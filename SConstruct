@@ -5,7 +5,7 @@
 import glob, os.path, re, os
 import lsst.SConsUtils as scons
 
-env = scons.makeEnv("daymops", r"$HeadURL: svn+ssh://svn.lsstcorp.org/DMS/mops/tickets/499/daymops/SConstruct $")
+env = scons.makeEnv("daymops", r"$HeadURL: svn+ssh://svn.lsstcorp.org/DMS/mops/daymops/trunk/SConstruct $")
 
 
 

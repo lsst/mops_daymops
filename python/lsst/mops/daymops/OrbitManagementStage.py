@@ -69,7 +69,7 @@ class OrbitManagementStage(DayMOPSStage):
         self.logIt('INFO', 'Started preprocessing.')
         
         # Get the prelim. MovingObject instances.
-        movingObjectsIter = getAllPreliminaryMovingObjects(self.obsCode, 
+        movingObjectsIter = getAllPreliminaryMovingObjects(self.dbLocStr, 
                                                            shallow=False)
         
         # Now, get the full list of Tracklets and start examining each one to 

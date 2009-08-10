@@ -85,9 +85,35 @@ def _getMovingObjects(dbLocStr, where, shallow=True,
     Return an iterator.
     """
     if(not shallow):
-        # FIXME: Implement deep copy!
-        raise(NotImplementedError('Implement deep fetch!'))
-    
+        return(_getMovingObjectsDeep(dbLocStr,where,shallow,sliceId,numSlices))
+    return(_getMovingObjectsShallow(dbLocStr,where,shallow,sliceId,numSlices))
+
+
+def _getMovingObjectsDeep(dbLocStr, where, shallow=True, 
+                          sliceId=None, numSlices=None):
+    # What we do here is do a shallow fetch first and then loop over and get the
+    # Tracklets.
+    movingObjectsIter = _getMovingObjectsShallow(dbLocStr,
+                                                 where,
+                                                 shallow,
+                                                 sliceId,
+                                                 numSlices)
+    for movingObject in movingObjectsIter:
+        _id = movingObject.getMovingObjectId()
+        trackletIter = TrackletList.allTrackletsForMovingObject(dbLocStr,
+                                                                _id,
+                                                                False,
+                                                                None,
+                                                                None)
+        
+        tracklets = [t for t in trackletIter]
+        movingObject.setTracklets(tracklets)
+        yield(movingObject)
+    # return
+
+
+def _getMovingObjectsShallow(dbLocStr, where, shallow=True, 
+                             sliceId=None, numSlices=None):
     # Send the query.
     # sql: select movingObjectId, mopsStatus, h_v, g, 
     #      q, e, i, node, argPeri, timePeri, epoch, 

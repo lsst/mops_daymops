@@ -35,8 +35,7 @@ def newTrackletsFromTonight(dbLocStr, shallow=True,
                            numSlices))
 
 
-def newTracklets(dbLocStr, shallow=True, 
-                 fromMjd=None, toMjd=None,
+def newTracklets(dbLocStr, fromMjd=None, toMjd=None, shallow=True, 
                  sliceId=None, numSlices=None):
     """
     Fetch non attrinuted/linked/precovered (i.e. status='U') Tracklets.
@@ -64,7 +63,7 @@ def newTracklets(dbLocStr, shallow=True,
         where += 'DiaSource.taiMidPoint >= %f' %(fromMjd)
     if(toMjd != None):
         if(where):
-            where += 'DiaSource.taiMidPoint <= %f' %(toMjd)
+            where += 'and DiaSource.taiMidPoint <= %f' %(toMjd)
         else:
             where = 'DiaSource.taiMidPoint <= %f' %(toMjd)
     return(_fetchTracklets(dbLocStr, 
@@ -73,6 +72,30 @@ def newTracklets(dbLocStr, shallow=True,
                            shallow, 
                            sliceId, 
                            numSlices))
+
+
+def allTrackletsForMovingObject(dbLocStr, movingObjectId, shallow=True, 
+                                sliceId=None, numSlices=None):
+    """
+    Fetch all Tracklet instances associated to a given MovingObject (via its
+    movingObjectId).
+    
+    Use  sliceId and numSlices to implement some form of parallelism.
+    If shallow=False, then fetch the DIASources also.
+    
+    @param dbLocStr: database connection string.
+    @param shallow: if True, do not bother retrieving DIASources per Tracklet.
+    @param movingObjectId: ID of the MovingObject associated to the Tracklets.
+    @param sliceId: Id of the current Slice.
+    @param numSlices: number of available slices (i.e. MPI universe size - 1)
+    
+    Return
+    Interator to the list of Tracklet instances.
+    """
+    w = 'mops_MovingObjectToTracklet.movingObjectId=%d ' %(movingObjectId)
+    w += 'and mops_MovingObjectToTracklet.trackletId=mops_Tracklet.trackletId'
+    extra = ['mops_MovingObjectToTracklet', ]
+    return(_fetchTracklets(dbLocStr, w, extra, shallow, sliceId, numSlices))
 
 
 def _fetchTracklets(dbLocStr, where, extraTables=[], shallow=True, 

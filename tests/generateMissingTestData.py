@@ -52,11 +52,11 @@ if(False):
         # choose n random Tracklets.
         idxs = []
         for i in range(n):
-            idx = int(random.random() * tTot)
+            idx = int(random.random() * (tTot - 1))
             while(idx in idxs):
-                idx = int(random.random() * tTot)
+                idx = int(random.random() * (tTot - 1))
             idxs.append(idx)
-            valSQL += '(%d, %d), ' %(moId, idx)
+            valSQL += '(%d, %d), ' %(moId, tIds[idx])
         valSQL = valSQL[:-2]
         
         # Insert the values.
@@ -88,7 +88,7 @@ if(False):
             while(idx in idxs):
                 idx = int(random.uniform(1, trTot))
             idxs.append(idx)
-            valSQL += '(%d, %d), ' %(tId, idx)
+            valSQL += '(%d, %d), ' %(tId, trIds[idx])
         valSQL = valSQL[:-2]
         
         # Insert the values.

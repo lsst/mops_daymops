@@ -140,6 +140,26 @@ where trackletId = %d'''
         sql = 'select DIASourceIDTonight.DIASourceId from DIASourceIDTonight'
         n = self._dbc.execute(sql)
         self.trueDiaSourceIdsForTonight = [int(r[0]) for r in self._dbc.fetchall()]
+        
+        # Finally, get the MovingObject -> Tracklet associations.
+        self.trueMovingObjectToTracklets = {}
+        sql = '''\
+select movingObjectId, 
+       trackletId 
+from mops_MovingObjectToTracklet
+order by movingObjectId'''
+        n = self._dbc.execute(sql)
+        if(not n):
+                raise(DBSetupError('No MovingObject-Tracklet link!' %(_id)))
+            
+        row = self._dbc.fetchone()
+        while(row):
+            (moId, tId) = row
+            if(self.trueMovingObjectToTracklets.has_key(moId)):
+                self.trueMovingObjectToTracklets[moId].append(tId)
+            else:
+                self.trueMovingObjectToTracklets[moId] = [tId, ]
+            row = self._dbc.fetchone()
         return
     
     def testNewTrackletsFromTonight(self):
@@ -196,6 +216,27 @@ where trackletId = %d'''
                              'taiMidPoint', 'obsCode', 'apFlux', 'apFluxErr', 
                              'refMag'):
                     self.checkObjs(trueSources[j], sources[j], attr)
+        return
+    
+    def testTrackletsForMovingObject(self):
+        # For each MovingObjectId, make sure that we get all the corresponding
+        # Tracklets.
+        for movingObjectId in self.trueMovingObjectToTracklets.keys():
+            trueTrackletIds = self.trueMovingObjectToTracklets[movingObjectId]
+            
+            # Fetch the Tracklets.
+            tIter = TrackletList.allTrackletsForMovingObject(self.dbLocStr,
+                                                             movingObjectId,
+                                                             True,
+                                                             0,
+                                                             1)
+            trackletIds = [t.getTrackletId() for t in tIter]
+            self.failUnlessEqual(len(trueTrackletIds), len(trackletIds), 'number of tracklets retrieved for MovingObject %d is different: %d /= %d.' %(movingObjectId, len(trueTrackletIds), len(trackletIds)))
+            
+            trueTrackletIds.sort()
+            trackletIds.sort()
+            for i in range(len(trueTrackletIds)):
+                self.failUnlessEqual(trueTrackletIds[i], trackletIds[i], 'IDs of Tracklet number %d differ: %d /= %d' %(i, trueTrackletIds[i], trackletIds[i]))
         return
 
 

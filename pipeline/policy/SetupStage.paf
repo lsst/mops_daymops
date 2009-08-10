@@ -1,0 +1,7 @@
+#<?cfg paf policy ?>
+# Default TelescopeSimulatorStage policy file
+# All angles in degrees,times in days.
+databasePolicy: @policy/DataBase.paf
+locationPolicy: @policy/Location.paf
+#
+

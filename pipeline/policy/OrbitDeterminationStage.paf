@@ -1,0 +1,13 @@
+#<?cfg paf policy ?>
+# Default TelescopeSimulatorStage policy file
+# All angles in degrees. All times are in days.
+databasePolicy: @policy/DataBase.paf
+locationPolicy: @policy/Location.paf
+
+minNights: 3                # minimum number of nights to attempt OD
+timeSpan: 30                # max number of days worth of data to consider.
+
+numRangingOrbits: 5000      # number of ranging orbits to use.
+elementType: 'keplerian'    # type of orbital elements to use.
+stdDev: 8.3333333e-05       # observational error in degrees.
+#

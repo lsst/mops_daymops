@@ -10,7 +10,7 @@ setupRequired(daf_persistence)
 setupRequired(afw)
 setupRequired(pex_harness)
 setupRequired(auton)
-setupRequired(oorb)
+setupOptional(oorb)
 
 envPrepend(LD_LIBRARY_PATH, ${PRODUCT_DIR}/lib)
 envPrepend(DYLD_LIBRARY_PATH, ${PRODUCT_DIR}/lib)

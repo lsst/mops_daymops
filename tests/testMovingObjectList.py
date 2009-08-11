@@ -189,7 +189,8 @@ select MovingObject.movingObjectId,
        MovingObject.src19,
        MovingObject.src20,
        MovingObject.src21,
-       MovingObject.stablePass
+       MovingObject.stablePass,
+       MovingObject.meanAnom
 from MovingObject'''
         
         # Send the query.
@@ -233,7 +234,8 @@ from MovingObject'''
              src[18],
              src[19],
              src[20],
-             stablePass) = row
+             stablePass,
+             meanAnom) = row
             # Create the MovingObject and its Orbit instance.
             o = Orbit()
             o.setQ(float(q))
@@ -245,6 +247,7 @@ from MovingObject'''
             o.setEpoch(float(epoch))
             o.setSrc(src)
             o.setStablePass(str(stablePass))
+            o.setMeanAnom(float(meanAnom))
             
             m = MovingObject()
             m.setMovingObjectId(int(_id))
@@ -297,7 +300,7 @@ from MovingObject'''
             for attr in ('movingObjectId', 'mopsStatus', 'h_v', 'g'):
                 self.checkObjs(trueNonMergedObjs[_id], movingObjects[_id], attr)
             for attr in ('q', 'e', 'i', 'node', 'argPeri', 'timePeri', 'epoch',
-                         'src'):
+                         'meanAnom', 'src'):
                 self.checkObjs(trueNonMergedObjs[_id].getOrbit(), 
                                movingObjects[_id].getOrbit(), attr)
         return
@@ -325,7 +328,7 @@ from MovingObject'''
                          'arcLength'):
                 self.checkObjs(trueNonMergedObjs[_id], movingObjects[_id], attr)
             for attr in ('q', 'e', 'i', 'node', 'argPeri', 'timePeri', 'epoch',
-                         'src'):
+                         'meanAnom', 'src'):
                 self.checkObjs(trueNonMergedObjs[_id].getOrbit(), 
                                movingObjects[_id].getOrbit(), attr)
             
@@ -368,7 +371,7 @@ from MovingObject'''
             for attr in ('movingObjectId', 'mopsStatus', 'h_v', 'g'):
                 self.checkObjs(trueNonMergedObjs[_id], movingObjects[_id], attr)
             for attr in ('q', 'e', 'i', 'node', 'argPeri', 'timePeri', 'epoch',
-                         'src'):
+                         'meanAnom', 'src'):
                 self.checkObjs(trueNonMergedObjs[_id].getOrbit(), 
                                movingObjects[_id].getOrbit(), attr)
         return
@@ -395,7 +398,7 @@ from MovingObject'''
                          'arcLength'):
                 self.checkObjs(trueNonMergedObjs[_id], movingObjects[_id], attr)
             for attr in ('q', 'e', 'i', 'node', 'argPeri', 'timePeri', 'epoch',
-                         'src'):
+                         'meanAnom', 'src'):
                 self.checkObjs(trueNonMergedObjs[_id].getOrbit(), 
                                movingObjects[_id].getOrbit(), attr)
             

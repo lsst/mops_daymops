@@ -109,6 +109,9 @@ def getTimeSpan(diaSources):
     Return
     The time spanned (in days) by the input DIASource instances.
     """
+    if(not diaSources):
+        return(None)
+    
     times = [d.getTaiMidPoint() for d in diaSources]
     times.sort()
     return(times[-1] - times[0])

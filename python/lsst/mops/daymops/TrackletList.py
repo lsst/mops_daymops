@@ -316,8 +316,9 @@ def getArcLength(tracklets):
     """
     # TODO: is this the most efficient way of computing the arc length?
     # Probably not, but at least is pretty elegant.
-    diaSources = reduce(lambda a, b: a+b, [t.getDiaSources for t in tracklets])
-    return(diaSources.getTimeSpan())
+    diaSources = reduce(lambda a, b: a+b, 
+                        [t.getDiaSources() for t in tracklets])
+    return(DiaSourceList.getTimeSpan(diaSources))
 
 
 def save(dbLocStr, tracklets):

@@ -23,7 +23,7 @@ class Orbit(DayMOPSObject):
                  i=None, 
                  node=None, 
                  argPeri=None, 
-                 m=None,
+                 meanAnom=None,
                  timePeri=None, 
                  epoch=None, 
                  src=[],
@@ -42,7 +42,7 @@ class Orbit(DayMOPSObject):
         i (deg)
         node (deg)
         argPeri (deg)
-        m (deg)                             (only for Keplerian elements)
+        m\meanAnom (deg)                    (only for Keplerian elements)
         timePeri (TAI MJD)                  (only for cometary elements)
         epoch: orbit epoch (TAI MJD)
         src: 21 element array (covariance matrix in diagonal form).
@@ -54,7 +54,7 @@ class Orbit(DayMOPSObject):
         self._i = i
         self._node = node
         self._argPeri = argPeri
-        self._m = m
+        self._meanAnom = meanAnom
         self._timePeri = timePeri
         self._epoch = epoch
         self._src = None

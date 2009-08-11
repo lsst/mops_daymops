@@ -115,12 +115,6 @@ def _getMovingObjectsDeep(dbLocStr, where, shallow=True,
 def _getMovingObjectsShallow(dbLocStr, where, shallow=True, 
                              sliceId=None, numSlices=None):
     # Send the query.
-    # sql: select movingObjectId, mopsStatus, h_v, g, 
-    #      q, e, i, node, argPeri, timePeri, epoch, 
-    #      src01, src02, src03, src04, src05, src06, src07, src08, src09, 
-    #      src10, src11, src12, src13, src14, src15, src16, src17, src18, 
-    #      src19, src20, src21 from MovingObject where
-    #      mopsStatus != "M"
     cols = [('movingObjectId', 'Long'), 
             ('mopsStatus', 'String'),
             ('h_v', 'Double'), 
@@ -131,6 +125,7 @@ def _getMovingObjectsShallow(dbLocStr, where, shallow=True,
             ('i', 'Double'), 
             ('node', 'Double'), 
             ('argPeri', 'Double'), 
+            ('meanAnom', 'Double'), 
             ('timePeri', 'Double'), 
             ('epoch', 'Double'), 
             ('src01', 'Double'), 
@@ -251,24 +246,33 @@ def save(dbLocStr, movingObjects, updateTrackletStatus=True):
         src = orbit.getSrc()
         
         # Update the MovingObject table.
+        # FIXME: Since we do not measure some of these parameters (yet) and the
+        # FIXME: corresponding columns are NOT NULL, we insert -1 instead of 
+        # FIXME: NULL, which is LAME.
         db.setColumnLong('movingObjectId', movingObjectId)
         db.setColumnString('mopsStatus', movingObject.getStatus())
         h_v = movingObject.getH_v()
         if(h_v == None):
-            db.setColumnToNull('h_v')
-        else:
-            db.setColumnDouble('h_v', h_v)
+            h_v = -1
+        db.setColumnDouble('h_v', h_v)
         g = movingObject.getG()
         if(g == None):
-            db.setColumnToNull('g')
-        else:
-            db.setColumnDouble('g', g)
+            g = -1.
+        db.setColumnDouble('g', g)
         db.setColumnDouble('q', orbit.getQ())
         db.setColumnDouble('e', orbit.getE())
         db.setColumnDouble('i', orbit.getI())
         db.setColumnDouble('node', orbit.getNode())
         db.setColumnDouble('argPeri', orbit.getArgPeri())
-        db.setColumnDouble('timePeri', orbit.getTimePeri())
+        timePeri = orbit.getTimePeri()
+        if(timePeri == None):
+            timePeri = -1.
+        db.setColumnDouble('timePeri', timePeri)
+        meanAnom = orbit.getMeanAnom()
+        if(meanAnom == None):
+            meanAnom = -1
+        db.setColumnDouble('meanAnom', meanAnom)
+        
         for i in range(1, 22, 1):
             db.setColumnDouble('src%02d' %(i), src[i-1])
         db.insertRow()

@@ -106,8 +106,9 @@ class OrbitDeterminationStage(DayMOPSStage):
                 # Create temporary MovingObject instances ad write them to the 
                 # database.
                 movingObjects.append(MovingObject(movingObjectId=None, 
-                    status=STATUS['PRELIMINARY']), orbit=o,
-                    tracklets=track.getTracklets())
+                                                  status=STATUS['PRELIMINARY'], 
+                                                  orbit=o,
+                                                  tracklets=track.getTracklets()))
                 
         self.logIt('INFO', 'Found %d possible Orbits.' %(numOrbits))
         if(not movingObjects):

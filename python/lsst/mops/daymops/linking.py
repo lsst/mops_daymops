@@ -243,20 +243,32 @@ def orbitDetermination(track,
         return(None)
     
     # If everything went well, we have an orbit with covariance.
-    # res[0]: [a, e, i, node, argPeri, m, epoch, H, G, elTypeId]
-    # res[1]: is a 6x6 covariance matrix, get the diagonal form.
+    # res[0]: [trackId, a, e, i, node, argPeri, m, epoch, H, G, elTypeId]
+    # res[1]: is a 6x6 covariance matrix, get the upper diagonal form.
     cov = []
     for i in (0, 1, 2, 3, 4, 5):
-        for j in range(i):
+        for j in range(i, 6, 1):
             cov.append(res[1][i][j])
+    
     # q = (1 - e) * a
-    return(Orbit.Orbit(q=(1. - res[0][1]) * res[0][0],
-                       e=res[0][1],
-                       i=res[0][2],
-                       node=res[0][3],
-                       argPeri=res[0][4],
-                       m=res[0][5],
-                       epoch=res[0][6],
+    [trackId, 
+     a, 
+     e, 
+     i, 
+     node, 
+     argPeri, 
+     m, 
+     epoch, 
+     H, 
+     G, 
+     elTypeId] = list(res[0])
+    return(Orbit.Orbit(q=(1. - e) * a,
+                       e=a,
+                       i=i,
+                       node=node,
+                       argPeri=argPeri,
+                       meanAnom=m,
+                       epoch=epoch,
                        src=cov))
     
     

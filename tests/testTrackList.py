@@ -242,7 +242,74 @@ order by trackId'''
                         self.checkObjs(trueSources[j], sources[j], attr)
         return
                 
-
+    
+    def testNewTracksDeepParallel(self):
+        # Get half of the Tracks.
+        iter = TrackList.newTracks(self.dbLocStr,
+                                   shallow=False,
+                                   sliceId=0,
+                                   numSlices=2)
+        tracks1 = dict([(t.getTrackId(), t) for t in iter])
+        
+        # Get the other half.
+        iter = TrackList.newTracks(self.dbLocStr,
+                                   shallow=False,
+                                   sliceId=1,
+                                   numSlices=2)
+        tracks2 = dict([(t.getTrackId(), t) for t in iter])
+        
+        # Make sure that we do not get any duplicates.
+        for _id in tracks1.keys():
+            self.failUnless(_id not in tracks2.keys(),
+                            'Track %d is present in both dictionaries!' %(_id))
+        
+        # Now concatenate the two dictionaries.
+        tracks1.update(tracks2)
+        tracks = tracks1
+        
+        # Same number?
+        self.failUnlessEqual(len(self.trueTrackToTracklets), len(tracks),
+                             'the number of Tracks is different: %d /= %d' %(len(self.trueTrackToTracklets), len(tracks)))
+        
+        # And now, one by one.
+        for trackId in self.trueTrackToTracklets.keys():
+            # TrackId has to be there.
+            self.failUnless(trackId in tracks.keys())
+            
+            track = tracks[trackId]
+            trueTrack = self.trueTrackToTracklets[trackId]
+            
+            # And now check the Tracklets.
+            trueTracklets = [self.trueTracklets[tId] for tId in trueTrack]
+            tracklets = track.getTracklets()
+            
+            self.failUnlessEqual(len(trueTracklets), len(tracklets),
+                                 'the number of Tracklets is different: %d /= %d' %(len(trueTracklets), len(tracklets)))
+            if(not trueTracklets):
+                continue
+            
+            # This is a deep fetch.
+            for i in range(len(trueTracklets)):
+                # Check Tracklet attributes.
+                for attr in ('trackletId', 'velRa', 'velDec', 'status'):
+                    self.checkObjs(trueTracklets[i], tracklets[i], attr)
+                
+                # Now the DiaSources.
+                trueSourcesIds = self.trueTrackletToDiaSources[trueTracklets[i].getTrackletId()]
+                trueSources = [self.trueDiaSources[_id] for _id in trueSourcesIds]
+                sources = tracklets[i].getDiaSources()
+                
+                self.failUnlessEqual(len(trueSources), len(sources), 'number of DiaSources is different: %d /= %d' %(len(trueSources), len(sources)))
+                
+                # And now the attributes.
+                sources.sort()
+                trueSources.sort()
+                for j in range(len(sources)):
+                    for attr in ('diaSourceId', 'ra', 'dec', 'filterId', 
+                                 'taiMidPoint', 'obsCode', 'apFlux', 'apFluxErr', 
+                                 'refMag'):
+                        self.checkObjs(trueSources[j], sources[j], attr)
+        return
 
 
 

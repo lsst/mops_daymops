@@ -9,6 +9,8 @@ try:
     import lsst.mops.daymops.MovingObjectList as MovingObjectList
     from lsst.mops.daymops.MovingObject import MovingObject, STATUS
     from lsst.mops.daymops.Orbit import Orbit, STABLE_STATUS
+    from lsst.mops.daymops.DiaSource import DiaSource
+    from lsst.mops.daymops.Tracklet import Tracklet
 except:
     raise(ImportError('Please setup daymops first.'))
 
@@ -61,6 +63,96 @@ class TestMovingObjecList(unittest.TestCase):
                                 passwd=DB_PASS,
                                 db=DB_DBNAME)
         self._dbc = self._dbh.cursor()
+        
+        # Get all the Tracklets in the DB that are associated to MovingObjects.
+        sql = '''\
+select mops_Tracklet.trackletId, 
+       mops_Tracklet.velRa, 
+       mops_Tracklet.velDecl, 
+       mops_Tracklet.velTot, 
+       mops_Tracklet.status 
+from mops_Tracklet
+where mops_Tracklet.trackletId in 
+(select mops_MovingObjectToTracklet.trackletId from mops_MovingObjectToTracklet)
+order by mops_Tracklet.trackletId'''
+        
+        # Send the query.
+        n = self._dbc.execute(sql)
+        
+        trueTracklets = {}
+        row = self._dbc.fetchone()
+        while(row):
+            (_id, vRa, vDec, vTot, status) = row
+            t = Tracklet()
+            t.setTrackletId(int(_id))
+            t.setVelRa(float(vRa))
+            t.setVelDec(float(vDec))
+            t.setVelTot(float(vTot))
+            t.setStatus(str(status))
+            trueTracklets[_id] = t
+            
+            row = self._dbc.fetchone()
+        
+        # Fetch trackletId -> diaSourceIds
+        sql = '''\
+select DIASource.diaSourceId, 
+       DIASource.ra, 
+       DIASource.decl, 
+       DIASource.filterId, 
+       DIASource.taiMidPoint, 
+       DIASource.obsCode, 
+       DIASource.apFlux, 
+       DIASource.apFluxErr, 
+       DIASource.refMag
+from DIASource, mops_TrackletsToDIASource
+where mops_TrackletsToDIASource.trackletId = %d and
+      DIASource.diaSourceId = mops_TrackletsToDIASource.diaSourceId'''
+        
+        for _id in trueTracklets.keys():
+            # Send the query.
+            n = self._dbc.execute(sql %(_id))
+            
+            # Create the DiaSource objects manually.
+            diaSources = []
+            row = self._dbc.fetchone()
+            while(row):
+                (dId, ra, dec, fltr, mjd, ocode, fl, flErr, rMag) = row
+                d = DiaSource()
+                d.setDiaSourceId(int(dId))
+                d.setRa(float(ra))
+                d.setDec(float(dec))
+                d.setFilterId(int(fltr))
+                d.setTaiMidPoint(float(mjd))
+                d.setObsCode(str(ocode))
+                d.setApFlux(float(fl))
+                d.setApFluxErr(float(flErr))
+                d.setRefMag(float(rMag))
+                diaSources.append(d)
+                
+                row = self._dbc.fetchone()
+            
+            # Add the diaSources to the Tracklet.
+            trueTracklets[_id].setDiaSources(diaSources)
+        
+        # Now get the MovingObject -> Tracklet associations.
+        trueMovingObjectToTracklets = {}
+        sql = '''\
+select movingObjectId, 
+       trackletId 
+from mops_MovingObjectToTracklet
+order by movingObjectId'''
+        n = self._dbc.execute(sql)
+        if(not n):
+                raise(DBSetupError('No MovingObject-Tracklet link!' %(_id)))
+            
+        row = self._dbc.fetchone()
+        while(row):
+            (moId, tId) = row
+            if(trueMovingObjectToTracklets.has_key(moId)):
+                trueMovingObjectToTracklets[moId].append(tId)
+            else:
+                trueMovingObjectToTracklets[moId] = [tId, ]
+            row = self._dbc.fetchone()
         
         # Retrieve the list of MovingObject instances in the database.
         sql = '''\
@@ -173,13 +265,48 @@ from MovingObject'''
             
             self.trueMovingObjects[_id] = m
             row = self._dbc.fetchone()
+        
+            # Manualy update the true MovingObjects. Only update those that
+            # have Tracklets, clearly.
+            if(_id in trueMovingObjectToTracklets.keys()):
+                ts = [trueTracklets[tId] 
+                      for tId in trueMovingObjectToTracklets[_id]]
+                self.trueMovingObjects[_id].setTracklets(ts)
         return
     
-    def testGetAllMovingObjects(self):
+    def testGetAllMovingObjectsShallow(self):
         # This actually means (see the function docs in MovingObjectList.py) 
         # retrieving all MovingObject with status /= merged.
         iter = MovingObjectList.getAllMovingObjects(self.dbLocStr,
                                                     shallow=True,
+                                                    sliceId=0,
+                                                    numSlices=1)
+        movingObjects = dict([(m.getMovingObjectId(), m) for m in iter])
+        
+        trueNonMergedObjs = dict([(m.getMovingObjectId(), m) \
+                                  for m in self.trueMovingObjects.values() \
+                                  if m.getMopsStatus != STATUS['MERGED']])
+        
+        # Make sure that we got the same number of objects.
+        self.failUnlessEqual(len(trueNonMergedObjs), len(movingObjects),
+                             'number of retrieved objects is incorrect: %d /= %d' %(len(trueNonMergedObjs), len(movingObjects)))
+        
+        # Check 'em piece by piece. Do not test arcLength since we are not 
+        # retrieving Tracklets.
+        for _id in trueNonMergedObjs.keys():
+            for attr in ('movingObjectId', 'mopsStatus', 'h_v', 'g'):
+                self.checkObjs(trueNonMergedObjs[_id], movingObjects[_id], attr)
+            for attr in ('q', 'e', 'i', 'node', 'argPeri', 'timePeri', 'epoch',
+                         'src'):
+                self.checkObjs(trueNonMergedObjs[_id].getOrbit(), 
+                               movingObjects[_id].getOrbit(), attr)
+        return
+    
+    def testGetAllMovingObjectsDeep(self):
+        # This actually means (see the function docs in MovingObjectList.py) 
+        # retrieving all MovingObject with status /= merged.
+        iter = MovingObjectList.getAllMovingObjects(self.dbLocStr,
+                                                    shallow=False,
                                                     sliceId=0,
                                                     numSlices=1)
         movingObjects = dict([(m.getMovingObjectId(), m) for m in iter])
@@ -201,9 +328,25 @@ from MovingObject'''
                          'src'):
                 self.checkObjs(trueNonMergedObjs[_id].getOrbit(), 
                                movingObjects[_id].getOrbit(), attr)
+            
+            # Check their Tracklets.
+            trueTracklets = trueNonMergedObjs[_id].getTracklets()
+            tracklets = movingObjects[_id].getTracklets()
+            trueTracklets.sort()
+            tracklets.sort()
+            
+            # Same numbers?
+            self.failUnlessEqual(len(trueTracklets), len(tracklets),
+                             'number of retrieved Tracklets for object %d is incorrect: %d /= %d' %(_id, len(trueTracklets), len(tracklets)))
+            
+            # Same Tracklets?
+            for i in range(len(tracklets)):
+                # Check Tracklet attributes.
+                for attr in ('trackletId', 'velRa', 'velDec', 'status'):
+                    self.checkObjs(trueTracklets[i], tracklets[i], attr)
         return
     
-    def testGetAllUnstableMovingObjects(self):
+    def testGetAllUnstableMovingObjectsShallow(self):
         iter = MovingObjectList.getAllUnstableMovingObjects(self.dbLocStr,
                                                             shallow=True,
                                                             sliceId=0,
@@ -219,7 +362,34 @@ from MovingObject'''
         self.failUnlessEqual(len(trueNonMergedObjs), len(movingObjects),
                              'number of retrieved objects is incorrect: %d /= %d' %(len(trueNonMergedObjs), len(movingObjects)))
         
-        # Check 'em piece by piece.
+        # Check 'em piece by piece. Do not check arcLength since we are not 
+        # retrieving Tracklets.
+        for _id in trueNonMergedObjs.keys():
+            for attr in ('movingObjectId', 'mopsStatus', 'h_v', 'g'):
+                self.checkObjs(trueNonMergedObjs[_id], movingObjects[_id], attr)
+            for attr in ('q', 'e', 'i', 'node', 'argPeri', 'timePeri', 'epoch',
+                         'src'):
+                self.checkObjs(trueNonMergedObjs[_id].getOrbit(), 
+                               movingObjects[_id].getOrbit(), attr)
+        return
+    
+    def testGetAllUnstableMovingObjectsDeep(self):
+        iter = MovingObjectList.getAllUnstableMovingObjects(self.dbLocStr,
+                                                            shallow=False,
+                                                            sliceId=0,
+                                                            numSlices=1)
+        movingObjects = dict([(m.getMovingObjectId(), m) for m in iter])
+        
+        trueNonMergedObjs = dict([(m.getMovingObjectId(), m) \
+            for m in self.trueMovingObjects.values() \
+            if m.getMopsStatus != STATUS['MERGED'] and \
+               m.getOrbit().getStablePass() != STABLE_STATUS['STABLE']])
+        
+        # Make sure that we got the same number of objects.
+        self.failUnlessEqual(len(trueNonMergedObjs), len(movingObjects),
+                             'number of retrieved objects is incorrect: %d /= %d' %(len(trueNonMergedObjs), len(movingObjects)))
+        
+        # Check 'em piece by piece. 
         for _id in trueNonMergedObjs.keys():
             for attr in ('movingObjectId', 'mopsStatus', 'h_v', 'g', 
                          'arcLength'):
@@ -228,6 +398,22 @@ from MovingObject'''
                          'src'):
                 self.checkObjs(trueNonMergedObjs[_id].getOrbit(), 
                                movingObjects[_id].getOrbit(), attr)
+            
+            # Check their Tracklets.
+            trueTracklets = trueNonMergedObjs[_id].getTracklets()
+            tracklets = movingObjects[_id].getTracklets()
+            trueTracklets.sort()
+            tracklets.sort()
+            
+            # Same numbers?
+            self.failUnlessEqual(len(trueTracklets), len(tracklets),
+                             'number of retrieved Tracklets for object %d is incorrect: %d /= %d' %(_id, len(trueTracklets), len(tracklets)))
+            
+            # Same Tracklets?
+            for i in range(len(tracklets)):
+                # Check Tracklet attributes.
+                for attr in ('trackletId', 'velRa', 'velDec', 'status'):
+                    self.checkObjs(trueTracklets[i], tracklets[i], attr)
         return
 
 

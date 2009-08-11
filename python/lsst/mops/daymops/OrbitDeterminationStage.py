@@ -90,7 +90,6 @@ class OrbitDeterminationStage(DayMOPSStage):
                 
         # Pass the Tracks to the OrbitDetermination code.
         movingObjects = []
-        numOrbits = 0
         for track in tracks:
             o = linking.orbitDetermination(track, 
                                            self.elementType,
@@ -100,9 +99,6 @@ class OrbitDeterminationStage(DayMOPSStage):
             
             # Count the number of not null orbits.
             if(o != None):
-                self.logIt('INFO', 'Found an Orbit!')
-                numOrbits += 1
-                
                 # Create temporary MovingObject instances ad write them to the 
                 # database.
                 movingObjects.append(MovingObject(movingObjectId=None, 
@@ -110,7 +106,7 @@ class OrbitDeterminationStage(DayMOPSStage):
                                                   orbit=o,
                                                   tracklets=track.getTracklets()))
                 
-        self.logIt('INFO', 'Found %d possible Orbits.' %(numOrbits))
+        self.logIt('INFO', 'Found %d possible Orbits.' %(len(movingObjects)))
         if(not movingObjects):
             self.outputQueue.addDataset(self.activeClipboard)
             return

@@ -90,7 +90,7 @@ class OrbitManagementStage(DayMOPSStage):
         movingObjects = []
         for tId in trackletToMO.keys():
             # Do we have >1 MovingObject?
-            if(len(trackletToMO[tId] <= 1)):
+            if(len(trackletToMO[tId]) <= 1):
                 # Nope!
                 continue
             

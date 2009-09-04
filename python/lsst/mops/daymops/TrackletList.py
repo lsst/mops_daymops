@@ -60,12 +60,12 @@ def newTracklets(dbLocStr, fromMjd=None, toMjd=None, shallow=True,
     """
     where = ''
     if(fromMjd != None):
-        where += 'DiaSource.taiMidPoint >= %f' %(fromMjd)
+        where += 'DIASource.taiMidPoint >= %f' %(fromMjd)
     if(toMjd != None):
         if(where):
-            where += 'and DiaSource.taiMidPoint <= %f' %(toMjd)
+            where += 'and DIASource.taiMidPoint <= %f' %(toMjd)
         else:
-            where = 'DiaSource.taiMidPoint <= %f' %(toMjd)
+            where = 'DIASource.taiMidPoint <= %f' %(toMjd)
     return(_fetchTracklets(dbLocStr, 
                            where,
                            [],
@@ -207,7 +207,7 @@ def _fetchDeepTracklets(dbLocStr, where, extraTables=[], sliceId=None,
     # Send the query.
     db = SafeDbStorage()
     db.setPersistLocation(persistence.LogicalLocation(dbLocStr))
-    tables = ['mops_Tracklet', 'mops_TrackletsToDIASource', 'DiaSource'] + \
+    tables = ['mops_Tracklet', 'mops_TrackletsToDIASource', 'DIASource'] + \
              list(extraTables)
     db.setTableListForQuery(tables)
     db.outColumn('mops_Tracklet.trackletId')
@@ -215,19 +215,19 @@ def _fetchDeepTracklets(dbLocStr, where, extraTables=[], sliceId=None,
     db.outColumn('mops_Tracklet.velDecl')
     db.outColumn('mops_Tracklet.velTot')
     db.outColumn('mops_Tracklet.status')
-    db.outColumn('DiaSource.diaSourceId')
-    db.outColumn('DiaSource.ra')
-    db.outColumn('DiaSource.decl')
-    db.outColumn('DiaSource.filterId')
-    db.outColumn('DiaSource.taiMidPoint')
-    db.outColumn('DiaSource.obsCode')
-    db.outColumn('DiaSource.apFlux')
-    db.outColumn('DiaSource.apFluxErr')
-    db.outColumn('DiaSource.refMag')
+    db.outColumn('DIASource.diaSourceId')
+    db.outColumn('DIASource.ra')
+    db.outColumn('DIASource.decl')
+    db.outColumn('DIASource.filterId')
+    db.outColumn('DIASource.taiMidPoint')
+    db.outColumn('DIASource.obsCode')
+    db.outColumn('DIASource.apFlux')
+    db.outColumn('DIASource.apFluxErr')
+    db.outColumn('DIASource.refMag')
     
     w2 = 'mops_Tracklet.status="%s"' %(STATUS['UNATTRIBUTED'])
     w2 += ' and mops_Tracklet.trackletId=mops_TrackletsToDIASource.trackletId'
-    w2 += ' and DiaSource.diaSourceId=mops_TrackletsToDIASource.diaSourceId'
+    w2 += ' and DIASource.diaSourceId=mops_TrackletsToDIASource.diaSourceId'
     
     w = ''
     if(where):

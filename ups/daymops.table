@@ -1,3 +1,6 @@
+setupRequired("scons")
+setupRequired("swig")
+
 setupRequired(mysqlclient)
 setupRequired(numpy)
 setupRequired(boost)
@@ -15,4 +18,3 @@ setupOptional(oorb)
 envPrepend(LD_LIBRARY_PATH, ${PRODUCT_DIR}/lib)
 envPrepend(DYLD_LIBRARY_PATH, ${PRODUCT_DIR}/lib)
 envAppend(PYTHONPATH, ${PRODUCT_DIR}/python)
-

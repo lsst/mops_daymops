@@ -4,12 +4,10 @@ import distutils.sysconfig
 
 doExtras = True
 
-env = scons.makeEnv("linkTracklets",
-    r"1.0",
-    [["boost", "boost/test/included/unit_test.hpp"],
-    ["pex_exceptions", "lsst/pex/exceptions/Exception.h lsst/pex/exceptions/Runtime.h", "pex_exceptions:C++"],
-    ["gsl", "gsl/gsl_fit.h", "gslcblas gsl:C++"]
-    ])
+
+Import("env")
+
+
 
 
 common_libs = ['../common.o', '../collapseTrackletsAndPostfilters/SubsetRemover.o', '../Detection.o', 

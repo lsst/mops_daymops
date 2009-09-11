@@ -62,7 +62,7 @@ void prune(std::vector<int>*, std::map<double, KDTree::KDTree<int> >*,
  * Find the position of a double in a vector of doubles.  Return
  * position index or -1 if not found.
  ****************************************************************/
-int vecPosition(const std::vector<double>*, double);
+int vectorPosition(const std::vector<double>*, double);
 
 
 /**************************************************************
@@ -151,7 +151,7 @@ void generateMJDTrees(const std::vector<Detection> *myDets,
             tempD = myDets->at(i);
             tempD.setFileIndex(i);
 
-            insertIndex = vecPosition(&epochs, epochTime);
+            insertIndex = vectorPosition(&epochs, epochTime);
 
             detectionSets->at(insertIndex).push_back(tempD);
         }
@@ -352,7 +352,7 @@ void getEpochs(const std::vector<Detection> *myDets,
     for(unsigned int i=0; i<myDets->size(); i++){
         tempEpoch=myDets->at(i).getEpochMJD();
     
-        vPos = vecPosition(epochs, tempEpoch);
+        vPos = vectorPosition(epochs, tempEpoch);
 
         if(vPos == -1){
             epochs->push_back(tempEpoch);
@@ -367,7 +367,7 @@ void getEpochs(const std::vector<Detection> *myDets,
  * Find the position of a double in a vector of doubles.  Return
  * position index or -1 if not found.
  ****************************************************************/
-int vecPosition(const std::vector<double>* lookUp, double val)
+int vectorPosition(const std::vector<double>* lookUp, double val)
 {
     std::vector<double>::iterator result;
   

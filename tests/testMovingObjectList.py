@@ -20,9 +20,9 @@ except:
 # Constants.
 DB_HOST = 'localhost'
 DB_PORT = '3306'
-DB_DBNAME = 'mops_test'
-DB_USER = 'www'
-DB_PASS = 'zxcvbnm'
+DB_DBNAME = 'mops_onelunation'
+DB_USER = 'jmyers'
+DB_PASS = 'jmyers'
 
 
 

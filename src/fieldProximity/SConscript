@@ -1,0 +1,28 @@
+import os, os.path
+import lsst.SConsUtils as scons
+import distutils.sysconfig
+
+
+
+env = scons.makeEnv("trackingLib",
+    r"1.0",
+    [["boost", "boost/test/included/unit_test.hpp"],
+    ["pex_exceptions", "lsst/pex/exceptions/Exception.h lsst/pex/exceptions/Runtime.h", "pex_exceptions:C++"],
+    ["gsl", "gsl/gsl_fit.h", "gslcblas gsl:C++"]
+    ])
+
+ext_libs = ["gsl", "gslcblas", "pex_exceptions"]
+
+common_libs = ['../Detection.o', '../common.o', '../collapseTrackletsAndPostfilters/TrackletCollapser.o',
+               '../collapseTrackletsAndPostfilters/rmsLineFit.o']
+
+env.Library('Field', 'Field.cc')
+common_libs.append('Field.o')
+env.Library('fieldProximity', common_libs + ['fieldProximity.cc'])
+
+env.Program('fieldProximity-unitTests', ['fieldProximityUnitTests.cc', 'fieldProximity.o'] + common_libs, 
+            LIBS=ext_libs)
+
+
+
+

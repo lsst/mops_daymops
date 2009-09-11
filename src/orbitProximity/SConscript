@@ -1,0 +1,28 @@
+import os, os.path
+import lsst.SConsUtils as scons
+import distutils.sysconfig
+
+
+env = scons.makeEnv("detectionProximity",
+    r"1.0",
+    [["boost", "boost/test/included/unit_test.hpp"],
+    ["pex_exceptions", "lsst/pex/exceptions/Exception.h lsst/pex/exceptions/Runtime.h", "pex_exceptions:C++"],
+    ["gsl", "gsl/gsl_fit.h", "gslcblas gsl:C++"]
+    ])
+
+ext_libs = ["gsl", "gslcblas", "pex_exceptions"]
+
+common_libs = ['../Detection.o', '../common.o', '../collapseTrackletsAndPostfilters/TrackletCollapser.o',
+               '../collapseTrackletsAndPostfilters/rmsLineFit.o', '../Orbit.o']
+
+env.Library('orbitProximity', common_libs + ['orbitProximity.cc'])
+
+env.Program('orbitProximity', ['orbitProximityMain.cc', 
+				 'orbitProximity.o'] + common_libs, 
+            LIBS=ext_libs)
+
+env.Program('orbitProximity-unitTests', ['orbitProximityUnitTests.cc', 
+					 'orbitProximity.o'] + common_libs, 
+            LIBS=ext_libs)
+
+

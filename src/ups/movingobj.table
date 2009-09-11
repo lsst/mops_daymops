@@ -1,0 +1,7 @@
+setupRequired("scons")
+setupRequired("swig")
+setupRequired("pex_exceptions")
+setupRequired("gsl")
+#envPrepend(PATH, ${PRODUCT_DIR}/bin)
+#envPrepend(LD_LIBRARY_PATH, ${PRODUCT_DIR}/lib)
+#envPrepend(DYLD_LIBRARY_PATH, ${PRODUCT_DIR}/lib)

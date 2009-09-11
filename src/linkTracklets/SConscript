@@ -1,0 +1,35 @@
+import os, os.path
+import lsst.SConsUtils as scons
+import distutils.sysconfig
+
+doExtras = True
+
+env = scons.makeEnv("linkTracklets",
+    r"1.0",
+    [["boost", "boost/test/included/unit_test.hpp"],
+    ["pex_exceptions", "lsst/pex/exceptions/Exception.h lsst/pex/exceptions/Runtime.h", "pex_exceptions:C++"],
+    ["gsl", "gsl/gsl_fit.h", "gslcblas gsl:C++"]
+    ])
+
+
+common_libs = ['../common.o', '../collapseTrackletsAndPostfilters/SubsetRemover.o', '../Detection.o', 
+	      '../collapseTrackletsAndPostfilters/TrackletCollapser.o', 
+               '../collapseTrackletsAndPostfilters/rmsLineFit.o']
+
+ext_libs = ["gsl", "gslcblas", "pex_exceptions"]
+		      
+
+env.Library('linkTracklets', ['linkTracklets.cc'] + common_libs)
+
+env.Program('linkTracklets-unitTests', ['linkTracklets-unittests.cc', 'linkTracklets.o'] + common_libs, 
+				       LIBS=ext_libs)
+
+env.Program('linkTracklets', ['linkTrackletsMain.cc', 'linkTracklets.o'] + common_libs,
+				       LIBS=ext_libs)
+
+
+
+
+if doExtras:
+    env.Program('findLinkableObjects', ['findLinkableObjects.cc'] + common_libs, 
+				       LIBS=ext_libs)

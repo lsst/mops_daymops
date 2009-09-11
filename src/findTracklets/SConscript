@@ -1,0 +1,37 @@
+import os, os.path
+import lsst.SConsUtils as scons
+import distutils.sysconfig
+
+env = scons.makeEnv("trackingLib",
+    r"1.0",
+    [["boost", "boost/test/included/unit_test.hpp"],
+    ["pex_exceptions", "lsst/pex/exceptions/Exception.h lsst/pex/exceptions/Runtime.h", "pex_exceptions:C++"],
+    ["gsl", "gsl/gsl_fit.h", "gslcblas gsl:C++"]
+    ])
+
+
+ext_libs = ["gsl", "gslcblas", "pex_exceptions"]
+		      
+commonStuff = ['../common', '../collapseTrackletsAndPostfilters/SubsetRemover', '../Detection', 
+	      '../collapseTrackletsAndPostfilters/TrackletCollapser', 
+	      '../collapseTrackletsAndPostfilters/rmsLineFit']
+common_libs = []
+
+
+
+for lib in commonStuff:
+    common_libs.append(lib+'.o')
+
+env.Library('findTracklets', ['findTracklets.cc'] + common_libs)
+
+common_libs.append('findTracklets.o')
+
+env.Program('findTracklets-unitTests', 
+            ['findTracklets-unittests.cc'] +  common_libs, 
+            LIBS=ext_libs)
+
+env.Program('findTracklets', 
+            ['findTrackletsMain.cc'] + common_libs,
+            LIBS=ext_libs)
+
+

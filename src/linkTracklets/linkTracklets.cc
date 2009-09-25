@@ -13,9 +13,11 @@
 #include "../collapseTrackletsAndPostfilters/TrackletCollapser.h"
 
 
+//#define LEAF_SIZE 1
 //#define LEAF_SIZE 2 //useful for teasing out bugs...
 //#define LEAF_SIZE 1024
-#define LEAF_SIZE 256
+//#define LEAF_SIZE 256
+#define LEAF_SIZE 2
 
 /* 
 the following flags, if set to 'true, will enable some debugging checks which
@@ -706,6 +708,9 @@ void buildTracksAddToResults(const std::vector<Detection> &allDetections,
                              const std::vector<TreeNodeAndTime> &supportNodes,
                              std::vector<Track> & results)
 {
+
+
+
     if ((firstEndpoint.myTree->isLeaf() == false) ||
         (secondEndpoint.myTree->isLeaf() == false)) {
         LSST_EXCEPT(ctExcept::ProgrammerErrorException, 
@@ -980,15 +985,6 @@ bool containsProbablyFindableObject(const std::vector<Detection>&allDetections,
  * this is, roughly, the algorithm presented in http://arxiv.org/abs/astro-ph/0703475v1:
  * 
  * Efficient intra- and inter-night linking of asteroid detections using kd-trees
- *
- * A simpler version would be:
- * 
- * Take two endpoints (which are KDTree nodes) and a set of support points (also
- * KDTree nodes).  If the endpoints are incompatible, terminate the search.  If
- * they are compatible, filter the support nodes, leaving only support nodes
- * mutually compatible with the endpoints.  If we have enough support nodes to
- * get a track from, split a node (choose by "width", described below) and
- * recurse.
  * 
  * The "proper" version of the algorithm (as presented in psuedocode om the
  * document) is a little different; basically, he has us recurring only on
@@ -996,30 +992,17 @@ bool containsProbablyFindableObject(const std::vector<Detection>&allDetections,
  * are no longer "too wide".  Unfortunately, I found that neither my intuition
  * nor Kubica's implementation made clear the definition of "too wide".
  *
- * I *have* noticed that since we usually have a huge number of support nodes,
- * almost all of our splitting occurs on support nodes, and it would be silly to
- * test each non-split support node again for compatibility with the same
- * endpoints.
- *
- * As a result, we are using the aforementioned "simplified" algorithm described
- * above, but we pass around both "verified support nodes" which are known to be
- * compatible with both endpoints and "untested support nodes," which are *not*
- * yet known to be compatible with the endpoints.
- *
- * When we split a support node, the children are "untested" but the rest of the
- * support nodes *remain* verified (neither they nor the endpoints have
- * chagned).  When we split an endpoint node, *all* support nodes are shifted
- * into the "untested" category because none have been verified with the new
- * endpoints.
+ * this implementation is more like the one Kubica did in his code. at every
+ * step, we check all support nodes for compatibility, splitting each one. we
+ * then split one model node and recurse. 
  */
-void doLinkingRecurse(const std::vector<Detection> &allDetections,
-                      const std::vector<Tracklet> &allTracklets,
-                      linkTrackletsConfig searchConfig,
-                      const TreeNodeAndTime &firstEndpoint,
-                      const TreeNodeAndTime &secondEndpoint,
-                      const std::vector<TreeNodeAndTime> &untestedSupportNodes,
-                      const std::vector<TreeNodeAndTime> &verifiedSupportNodes,
-                      std::vector<Track> & results)
+void doLinkingRecurse2(const std::vector<Detection> &allDetections,
+                       const std::vector<Tracklet> &allTracklets,
+                       linkTrackletsConfig searchConfig,
+                       const TreeNodeAndTime &firstEndpoint,
+                       const TreeNodeAndTime &secondEndpoint,
+                       const std::vector<TreeNodeAndTime> &supportNodes,
+                       std::vector<Track> & results)
 {
     if (areCompatible(firstEndpoint, secondEndpoint, searchConfig) == false)
     {
@@ -1030,35 +1013,36 @@ void doLinkingRecurse(const std::vector<Detection> &allDetections,
     {
 
         std::set<double> uniqueSupportMJDs;
-        std::vector<TreeNodeAndTime> compatibleSupportNodes;
+        std::vector<TreeNodeAndTime> newSupportNodes;
         std::vector<TreeNodeAndTime>::const_iterator supportNodeIter;
-
-        /* if we got any 'verified' support nodes, we know that they are compatible. */
-
-        for (supportNodeIter = verifiedSupportNodes.begin(); supportNodeIter != verifiedSupportNodes.end();
-             supportNodeIter++) {
-            compatibleSupportNodes.push_back(*supportNodeIter);
-            uniqueSupportMJDs.insert(supportNodeIter->myTime);
-        }
         
         /* look through untested support nodes, find the ones that are compatible
-         * with the model nodes */
+         * with the model nodes, add their children to newSupportNodes */
 
-
-
-        for (supportNodeIter  = untestedSupportNodes.begin();
-             supportNodeIter != untestedSupportNodes.end();
+        for (supportNodeIter  = supportNodes.begin();
+             supportNodeIter != supportNodes.end();
              supportNodeIter++) {
 
             bool firstEndpointCompatible =  areCompatible(firstEndpoint, *supportNodeIter, searchConfig);
             bool secondEndpointCompatible = areCompatible(secondEndpoint, *supportNodeIter, searchConfig);
             
 
-
             if (firstEndpointCompatible && secondEndpointCompatible)
-            {                
-                compatibleSupportNodes.push_back(*supportNodeIter);
-                uniqueSupportMJDs.insert(supportNodeIter->myTime);
+            {   
+                if (supportNodeIter->myTree->isLeaf()) {
+                    newSupportNodes.push_back(*supportNodeIter);
+                    uniqueSupportMJDs.insert(supportNodeIter->myTime);
+                }
+                else {
+                    if (supportNodeIter->myTree->hasLeftChild()) {
+                        newSupportNodes.push_back(TreeNodeAndTime(supportNodeIter->myTree->getLeftChild(), supportNodeIter->myTime));
+                        uniqueSupportMJDs.insert(supportNodeIter->myTime);
+                    }
+                    if (supportNodeIter->myTree->hasRightChild()) {
+                        newSupportNodes.push_back(TreeNodeAndTime(supportNodeIter->myTree->getRightChild(), supportNodeIter->myTime));
+                        uniqueSupportMJDs.insert(supportNodeIter->myTime);
+                    }
+                }
             }
         }
 
@@ -1075,34 +1059,22 @@ void doLinkingRecurse(const std::vector<Detection> &allDetections,
             // if they are not leaves, split one of them and recurse.
 
             if (firstEndpoint.myTree->isLeaf() && secondEndpoint.myTree->isLeaf() &&
-                areAllLeaves(compatibleSupportNodes)) {
+                areAllLeaves(newSupportNodes)) {
                 
+                // TBD: actually, we need to filter newSupportNodes one more time here, since 
+                // we checked for compatibility, then split off the children. of course, buildTracksAddToResults won't 
+                // be affected with regards to correctness, just performance. So it may not even be wise to add a
+                // mostly-needless check.
                 buildTracksAddToResults(allDetections, allTracklets, searchConfig,
-                                        firstEndpoint, secondEndpoint, compatibleSupportNodes,
+                                        firstEndpoint, secondEndpoint, newSupportNodes,
                                         results);
             }
             else  {
-
                
                 // find the "widest" node, where width is just the product
                 // of RA range, Dec range, RA velocity range, Dec velocity range.
                 // we will split that node and recurse.
                 
-                unsigned int widestSupportNodeIndex = 0;
-                double widestSupportNodeWidth = -1;
-                for (unsigned int supI = 0; supI < compatibleSupportNodes.size(); supI++)
-                {
-                    const KDTree::KDTreeNode<unsigned int> * node = compatibleSupportNodes.at(supI).myTree;
-                    // don't consider leaf nodes, as we can't split those anyway!
-                    if (!node->isLeaf()) {
-
-                        double width = nodeWidth(node);
-                        if (width > widestSupportNodeWidth) {
-                            widestSupportNodeIndex = supI;
-                            widestSupportNodeWidth = width;
-                        }
-                    }
-                }
                 double firstEndpointWidth = nodeWidth(firstEndpoint.myTree);
                 double secondEndpointWidth = nodeWidth(secondEndpoint.myTree);
                 
@@ -1113,58 +1085,20 @@ void doLinkingRecurse(const std::vector<Detection> &allDetections,
                 if (secondEndpoint.myTree->isLeaf()) {
                     secondEndpointWidth = -1;
                 }
-                
-                if ( (KDTree::Common::areEqual(widestSupportNodeWidth, -1)) &&
-                     (KDTree::Common::areEqual(firstEndpointWidth, -1)) &&
+
+                // choose the widest model node, split it and recurse!                                
+                if ( (KDTree::Common::areEqual(firstEndpointWidth, -1)) &&
                      (KDTree::Common::areEqual(secondEndpointWidth, -1)) ) {
-                    throw LSST_EXCEPT(ctExcept::ProgrammerErrorException, 
-                                      "Got all leaves have no width, but they are not leaves. Must be a bug!");
+                    // in this case, our endpoints are leaves, but not all our support nodes are.
+                    // just call this function again until they *are* all leaves.
+                    doLinkingRecurse2(allDetections, allTracklets, searchConfig,
+                                      firstEndpoint, secondEndpoint,
+                                      newSupportNodes, results);
                 }
-
-                // choose the widest of something and recurse!
-                
-                if ((widestSupportNodeWidth >= firstEndpointWidth) && 
-                    (widestSupportNodeWidth >= secondEndpointWidth)) {
-                    
-                    /* split a support node
-                     * 
-                     * its children are untested, but all others are verified.
-                     */
-
-                    std::vector<TreeNodeAndTime> newVerifiedSupport;
-                    std::vector<TreeNodeAndTime> newUntestedSupport;
-                    for (unsigned int i = 0; i < compatibleSupportNodes.size(); i++) {
-                        if (i != widestSupportNodeIndex) {
-                            newVerifiedSupport.push_back(compatibleSupportNodes.at(i));                            
-                        }
-                        else {                   
-                            TreeNodeAndTime ttt = compatibleSupportNodes.at(i);
-                            if (ttt.myTree->hasLeftChild()) {
-                                TreeNodeAndTime newTAT(ttt.myTree->getLeftChild(), ttt.myTime);
-                                newUntestedSupport.push_back(newTAT);
-                            }
-                            if (ttt.myTree->hasRightChild()) {
-                                TreeNodeAndTime newTAT(ttt.myTree->getRightChild(), ttt.myTime);
-                                newUntestedSupport.push_back(newTAT);
-                            }
-                        }                    
-                    }
-                    
-                    doLinkingRecurse(allDetections, allTracklets, searchConfig,
-                                     firstEndpoint,secondEndpoint,
-                                     newUntestedSupport, newVerifiedSupport,
-                                     results);
-                    
-                }
-                else if ((firstEndpointWidth >= widestSupportNodeWidth) && 
-                         (firstEndpointWidth >= secondEndpointWidth)) {
+                else if (firstEndpointWidth >= secondEndpointWidth) {
 
                     //"widest" node is first endpoint, recurse twice using its children
-                    // in its place.  All support nodes are now "untested."
-
-                    std::vector<TreeNodeAndTime> newUntestedSupport = compatibleSupportNodes;
-                    std::vector<TreeNodeAndTime> newVerifiedSupport;
-                    newVerifiedSupport.clear();
+                    // in its place.  
                     
                     if ((! firstEndpoint.myTree->hasLeftChild()) && (!firstEndpoint.myTree->hasRightChild())) {
                         throw LSST_EXCEPT(ctExcept::ProgrammerErrorException, "Recursing in a leaf node (first endpoint), must be a bug!");
@@ -1173,18 +1107,18 @@ void doLinkingRecurse(const std::vector<Detection> &allDetections,
                     if (firstEndpoint.myTree->hasLeftChild())
                     {
                         TreeNodeAndTime newTAT(firstEndpoint.myTree->getLeftChild(), firstEndpoint.myTime);
-                        doLinkingRecurse(allDetections, allTracklets, searchConfig,
+                        doLinkingRecurse2(allDetections, allTracklets, searchConfig,
                                          newTAT,secondEndpoint,
-                                         newUntestedSupport,newVerifiedSupport,
+                                         newSupportNodes,
                                          results);                    
                     }
                     
                     if (firstEndpoint.myTree->hasRightChild())
                     {
                         TreeNodeAndTime newTAT(firstEndpoint.myTree->getRightChild(), firstEndpoint.myTime);
-                        doLinkingRecurse(allDetections, allTracklets, searchConfig,
+                        doLinkingRecurse2(allDetections, allTracklets, searchConfig,
                                          newTAT,secondEndpoint,
-                                         newUntestedSupport,newVerifiedSupport,
+                                         newSupportNodes,
                                          results);                    
                     }
                 }
@@ -1192,11 +1126,6 @@ void doLinkingRecurse(const std::vector<Detection> &allDetections,
                     //"widest" node is second endpoint, recurse twice using its children
                     // in its place
                     
-                    // all support nodes are now untested.
-                    std::vector<TreeNodeAndTime> newUntestedSupport = compatibleSupportNodes;
-                    std::vector<TreeNodeAndTime> newVerifiedSupport;
-                    newVerifiedSupport.clear();
-
                     if ((!secondEndpoint.myTree->hasLeftChild()) && (!secondEndpoint.myTree->hasRightChild())) {
                         throw LSST_EXCEPT(ctExcept::ProgrammerErrorException, "Recursing in a leaf node (second endpoint), must be a bug!");
                     }
@@ -1204,29 +1133,42 @@ void doLinkingRecurse(const std::vector<Detection> &allDetections,
                     if (secondEndpoint.myTree->hasLeftChild())
                     {
                         TreeNodeAndTime newTAT(secondEndpoint.myTree->getLeftChild(), secondEndpoint.myTime);
-                        doLinkingRecurse(allDetections, allTracklets, searchConfig,
+                        doLinkingRecurse2(allDetections, allTracklets, searchConfig,
                                          firstEndpoint,newTAT,
-                                         newUntestedSupport, newVerifiedSupport,
+                                         newSupportNodes,
                                          results);                    
                     }
                     
                     if (secondEndpoint.myTree->hasRightChild())
                     {
                         TreeNodeAndTime newTAT(secondEndpoint.myTree->getRightChild(), secondEndpoint.myTime);
-                        doLinkingRecurse(allDetections, allTracklets, searchConfig,
+                        doLinkingRecurse2(allDetections, allTracklets, searchConfig,
                                          firstEndpoint,newTAT,
-                                         newUntestedSupport,newVerifiedSupport,
+                                         newSupportNodes,
                                          results);
                         
-                    }       
+                    }
                 }
-            }
+            }                        
         }
     }
 }
 
 
 
+
+
+
+
+
+// TBD: REMOVE
+// THESE ARE FOR DEBUGGING ONLY
+#include <ctime>
+double getTimeElapsed(clock_t priorEvent)
+{
+     return ( std::clock() - priorEvent ) / (double)CLOCKS_PER_SEC;
+}
+// DONE
 
 
 
@@ -1251,11 +1193,11 @@ void doLinking(const std::vector<Detection> &allDetections,
      * doLinking, we start the searching with the head (i.e. root) node of each
      * tree.
      */
-    bool DEBUG = true;
+    bool DEBUG = false;
 
-    bool limitedRun = false;
-    double limitedRunFirstEndpoint = 53738.266849;
-    double limitedRunSecondEndpoint = 53747.241076 ;
+    bool limitedRun = true;
+    double limitedRunFirstEndpoint = 53738.217607 ;
+    double limitedRunSecondEndpoint = 53747.208854 ;
 
 
     
@@ -1364,27 +1306,22 @@ void doLinking(const std::vector<Detection> &allDetections,
                             oldResultsSize = results.size();
                         }
                 
-                        // start with the set of no verified support nodes - see comments on doLinkingRecurse.
-                        std::vector<TreeNodeAndTime> verifiedSupportNodes;
-                        doLinkingRecurse(allDetections, allTracklets, searchConfig,
-                                         firstEndpoint, secondEndpoint,
-                                         supportPoints, verifiedSupportNodes, 
-                                         results);
-                        if (CHEAT_AND_DO_TOP_LEVEL_CHECK) {
-                            if ((containsAMatch)  && (oldResultsSize == results.size())) {
-                                std::cerr << "With endpoints at " << firstEndpoint.myTime << " and " 
-                                          << secondEndpoint.myTime << " we expected to get a track for (at least)" 
-                                          << objName << ", but we didn't get any tracks at all! " << std::endl;
-
-                                std::vector<Track> dummyResults;
-
-                                //do a redundant call to doLinkingRecurse so we can debug
-                                doLinkingRecurse(allDetections, allTracklets, searchConfig,
-                                                 firstEndpoint, secondEndpoint,
-                                                 supportPoints, verifiedSupportNodes,
-                                                 dummyResults);
-                            } 
+                        double last;
+                        if (limitedRun) {
+                            last = std::clock();
                         }
+                        doLinkingRecurse2(allDetections, allTracklets, searchConfig,
+                                         firstEndpoint, secondEndpoint,
+                                         supportPoints,  
+                                         results);
+
+                        if (limitedRun)
+                        {
+                            double dif = getTimeElapsed(last);
+                            std::cout << "doLinkingRecurse2 took " << std::fixed << std::setprecision(10)
+                                      << dif << " seconds." << std::endl;
+                        }
+                    
                     }
                 }
             }

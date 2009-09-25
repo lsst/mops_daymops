@@ -6963,6 +6963,58 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_Detection_setFileIndex(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  Detection *arg1 = (Detection *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:Detection_setFileIndex",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_Detection, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Detection_setFileIndex" "', argument " "1"" of type '" "Detection *""'"); 
+  }
+  arg1 = reinterpret_cast< Detection * >(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "Detection_setFileIndex" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = static_cast< int >(val2);
+  (arg1)->setFileIndex(arg2);
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_Detection_getFileIndex(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  Detection *arg1 = (Detection *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  int result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:Detection_getFileIndex",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_Detection, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Detection_getFileIndex" "', argument " "1"" of type '" "Detection const *""'"); 
+  }
+  arg1 = reinterpret_cast< Detection * >(argp1);
+  result = (int)((Detection const *)arg1)->getFileIndex();
+  resultobj = SWIG_From_int(static_cast< int >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_delete_Detection(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   Detection *arg1 = (Detection *) 0 ;
@@ -12831,6 +12883,8 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"Detection_getAngle", _wrap_Detection_getAngle, METH_VARARGS, NULL},
 	 { (char *)"Detection_hasExposureTime", _wrap_Detection_hasExposureTime, METH_VARARGS, NULL},
 	 { (char *)"Detection_getExposureTime", _wrap_Detection_getExposureTime, METH_VARARGS, NULL},
+	 { (char *)"Detection_setFileIndex", _wrap_Detection_setFileIndex, METH_VARARGS, NULL},
+	 { (char *)"Detection_getFileIndex", _wrap_Detection_getFileIndex, METH_VARARGS, NULL},
 	 { (char *)"delete_Detection", _wrap_delete_Detection, METH_VARARGS, NULL},
 	 { (char *)"Detection_swigregister", Detection_swigregister, METH_VARARGS, NULL},
 	 { (char *)"TrackletVector_iterator", _wrap_TrackletVector_iterator, METH_VARARGS, NULL},

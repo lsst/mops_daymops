@@ -174,19 +174,19 @@ def _fetchDeepTracks(dbLocStr, where, extraTables=[], sliceId=None,
     db.outColumn('mops_Tracklet.velDecl')                               # 3
     db.outColumn('mops_Tracklet.velTot')                                # 4
     db.outColumn('mops_Tracklet.status')                                # 5
-    db.outColumn('DiaSource.diaSourceId')                               # 6
-    db.outColumn('DiaSource.ra')                                        # 7
-    db.outColumn('DiaSource.decl')                                      # 8
-    db.outColumn('DiaSource.filterId')                                  # 9
-    db.outColumn('DiaSource.taiMidPoint')                               # 10
-    db.outColumn('DiaSource.obsCode')                                   # 11
-    db.outColumn('DiaSource.apFlux')                                    # 12
-    db.outColumn('DiaSource.apFluxErr')                                 # 13
-    db.outColumn('DiaSource.refMag')                                    # 14
+    db.outColumn('DIASource.diaSourceId')                               # 6
+    db.outColumn('DIASource.ra')                                        # 7
+    db.outColumn('DIASource.decl')                                      # 8
+    db.outColumn('DIASource.filterId')                                  # 9
+    db.outColumn('DIASource.taiMidPoint')                               # 10
+    db.outColumn('DIASource.obsCode')                                   # 11
+    db.outColumn('DIASource.apFlux')                                    # 12
+    db.outColumn('DIASource.apFluxErr')                                 # 13
+    db.outColumn('DIASource.refMag')                                    # 14
     
     w2 = 'mops_TracksToTracklet.trackletId=mops_Tracklet.trackletId'
     w2 += ' and mops_Tracklet.trackletId=mops_TrackletsToDIASource.trackletId'
-    w2 += ' and mops_TrackletsToDIASource.diaSourceId=DiaSource.diaSourceId'
+    w2 += ' and mops_TrackletsToDIASource.diaSourceId=DIASource.diaSourceId'
     
     w = ''
     if(where):
@@ -196,7 +196,7 @@ def _fetchDeepTracks(dbLocStr, where, extraTables=[], sliceId=None,
     if(sliceId != None and numSlices > 1):
         w += ' and mops_TracksToTracklet.trackId %% %d = %d' %(numSlices, sliceId)
     db.setQueryWhere(w)
-    db.orderBy('mops_TracksToTracklet.trackId,mops_TracksToTracklet.trackletId,DiaSource.diaSourceId')
+    db.orderBy('mops_TracksToTracklet.trackId,mops_TracksToTracklet.trackletId,DIASource.diaSourceId')
     db.query()
     
     # Fetch the results.

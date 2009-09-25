@@ -91,12 +91,14 @@ class OrbitDeterminationStage(DayMOPSStage):
         # Pass the Tracks to the OrbitDetermination code.
         movingObjects = []
         for track in tracks:
+            self.logIt('INFO', 'Slice ID: %d/%d starting orbit determination'%(i,n))
             o = linking.orbitDetermination(track, 
                                            self.elementType,
                                            self.numRangingOrbits,
                                            self.stdDev,
                                            self.obsCode)
             
+            self.logIt('INFO', 'Slice ID: %d/%d finished orbit determination'%(i,n))
             # Count the number of not null orbits.
             if(o != None):
                 # Create temporary MovingObject instances ad write them to the 

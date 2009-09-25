@@ -1,3 +1,7 @@
+# -*- python -*-
+# jmyers, 9/11/09 
+
+
 import lsst.SConsUtils as scons
 
 Import("env")
@@ -18,3 +22,10 @@ env.Program('collapseTracklets-unittests', ['unitTests.cc'] + common_libs, LIBS=
 env.Program('collapseTracklets', ['collapseTrackletsMain.cc'] + common_libs, LIBS=ext_libs)
 env.Program('removeSubsets', ['removeSubsetsMain.cc'] + common_libs, LIBS=ext_libs)
 env.Program('purifyTracklets', ['purifyTracklets.cc'] + common_libs, LIBS=ext_libs)
+
+
+
+#env.CheckSwig("python", ilang="c++")
+
+#env.LoadableModuleIncomplete("_TrackletCollapser", Split("TrackletCollapser.i"), 
+#                             LIBS=env.getlibs(["pex_exceptions"]))

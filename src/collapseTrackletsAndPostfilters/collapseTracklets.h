@@ -24,7 +24,6 @@
 #include "../Detection.h" 
 #include "../Exceptions.h"
 #include "../Tracklet.h"
-#include "lsst/pex/exceptions.h"
 
 
 namespace collapseTracklets {
@@ -38,22 +37,6 @@ namespace collapseTracklets {
          */
         void collapse(Tracklet &t1, Tracklet &t2);
         
-        /*
-          given an array of detections, solve for RA and Dec in terms of MJD on the
-          assumption that both are linear.  Output vectors will look like this when done:
-          
-          if RA = MJD * m + b
-          RASlopeAndOffsetOut = [m, b] 
-          
-          (and similarly for Dec.)
-          
-          if timeOffset is specified as non-zero, this value will be substracted from the 
-          MJDs of each detection.
-        */
-        void leastSquaresSolveForRADecLinear(const std::vector <Detection> *trackletDets,
-                                             std::vector<double> &RASlopeAndOffsetOut,
-                                             std::vector<double> &DecSlopeAndOffsetOut, 
-                                             double timeOffset=0.0);
         
         /* *pairs is modified - the Tracklets will have isCollapsed set. collapsedPairs will
          * actual output data.  I.e. if pairs contains similar tracklets [1,2]  and [2,3]  they will be

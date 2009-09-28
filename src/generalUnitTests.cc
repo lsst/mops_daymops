@@ -15,8 +15,8 @@
 #include "PointAndValue.h"
 #include "common.h"
 #include "KDTree.h"
-#include "collapseTrackletsAndPostfilters/rmsLineFit.h"
-#include "collapseTrackletsAndPostfilters/removeSubsets.h"
+#include "rmsLineFit.h"
+#include "removeSubsets.h"
 
 
 bool Eq(double a, double b) 
@@ -1979,9 +1979,9 @@ BOOST_AUTO_TEST_CASE( removeSubsetsPopulateOutputVector_blackbox_2 )
     removeSubsets::SubsetRemover mySR;
     mySR.removeSubsetsPopulateOutputVector(&pairsVec, results);
     BOOST_REQUIRE(results.size() == 2);
-    BOOST_CHECK(((results[0].indices == lastOne.indices) && (results[1].indices == t2.indices))
+    BOOST_CHECK((((results[0].indices == lastOne.indices) && (results[1].indices == t2.indices)))
                 ||
-                (results[1].indices == lastOne.indices) && (results[0].indices == t2.indices));
+                ((results[1].indices == lastOne.indices) && (results[0].indices == t2.indices)));
 
 }
 

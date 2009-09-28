@@ -10,38 +10,44 @@ Import("env")
 
 ext_libs = ["gsl", "gslcblas", "pex_exceptions"]
 		      
-commonStuff = ['common', 'collapseTrackletsAndPostfilters/SubsetRemover', 'Detection', 'fileUtils',
-	      'collapseTrackletsAndPostfilters/TrackletCollapser', 'collapseTrackletsAndPostfilters/rmsLineFit',
+commonStuff = ['common', 'Detection',
                'Orbit']
-common_libs = []
 
-
-
-for lib in commonStuff:
-    env.StaticLibrary(lib, lib+'.cc')
-    env.Library(lib, lib+'.cc')
-    common_libs.append(lib+'.o')
-
-commonStuff = ['common', 'collapseTrackletsAndPostfilters/SubsetRemover', 'Detection', 
-	      'collapseTrackletsAndPostfilters/TrackletCollapser', 'collapseTrackletsAndPostfilters/rmsLineFit']
 common_libs = []
 
 for lib in commonStuff:
-    env.StaticLibrary(lib, lib+'.cc')
-    env.Library(lib, lib+'.cc')
-    common_libs.append(lib+'.o')
-
-env.Program('utilities-unittests', ['generalUnitTests.cc'] + common_libs, LIBS=ext_libs)
+    common_libs.append(env.Library(lib, lib+'.cc'))
 
 
+common_libs.append(env.StaticLibrary('rmsLineFit', 
+                                     ['rmsLineFit.cc', 'common', 'Detection'], 
+                                     LIBS=ext_libs))
 
-SConscript('findTracklets/SConscript')
-SConscript('collapseTrackletsAndPostfilters/SConscript')
-SConscript('linkTracklets/SConscript')
+common_libs.append(env.StaticLibrary('fileUtils', ['fileUtils.cc', 'Detection'], LIBS=ext_libs))
 
-SConscript('detectionProximity/SConscript')
-SConscript('fieldProximity/SConscript')
-SConscript('orbitProximity/SConscript')
+
+common_libs.append(env.StaticLibrary('removeSubsets',  ['removeSubsets.cc'] + common_libs, LIBS=ext_libs))
+
+
+env.Program('removeSubsets',  ['removeSubsetsMain.cc'] + common_libs, LIBS=ext_libs)
+
+
+
+Export("common_libs")
+Export("ext_libs")
+
+env.Program('utilities-unittests', ['generalUnitTests.cc'] + common_libs, 
+            LIBS=ext_libs)
+
+
+
+SConscript(os.path.join('findTracklets','SConscript'))
+SConscript(os.path.join('collapseTrackletsAndPostfilters','SConscript'))
+SConscript(os.path.join('linkTracklets','SConscript'))
+
+SConscript(os.path.join('detectionProximity','SConscript'))
+SConscript(os.path.join('fieldProximity','SConscript'))
+SConscript(os.path.join('orbitProximity','SConscript'))
 
 
 # swig wrappers

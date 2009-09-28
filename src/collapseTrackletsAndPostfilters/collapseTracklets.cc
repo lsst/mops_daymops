@@ -6,11 +6,8 @@
 #include <istream>
 #include <sstream>
 
-#include <gsl/gsl_fit.h>
-
-#include "TrackletCollapser.h"
-#include "removeSubsets.h"
-#include "rmsLineFit.h"
+#include "collapseTracklets.h"
+#include "../rmsLineFit.h"
 
 // these just need to be greater or less than any date we'll ever see...
 #define IMPOSSIBLY_EARLY_MJD -1.0E16
@@ -332,7 +329,8 @@ namespace collapseTracklets {
                             trackletDets.push_back((*detections)[*detIter]);
                         }
                         double t0 = (*detections)[*newTracklet.indices.begin()].getEpochMJD();
-                        leastSquaresSolveForRADecLinear(&trackletDets, currentRAFunc, currentDecFunc, t0);
+                        rmsLineFit::leastSquaresSolveForRADecLinear(&trackletDets, currentRAFunc, 
+                                                                    currentDecFunc, t0);
 
                         for (similarTrackletIter = queryResults.begin();
                              similarTrackletIter != queryResults.end();
@@ -450,97 +448,9 @@ namespace collapseTracklets {
 
 
 
-    void make180To360Negative(std::vector<double> &v) {
-        std::vector<double>::iterator iter;
-        for (iter = v.begin(); iter != v.end(); iter++){
-            if (*iter > 180) {
-                *iter = *iter - 360;
-            }
-        }
-    }
 
 
 
-    void TrackletCollapser::leastSquaresSolveForRADecLinear(const std::vector <Detection> *trackletDets,
-                                                            std::vector<double> &RASlopeAndOffsetOut,
-                                                            std::vector<double> &DecSlopeAndOffsetOut,
-                                                            double timeOffset) {
-        unsigned int numDets = (*trackletDets).size();
-        
-        std::vector<double> MJDs(numDets);
-        std::vector<double> RAs(numDets);
-        std::vector<double> Decs(numDets);
-
-        if ((RASlopeAndOffsetOut.size() != 0) || (DecSlopeAndOffsetOut.size() != 0)) {
-            throw LSST_EXCEPT(ctExcept::BadParameterException, 
-                              "EE:  leastSquaresSolveForRADecLinear: output vectors were not empty.\n");
-        }
-
-        for (unsigned int i = 0; i < numDets; i++) {
-            RAs[i] = (*trackletDets)[i].getRA();
-            Decs[i] = (*trackletDets)[i].getDec();
-            MJDs[i] = (*trackletDets)[i].getEpochMJD() - timeOffset;
-        }
-
-        /* here we make the assumption that the data is not very far apart in RA
-        * or Dec degrees.  Since we are currently only concerned with a single
-        * night of observation, this should be very safe.  Note that under this
-        * assumption, our data could only span > 180 deg if the object crosses
-        * the 0/360 line.*/
-
-        if (*std::max_element(RAs.begin(), RAs.end()) - *std::min_element(RAs.begin(), RAs.end()) > 180.) {
-            make180To360Negative(RAs);
-        }
-        if (*std::max_element(Decs.begin(), Decs.end()) - *std::min_element(Decs.begin(), Decs.end()) > 180.) {
-            make180To360Negative(Decs);            
-        }
-        if ((*std::max_element(RAs.begin(), RAs.end()) - *std::min_element(RAs.begin(), RAs.end()) > 180.) ||
-            (*std::max_element(Decs.begin(), Decs.end()) - *std::min_element(Decs.begin(), Decs.end()) > 180.)) {
-            throw LSST_EXCEPT(ctExcept::ProgrammerErrorException, 
-                              "EE: Unexpected coding error: could not move data into a contiguous < 180 degree range.\n");
-        }
-
-        /* use linear least squares to get MJD->RA, MJD->Dec funs */
-        /* need to get C-style arrays for gsl. Do this The Right Way, rather
-         * than with the famous hack: &(RA[0]) */
-        double *arrayRAs = (double*)malloc(sizeof(double) * numDets);
-        double *arrayDecs = (double*)malloc(sizeof(double) * numDets);
-        double *arrayMJDs = (double*)malloc(sizeof(double) * numDets);
-
-        if ((arrayRAs == NULL) || (arrayDecs == NULL) || (arrayMJDs == NULL)) {
-            throw LSST_EXCEPT(pexExcept::MemoryException, "Malloc returned NULL on a very small malloc. System out of memory or something very odd.\n");
-        }
-        
-        for (unsigned int i = 0; i < numDets; i++) {
-            arrayRAs[i] = RAs[i];
-            arrayDecs[i] = Decs[i];
-            arrayMJDs[i] = MJDs[i];
-        }
-        
-        int gslRV = 0;
-        double offset, slope;
-        double cov00, cov01, cov11, sumsq;
-
-        // arrayMJDs is independent, arrayRAs is dependent.
-        gslRV += gsl_fit_linear(arrayMJDs, 1, arrayRAs, 1, numDets, &offset, &slope, 
-                                &cov00,&cov01,&cov11,&sumsq);
-        RASlopeAndOffsetOut.push_back(slope);
-        RASlopeAndOffsetOut.push_back(offset);
-        
-        gslRV += gsl_fit_linear(arrayMJDs, 1, arrayDecs, 1, numDets, &offset, &slope, 
-                                &cov00,&cov01,&cov11,&sumsq);
-        DecSlopeAndOffsetOut.push_back(slope);
-        DecSlopeAndOffsetOut.push_back(offset);
-
-        if (gslRV != 0) {
-            throw LSST_EXCEPT(ctExcept::GSLException, "EE: gsl_fit_linear unexpectedly returned error.\n");
-        }
-
-        free(arrayRAs);
-        free(arrayDecs);
-        free(arrayMJDs);
-
-    }
 
 
 
@@ -561,8 +471,8 @@ namespace collapseTracklets {
         
 
         // physical params 0, 1 are initial RA, initial Dec at normalTime.
-        leastSquaresSolveForRADecLinear(trackletDets, RASlopeAndOffset, DecSlopeAndOffset,
-                                        normalTime);
+        rmsLineFit::leastSquaresSolveForRADecLinear(trackletDets, RASlopeAndOffset, DecSlopeAndOffset,
+                                                    normalTime);
         physicalParams[0] = KDTree::Common::convertToStandardDegrees(RASlopeAndOffset[1]);
         physicalParams[1] = KDTree::Common::convertToStandardDegrees(DecSlopeAndOffset[1]);
         double RAv = RASlopeAndOffset[0];

@@ -1,34 +1,21 @@
-import os, os.path
-import lsst.SConsUtils as scons
-import distutils.sysconfig
+# -*- python -*-
+# jmyers, 9/11/09 
 
 
 Import("env")
+Import("common_libs")
+Import("ext_libs")
 
 
-
-ext_libs = ["gsl", "gslcblas", "pex_exceptions"]
-		      
-commonStuff = ['../common', '../collapseTrackletsAndPostfilters/SubsetRemover', '../Detection', 
-	      '../collapseTrackletsAndPostfilters/TrackletCollapser', '../fileUtils',
-	      '../collapseTrackletsAndPostfilters/rmsLineFit']
-common_libs = []
-
-
-
-for lib in commonStuff:
-    common_libs.append(lib+'.o')
 
 env.Library('findTracklets', ['findTracklets.cc'] + common_libs)
 
-common_libs.append('findTracklets.o')
-
 env.Program('findTracklets-unitTests', 
-            ['findTracklets-unittests.cc'] +  common_libs, 
+            ['findTracklets-unittests.cc', 'findTracklets'] +  common_libs, 
             LIBS=ext_libs)
 
 env.Program('findTracklets', 
-            ['findTrackletsMain.cc'] + common_libs,
+            ['findTrackletsMain.cc', 'findTracklets'] + common_libs,
             LIBS=ext_libs)
 
 

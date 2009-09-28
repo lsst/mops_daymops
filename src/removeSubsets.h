@@ -9,8 +9,7 @@
 
 #include <vector>
 
-#include "TrackletCollapser.h"
-#include "../Tracklet.h"
+#include "Tracklet.h"
 
 namespace removeSubsets {
 
@@ -20,13 +19,12 @@ namespace removeSubsets {
         void removeSubsetsPopulateOutputVector(
             const std::vector<Tracklet> *pairsVector, 
             std::vector<Tracklet> &outVector);
+        
     };
 
     void putLongestPerDetInOutputVector(const std::vector<Tracklet> *pairsVector, 
                                         std::vector<Tracklet> &outputVector);
 
-    int removeSubsetsMain(int argc, char** argv);
-    bool guessBoolFromStringOrGiveErr(std::string guessStr, std::string errStr);
 }
 
 

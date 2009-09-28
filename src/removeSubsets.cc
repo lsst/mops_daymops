@@ -14,8 +14,8 @@
 #include <map>
 #include <set>
 
-#include "SubsetRemover.h"
-#include "../Exceptions.h"
+#include "removeSubsets.h"
+#include "Exceptions.h"
 
 
 namespace ctExcept = collapseTracklets::exceptions;

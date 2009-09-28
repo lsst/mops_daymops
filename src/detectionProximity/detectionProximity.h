@@ -17,7 +17,6 @@
 
 #include "../KDTree.h"
 #include "../Detection.h"
-#include "../collapseTrackletsAndPostfilters/TrackletCollapser.h"
 
 
 /*

@@ -17,10 +17,9 @@
 #include <vector>
 #include <map>
 
-#include "../Tracklet.h"
-#include "../Detection.h"
-#include "../Exceptions.h"
-#include "TrackletCollapser.h"
+#include "Tracklet.h"
+#include "Detection.h"
+#include "Exceptions.h"
 
 
 namespace rmsLineFit {
@@ -38,6 +37,25 @@ namespace rmsLineFit {
                           std::vector<double>*perDetSqDist=NULL);
     
     double getAverageMagnitude(const Tracklet t, const::std::vector<Detection>* detections);
+
+
+    
+    /*
+      given an array of detections, solve for RA and Dec in terms of MJD on the
+      assumption that both are linear.  Output vectors will look like this when done:
+      
+      if RA = MJD * m + b
+      RASlopeAndOffsetOut = [m, b] 
+      
+      (and similarly for Dec.)
+      
+      if timeOffset is specified as non-zero, this value will be substracted from the 
+      MJDs of each detection.
+    */
+    void leastSquaresSolveForRADecLinear(const std::vector <Detection> *trackletDets,
+                                         std::vector<double> &RASlopeAndOffsetOut,
+                                         std::vector<double> &DecSlopeAndOffsetOut, 
+                                         double timeOffset=0.0);
     
 /*
  * given a vector of Tracklets and the corresponding vector of Detections,

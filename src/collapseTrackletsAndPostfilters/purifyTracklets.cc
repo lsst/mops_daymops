@@ -10,7 +10,7 @@
 #include <getopt.h>
 
 #include "../fileUtils.h"
-#include "rmsLineFit.h"
+#include "../rmsLineFit.h"
 
 namespace ctExcept = collapseTracklets::exceptions;
 
@@ -118,7 +118,6 @@ namespace rmsLineFit {
                   << maxRMSm << " * av. magnitude of tracklet + " << maxRMSb << std::endl;
 
         std::cout << "Reading detections file...." << std::endl;
-        collapseTracklets::TrackletCollapser myTC;
         populateDetVectorFromFile(detsFile, detsVector);
         std::cout << "Reading tracklets (pairs) file...." << std::endl;
         populatePairsVectorFromFile(pairsFile, trackletsVector);
@@ -258,7 +257,6 @@ namespace rmsLineFit {
                   << maxRMSm << " * av. magnitude of tracklet + " << maxRMSb << std::endl;
 
         std::cout << "Reading detections file...." << std::endl;
-        collapseTracklets::TrackletCollapser myTC;
         populateDetVectorFromFile(detsFile, detsVector);
         std::cout << "Reading tracklets (pairs) file...." << std::endl;
         populatePairsVectorFromFile(pairsFile, trackletsVector);

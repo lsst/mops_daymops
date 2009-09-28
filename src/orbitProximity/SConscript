@@ -1,20 +1,15 @@
-import os, os.path
-import lsst.SConsUtils as scons
-import distutils.sysconfig
+# -*- python -*-
+# jmyers, 9/11/09 
 
 
 Import("env")
-
-
-ext_libs = ["gsl", "gslcblas", "pex_exceptions"]
-
-common_libs = ['../Detection.o', '../common.o', '../collapseTrackletsAndPostfilters/TrackletCollapser.o',
-               '../collapseTrackletsAndPostfilters/rmsLineFit.o', '../Orbit.o']
+Import("common_libs")
+Import("ext_libs")
 
 env.Library('orbitProximity', common_libs + ['orbitProximity.cc'])
 
 env.Program('orbitProximity', ['orbitProximityMain.cc', 
-				 'orbitProximity.o'] + common_libs, 
+                               'orbitProximity.o'] + common_libs, 
             LIBS=ext_libs)
 
 env.Program('orbitProximity-unitTests', ['orbitProximityUnitTests.cc', 

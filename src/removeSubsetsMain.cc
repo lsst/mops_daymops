@@ -4,8 +4,8 @@
 #include <unistd.h>
 #include <getopt.h>
 
-#include "../fileUtils.h"
-#include "SubsetRemover.h"
+#include "fileUtils.h"
+#include "removeSubsets.h"
 
 
 namespace ctExcept = collapseTracklets::exceptions;

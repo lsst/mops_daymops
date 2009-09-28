@@ -1,20 +1,20 @@
-import os, os.path
-import lsst.SConsUtils as scons
-import distutils.sysconfig
+# -*- python -*-
+# jmyers, 9/11/09 
+
+
+Import("env")
+Import("common_libs")
+Import("ext_libs")
 
 doExtras = True
 
 
 Import("env")
+Import("common_libs")
+Import("ext_libs")
 
 
 
-
-common_libs = ['../common.o', '../collapseTrackletsAndPostfilters/SubsetRemover.o', '../Detection.o', 
-	      '../collapseTrackletsAndPostfilters/TrackletCollapser.o', '../fileUtils.o',
-               '../collapseTrackletsAndPostfilters/rmsLineFit.o']
-
-ext_libs = ["gsl", "gslcblas", "pex_exceptions"]
 		      
 
 env.Library('linkTracklets', ['linkTracklets.cc'] + common_libs)

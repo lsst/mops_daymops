@@ -7,14 +7,11 @@
 #include <time.h>
 
 #include "linkTracklets.h"
+#include "../rmsLineFit.h"
 #include "../Exceptions.h"
 #include "../KDTree.h"
-// TBD: remove leastSquaresSolveForRADecLinear from trackletCollapser and put it somewhere else.
-#include "../collapseTrackletsAndPostfilters/TrackletCollapser.h"
 
 
-//#define LEAF_SIZE 1
-//#define LEAF_SIZE 2 //useful for teasing out bugs...
 //#define LEAF_SIZE 1024
 //#define LEAF_SIZE 256
 #define LEAF_SIZE 2
@@ -374,13 +371,13 @@ bool areCompatible(const TreeNodeAndTime  &nodeA,
   for the tracklet.  (we can implicitly calculate the min and max if we assume
   2-point tracklets; but with many-point tracklets some additional possible
   error creeps in).
+
+  TBD: be a tad more careful. for 2-point tracklets this is easy, for longer
+  tracklets it may be trickier.
  */
 void setTrackletVelocities(const std::vector<Detection> &allDetections,
                            std::vector<Tracklet> &queryTracklets)
 {
-    // for leastSquaresSolveForRADecLinear
-    collapseTracklets::TrackletCollapser myTC;
-
     for (unsigned int i = 0; i < queryTracklets.size(); i++) {
         Tracklet *curTracklet = &queryTracklets.at(i);
         std::vector <Detection> trackletDets;
@@ -388,9 +385,9 @@ void setTrackletVelocities(const std::vector<Detection> &allDetections,
 
         std::vector<double> RASlopeAndOffset;
         std::vector<double> DecSlopeAndOffset;
-        myTC.leastSquaresSolveForRADecLinear(&trackletDets,
-                                             RASlopeAndOffset,
-                                             DecSlopeAndOffset);
+        rmsLineFit::leastSquaresSolveForRADecLinear(&trackletDets,
+                                                    RASlopeAndOffset,
+                                                    DecSlopeAndOffset);
         
         curTracklet->velocityRA = RASlopeAndOffset.at(0);
         curTracklet->velocityDec = DecSlopeAndOffset.at(0);

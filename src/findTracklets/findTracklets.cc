@@ -13,7 +13,6 @@
 #include <math.h>
 
 #include "../KDTree.h"
-#include "../collapseTrackletsAndPostfilters/TrackletCollapser.h"
 #include "../Detection.h"
 #include "findTracklets.h"
 

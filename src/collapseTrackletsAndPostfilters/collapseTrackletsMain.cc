@@ -7,7 +7,7 @@
 #include <getopt.h>
 
 #include "../common.h"
-#include "TrackletCollapser.h"
+#include "collapseTracklets.h"
 #include "../fileUtils.h"
 
 namespace ctExcept = collapseTracklets::exceptions;

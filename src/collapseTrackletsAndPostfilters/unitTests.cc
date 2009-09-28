@@ -15,9 +15,9 @@
 #include "../common.h"
 #include "../KDTree.h"
 #include "../fileUtils.h"
-#include "rmsLineFit.h"
-#include "removeSubsets.h"
-#include "TrackletCollapser.h"
+#include "../rmsLineFit.h"
+#include "../removeSubsets.h"
+#include "collapseTracklets.h"
 
 
 bool Eq(double a, double b) 
@@ -175,9 +175,8 @@ BOOST_AUTO_TEST_CASE( leastSquaresSolveForRADecLinear_blackbox_1)
     dets.push_back(tmpDet);
 
     std::vector<double> RASlopeAndOffset, DecSlopeAndOffset;
-    collapseTracklets::TrackletCollapser myTC;
-    myTC.leastSquaresSolveForRADecLinear(&dets, RASlopeAndOffset, DecSlopeAndOffset,
-                                                       5330.0);
+    rmsLineFit::leastSquaresSolveForRADecLinear(&dets, RASlopeAndOffset, DecSlopeAndOffset,
+						5330.0);
     BOOST_REQUIRE(RASlopeAndOffset.size() == 2);
     BOOST_REQUIRE(DecSlopeAndOffset.size() == 2);
 

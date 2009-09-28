@@ -11,7 +11,6 @@
 #include <sstream>
 #include <math.h>
 
-#include "../collapseTrackletsAndPostfilters/TrackletCollapser.h"
 #include "../Detection.h"
 #include "../fileUtils.h"
 #include "findTracklets.h"

@@ -10,7 +10,6 @@
 
 #include "linkTracklets.h"
 #include "../fileUtils.h"
-#include "../collapseTrackletsAndPostfilters/TrackletCollapser.h"
 
 
 

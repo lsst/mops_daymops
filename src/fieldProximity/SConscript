@@ -1,23 +1,16 @@
-import os, os.path
-import lsst.SConsUtils as scons
-import distutils.sysconfig
+# -*- python -*-
+# jmyers, 9/11/09 
 
 
 Import("env")
-
-
-ext_libs = ["gsl", "gslcblas", "pex_exceptions"]
-
-common_libs = ['../Detection.o', '../common.o', '../collapseTrackletsAndPostfilters/TrackletCollapser.o',
-               '../fileUtils.o', '../collapseTrackletsAndPostfilters/rmsLineFit.o']
+Import("common_libs")
+Import("ext_libs")
 
 env.Library('Field', 'Field.cc')
-common_libs.append('Field.o')
-env.Library('fieldProximity', common_libs + ['fieldProximity.cc'])
 
-env.Program('fieldProximity-unitTests', ['fieldProximityUnitTests.cc', 'fieldProximity.o'] + common_libs, 
+env.Library('fieldProximity', common_libs + ['fieldProximity.cc', 'Field'])
+
+env.Program('fieldProximity-unitTests', ['fieldProximityUnitTests.cc', 'fieldProximity.o', 'Field'] + common_libs, 
             LIBS=ext_libs)
-
-
 
 

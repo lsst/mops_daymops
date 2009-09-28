@@ -16,7 +16,6 @@
 
 
 #include "../KDTree.h"
-#include "../collapseTrackletsAndPostfilters/TrackletCollapser.h"
 #include "Field.h"
 #include "TrackForFieldProximity.h"
 

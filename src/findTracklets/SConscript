@@ -1,0 +1,21 @@
+# -*- python -*-
+# jmyers, 9/11/09 
+
+
+Import("env")
+Import("common_libs")
+Import("ext_libs")
+
+
+
+env.Library('findTracklets', ['findTracklets.cc'] + common_libs)
+
+env.Program('findTracklets-unitTests', 
+            ['findTracklets-unittests.cc', 'findTracklets'] +  common_libs, 
+            LIBS=ext_libs)
+
+env.Program('findTracklets', 
+            ['findTrackletsMain.cc', 'findTracklets'] + common_libs,
+            LIBS=ext_libs)
+
+

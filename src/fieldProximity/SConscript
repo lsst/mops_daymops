@@ -1,0 +1,16 @@
+# -*- python -*-
+# jmyers, 9/11/09 
+
+
+Import("env")
+Import("common_libs")
+Import("ext_libs")
+
+env.Library('Field', 'Field.cc')
+
+env.Library('fieldProximity', common_libs + ['fieldProximity.cc', 'Field'])
+
+env.Program('fieldProximity-unitTests', ['fieldProximityUnitTests.cc', 'fieldProximity.o', 'Field'] + common_libs, 
+            LIBS=ext_libs)
+
+

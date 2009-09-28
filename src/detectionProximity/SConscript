@@ -1,0 +1,14 @@
+# -*- python -*-
+# jmyers, 9/11/09 
+
+
+Import("env")
+Import("common_libs")
+Import("ext_libs")
+
+env.Library('detectionProximity', common_libs + ['detectionProximity.cc'])
+
+env.Program('detectionProximity-unitTests', ['detectionProximityUnitTests.cc', 
+                                             'detectionProximity.o'] + common_libs, 
+            LIBS=ext_libs)
+

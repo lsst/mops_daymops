@@ -13,6 +13,7 @@
 
 #include "../collapseTrackletsAndPostfilters/TrackletCollapser.h"
 #include "../Detection.h"
+#include "../fileUtils.h"
 #include "findTracklets.h"
 
 
@@ -25,8 +26,6 @@ int main(int argc, char* argv[])
     //list of all detections
     std::vector <Detection> myDets; 
 
-    //used for populating detections vector
-    collapseTracklets::TrackletCollapser myTC; 
 
     // parse command-line options
     // find name of dets file
@@ -81,7 +80,7 @@ int main(int argc, char* argv[])
 
     std::ifstream detsFile(inFileName.c_str());
     
-    myTC.populateDetVectorFromFile(detsFile, myDets);
+    populateDetVectorFromFile(detsFile, myDets);
     
     std::vector<Tracklet> results;
     

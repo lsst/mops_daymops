@@ -24,7 +24,7 @@ Alias("install", [env.Install(env['prefix'], "python"),
                   env.InstallEups(env['prefix'] + "/ups",
                                   glob.glob("ups/*.table"))])
 
-scons.CleanTree(r"*~ core *.os *.o *.a")
+scons.CleanTree(r"*~ core *.os *.o *.a *.so")
 
 #
 # Build TAGS files
@@ -40,7 +40,7 @@ LSST-MOPS package
 
 
 
-
-
 SConscript(['src/SConscript',
             'lib/SConscript'])
+
+ 

@@ -8,7 +8,7 @@ Import("env")
 ext_libs = ["gsl", "gslcblas", "pex_exceptions"]
 
 common_libs = ['../Detection.o', '../common.o', '../collapseTrackletsAndPostfilters/TrackletCollapser.o',
-               '../collapseTrackletsAndPostfilters/rmsLineFit.o']
+               '../fileUtils.o', '../collapseTrackletsAndPostfilters/rmsLineFit.o']
 
 env.Library('detectionProximity', common_libs + ['detectionProximity.cc'])
 

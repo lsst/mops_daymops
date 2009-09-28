@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <getopt.h>
 
+#include "../fileUtils.h"
 #include "rmsLineFit.h"
 
 namespace ctExcept = collapseTracklets::exceptions;
@@ -118,12 +119,12 @@ namespace rmsLineFit {
 
         std::cout << "Reading detections file...." << std::endl;
         collapseTracklets::TrackletCollapser myTC;
-        myTC.populateDetVectorFromFile(detsFile, detsVector);
+        populateDetVectorFromFile(detsFile, detsVector);
         std::cout << "Reading tracklets (pairs) file...." << std::endl;
-        myTC.populatePairsVectorFromFile(pairsFile, trackletsVector);
+        populatePairsVectorFromFile(pairsFile, trackletsVector);
         std::cout << "Done!" << std::endl;
 
-        if (!myTC.isSane(detsVector.size(), &trackletsVector)) {
+        if (!isSane(detsVector.size(), &trackletsVector)) {
             throw LSST_EXCEPT(ctExcept::InputFileFormatErrorException, "EE: Pairs file does not seem to correspond with detections file.\n");
         }
 
@@ -132,7 +133,7 @@ namespace rmsLineFit {
         std::cout << "Doing the filtering..." << std::endl;
         filterByLineFitAddToOutputVector(&trackletsVector, &detsVector, maxRMSm, maxRMSb, postFilteredTracklets);
         std::cout << "Done. Writing output." << std::endl;
-        myTC.writeTrackletsToOutFile(&postFilteredTracklets, outFile);
+        writeTrackletsToOutFile(&postFilteredTracklets, outFile);
 
         return 0;
     }
@@ -258,12 +259,12 @@ namespace rmsLineFit {
 
         std::cout << "Reading detections file...." << std::endl;
         collapseTracklets::TrackletCollapser myTC;
-        myTC.populateDetVectorFromFile(detsFile, detsVector);
+        populateDetVectorFromFile(detsFile, detsVector);
         std::cout << "Reading tracklets (pairs) file...." << std::endl;
-        myTC.populatePairsVectorFromFile(pairsFile, trackletsVector);
+        populatePairsVectorFromFile(pairsFile, trackletsVector);
         std::cout << "Done!" << std::endl;
 
-        if (!myTC.isSane(detsVector.size(), &trackletsVector)) {
+        if (!isSane(detsVector.size(), &trackletsVector)) {
             throw LSST_EXCEPT(ctExcept::InputFileFormatErrorException, 
                               "EE: Pairs file does not seem to correspond with detections file.\n");
         }
@@ -275,7 +276,7 @@ namespace rmsLineFit {
         myTP.purifyTracklets(&trackletsVector, &detsVector, maxRMSm, maxRMSb, minObs, postFilteredTracklets);
         
         std::cout << "Done. Writing output." << std::endl;
-        myTC.writeTrackletsToOutFile(&postFilteredTracklets, outFile);
+        writeTrackletsToOutFile(&postFilteredTracklets, outFile);
 
         return 0;
     }

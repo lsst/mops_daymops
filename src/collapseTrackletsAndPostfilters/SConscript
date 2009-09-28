@@ -10,8 +10,8 @@ Import("env")
 
 ext_libs = ["gsl", "gslcblas", "pex_exceptions"]
 		      
-commonStuff = ['../common', 'SubsetRemover', '../Detection', 
-	      'TrackletCollapser', 'rmsLineFit']
+commonStuff = ['../common', 'SubsetRemover', '../Detection', '../fileUtils',
+               'TrackletCollapser', 'rmsLineFit']
 common_libs = []
 for lib in commonStuff:
     common_libs.append(lib+'.o')

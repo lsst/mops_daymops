@@ -16,8 +16,6 @@
 #ifndef LSST_COLLAPSE_TRACKLETS_H
 #define LSST_COLLAPSE_TRACKLETS_H
 
-#include <fstream>
-#include <iostream>
 #include <set>
 #include <string>
 #include <vector>
@@ -33,14 +31,7 @@ namespace collapseTracklets {
 
     class TrackletCollapser {
     public:
-        
-        /* if any index in pairs is >= detsSize, return false, else return true.
-         * ALWAYS do this sanity check before anything else - particularly
-         * setPhysicalParams vector or similar.
-         */
-
-        bool isSane(unsigned int detsSize, const std::vector<Tracklet> *pairs);
-        
+                
         
         /* add all det indices from t1 (which are not already in t2) into t2. 
          * set t1 and t2.isCollapsed() = True.
@@ -64,9 +55,6 @@ namespace collapseTracklets {
                                              std::vector<double> &DecSlopeAndOffsetOut, 
                                              double timeOffset=0.0);
         
-        void writeTrackletsToOutFile(const std::vector<Tracklet> * tracklets, std::ofstream &outFile);
-
-
         /* *pairs is modified - the Tracklets will have isCollapsed set. collapsedPairs will
          * actual output data.  I.e. if pairs contains similar tracklets [1,2]  and [2,3]  they will be
          * marked as collapsed, and [1,2,3] will be added to the collapsedPairs vector.*/
@@ -78,11 +66,6 @@ namespace collapseTracklets {
             bool useMinimumRMS, bool useBestFit, 
             bool useRMSFilt, double maxRMSm, double maxRMSb, bool beVerbose);
       
-        void populateDetVectorFromFile(std::ifstream &detsFile, std::vector <Detection> &myDets);
-
-        void populatePairsVectorFromFile(std::ifstream &pairsFile,
-                                         std::vector <Tracklet> &pairsVector);
-
         void setPhysicalParamsVector(const std::vector<Detection> *trackletDets,
                                      std::vector<double> &physicalParams,
                                      double normalTime);
@@ -93,11 +76,6 @@ namespace collapseTracklets {
                                             std::vector<KDTree::PointAndValue <unsigned int> >
                                             &trackletsForTree);
 
-        /* these overloaded versions are mainly for SWIG, since Python file objects != fstreams */
-        void writeTrackletsToOutFile(const std::vector<Tracklet> * tracklets, std::string outFileName);
-        void populateDetVectorFromFile(std::string detsFileName, std::vector <Detection> &myDets);
-        void populatePairsVectorFromFile(std::string pairsFileName,
-                                         std::vector <Tracklet> &pairsVector);
             
     };
     

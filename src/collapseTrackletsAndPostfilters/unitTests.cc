@@ -14,6 +14,7 @@
 #include "../PointAndValue.h"
 #include "../common.h"
 #include "../KDTree.h"
+#include "../fileUtils.h"
 #include "rmsLineFit.h"
 #include "removeSubsets.h"
 #include "TrackletCollapser.h"
@@ -49,8 +50,7 @@ BOOST_AUTO_TEST_CASE( isSane_blackbox_1 )
 {
     std::vector<Tracklet> pairs;
     // first try calling with empty pairs
-    collapseTracklets::TrackletCollapser myTC;
-    BOOST_CHECK(myTC.isSane(100, &pairs) == true);
+    BOOST_CHECK(isSane(100, &pairs) == true);
 
     //create some tracklets, put them in pairs
     for (int i = 0; i < 100; i++) {        
@@ -61,9 +61,9 @@ BOOST_AUTO_TEST_CASE( isSane_blackbox_1 )
         pairs.push_back(tmp);
     }
 
-    BOOST_CHECK(myTC.isSane(100, &pairs) == true);
+    BOOST_CHECK(isSane(100, &pairs) == true);
     
-    BOOST_CHECK(myTC.isSane(99, &pairs) == true);
+    BOOST_CHECK(isSane(99, &pairs) == true);
         
 }
 

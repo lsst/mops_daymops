@@ -8,7 +8,7 @@
 
 #include "../common.h"
 #include "TrackletCollapser.h"
-
+#include "../fileUtils.h"
 
 namespace ctExcept = collapseTracklets::exceptions;
 
@@ -229,13 +229,13 @@ Only used if useRMSfilt == true.  Describes the function for RMS filtering.  Tra
          * output */
 
         TrackletCollapser myTC;
-        myTC.populateDetVectorFromFile(detsFile, detections);
-        myTC.populatePairsVectorFromFile(pairsFile, pairs);
+        populateDetVectorFromFile(detsFile, detections);
+        populatePairsVectorFromFile(pairsFile, pairs);
         // TBD: use proper LSST logs, too...
         std::cout << "Found " << detections.size() << " detections\n";
         std::cout << "Found " << pairs.size() << " pairs.\n";
           
-        if (!myTC.isSane(detections.size(), &pairs)) {
+        if (!isSane(detections.size(), &pairs)) {
             throw LSST_EXCEPT(ctExcept::InputFileFormatErrorException, 
                               "EE: Pairs file does not seem to correspond with detections file.\n");
         }
@@ -255,7 +255,7 @@ Only used if useRMSfilt == true.  Describes the function for RMS filtering.  Tra
         std::cout << "Writing the output to file..." << std::endl;
         /* write the output */
         /*collapsedPairs = removeSubsets(&collapsedPairs);  for now, do this in a separate program.*/
-        myTC.writeTrackletsToOutFile(&collapsedPairs, outFile);
+        writeTrackletsToOutFile(&collapsedPairs, outFile);
         /* close all files. */
         std::cout << "Done!" << std::endl;
         detsFile.close();

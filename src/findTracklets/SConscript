@@ -10,7 +10,7 @@ Import("env")
 ext_libs = ["gsl", "gslcblas", "pex_exceptions"]
 		      
 commonStuff = ['../common', '../collapseTrackletsAndPostfilters/SubsetRemover', '../Detection', 
-	      '../collapseTrackletsAndPostfilters/TrackletCollapser', 
+	      '../collapseTrackletsAndPostfilters/TrackletCollapser', '../fileUtils',
 	      '../collapseTrackletsAndPostfilters/rmsLineFit']
 common_libs = []
 

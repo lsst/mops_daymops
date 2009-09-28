@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <getopt.h>
 
+#include "../fileUtils.h"
 #include "SubsetRemover.h"
 
 
@@ -82,11 +83,9 @@ namespace removeSubsets {
         std::cout << "Keep only longest tracklet(s) per detection: "<< 
             KDTree::Common::boolToString(keepOnlyLongestPerDet) << std::endl;
 
-        collapseTracklets::TrackletCollapser myTC;
-
         inFile.open(inFileName);
         outFile.open(outFileName);
-        myTC.populatePairsVectorFromFile(inFile, *pairsVector);
+        populatePairsVectorFromFile(inFile, *pairsVector);
 
         /* do the actual work */
 
@@ -108,7 +107,7 @@ namespace removeSubsets {
             outputVector = pairsVector;
         }
 
-        myTC.writeTrackletsToOutFile(outputVector, outFile);
+        writeTrackletsToOutFile(outputVector, outFile);
         if (outputVector != pairsVector) {
             delete outputVector;
         }

@@ -9,6 +9,7 @@
 
 
 #include "linkTracklets.h"
+#include "../fileUtils.h"
 #include "../collapseTrackletsAndPostfilters/TrackletCollapser.h"
 
 
@@ -137,9 +138,8 @@ int main(int argc, char* argv[])
      if(PRINT_TIMING_INFO) {     
 	  last = std::clock();
      }
-     collapseTracklets::TrackletCollapser myTC;
-     myTC.populateDetVectorFromFile(detectionsFileName, allDets);
-     myTC.populatePairsVectorFromFile(trackletsFileName, allTracklets);
+     populateDetVectorFromFile(detectionsFileName, allDets);
+     populatePairsVectorFromFile(trackletsFileName, allTracklets);
 
      if(PRINT_TIMING_INFO) {     	  
 	  dif = timeElapsed(last);

@@ -19,6 +19,15 @@
 //#define LEAF_SIZE 256
 #define LEAF_SIZE 2
 
+
+
+/* taking a queue from Kubica, it's only once per ITERATIONS_PER_SPLIT calls to
+ * doLinkingRecurse that we actually split the (non-leaf) support nodes. The
+ * idea is to avoid redundantly calculating whether a set of support nodes is
+ * compatible.
+ */
+#define ITERATIONS_PER_SPLIT 0
+
 /* 
 the following flags, if set to 'true, will enable some debugging checks which
 use brute-force searching and ground truth data to alert the user if an object
@@ -1002,7 +1011,8 @@ void doLinkingRecurse2(const std::vector<Detection> &allDetections,
                        const TreeNodeAndTime &firstEndpoint,
                        const TreeNodeAndTime &secondEndpoint,
                        const std::vector<TreeNodeAndTime> &supportNodes,
-                       std::vector<Track> & results)
+                       std::vector<Track> & results,
+                       int iterationsTillSplit)
 {
     if (areCompatible(firstEndpoint, secondEndpoint, searchConfig) == false)
     {
@@ -1023,29 +1033,45 @@ void doLinkingRecurse2(const std::vector<Detection> &allDetections,
              supportNodeIter != supportNodes.end();
              supportNodeIter++) {
 
-            bool firstEndpointCompatible =  areCompatible(firstEndpoint, *supportNodeIter, searchConfig);
-            bool secondEndpointCompatible = areCompatible(secondEndpoint, *supportNodeIter, searchConfig);
-            
-
-            if (firstEndpointCompatible && secondEndpointCompatible)
-            {   
-                if (supportNodeIter->myTree->isLeaf()) {
-                    newSupportNodes.push_back(*supportNodeIter);
-                    uniqueSupportMJDs.insert(supportNodeIter->myTime);
-                }
-                else {
-                    if (supportNodeIter->myTree->hasLeftChild()) {
-                        newSupportNodes.push_back(TreeNodeAndTime(supportNodeIter->myTree->getLeftChild(), supportNodeIter->myTime));
+            if (iterationsTillSplit <= 0) {
+                bool firstEndpointCompatible =  areCompatible(firstEndpoint, *supportNodeIter, searchConfig);
+                bool secondEndpointCompatible = areCompatible(secondEndpoint, *supportNodeIter, searchConfig);
+                
+                
+                if (firstEndpointCompatible && secondEndpointCompatible)
+                {   
+                    if (supportNodeIter->myTree->isLeaf()) {
+                        newSupportNodes.push_back(*supportNodeIter);
                         uniqueSupportMJDs.insert(supportNodeIter->myTime);
                     }
-                    if (supportNodeIter->myTree->hasRightChild()) {
-                        newSupportNodes.push_back(TreeNodeAndTime(supportNodeIter->myTree->getRightChild(), supportNodeIter->myTime));
-                        uniqueSupportMJDs.insert(supportNodeIter->myTime);
+                    else {
+                        if (supportNodeIter->myTree->hasLeftChild()) {
+                            newSupportNodes.push_back(TreeNodeAndTime(supportNodeIter->myTree->getLeftChild(), supportNodeIter->myTime));
+                            uniqueSupportMJDs.insert(supportNodeIter->myTime);
+                        }
+                        if (supportNodeIter->myTree->hasRightChild()) {
+                            newSupportNodes.push_back(TreeNodeAndTime(supportNodeIter->myTree->getRightChild(), supportNodeIter->myTime));
+                            uniqueSupportMJDs.insert(supportNodeIter->myTime);
+                        }
                     }
                 }
             }
+            else {
+                // iterationsTillSplit is non-zero; 
+                // don't do any real work; just copy the previous support nodes. we'll do this
+                // momentarily; but go ahead and add their support MJDs now.
+                uniqueSupportMJDs.insert(supportNodeIter->myTime);                
+            }
         }
+        
 
+        if (iterationsTillSplit <= 0) {
+            iterationsTillSplit = ITERATIONS_PER_SPLIT;
+        }
+        else{
+            // we still need to get newSupportNodes set up. just use the old ones.
+            newSupportNodes = supportNodes;
+        }
 
         if (uniqueSupportMJDs.size() < searchConfig.minSupportTracklets) {
             // we can't possibly have enough distinct support tracklets between endpoints
@@ -1071,6 +1097,8 @@ void doLinkingRecurse2(const std::vector<Detection> &allDetections,
             }
             else  {
                
+                iterationsTillSplit -= 1;
+
                 // find the "widest" node, where width is just the product
                 // of RA range, Dec range, RA velocity range, Dec velocity range.
                 // we will split that node and recurse.
@@ -1091,9 +1119,10 @@ void doLinkingRecurse2(const std::vector<Detection> &allDetections,
                      (KDTree::Common::areEqual(secondEndpointWidth, -1)) ) {
                     // in this case, our endpoints are leaves, but not all our support nodes are.
                     // just call this function again until they *are* all leaves.
+                    iterationsTillSplit = 0;
                     doLinkingRecurse2(allDetections, allTracklets, searchConfig,
                                       firstEndpoint, secondEndpoint,
-                                      newSupportNodes, results);
+                                      newSupportNodes, results, iterationsTillSplit);
                 }
                 else if (firstEndpointWidth >= secondEndpointWidth) {
 
@@ -1108,18 +1137,18 @@ void doLinkingRecurse2(const std::vector<Detection> &allDetections,
                     {
                         TreeNodeAndTime newTAT(firstEndpoint.myTree->getLeftChild(), firstEndpoint.myTime);
                         doLinkingRecurse2(allDetections, allTracklets, searchConfig,
-                                         newTAT,secondEndpoint,
-                                         newSupportNodes,
-                                         results);                    
+                                          newTAT,secondEndpoint,
+                                          newSupportNodes,
+                                          results, iterationsTillSplit); 
                     }
                     
                     if (firstEndpoint.myTree->hasRightChild())
                     {
                         TreeNodeAndTime newTAT(firstEndpoint.myTree->getRightChild(), firstEndpoint.myTime);
                         doLinkingRecurse2(allDetections, allTracklets, searchConfig,
-                                         newTAT,secondEndpoint,
-                                         newSupportNodes,
-                                         results);                    
+                                          newTAT,secondEndpoint,
+                                          newSupportNodes,
+                                          results, iterationsTillSplit);  
                     }
                 }
                 else {
@@ -1134,18 +1163,18 @@ void doLinkingRecurse2(const std::vector<Detection> &allDetections,
                     {
                         TreeNodeAndTime newTAT(secondEndpoint.myTree->getLeftChild(), secondEndpoint.myTime);
                         doLinkingRecurse2(allDetections, allTracklets, searchConfig,
-                                         firstEndpoint,newTAT,
-                                         newSupportNodes,
-                                         results);                    
+                                          firstEndpoint,newTAT,
+                                          newSupportNodes,
+                                          results, iterationsTillSplit);            
                     }
                     
                     if (secondEndpoint.myTree->hasRightChild())
                     {
                         TreeNodeAndTime newTAT(secondEndpoint.myTree->getRightChild(), secondEndpoint.myTime);
                         doLinkingRecurse2(allDetections, allTracklets, searchConfig,
-                                         firstEndpoint,newTAT,
-                                         newSupportNodes,
-                                         results);
+                                          firstEndpoint,newTAT,
+                                          newSupportNodes,
+                                          results, iterationsTillSplit);
                         
                     }
                 }
@@ -1193,9 +1222,9 @@ void doLinking(const std::vector<Detection> &allDetections,
      * doLinking, we start the searching with the head (i.e. root) node of each
      * tree.
      */
-    bool DEBUG = false;
+    bool DEBUG = true;
 
-    bool limitedRun = true;
+    bool limitedRun = false;
     double limitedRunFirstEndpoint = 53738.217607 ;
     double limitedRunSecondEndpoint = 53747.208854 ;
 
@@ -1313,7 +1342,7 @@ void doLinking(const std::vector<Detection> &allDetections,
                         doLinkingRecurse2(allDetections, allTracklets, searchConfig,
                                          firstEndpoint, secondEndpoint,
                                          supportPoints,  
-                                         results);
+                                          results, 2);
 
                         if (limitedRun)
                         {

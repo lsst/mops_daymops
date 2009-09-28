@@ -14,6 +14,7 @@
 
 
 #include "linkTracklets.h"
+#include "../fileUtils.h"
 #include "../collapseTrackletsAndPostfilters/TrackletCollapser.h"
 
 
@@ -271,9 +272,8 @@ int main(int argc, char** argv)
      std::vector<Tracklet> allTracklets;
 
 
-     collapseTracklets::TrackletCollapser myTC;
-     myTC.populateDetVectorFromFile(detectionsFileName, allDets);
-     myTC.populatePairsVectorFromFile(trackletsFileName, allTracklets);
+     populateDetVectorFromFile(detectionsFileName, allDets);
+     populatePairsVectorFromFile(trackletsFileName, allTracklets);
      
      linkTrackletsConfig searchConfig; 
 

@@ -5,7 +5,7 @@
 import glob, os.path, re, os
 import lsst.SConsUtils as scons
 
-env = scons.makeEnv("daymops", 
+env = scons.makeEnv("mops_daymops", 
                     r"$HeadURL: svn+ssh://svn.lsstcorp.org/DMS/mops/daymops/trunk/SConstruct $",
                     [["boost", "boost/test/included/unit_test.hpp"],
                      ["pex_exceptions", "lsst/pex/exceptions/Exception.h lsst/pex/exceptions/Runtime.h", "pex_exceptions:C++"],

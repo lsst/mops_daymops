@@ -49,7 +49,7 @@ class IntraNightLinkingStage(DayMOPSStage):
         super(IntraNightLinkingStage, self).__init__(stageId, policy)
         
         # Read the configuration from policy.
-        self.maxV = self.getValueFromPolicy('maxV', linking.DEFAULT_MAXV)
+        self.maxV = self.getValueFromPolicy('maxV', linking.DEFAULT_MAXV)    
         self.minObs = self.getValueFromPolicy('minObs', linking.DEFAULT_MINOBS)
         self.extended = self.getValueFromPolicy('extended', 
                                                 linking.DEFAULT_EXTENDED)
@@ -87,8 +87,13 @@ class IntraNightLinkingStage(DayMOPSStage):
         if(not sources):
             return
         
+        self.logIt('INFO', 'Found Calling linking. maxV = %f.' % self.maxV)
         # Build the tracklets.
-        tracklets = [t for t in linking.trackletsFromDiaSources(sources)]
+        trackletsArray = linking.trackletsFromDiaSources(sources,
+                                                         maxV=self.maxV,
+                                                         minObs=self.minObs,
+                                                         maxT=self.maxT)
+        tracklets = [t for t in trackletsArray]
         
         # Put those Tracklets in the database.
         if(tracklets and len(tracklets)):

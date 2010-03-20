@@ -24,8 +24,8 @@ from lsst.daf.base import DateTime
 
 # Constants
 DB_HOST = 'localhost'
-DB_USER = 'mops'
-DB_PASSWORD = 'mops'
+DB_USER = 'jmyers'
+DB_PASSWORD = 'jmyers'
 
 FOV_RADIUS = 3.5 / 2.                       # Size of the FoV radius in degrees.
 
@@ -52,7 +52,9 @@ def _toSqlString(x):
 
     
 def _populateTable(readCur, readSql, writeCur, writeSql):
+    print "fetching records..."
     numRes = readCur.execute(readSql)
+    print "done."
     row = readCur.fetchone()
     i = 0
     while(row):
@@ -63,7 +65,7 @@ def _populateTable(readCur, readSql, writeCur, writeSql):
     return(i)
 
 
-def populateSSM(psmopsConn, daymopsConn):
+def populateSSM(psmopsConn, daymopsConn):    
     psmopsCur = psmopsConn.cursor()
     daymopsCur = daymopsConn.cursor()
     
@@ -76,6 +78,7 @@ def populateSSM(psmopsConn, daymopsConn):
     readSql = 'select `desc_id`, `prefix`, `description` from `ssm_desc`'
     writeSql = 'insert into `mops_SSMDesc` \
                 (`ssmDescId`, `prefix`, `description`) values (%s, "%s", "%s")'
+    print "writing to mops_SSMDesc"
     n = _populateTable(psmopsCur, readSql, daymopsCur, writeSql)
     daymopsConn.commit()
     
@@ -94,6 +97,7 @@ def populateSSM(psmopsConn, daymopsConn):
                 `ssmObjectName`,`ssmDescId`) values (%s, %s, %s, %s, %s, \
                 %s, %s, %s, %s, %s, %s, %s, \
                 "%s", %s)'
+    print "writing to mops_SSM"
     n = _populateTable(psmopsCur, readSql, daymopsCur, writeSql)
     daymopsConn.commit()
     return
@@ -241,8 +245,10 @@ def populateSources(psmopsConn, daymopsConn):
         filterId = 0
         
         # Convert the UTC MJDs to TAI nsecs and TAI datetimes.
+        print "source has epochMJD = ", epochMJD
         t = DateTime(epochMjd, DateTime.UTC)
         taiMidPoint = t.nsecs(DateTime.TAI)
+        print "calculated associated taiMidPoint = ", taiMidPoint
         
         # Compute flux and flux error.
         # m = m0 -2.5Log(f)

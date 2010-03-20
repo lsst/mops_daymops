@@ -24,6 +24,7 @@ class TelescopeSimulatorStage(DayMOPSStage):
         """
         Standard Stage initializer.
         """
+        print "Entering TelescopeSimulatorStage.__init__!"
         super(TelescopeSimulatorStage, self).__init__(stageId, policy)
         
         # Get database details from policy
@@ -56,6 +57,7 @@ class TelescopeSimulatorStage(DayMOPSStage):
             raise(Exception('No data in %s/DIASource' %(self.dbLocStr, )))
         del(db)
         
+        print "got tMin, tMax = ", tMin, tMax
         # Now determine the starting night number.
         self.lastProcessedNight = max(int(startFromNightNumber),
                                       lib.mjdToNightNumber(tMin))
@@ -71,6 +73,7 @@ class TelescopeSimulatorStage(DayMOPSStage):
         table. Start from the oldest night not grater than 
         self.lastProcessedNight.
         """
+        print "Entering TelescopeSimulatorStage.preprocess!"
         # Call the superclass preprocess() method.
         super(TelescopeSimulatorStage, self).preprocess()
         

@@ -38,7 +38,7 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_1 )
 // helper function for creating sets of detections
 void addDetectionAt(double MJD, double RA, double dec,  std::vector<Detection> &detVec)
 {
-    Detection tmpDet(detVec.size(), MJD, RA, dec, 566, "dummy",
+    Detection tmpDet(detVec.size(), MJD, RA, dec, "566", "dummy",
                      24.0, 0., 0.);
     detVec.push_back(tmpDet);
 }

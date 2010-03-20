@@ -48,7 +48,7 @@ BOOST_AUTO_TEST_CASE( Detection_blackbox_1 )
     double MJD = 1234.5678;
     double RA = 2.02;
     double dec = 3.03;
-    double obscode = 1337;
+    std::string obscode = "1337";
     std::string objName = "TestingObject1";
     double mag = 4.04;
     double len = 5.05;
@@ -67,7 +67,7 @@ BOOST_AUTO_TEST_CASE( Detection_blackbox_1 )
     BOOST_CHECK (Eq(MJD, myDet.getEpochMJD())) ;
     BOOST_CHECK (Eq(RA,myDet.getRA()));
     BOOST_CHECK (Eq(dec,myDet.getDec())) ; 
-    BOOST_CHECK (Eq(obscode,myDet.getObscode() ));
+    BOOST_CHECK (obscode == myDet.getObscode());
     BOOST_CHECK (objName == myDet.getObjName()); 
     BOOST_CHECK (Eq(mag,myDet.getMag()) ); 
     BOOST_CHECK (Eq(len,myDet.getLength())); 
@@ -84,7 +84,7 @@ BOOST_AUTO_TEST_CASE( Detection_blackbox_2 )
     double MJD = 1234.5678;
     double RA = 2.02;
     double dec = 3.03;
-    double obscode = 1337;
+    std::string obscode = "1337";
     std::string objName = "TestingObject1";
     double mag = 4.04;
     double len = 5.05;
@@ -102,7 +102,7 @@ BOOST_AUTO_TEST_CASE( Detection_blackbox_2 )
     BOOST_CHECK (Eq(MJD, myDet.getEpochMJD())) ;
     BOOST_CHECK (Eq(RA,myDet.getRA()));
     BOOST_CHECK (Eq(dec,myDet.getDec())) ; 
-    BOOST_CHECK (Eq(obscode,myDet.getObscode() ));
+    BOOST_CHECK (obscode == myDet.getObscode());
     BOOST_CHECK (objName == myDet.getObjName()); 
     BOOST_CHECK (Eq(mag,myDet.getMag()) ); 
     BOOST_CHECK (Eq(len,myDet.getLength())); 
@@ -119,7 +119,7 @@ BOOST_AUTO_TEST_CASE( Detection_blackbox_3 )
     double MJD = 1234.5678;
     double RA = 2.02;
     double dec = 3.03;
-    double obscode = 1337;
+    std::string obscode = "1337";
     std::string objName = "TestingObject1";
     double mag = 4.04;
     double len = 5.05;
@@ -137,7 +137,7 @@ BOOST_AUTO_TEST_CASE( Detection_blackbox_3 )
     BOOST_CHECK (Eq(MJD, myDet.getEpochMJD())) ;
     BOOST_CHECK (Eq(RA,myDet.getRA()));
     BOOST_CHECK (Eq(dec,myDet.getDec())) ; 
-    BOOST_CHECK (Eq(obscode,myDet.getObscode() ));
+    BOOST_CHECK (obscode == myDet.getObscode());
     BOOST_CHECK (objName == myDet.getObjName()); 
     BOOST_CHECK (Eq(mag,myDet.getMag()) ); 
     BOOST_CHECK (Eq(len,myDet.getLength())); 
@@ -153,7 +153,7 @@ BOOST_AUTO_TEST_CASE( Detection_blackbox_4 )
     double MJD = 1234.5678;
     double RA = 2.02;
     double dec = 3.03;
-    double obscode = 1337;
+    std::string obscode = "1337";
     std::string objName = "TestingObject1";
     double mag = 4.04;
     double len = 5.05;
@@ -171,7 +171,7 @@ BOOST_AUTO_TEST_CASE( Detection_blackbox_4 )
     BOOST_CHECK (Eq(MJD, myDet.getEpochMJD())) ;
     BOOST_CHECK (Eq(RA,myDet.getRA()));
     BOOST_CHECK (Eq(dec,myDet.getDec())) ; 
-    BOOST_CHECK (Eq(obscode,myDet.getObscode() ));
+    BOOST_CHECK (obscode == myDet.getObscode());
     BOOST_CHECK (objName == myDet.getObjName()); 
     BOOST_CHECK (Eq(mag,myDet.getMag()) ); 
     BOOST_CHECK (Eq(len,myDet.getLength())); 
@@ -190,7 +190,7 @@ BOOST_AUTO_TEST_CASE( Detection_blackbox_5 )
     double MJD = 1234.5678;
     double RA = 2.02;
     double dec = 3.03;
-    double obscode = 1337;
+    std::string obscode = "1337";
     std::string objName = "TestingObject1";
     double mag = 4.04;
     double len = 5.05;
@@ -210,7 +210,7 @@ BOOST_AUTO_TEST_CASE( Detection_blackbox_5 )
     BOOST_CHECK (Eq(MJD, myDet.getEpochMJD())) ;
     BOOST_CHECK (Eq(RA,myDet.getRA()));
     BOOST_CHECK (Eq(dec,myDet.getDec())) ; 
-    BOOST_CHECK (Eq(obscode,myDet.getObscode() ));
+    BOOST_CHECK (obscode == myDet.getObscode());
     BOOST_CHECK (objName == myDet.getObjName()); 
     BOOST_CHECK (Eq(mag,myDet.getMag()) ); 
     BOOST_CHECK (Eq(len,myDet.getLength())); 
@@ -230,7 +230,7 @@ BOOST_AUTO_TEST_CASE( Detection_blackbox_6 )
     double MJD = 1234.5678;
     double RA = 2.02;
     double dec = 3.03;
-    double obscode = 1337;
+    std::string obscode = "1337";
     std::string objName = "TestingObject1";
     double mag = 4.04;
     double len = 5.05;
@@ -251,7 +251,7 @@ BOOST_AUTO_TEST_CASE( Detection_blackbox_6 )
     BOOST_CHECK (Eq(MJD, myDet.getEpochMJD())) ;
     BOOST_CHECK (Eq(RA,myDet.getRA()));
     BOOST_CHECK (Eq(dec,myDet.getDec())) ; 
-    BOOST_CHECK (Eq(obscode,myDet.getObscode() ));
+    BOOST_CHECK (obscode == myDet.getObscode());
     BOOST_CHECK (objName == myDet.getObjName()); 
     BOOST_CHECK (Eq(mag,myDet.getMag()) ); 
     BOOST_CHECK (Eq(len,myDet.getLength())); 
@@ -270,7 +270,7 @@ BOOST_AUTO_TEST_CASE( Detection_blackbox_7 )
     double MJD = 1234.5678;
     double RA = 2.02;
     double dec = 3.03;
-    double obscode = 1337;
+    std::string obscode = "1337";
     std::string objName = "TestingObject1";
     double mag = 4.04;
     double len = 5.05;
@@ -286,7 +286,7 @@ BOOST_AUTO_TEST_CASE( Detection_blackbox_7 )
     BOOST_CHECK (Eq(MJD, myDet.getEpochMJD())) ;
     BOOST_CHECK (Eq(RA,myDet.getRA()));
     BOOST_CHECK (Eq(dec,myDet.getDec())) ; 
-    BOOST_CHECK (Eq(obscode,myDet.getObscode() ));
+    BOOST_CHECK (obscode == myDet.getObscode());
     BOOST_CHECK (objName == myDet.getObjName()); 
     BOOST_CHECK (Eq(mag,myDet.getMag()) ); 
     BOOST_CHECK (Eq(len,myDet.getLength())); 
@@ -302,7 +302,7 @@ BOOST_AUTO_TEST_CASE( Detection_blackbox_8 )
     double MJD = 1234.5678;
     double RA = 2.02;
     double dec = 3.03;
-    double obscode = 1337;
+    std::string obscode = "1337";
     std::string objName = "TestingObject1";
     double mag = 4.04;
     double len = 5.05;
@@ -318,7 +318,7 @@ BOOST_AUTO_TEST_CASE( Detection_blackbox_8 )
     BOOST_CHECK (Eq(MJD, myDet.getEpochMJD())) ;
     BOOST_CHECK (Eq(RA,myDet.getRA()));
     BOOST_CHECK (Eq(dec,myDet.getDec())) ; 
-    BOOST_CHECK (Eq(obscode,myDet.getObscode() ));
+    BOOST_CHECK (obscode == myDet.getObscode());
     BOOST_CHECK (objName == myDet.getObjName()); 
     BOOST_CHECK (Eq(mag,myDet.getMag()) ); 
     BOOST_CHECK (Eq(len,myDet.getLength())); 

@@ -714,9 +714,6 @@ void buildTracksAddToResults(const std::vector<Detection> &allDetections,
                              const std::vector<TreeNodeAndTime> &supportNodes,
                              std::vector<Track> & results)
 {
-
-
-
     if ((firstEndpoint.myTree->isLeaf() == false) ||
         (secondEndpoint.myTree->isLeaf() == false)) {
         LSST_EXCEPT(ctExcept::ProgrammerErrorException, 

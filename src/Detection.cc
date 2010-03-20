@@ -22,7 +22,7 @@ Detection::Detection()
 
 
 Detection::Detection(long int ID, double epochMJD, double RA, double Dec, 
-                     int obsCode, std::string objName, double mag, 
+                     std::string obsCode, std::string objName, double mag, 
                      double elongationLength, double elongationAngle)
 {
     hasETime = false;
@@ -40,7 +40,7 @@ Detection::Detection(long int ID, double epochMJD, double RA, double Dec,
 }
 
 Detection::Detection(long int ID, double epochMJD, double RA, double Dec, 
-                     int obsCode, std::string objName, double mag, 
+                     std::string obsCode, std::string objName, double mag, 
                      double elongationLength, double elongationAngle,
                      double exposureTime)
 {
@@ -113,12 +113,12 @@ double Detection::getDec()  const
 }
 
 
-int  Detection::getObscode() const  
+std::string  Detection::getObscode() const  
 {
     if (!initialized) {
         throw LSST_EXCEPT(ctExcept::UninitializedException, 
                           "Detection: request for ObsCode from uninitialized Detection\n");
-        return -1;
+        return "";
     }
     else {
         return obscode;

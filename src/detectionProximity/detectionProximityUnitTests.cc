@@ -52,8 +52,8 @@ BOOST_AUTO_TEST_CASE( detectionProximity1 )
 	    double elongationLength, double elongationAngle); */
 
   //           ID    MJD      RA      DEC     obs  NAME      MAG 
-  Detection qd1(0, 53736,    100.00,   50.00, 566, "dummy1", 20.0, 0, 0);
-  Detection dd1(1, 53736,    100.01,   50.01, 566, "dummy1", 20.0, 0, 0);
+  Detection qd1(0, 53736,    100.00,   50.00, "566", "dummy1", 20.0, 0, 0);
+  Detection dd1(1, 53736,    100.01,   50.01, "566", "dummy1", 20.0, 0, 0);
   queryDets.push_back(qd1);
   dataDets.push_back(dd1);
 
@@ -79,7 +79,7 @@ BOOST_AUTO_TEST_CASE( detectionProximity2 )
 	    double elongationLength, double elongationAngle); */
 
   //           ID    MJD      RA      DEC     obs  NAME      MAG 
-  Detection qd1(0, 53736,    100.00,   50.00, 566, "dummy1", 20.0, 0, 0);
+  Detection qd1(0, 53736,    100.00,   50.00, "566", "dummy1", 20.0, 0, 0);
   queryDets.push_back(qd1);
 
   queryResult = detectionProximity(queryDets, dataDets, .1, 1, 0.1);
@@ -102,7 +102,7 @@ BOOST_AUTO_TEST_CASE( detectionProximity3 )
 	    double elongationLength, double elongationAngle); */
 
   //           ID    MJD      RA      DEC     obs  NAME      MAG 
-  Detection dd1(0, 53736,    100.00,   50.00, 566, "dummy1", 20.0, 0, 0);
+  Detection dd1(0, 53736,    100.00,   50.00, "566", "dummy1", 20.0, 0, 0);
   dataDets.push_back(dd1);
 
   queryResult = detectionProximity(queryDets, dataDets, .1, 1, 0.1);
@@ -147,8 +147,8 @@ BOOST_AUTO_TEST_CASE( detectionProximity5 )
 	    double elongationLength, double elongationAngle); */
 
   //           ID    MJD      RA      DEC     obs  NAME      MAG 
-  Detection qd1(0, 53736,    100.00,   89.50, 566, "dummy1", 20.0, 0, 0);
-  Detection dd1(1, 53736,    280.00,   89.50, 566, "dummy1", 20.0, 0, 0);
+  Detection qd1(0, 53736,    100.00,   89.50, "566", "dummy1", 20.0, 0, 0);
+  Detection dd1(1, 53736,    280.00,   89.50, "566", "dummy1", 20.0, 0, 0);
   queryDets.push_back(qd1);
   dataDets.push_back(dd1);
 
@@ -174,8 +174,8 @@ BOOST_AUTO_TEST_CASE( detectionProximity6 )
 	    double elongationLength, double elongationAngle); */
 
   //           ID    MJD      RA      DEC     obs  NAME      MAG 
-  Detection qd1(0, 53736,    100.00,   -89.50, 566, "dummy1", 20.0, 0, 0);
-  Detection dd1(1, 53736,    280.00,   -89.50, 566, "dummy1", 20.0, 0, 0);
+  Detection qd1(0, 53736,    100.00,   -89.50, "566", "dummy1", 20.0, 0, 0);
+  Detection dd1(1, 53736,    280.00,   -89.50, "566", "dummy1", 20.0, 0, 0);
   queryDets.push_back(qd1);
   dataDets.push_back(dd1);
 
@@ -202,8 +202,8 @@ BOOST_AUTO_TEST_CASE( detectionProximity7 )
 	    double elongationLength, double elongationAngle); */
 
   //           ID    MJD      RA      DEC     obs  NAME      MAG 
-  Detection qd1(0, 53736,   -100.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  Detection dd1(1, 53736,    260.01,   -10.00, 566, "dummy1", 20.0, 0, 0);
+  Detection qd1(0, 53736,   -100.00,   -10.00, "566", "dummy1", 20.0, 0, 0);
+  Detection dd1(1, 53736,    260.01,   -10.00, "566", "dummy1", 20.0, 0, 0);
   queryDets.push_back(qd1);
   dataDets.push_back(dd1);
 
@@ -231,13 +231,13 @@ BOOST_AUTO_TEST_CASE( detectionProximity8 )
 	    double elongationLength, double elongationAngle); */
 
   //           ID    MJD      RA      DEC     obs  NAME      MAG 
-  Detection qd1(0, 53736,    010.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  Detection dd1(1, 53736,    007.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  Detection dd2(2, 53736,    008.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  Detection dd3(3, 53736,    009.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  Detection dd4(4, 53736,    011.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  Detection dd5(5, 53736,    012.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  Detection dd6(6, 53736,    013.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
+  Detection qd1(0, 53736,    010.00,   -10.00, "566", "dummy1", 20.0, 0, 0);
+  Detection dd1(1, 53736,    007.00,   -10.00, "566", "dummy1", 20.0, 0, 0);
+  Detection dd2(2, 53736,    008.00,   -10.00, "566", "dummy1", 20.0, 0, 0);
+  Detection dd3(3, 53736,    009.00,   -10.00, "566", "dummy1", 20.0, 0, 0);
+  Detection dd4(4, 53736,    011.00,   -10.00, "566", "dummy1", 20.0, 0, 0);
+  Detection dd5(5, 53736,    012.00,   -10.00, "566", "dummy1", 20.0, 0, 0);
+  Detection dd6(6, 53736,    013.00,   -10.00, "566", "dummy1", 20.0, 0, 0);
   queryDets.push_back(qd1);
   dataDets.push_back(dd1);
   dataDets.push_back(dd2);
@@ -270,13 +270,13 @@ BOOST_AUTO_TEST_CASE( detectionProximity9 )
 	    double elongationLength, double elongationAngle); */
 
   //           ID    MJD      RA      DEC     obs  NAME      MAG 
-  Detection qd1(0, 53736,    010.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  Detection dd1(1, 53736,    007.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  Detection dd2(2, 53736,    008.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  Detection dd3(3, 53736,    009.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  Detection dd4(4, 53736,    011.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  Detection dd5(5, 53736,    012.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  Detection dd6(6, 53736,    013.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
+  Detection qd1(0, 53736,    010.00,   -10.00, "566", "dummy1", 20.0, 0, 0);
+  Detection dd1(1, 53736,    007.00,   -10.00, "566", "dummy1", 20.0, 0, 0);
+  Detection dd2(2, 53736,    008.00,   -10.00, "566", "dummy1", 20.0, 0, 0);
+  Detection dd3(3, 53736,    009.00,   -10.00, "566", "dummy1", 20.0, 0, 0);
+  Detection dd4(4, 53736,    011.00,   -10.00, "566", "dummy1", 20.0, 0, 0);
+  Detection dd5(5, 53736,    012.00,   -10.00, "566", "dummy1", 20.0, 0, 0);
+  Detection dd6(6, 53736,    013.00,   -10.00, "566", "dummy1", 20.0, 0, 0);
   queryDets.push_back(qd1);
   dataDets.push_back(dd1);
   dataDets.push_back(dd2);
@@ -306,13 +306,13 @@ BOOST_AUTO_TEST_CASE( detectionProximity10 )
 	    double elongationLength, double elongationAngle); */
 
   //           ID    MJD      RA      DEC     obs  NAME      MAG 
-  Detection dd1(0, 53736,    010.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  Detection qd1(1, 53736,    007.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  Detection qd2(2, 53736,    008.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  Detection qd3(3, 53736,    009.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  Detection qd4(4, 53736,    011.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  Detection qd5(5, 53736,    012.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  Detection qd6(6, 53736,    013.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
+  Detection dd1(0, 53736,    010.00,   -10.00, "566", "dummy1", 20.0, 0, 0);
+  Detection qd1(1, 53736,    007.00,   -10.00, "566", "dummy1", 20.0, 0, 0);
+  Detection qd2(2, 53736,    008.00,   -10.00, "566", "dummy1", 20.0, 0, 0);
+  Detection qd3(3, 53736,    009.00,   -10.00, "566", "dummy1", 20.0, 0, 0);
+  Detection qd4(4, 53736,    011.00,   -10.00, "566", "dummy1", 20.0, 0, 0);
+  Detection qd5(5, 53736,    012.00,   -10.00, "566", "dummy1", 20.0, 0, 0);
+  Detection qd6(6, 53736,    013.00,   -10.00, "566", "dummy1", 20.0, 0, 0);
   dataDets.push_back(dd1);
   queryDets.push_back(qd1);
   queryDets.push_back(qd2);
@@ -343,13 +343,13 @@ BOOST_AUTO_TEST_CASE( detectionProximity11 )
 	    double elongationLength, double elongationAngle); */
 
   //           ID    MJD      RA      DEC     obs  NAME      MAG 
-  Detection dd1(0, 53736,    010.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  Detection qd1(1, 53736,    007.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  Detection qd2(2, 53736,    008.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  Detection qd3(3, 53736,    009.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  Detection qd4(4, 53736,    011.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  Detection qd5(5, 53736,    012.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  Detection qd6(6, 53736,    013.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
+  Detection dd1(0, 53736,    010.00,   -10.00, "566", "dummy1", 20.0, 0, 0);
+  Detection qd1(1, 53736,    007.00,   -10.00, "566", "dummy1", 20.0, 0, 0);
+  Detection qd2(2, 53736,    008.00,   -10.00, "566", "dummy1", 20.0, 0, 0);
+  Detection qd3(3, 53736,    009.00,   -10.00, "566", "dummy1", 20.0, 0, 0);
+  Detection qd4(4, 53736,    011.00,   -10.00, "566", "dummy1", 20.0, 0, 0);
+  Detection qd5(5, 53736,    012.00,   -10.00, "566", "dummy1", 20.0, 0, 0);
+  Detection qd6(6, 53736,    013.00,   -10.00, "566", "dummy1", 20.0, 0, 0);
   dataDets.push_back(dd1);
   queryDets.push_back(qd1);
   queryDets.push_back(qd2);
@@ -383,9 +383,9 @@ BOOST_AUTO_TEST_CASE( detectionProximity12 )
 	    double elongationLength, double elongationAngle); */
 
   //           ID    MJD      RA      DEC     obs  NAME      MAG 
-  Detection dd1(0, 53736,    010.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  Detection qd1(1, 53736,    010.00,   -10.00, 566, "dummy1", 20.5, 0, 0);
-  Detection qd2(1, 53736,    010.00,   -10.00, 566, "dummy1", 21.1, 0, 0);
+  Detection dd1(0, 53736,    010.00,   -10.00, "566", "dummy1", 20.0, 0, 0);
+  Detection qd1(1, 53736,    010.00,   -10.00, "566", "dummy1", 20.5, 0, 0);
+  Detection qd2(1, 53736,    010.00,   -10.00, "566", "dummy1", 21.1, 0, 0);
   dataDets.push_back(dd1);
   queryDets.push_back(qd1);
   queryDets.push_back(qd2);
@@ -412,9 +412,9 @@ BOOST_AUTO_TEST_CASE( detectionProximity13 )
 	    double elongationLength, double elongationAngle); */
 
   //           ID    MJD      RA      DEC     obs  NAME      MAG 
-  Detection dd1(0, 53736,   010.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  Detection qd1(1, 53736.05,010.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  Detection qd2(1, 53736.11,010.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
+  Detection dd1(0, 53736,   010.00,   -10.00, "566", "dummy1", 20.0, 0, 0);
+  Detection qd1(1, 53736.05,010.00,   -10.00, "566", "dummy1", 20.0, 0, 0);
+  Detection qd2(1, 53736.11,010.00,   -10.00, "566", "dummy1", 20.0, 0, 0);
   dataDets.push_back(dd1);
   queryDets.push_back(qd1);
   queryDets.push_back(qd2);
@@ -441,9 +441,9 @@ BOOST_AUTO_TEST_CASE( detectionProximity14 )
 	    double elongationLength, double elongationAngle); */
 
   //           ID    MJD      RA      DEC     obs  NAME      MAG 
-  Detection qd1(0, 53736,   000.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  Detection dd1(1, 53736,   359.99,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  Detection dd2(2, 53736,   360.01,   -10.00, 566, "dummy1", 20.0, 0, 0);
+  Detection qd1(0, 53736,   000.00,   -10.00, "566", "dummy1", 20.0, 0, 0);
+  Detection dd1(1, 53736,   359.99,   -10.00, "566", "dummy1", 20.0, 0, 0);
+  Detection dd2(2, 53736,   360.01,   -10.00, "566", "dummy1", 20.0, 0, 0);
   queryDets.push_back(qd1);
   dataDets.push_back(dd1);
   dataDets.push_back(dd2);

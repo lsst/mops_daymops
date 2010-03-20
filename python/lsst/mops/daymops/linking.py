@@ -76,6 +76,8 @@ def trackletsFromDiaSources(sources, maxV=DEFAULT_MAXV, minObs=DEFAULT_MINOBS,
     # TODO: compute and use trail information!
     # TODO: Support per-DIASource exposure time.
     # TODO: Use fluxes instead of mags.
+    print "Calling auton.findTracklets with maxV = %f, minObs = %i maxT = %f eTime = %f" % \
+        (maxV, int(minObs), maxT, expTime)
     trackletToDiaSourceId = auton.findtracklets(detections=dets, 
                                                 maxv=maxV,
                                                 minobs=int(minObs),
@@ -94,8 +96,10 @@ def trackletsFromDiaSources(sources, maxV=DEFAULT_MAXV, minObs=DEFAULT_MINOBS,
 
 
 def linkTracklets(tracklets, slowMinV, slowMaxV, slowVtreeThresh,slowPredThresh,
-                  fastMinV, fastMaxV, fastVtreeThresh, fastPredThresh,minNights,
-                  plateWidth):
+                  slowMaxAccRa, slowMaxAccDec,
+                  fastMinV, fastMaxV, fastVtreeThresh, fastPredThresh,
+                  fastMaxAccRa, fastMaxAccDec, 
+                  minNights, plateWidth):
     """
     Given a list of tracklets, link them into tracks. Do two passes: one for 
     slow movers (defined as having velocity between slowMinV and slowMaxV) and
@@ -150,15 +154,28 @@ def linkTracklets(tracklets, slowMinV, slowMaxV, slowVtreeThresh,slowPredThresh,
     args.update({'minv': slowMinV,
                  'maxv': slowMaxV,
                  'vtree_thresh': slowVtreeThresh,
-                 'pred_thresh': slowPredThresh})
+                 'pred_thresh': slowPredThresh,
+                 'acc_r' : slowMaxAccRa,
+                 'acc_d' : slowMaxAccDec})
+
+    print """in linking.py, calling linkTracklets minv = %f, maxv = %f,
+    vtree_thresh = %f, pred_thresh = %f,
+    acc_r = %f, acc_d = %f""" % (args['minv'], args['maxv'], args['vtree_thresh'], \
+                                     args['pred_thresh'], args['acc_r'], args['acc_d'])
     rawTracks = auton.linktracklets(**args)
     
     # Get the fast tracks.
-    args.update({'minv': fastMinV,
-                 'maxv': fastMaxV,
-                 'vtree_thresh': fastVtreeThresh,
-                 'pred_thresh': fastPredThresh})
-    rawTracks += auton.linktracklets(**args)
+#     args.update({'minv': fastMinV,
+#                  'maxv': fastMaxV,
+#                  'vtree_thresh': fastVtreeThresh,
+#                  'pred_thresh': fastPredThresh,
+#                  'acc_r' : fastMaxAccRa,
+#                  'acc_d' : fastMaxAccDec})
+#     print """in linking.py, calling linkTracklets (fast pass) minv = %f, maxv = %f,
+#     vtree_thresh = %f, pred_thresh = %f,
+#     acc_r = %f, acc_d = %f""" % (args['minv'], args['maxv'], args['vtree_thresh'], \
+#                                      args['pred_thresh'], args['acc_r'], args['acc_d'])
+#     rawTracks += auton.linktracklets(**args)
     
     # What we get from linkTracklets is simply a list of list of trackletIds:
     #   [[trackletId1, trackletId2, ...], ...]

@@ -25,12 +25,12 @@ public:
     // these two added 6/19/09 (jmyers)
     // create a detection with initialized data, but no exposure time
     Detection(long int ID, double epochMJD, double RA, double Dec, 
-              int obsCode, std::string objName, double mag,
+              std::string obsCode, std::string objName, double mag,
               double elongationLength, double elongationAngle);
 
     //create a detection with initialized data, including exposure time data
     Detection(long int ID, double epochMJD, double RA, double Dec, 
-              int obsCode, std::string objName, double mag, 
+              std::string obsCode, std::string objName, double mag, 
               double elongationLength, double elongationAngle, 
               double exposureTime);
 
@@ -47,7 +47,7 @@ public:
     double getEpochMJD() const ;
     double getRA() const ;
     double getDec() const ;
-    int  getObscode() const ;
+    std::string  getObscode() const ;
     std::string getObjName() const ;
     double getMag() const ;
     double getLength() const ;
@@ -68,7 +68,7 @@ private:
     double MJD;
     double RA;
     double dec;
-    int obscode;
+    std::string obscode;
     double mag;
     std::string objName;
     double length;

@@ -1,6 +1,9 @@
 April-August, 2009
 F. Pierfederici
 
+Added updates Jan 2010
+J. Myers
+
 
 Introduction
 There are two types of test data. On one hand there is data used to test runs of
@@ -62,3 +65,22 @@ between 0 and 10 random trackletIds):
 
 
 
+------------------
+
+J Myers, updated Jan 7 2010
+
+The LSST DB schema has since changed, meaning that the existing test
+data from DIASource no longer works.  Fortunately, I've found that the
+following SQL is sufficient for shoehorning the data into the current
+schema.  Note that since there is no longer a midpoint time but only
+an exposure start time field, we change the semantics of the data by
+changing the times subtly!  This means the resulting data is NOT VALID
+FOR SCIENCE but should allow some basic testing nonetheless.
+
+insert into DiaSource 
+   (diaSourceId, filterId, xAstrom, xAstromSigma, yAstrom, yAstromSigma, xyAstromCov, 
+    xOther, xOtherSigma, yOther, yOtherSigma, xyOtherCov, sky, skySigma, psfFlux, 
+    psfFluxSigma, apFlux, apFluxSigma, modelFlux, modelFluxSigma, exposureStartTime, flags) 
+  select 
+   diaSourceId, filterId, ra, 0, decl, 0, 0, ra, 0, decl, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, taiMidPoint, 0 
+ from mops_onelunation.DIASource;

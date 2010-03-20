@@ -259,7 +259,7 @@ namespace collapseTracklets {
                 collapse(pairs[trackletIter->getValue()], newTracklet);
 
                 /* find all similar tracklets */
-                std::vector<KDTree::PointAndValue<unsigned int> > queryResults = 
+                std::vector<KDTree::PointAndValue<unsigned int> > queryResults = 		  
                     searchTree.hyperRectangleSearch((*trackletIter).getPoint(), 
                                                     tolerances, 
                                                     geometryTypes);
@@ -479,9 +479,16 @@ namespace collapseTracklets {
         double Decv = DecSlopeAndOffset[0];
         double velocity = sqrt(pow(RAv, 2) + pow(Decv, 2));
         physicalParams[3] = velocity;
-        double sineOfTheta = Decv/velocity;
-        double theta = asin(sineOfTheta) * (360./(2*M_PI));
-        physicalParams[2] = KDTree::Common::convertToStandardDegrees(theta);
+	if (velocity == 0) {
+	  /* jmyers: this is basically a stationary tracklet. there is
+	     no really ideal option here so just set to 0. */
+	  physicalParams[2] == 0;
+	}
+	else {
+	  double sineOfTheta = Decv/velocity;	
+	  double theta = asin(sineOfTheta) * (360./(2*M_PI));
+	  physicalParams[2] = KDTree::Common::convertToStandardDegrees(theta);
+	}
     }
 
 

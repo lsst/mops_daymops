@@ -18,14 +18,14 @@ def newTracks(dbLocStr, shallow=True, sliceId=None, numSlices=None):
     Fetch all Tracks.
     
     Use  sliceId and numSlices to implement some form of parallelism.
-    If shallow=False, then fetch the DIASources also.
+    If shallow=False, then fetch the DiaSources also.
     
-    Remember that right now we are using the mops_TracksToTracklet as a 
+    Remember that right now we are using the mops_TrackToTracklet as a 
     temporary table as there is no need to store Tracks permanently. This is why
     we can get away with this simple strategy.
     
     @param dbLocStr: database connection string.
-    @param shallow: if True, do not bother retrieving DIASources per Tracklet.
+    @param shallow: if True, do not bother retrieving DiaSources per Tracklet.
     @param sliceId: Id of the current Slice.
     @param numSlices: number of available slices (i.e. MPI universe size - 1)
     
@@ -40,14 +40,14 @@ def _fetchTracks(dbLocStr, where, extraTables=[], shallow=True,
     """
     Fetch all Tracks.
     
-    The teables from which we select (in ddition to mops_TracksToTracklet) have 
+    The teables from which we select (in ddition to mops_TrackToTracklet) have 
     to be specified in the extraTables list.
     
     The SQL where clause has to be specified. In it, specify the full 
     table names (e.g. mops_Track.status instead of just status).
     
     Use  sliceId and numSlices to implement some form of parallelism.
-    If shallow=False, then fetch the DIASources also.
+    If shallow=False, then fetch the DiaSources also.
     
     Return interator.
     """
@@ -66,7 +66,7 @@ def _fetchShallowTracks(dbLocStr, where, extraTables=[], sliceId=None,
     """
     Fetch all Tracks.
     
-    The teables from which we select (in ddition to mops_TracksToTracklet) have 
+    The teables from which we select (in ddition to mops_TrackToTracklet) have 
     to be specified in the extraTables list.
     
     The SQL where clause has to be specified. In it, specify the full 
@@ -81,19 +81,19 @@ def _fetchShallowTracks(dbLocStr, where, extraTables=[], sliceId=None,
     # Send the query.
     db = SafeDbStorage()
     db.setPersistLocation(persistence.LogicalLocation(dbLocStr))
-    tables = ['mops_TracksToTracklet', ] + list(extraTables)
+    tables = ['mops_TrackToTracklet', ] + list(extraTables)
     db.setTableListForQuery(tables)
-    db.outColumn('mops_TracksToTracklet.trackId')
-    db.outColumn('mops_TracksToTracklet.trackletId')
+    db.outColumn('mops_TrackToTracklet.trackId')
+    db.outColumn('mops_TrackToTracklet.trackletId')
     
     w = ''
     if(where):
         w = where
     if(sliceId != None and numSlices > 1):
-        w += ' and mops_TracksToTracklet.trackId %% %d = %d' \
+        w += ' and mops_TrackToTracklet.trackId %% %d = %d' \
              %(numSlices, sliceId)
     db.setQueryWhere(w)
-    db.orderBy('mops_TracksToTracklet.trackId')
+    db.orderBy('mops_TrackToTracklet.trackId')
     db.query()
     
     # Fetch the results.
@@ -148,7 +148,7 @@ def _fetchDeepTracks(dbLocStr, where, extraTables=[], sliceId=None,
     """
     Fetch all Tracks.
     
-    The teables from which we select (in ddition to mops_TracksToTracklet) have 
+    The teables from which we select (in ddition to mops_TrackToTracklet) have 
     to be specified in the extraTables list.
     
     The SQL where clause has to be specified. In it, specify the full 
@@ -163,30 +163,30 @@ def _fetchDeepTracks(dbLocStr, where, extraTables=[], sliceId=None,
     # Send the query.
     db = SafeDbStorage()
     db.setPersistLocation(persistence.LogicalLocation(dbLocStr))
-    tables = ['mops_TracksToTracklet', 
-              'mops_TrackletsToDIASource', 
+    tables = ['mops_TrackToTracklet', 
+              'mops_TrackletsToDiaSource', 
               'mops_Tracklet',
               'DiaSource'] + list(extraTables)
     db.setTableListForQuery(tables)
-    db.outColumn('mops_TracksToTracklet.trackId')                       # 0
+    db.outColumn('mops_TrackToTracklet.trackId')                       # 0
     db.outColumn('mops_Tracklet.trackletId')                            # 1
     db.outColumn('mops_Tracklet.velRa')                                 # 2
     db.outColumn('mops_Tracklet.velDecl')                               # 3
     db.outColumn('mops_Tracklet.velTot')                                # 4
     db.outColumn('mops_Tracklet.status')                                # 5
-    db.outColumn('DIASource.diaSourceId')                               # 6
-    db.outColumn('DIASource.ra')                                        # 7
-    db.outColumn('DIASource.decl')                                      # 8
-    db.outColumn('DIASource.filterId')                                  # 9
-    db.outColumn('DIASource.taiMidPoint')                               # 10
-    db.outColumn('DIASource.obsCode')                                   # 11
-    db.outColumn('DIASource.apFlux')                                    # 12
-    db.outColumn('DIASource.apFluxErr')                                 # 13
-    db.outColumn('DIASource.refMag')                                    # 14
+    db.outColumn('DiaSource.diaSourceId')                               # 6
+    db.outColumn('DiaSource.ra')                                        # 7
+    db.outColumn('DiaSource.decl')                                      # 8
+    db.outColumn('DiaSource.filterId')                                  # 9
+    db.outColumn('DiaSource.exposureStartTime')                         # 10
+    db.outColumn('DiaSource.obsCode')                                   # 11
+    db.outColumn('DiaSource.apFlux')                                    # 12
+    db.outColumn('DiaSource.apFluxErr')                                 # 13
+    db.outColumn('DiaSource.psfFlux')                                    # 14
     
-    w2 = 'mops_TracksToTracklet.trackletId=mops_Tracklet.trackletId'
-    w2 += ' and mops_Tracklet.trackletId=mops_TrackletsToDIASource.trackletId'
-    w2 += ' and mops_TrackletsToDIASource.diaSourceId=DIASource.diaSourceId'
+    w2 = 'mops_TrackToTracklet.trackletId=mops_Tracklet.trackletId'
+    w2 += ' and mops_Tracklet.trackletId=mops_TrackletsToDiaSource.trackletId'
+    w2 += ' and mops_TrackletsToDiaSource.diaSourceId=DiaSource.diaSourceId'
     
     w = ''
     if(where):
@@ -194,9 +194,9 @@ def _fetchDeepTracks(dbLocStr, where, extraTables=[], sliceId=None,
     else:
         w = w2
     if(sliceId != None and numSlices > 1):
-        w += ' and mops_TracksToTracklet.trackId %% %d = %d' %(numSlices, sliceId)
+        w += ' and mops_TrackToTracklet.trackId %% %d = %d' %(numSlices, sliceId)
     db.setQueryWhere(w)
-    db.orderBy('mops_TracksToTracklet.trackId,mops_TracksToTracklet.trackletId,DIASource.diaSourceId')
+    db.orderBy('mops_TrackToTracklet.trackId,mops_TrackToTracklet.trackletId,DiaSource.diaSourceId')
     db.query()
     
     # Fetch the results.
@@ -319,7 +319,7 @@ def deleteAllTracks(dbLocStr):
     db = SafeDbStorage()
     db.setPersistLocation(persistence.LogicalLocation(dbLocStr))
     db.startTransaction()
-    db.executeSql('delete from mops_TracksToTracklet')
+    db.executeSql('delete from mops_TrackToTracklet')
     db.endTransaction()
     return
 
@@ -342,7 +342,7 @@ def save(dbLocStr, tracks):
     db.setPersistLocation(persistence.LogicalLocation(dbLocStr))
     
     # Prepare for insert.
-    db.setTableForInsert('mops_TracksToTracklet')
+    db.setTableForInsert('mops_TrackToTracklet')
     
     db.startTransaction()
     for track in tracks:
@@ -372,7 +372,7 @@ def _getNextTrackId(dbLocStr):
     db = SafeDbStorage()
     db.setRetrieveLocation(persistence.LogicalLocation(dbLocStr))
     
-    db.setTableForQuery('mops_TracksToTracklet')
+    db.setTableForQuery('mops_TrackToTracklet')
     db.outColumn('max(trackId)', True)      # isExpr=True
     
     db.query()

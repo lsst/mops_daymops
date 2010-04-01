@@ -1,5 +1,5 @@
 """
-Class to represent a DIASource object.
+Class to represent a DiaSource object.
 
 This is monkeypatching the corresponding C++ class.
 """
@@ -12,25 +12,25 @@ import lsst.afw.detection as detection
 # SWIG :-(
 class DiaSource(detection.DiaSource):
     """
-    Opaque layer above the DIASource and DIASOurceIDTonight tables.
+    Opaque layer above the DiaSource and DIASOurceIDTonight tables.
     
     We compare DiaSources by their MJD alone, not their spatial location.
     """
-    _refMag = None
+    _psfFlux = None
     # FIXME: to be obsoleted by fix to bug #796
     _obsCode = ''
     
-    def getRefMag(self):
+    def getPsfFlux(self):
         """
-        Getter for refMag
+        Getter for psfFlux
         """
-        return(self._refMag)
+        return(self._psfFlux)
     
-    def setRefMag(self, mag):
+    def setPsfFlux(self, mag):
         """
-        Setter for refMag
+        Setter for psfFlux
         """
-        self._refMag = mag
+        self._psfFlux = mag
         return
     
     def getObsCode(self):
@@ -60,6 +60,18 @@ class DiaSource(detection.DiaSource):
         Alias for self.getDec()
         """
         return(self.getDec())
+
+    #alias by jmyers - TBD: get rid of this once AFW and Schema agree on which we're using!
+    def getExposureStartTime(self):
+        """ 
+        alias for getTaiMidPoint() - one of these will become deprecated soon.
+        """
+        return self.getTaiMidPoint()
+    def setExposureStartTime(self):
+        """
+        alias for setTaiMidPoint() - one of thse will become deprecated soon.
+        """
+        return self.setTaiMidPoint()
         
     # Comparison by MJD.
     def __lt__(self, other):

@@ -9,12 +9,12 @@ as input.
 A. System invokes "Orbit Proximity"
 
 B. For each MovingObject pair identified above:
-  B.1. System retrieves the list of DIASources associated to each MovingObject.
+  B.1. System retrieves the list of DiaSources associated to each MovingObject.
   B.2. System invokes "Orbit Determination" on union of the two lists of 
        DIAsources.
   B.3. System marks the two MovingObjects as MERGED and creates a new 
        MovingObject linked to the 2 MERGED ones (using the new orbit derived 
-       from the unified list of DIASources) marked as NEW.
+       from the unified list of DiaSources) marked as NEW.
 
 RAINY DAY SCENARIO
 If step B.2. (OrbitDetermination) failes, the two corresponding MovingObjects 

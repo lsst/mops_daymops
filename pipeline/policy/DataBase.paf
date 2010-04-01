@@ -3,7 +3,7 @@
 # All angles in degrees!
 #database: "mysql://localhost:3306/mops_onelunation"
 #database: "mysql://localhost:3306/daymops_lsst_full"
-database: "mysql://localhost:3306/mops_dc3btimingtest"
+database: "mysql://localhost:3306/daymops_onelunation_test"
 
 #
 

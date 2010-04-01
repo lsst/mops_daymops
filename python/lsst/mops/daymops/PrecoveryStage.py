@@ -22,7 +22,7 @@ D. For each night in step C.:
        returned by step B.1.
   D.2. System fetches the list of (NOT ATTRIBUTED AND NOT LINKED) Tracklets of 
        each Visit in input 2.
-  D.3. System invokes "Identify Best DIASource Match" on Ephemeris list from 
+  D.3. System invokes "Identify Best DiaSource Match" on Ephemeris list from 
        step D.1. and list of Tracklets from step D.2.
   D.4. System invokes "Orbit Determination" on MovingObjects and candidate 
        Tracklets from step D.3.
@@ -31,7 +31,7 @@ D. For each night in step C.:
 
 E. System marks MovigObjects from input 1. as PRECOVERED.
 
-F. System markes appropriate DIASources as PRECOVERED.
+F. System markes appropriate DiaSources as PRECOVERED.
 
 
 

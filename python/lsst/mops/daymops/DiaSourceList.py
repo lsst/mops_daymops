@@ -1,5 +1,5 @@
 """
-Helper functions to create/retrieve a list of DIASource instances.
+Helper functions to create/retrieve a list of DiaSource instances.
 """
 from DayMOPSObject import DayMOPSObject
 from DiaSource import DiaSource
@@ -20,28 +20,33 @@ def diaSourceListForTonight(dbLocStr, sliceId=None, numSlices=None):
     @param numSlices: number of available slices (i.e. MPI universe size - 1)
     
     Return 
-    Interator to the list of DIASource instances.
+    Interator to the list of DiaSource instances.
     """
     # Send the query.
-    # sql: select d.diaSourceId, d.ra, d.decl, d.filterId, d.taiMidPoint, \
-    #      d.obsCode, d.apFlux, d.apFluxErr, d.refMag from \
-    #      DIASource d, DIASourceIDTonight t where \
-    #      t.DIASourceId=d.diaSourceId;
+    # sql: select d.diaSourceId, d.ra, d.decl, d.filterId, d.exposureStartTime, \
+    #      d.obsCode, d.apFlux, d.apFluxSigma, d.psfFlux from \
+    #      DiaSource d, DiaSourceIDTonight t where \
+    #      t.DiaSourceId=d.diaSourceId;
     db = SafeDbStorage()
     db.setPersistLocation(persistence.LogicalLocation(dbLocStr))
-    db.setTableListForQuery(('DIASource', 'DIASourceIDTonight'))
-    db.outColumn('DIASource.diaSourceId')
-    db.outColumn('DIASource.ra')
-    db.outColumn('DIASource.decl')
-    db.outColumn('DIASource.filterId')
-    db.outColumn('DIASource.taiMidPoint')
-    db.outColumn('DIASource.obsCode')
-    db.outColumn('DIASource.apFlux')
-    db.outColumn('DIASource.apFluxErr')
-    db.outColumn('DIASource.refMag')
-    where = 'DIASource.diaSourceId=DIASourceIDTonight.DIASourceId'
+    db.setTableListForQuery(('DiaSource', 'DiaSourceIDTonight'))
+    db.outColumn('DiaSource.diaSourceId')
+    db.outColumn('DiaSource.ra')
+    db.outColumn('DiaSource.decl')
+    db.outColumn('DiaSource.filterId')
+    #jmyers: it looks like DiaSource has taiMidPoint even in newest AFW
+    # so just cheat and store this there... TBD: find out what's
+    # going on with AFW/schema inconsistency and straighten them out!
+    db.outColumn('DiaSource.exposureStartTime')
+    db.outColumn('DiaSource.apFlux')
+    db.outColumn('DiaSource.apFluxSigma')
+    #jmyers: another weird inconsistency between schema and AFW; AFW
+    # uses refmag and schema does not.  It doesn't really matter
+    # since we don't use magnitude data in MOPS.  TBD: Same as above.
+    db.outColumn('DiaSource.psfFlux')
+    where = 'DiaSource.diaSourceId=DiaSourceIDTonight.DiaSourceId'
     if(sliceId != None and numSlices > 1):
-        where += ' and DIASource.diaSourceId %% %d = %d' \
+        where += ' and DiaSource.diaSourceId %% %d = %d' \
                  %(numSlices, sliceId)
     db.setQueryWhere(where)
     db.query()
@@ -54,11 +59,12 @@ def diaSourceListForTonight(dbLocStr, sliceId=None, numSlices=None):
         d.setRa(db.getColumnByPosDouble(1))
         d.setDec(db.getColumnByPosDouble(2))
         d.setFilterId(db.getColumnByPosInt(3))
+        # TBD: change this!
         d.setTaiMidPoint(float(db.getColumnByPosDouble(4)))
-        d.setObsCode(db.getColumnByPosString(5))
         d.setApFlux(db.getColumnByPosDouble(6))
         d.setApFluxErr(db.getColumnByPosDouble(7))
-        d.setRefMag(db.getColumnByPosDouble(8))
+        # TBD: change this too!
+        d.setPsfFlux(db.getColumnByPosDouble(8))
         yield(d)
     db.finishQuery()
     del(db)
@@ -71,11 +77,11 @@ def computeVelocityStats(diaSources):
     Compute basic velocity information based on the details of members of
     diaSources.
     
-    @param diaSources: list of DIASource instances.
+    @param diaSources: list of DiaSource instances.
     
     Return 
     Velocity components and modulus, in deg/day computed from the input list of 
-    DIASource positions and MJDs.
+    DiaSource positions and MJDs.
         [velRa, velDec, velModulus]
     """
     # Sort diaSources by MJD. Compute stats on first and last DiaSource. We 
@@ -88,7 +94,7 @@ def computeVelocityStats(diaSources):
     last = diaSources[-1]
     
     # Compute time distance in days.
-    timeDistance = last.getTaiMidPoint() - first.getTaiMidPoint()
+    timeDistance = last.getExposureStartTime() - first.getExposureStartTime()
     if(not timeDistance):
         # FIXME: is this a good idea? Should we just return [0., 0., 0.]?
         raise(Exception('No temporal spread in DiaSources!'))
@@ -104,10 +110,10 @@ def getTimeSpan(diaSources):
     defined as
         max(d.getTaiMidPoint())-min(d.getTaiMidPoint) for d in diaSources
     
-    @param diaSources: list of DIASource instances.
+    @param diaSources: list of DiaSource instances.
     
     Return
-    The time spanned (in days) by the input DIASource instances.
+    The time spanned (in days) by the input DiaSource instances.
     """
     if(not diaSources):
         return(None)

@@ -3,6 +3,7 @@
 # All angles in degrees. All times are in days.
 databasePolicy: @policy/DataBase.paf
 locationPolicy: @policy/Location.paf
+verbosityLevel: "DEBUG"
 #
 
 

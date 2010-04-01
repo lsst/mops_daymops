@@ -1,7 +1,7 @@
 """
 BASIC COURSE
 System gets
-1. a list of (NOT ATTRIBUTED AND NOT LINKED and NOT PRECOVERED) DIASources 
+1. a list of (NOT ATTRIBUTED AND NOT LINKED and NOT PRECOVERED) DiaSources 
    belonging to the same night.
 as input.
 
@@ -9,7 +9,7 @@ A. System invokes "Find tracklets"
 
 B. System returns the newly formed linkages (a.k.a. Tracklets).
 
-C. System flags the DIASources linked in each Tracklet as LINKED.
+C. System flags the DiaSources linked in each Tracklet as LINKED.
 
 D. System flags the corresponding Visits as PROCESSED.
 
@@ -19,7 +19,7 @@ Policy
   2. Database name and location
 
 Input
-  1. [s for s in DIASources if (not s.ATTRIBUTED and not s.PRECOVERED and not 
+  1. [s for s in DiaSources if (not s.ATTRIBUTED and not s.PRECOVERED and not 
       s.LINKED]
 
 Output
@@ -29,7 +29,7 @@ Side Effects
   DB Inserts
     1. New Tracklets
   DB Updates
-    1. DIASource statusm -> LINKED
+    1. DiaSource statusm -> LINKED
   DB Deletes
     1. None
 """
@@ -64,18 +64,18 @@ class IntraNightLinkingStage(DayMOPSStage):
         Execute the non-parallel processing for the Intra-night linking Stage.
         
         Pseudo-code:
-        1. Fetch last night's DIASources.
+        1. Fetch last night's DiaSources.
         2. Execute auton.findTracklets and get tracklets out.
-        3. Update DB set linked DIASources.mopsStatus='L'
+        3. Update DB set linked DiaSources.mopsStatus='L'
         4. insert into DB mops_Tracklet
-        5. insert new entries into mops_TrackletsToDIASource.
+        5. insert new entries into mops_TrackletsToDiaSource.
         """
         # Call the superclass preprocess.
         super(IntraNightLinkingStage, self).preprocess()
         
         self.logIt('INFO', 'Starting processing.')
         
-        # Retrieve the DIASources to process.
+        # Retrieve the DiaSources to process.
         sources = []
         for s in DiaSourceList.diaSourceListForTonight(self.dbLocStr):
             sources.append(s)
@@ -97,11 +97,11 @@ class IntraNightLinkingStage(DayMOPSStage):
         
         # Put those Tracklets in the database.
         if(tracklets and len(tracklets)):
-            self.logIt('INFO', 'Found %d Tracklets from %d DIASources.' \
+            self.logIt('INFO', 'Found %d Tracklets from %d DiaSources.' \
                        %(len(tracklets), len(sources)))
             TrackletList.save(self.dbLocStr, tracklets)
         else:
-            self.logIt('INFO', 'Found 0 Tracklets from %d DIASources.' \
+            self.logIt('INFO', 'Found 0 Tracklets from %d DiaSources.' \
                        %(len(sources)))
         return
 

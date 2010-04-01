@@ -132,7 +132,8 @@ class InterNightLinkingStage(DayMOPSStage):
                                               self.fastMaxAccRa,
                                               self.fastMaxAccDec,
                                               self.minNights,
-                                              self.plateWidth):
+                                              self.plateWidth,
+                                              self.obsCode):
             # We do not really need the full Tracklet object: just an instance
             # with the appropriate trackletId.
             i += 1

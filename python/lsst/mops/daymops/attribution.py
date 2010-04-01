@@ -19,7 +19,7 @@ import auton
 def getTonightsNightNumber(dbLocStr, utOffset):
     """
     Given a database location string, figure out the night number for tonight's
-    DIASources.
+    DiaSources.
     
     The offset from UT (utOffset) is defined as
         local time = UT time - utOffset
@@ -28,23 +28,23 @@ def getTonightsNightNumber(dbLocStr, utOffset):
     @param utOffset: offset from localtime to UT (in hours).
     """
     # Send the query
-    # sql = select DIASource.taiMidPoint from DIASource, DIASourceIDTonight
-    #       where DIASource.diaSourceId=DIASourceIDTonight.DIASourceId limit 1
+    # sql = select DiaSource.firstExposureTime from DiaSource, DiaSourceIDTonight
+    #       where DiaSource.diaSourceId=DiaSourceIDTonight.DiaSourceId limit 1
     db = SafeDbStorage()
     db.setPersistLocation(persistence.LogicalLocation(dbLocStr))
-    db.setTableListForQuery(('DIASource', 'DIASourceIDTonight'))
-    db.outColumn('DIASource.taiMidPoint')
-    db.outColumn('DIASource.diaSourceId')
-    db.setQueryWhere('DIASource.diaSourceId=DIASourceIDTonight.DIASourceId')
+    db.setTableListForQuery(('DiaSource', 'DiaSourceIDTonight'))
+    db.outColumn('DiaSource.firstExposureTime')
+    db.outColumn('DiaSource.diaSourceId')
+    db.setQueryWhere('DiaSource.diaSourceId=DiaSourceIDTonight.DiaSourceId')
     db.query()
     
     if(db.next()):
         mjd = db.getColumnByPosDouble(0)
     else:
-        # We might not have any DIASources for tonight. In that case raise an
+        # We might not have any DiaSources for tonight. In that case raise an
         # exception.
         raise(Exception('Unable to determine night number: ' + \
-                        'DIASourceIDTonight is empty.'))
+                        'DiaSourceIDTonight is empty.'))
     db.finishQuery()
     del(db)
     return(lib.mjdToNightNumber(mjd, utOffset))

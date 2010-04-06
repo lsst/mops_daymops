@@ -1337,7 +1337,7 @@ void doLinking(const std::vector<Detection> &allDetections,
      */
     bool DEBUG = true;
 
-    bool limitedRun true;
+    bool limitedRun = true;
     double limitedRunFirstEndpoint = 49616.249649999998 ;
     double limitedRunSecondEndpoint = 49623.023787999999 ;
 

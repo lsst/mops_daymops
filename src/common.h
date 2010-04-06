@@ -77,7 +77,9 @@ namespace KDTree {
          */
         bool regionsOverlap1D(double aLo, double aHi, double b1, double b2, 
                               GeometryType type);
-        
+
+        // euclidean only, and aLo MUST be < aHi, bLo MUST be < bHi
+        bool regionsOverlap1D_unsafe(double aLo, double aHi, double bLo, double bHi) ;
 
         /* for deg is any double value, return a value along [0, 369) */
         double convertToStandardDegrees(double deg);

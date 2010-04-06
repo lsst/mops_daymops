@@ -245,7 +245,21 @@ namespace KDTree {
 
         
 
-
+        bool regionsOverlap1D_unsafe(double aLo, double aHi, double bLo, double bHi) 
+        {
+                            
+            if (aLo < bLo) {
+                if (aHi >= bLo) {
+                    return true;
+                }                            
+            }
+            else { //bmin <= amin
+                if (bHi >= aLo) {
+                    return true;
+                }
+            }
+            return false;
+        }
 
 
         bool regionsOverlap1D(double aLo, double aHi, double b1, double b2, 

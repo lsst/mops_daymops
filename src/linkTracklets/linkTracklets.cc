@@ -11,7 +11,7 @@
 #include "../Exceptions.h"
 #include "../KDTree.h"
 
-#include "../nwaycache.h"
+#include "lruCache.h"
 
 //#define LEAF_SIZE 1024
 //#define LEAF_SIZE 256
@@ -192,18 +192,9 @@ private:
 
 
 
-// crappy NWayCache demands we has things into unsigned longs. EW. Go ahead anyway.
-// TBD: someday: stop doing this, it's awful! write a real cache class.
-struct globalNodeIdAndProjectionIdHasher {
-    static unsigned long hash(GlobalNodeIdAndProjectionId g) 
-        { return ((unsigned long)((unsigned long)g.getImageId()) << 24) +
-                ((unsigned long) ((unsigned long)g.getTreeNodeId()) << 8) + 
-                (unsigned long) g.getProjectionId(); }
-};
 
 // a quick macro to remove a lot of ugly typing
-#define LTCache NWayCache::Cache<GlobalNodeIdAndProjectionId, std::vector<std::vector <double > >, 1, globalNodeIdAndProjectionIdHasher >
-#define LTCacheSlotReference NWayCache::SlotReference<GlobalNodeIdAndProjectionId, std::vector<std::vector <double > >, 1, globalNodeIdAndProjectionIdHasher, NWayCache::NullLockObject, NWayCache::NullLockObject >
+#define LTCache LRUCache <GlobalNodeIdAndProjectionId, std::vector <std::vector <double> > >
 
 
 
@@ -480,14 +471,13 @@ bool areCompatible(TreeNodeAndTime  &nodeA,
     // out to this time and saved that to our cache.
     GlobalNodeIdAndProjectionId lookupKey(first->getId(), firstTimeId, secondTimeId);
 
-    LTCacheSlotReference slot_reference;
+    std::vector<std::vector<double> > cachedBounds;
 
-    if (rangeCache.find(slot_reference, lookupKey)) {
+    if (rangeCache.find(lookupKey, cachedBounds)) {
         // we don't have to recompute it -it's there already!
         cacheHits++;
-        const std::vector<std::vector<double> > bounds = slot_reference.data();
-        std::vector<double> uBounds = bounds.at(0);
-        std::vector<double> lBounds = bounds.at(1);
+        std::vector<double> uBounds = cachedBounds.at(0);
+        std::vector<double> lBounds = cachedBounds.at(1);
         
         firstRAPositionMax = uBounds.at(POINT_RA);
         firstRAPositionMin = lBounds.at(POINT_RA);
@@ -1337,7 +1327,7 @@ void doLinking(const std::vector<Detection> &allDetections,
      */
     bool DEBUG = true;
 
-    bool limitedRun = true;
+    bool limitedRun = false;
     double limitedRunFirstEndpoint = 49616.249649999998 ;
     double limitedRunSecondEndpoint = 49623.023787999999 ;
 
@@ -1364,6 +1354,9 @@ void doLinking(const std::vector<Detection> &allDetections,
     nodeWidthTime = 0; 
     addAllDetectedObjectsToSetTime = 0; 
     doLinkingRecurseTime = 0;
+
+    double iterationTime = std::clock();
+    
 
     if (DEBUG) {
         std:: cout << "all MJDs: ";
@@ -1410,12 +1403,47 @@ void doLinking(const std::vector<Detection> &allDetections,
                     
                             time ( &rawtime );
                             timeinfo = localtime ( &rawtime );                    
+                            
+                            if (timeSince(iterationTime) > 5) {
 
-                            std::cout << "attempting linking between times " << std::setprecision(12)  
-                                      << firstEndpointIter->first.getMJD() << " and " 
-                                      << std::setprecision(12) << secondEndpointIter->first.getMJD() << std::endl;
-                            std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
-                    
+                                std::cout << "attempting linking between times " << std::setprecision(12)  
+                                          << firstEndpointIter->first.getMJD() << " and " 
+                                          << std::setprecision(12) << secondEndpointIter->first.getMJD() << std::endl;
+                                std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
+                                std::cout << " so far we've found " << results.size() << " tracks.\n";
+                                std::cout << "TIMING STATS: \n---------------------\n";
+                                std::cout << "getAllDetectionsForTracklet: :\t" << getAllDetectionsForTrackletTime << "sec\n"; 
+                                std::cout << "getFirstDetectionForTracklet:\t" << getFirstDetectionForTrackletTime << "sec\n"; 
+                                std::cout << "modifyWithAcceleration:\t" << modifyWithAccelerationTime << "sec\n"; 
+                                std::cout << "positionAndVelocityRangesOverlapAfterAcceleration:\t" << positionAndVelocityRangesOverlapAfterAccelerationTime << "sec\n"; 
+                                std::cout << "areCompatible:\t" << areCompatibleTime << "sec\n"; 
+                                std::cout << "getBestFitVelocityAndAcceleration:\t" << getBestFitVelocityAndAccelerationTime << "sec\n";
+                                std::cout << "getBestFitVelocityAndAccelerationForTracklets:\t" << getBestFitVelocityAndAccelerationForTrackletsTime << "sec\n"; 
+                                std::cout << "addBestCompatibleTrackletsAndDetectionsToTrack:\t" << addBestCompatibleTrackletsAndDetectionsToTrackTime << "sec\n"; 
+                                std::cout << "trackMeetsRequirements:\t" << trackMeetsRequirementsTime << "sec\n"; 
+                                std::cout << "endpointTrackletsAreCompatible:\t" << endpointTrackletsAreCompatibleTime << "sec\n"; 
+                                std::cout << "buildTracksAddToResults:\t" << buildTracksAddToResultsTime << "sec\n"; 
+                                std::cout << "areAllLeaves:\t" << areAllLeavesTime << "sec\n"; 
+                                std::cout << "nodeWidth:\t" << nodeWidthTime << "sec\n"; 
+                                std::cout << "addAllDetectedObjectsToSet:\t" << addAllDetectedObjectsToSetTime << "sec\n"; 
+                                std::cout << "doLinkingRecurse:\t" << doLinkingRecurseTime << "sec\n";
+                                
+                                std::cout << "\n\nVisited doLinkingRecurse " << doLinkingRecurseVisits  << " times.\n";
+                                std::cout << "Visited buildTracksAddToResults " << buildTracksAddToResultsVisits << " times.\n";
+                                std::cout << "found " << compatibleEndpointsFound << " compatible endpoint pairs.\n";
+                                std::cout << "generated " << results.size() << " Tracks.\n";
+                                
+                                std::cout << "cache had " << cacheHits << " hits.\n";
+                                std::cout << "cache had " << cacheMisses << " misses.\n";
+                                
+                                std::cout << "While examining tracklets, found " << wereCompatible 
+                                          << " compatibilities, counted separately in RA and Dec.\n";
+                                std::cout << "   - rejected " << rejectedOnVelocity << " based on velocity.\n";
+                                std::cout << "   - rejected " << rejectedOnPosition 
+                                          << " based on position, after finding the compatible in velocity.\n";
+
+                            }
+                            iterationTime = std::clock();
                         }
 
                         // get all intermediate points as support nodes.
@@ -1472,8 +1500,8 @@ void doLinking(const std::vector<Detection> &allDetections,
                         // isCompatible projects the location of the endpoint regions
                         // forward/backwards in time, so there will be 0 reuse between
                         // pairs of endpoint trees.
-                        LTCache rangeCache(100000, 10000000000);
-                        // first arg is num. slots. second arg is max age - set it impossibly high.
+                        LTCache rangeCache(100000000);
+
                         doLinkingRecurse2(allDetections, allTracklets, searchConfig,
                                           firstEndpoint, secondEndpoint,
                                           supportPoints,  
@@ -1487,13 +1515,6 @@ void doLinking(const std::vector<Detection> &allDetections,
                             
                         }
                             
-                        if (dif > 5) {
-                            // this took long enough to be interesting
-                            unsigned int numNodes = 0;
-                            unsigned int numVisits = 0;
-                            showNumVisits(firstEndpointIter->second.getRootNode(), numNodes, numVisits);
-                            std::cout << "saw total of " << numNodes << " over " << numVisits << " visits.\n";
-                        }
 
 
                     }

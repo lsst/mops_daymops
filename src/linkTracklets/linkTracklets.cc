@@ -380,8 +380,9 @@ inline bool positionAndVelocityRangesOverlap(double firstPositionMin, double fir
         positionAndVelocityRangesOverlapAfterAccelerationTime += timeSince(start);
         return false;
     }
-    bool positionCompatible = KDTree::Common::regionsOverlap1D_unsafe(firstPositionMin, firstPositionMax,
-                                                                      secondPositionMin, secondPositionMax);
+    bool positionCompatible = KDTree::Common::regionsOverlap1D(firstPositionMin, firstPositionMax,
+                                                               secondPositionMin, secondPositionMax,
+                                                               KDTree::Common::CIRCULAR_DEGREES);
     if (!positionCompatible) {
         rejectedOnPosition++;
         positionAndVelocityRangesOverlapAfterAccelerationTime += timeSince(start);
@@ -444,7 +445,7 @@ bool areCompatible(TreeNodeAndTime  &nodeA,
 
     second = nodeB.myTree;
     secondTime = nodeB.myTime.getMJD();
-    unsigned int secondTimeId = nodeA.myTime.getImageId();
+    unsigned int secondTimeId = nodeB.myTime.getImageId();
 
 
     bool RACompatible = false;
@@ -530,10 +531,10 @@ bool areCompatible(TreeNodeAndTime  &nodeA,
         firstDecVelocityMin = first->getLBounds()->at(POINT_DEC_VELOCITY) - searchConfig.velocityErrorThresh;
         
         modifyWithAcceleration(firstDecPositionMax, firstDecVelocityMax, 
-                               searchConfig.maxDecAccel, deltaTime);
+                               searchConfig.maxDecAccel, fabs(deltaTime));
         
         modifyWithAcceleration(firstDecPositionMin, firstDecVelocityMin, 
-                               -1.0 * searchConfig.maxDecAccel, deltaTime);
+                               -1.0 * searchConfig.maxDecAccel, fabs(deltaTime));
     
         // save these newly-computed values to cache!
         std::vector<std::vector <double> > boundsForStorage(2);

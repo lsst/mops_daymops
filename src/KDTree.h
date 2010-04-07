@@ -210,19 +210,19 @@ namespace KDTree {
         void debugPrint() const;
 
         // linkTracklets needs to see individual nodes. this returns a const pointer to that node.
-        const KDTreeNode<T> * getRootNode() const;
+        KDTreeNode<T> * getRootNode() const;
       
         KDTree<T>& operator=(const KDTree<T> &rhs);
 
         ~KDTree();
 
+        KDTreeNode<T> *myRoot;
 
     private:
         void copyTree(const KDTree<T> &source);
         void setUpEmptyTree();
         void clearPrivateData();
         bool hasData;
-        KDTreeNode<T> *myRoot;
         unsigned int myK;
         std::vector <double> myUBounds;
         std:: vector <double> myLBounds;
@@ -232,7 +232,7 @@ namespace KDTree {
 
 
 template <class T>
-const KDTreeNode<T> * KDTree<T>::getRootNode() const
+KDTreeNode<T> * KDTree<T>::getRootNode() const
 { 
     return myRoot; 
 }
@@ -438,9 +438,9 @@ void KDTree<T>::buildFromData(std::vector<PointAndValue <T> > pointsAndValues,
   
         /* create the root of the tree (and the rest of the tree
          * recursively), save it to private var. */
-
+        unsigned int idCounter = 0;
         myRoot = new KDTreeNode<T>(pointsAndValuesCopy, k, maxLeafSize, 0, \
-                                   pointsUBounds, pointsLBounds);  
+                                   pointsUBounds, pointsLBounds, idCounter);
     }
 }
 

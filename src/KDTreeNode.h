@@ -44,7 +44,7 @@ namespace KDTree {
         KDTreeNode(std::vector<PointAndValue <T> > pointsAndValues, 
                    unsigned int k, unsigned int maxLeafSize, 
                    unsigned int myAxisToSplit, std::vector<double> Ubounds,
-                   std::vector<double>LBounds);
+                   std::vector<double>LBounds, unsigned int &lastId=0);
 
         /*
          * this addReference operator is to be used by KDTree *ONLY*.
@@ -71,8 +71,8 @@ namespace KDTree {
         // these are to be used by linkTracklets.
         bool hasLeftChild() const;
         bool hasRightChild() const;
-        const KDTreeNode<T> * getLeftChild() const;
-        const KDTreeNode<T> * getRightChild() const;
+        KDTreeNode<T> * getLeftChild();
+        KDTreeNode<T> * getRightChild();
         /*return a pointer to a const vector of the per-axis upper bounds of
           this tree node.  The format is identical to the double vector in the
           pointsAndValues used to create this node.
@@ -85,7 +85,12 @@ namespace KDTree {
         
         void debugPrint(int depth) const;
     
-
+        std::vector <KDTreeNode<T> > myChildren;
+        
+        const unsigned int getNumVisits() const;
+        const unsigned int getId() const;
+        void addVisit();
+        
     private:
         /* for a collection of points and values, find the median value
            along the given axis and return it
@@ -101,13 +106,33 @@ namespace KDTree {
         unsigned int myK;
         std::vector <double> myUBounds;
         std::vector <double> myLBounds;
-        std::vector <KDTreeNode<T> > myChildren;
         std::vector <PointAndValue <T> > myData;
+        //these are used by linkTracklets
+        unsigned int numVisits;
+        unsigned int id;
+
     };
 
 
 
     // these are to be used by linkTracklets.
+    template <class T>
+    const unsigned int KDTreeNode<T>::getNumVisits() const
+    {
+        return numVisits;
+    }
+
+    template <class T>
+    const unsigned int KDTreeNode<T>::getId() const
+    {
+        return id;
+    }
+
+    template <class T>
+    void KDTreeNode<T>::addVisit() 
+    {
+        numVisits++;
+    }
 
 
     template <class T>
@@ -131,7 +156,7 @@ namespace KDTree {
 
 
     template <class T>
-    const KDTreeNode<T> * KDTreeNode<T>::getLeftChild() const
+    KDTreeNode<T> * KDTreeNode<T>::getLeftChild()
     {
         if (!hasLeftChild()) {
             return NULL;
@@ -141,7 +166,7 @@ namespace KDTree {
 
  
     template <class T>
-    const KDTreeNode<T> * KDTreeNode<T>::getRightChild() const
+    KDTreeNode<T> * KDTreeNode<T>::getRightChild()
     {
         if (!hasRightChild()) {
             return NULL;
@@ -214,12 +239,17 @@ namespace KDTree {
     KDTreeNode<T>::KDTreeNode(std::vector<PointAndValue <T> > pointsAndValues, 
                               unsigned int k, unsigned int maxLeafSize,       
                               unsigned int myAxisToSplit, std::vector<double> UBounds, 
-                              std::vector<double> LBounds)
+                              std::vector<double> LBounds, unsigned int &lastId)
     {
         myRefCount = 1;
         myK = k;  
         myUBounds = UBounds;
         myLBounds = LBounds;
+        
+        lastId++;
+        id = lastId;
+
+        numVisits = 0;
 
         std::vector<double> rightChildUBounds, rightChildLBounds,     
             leftChildUBounds, leftChildLBounds;
@@ -317,12 +347,12 @@ namespace KDTree {
             nextAxis = (myAxisToSplit + 1) % (myK);
     
             KDTreeNode leftChild(leftPointsAndValues, k, maxLeafSize,
-                                 nextAxis, leftChildUBounds, leftChildLBounds);
+                                 nextAxis, leftChildUBounds, leftChildLBounds, lastId);
     
             myChildren.push_back(leftChild);
     
             KDTreeNode rightChild(rightPointsAndValues, k, maxLeafSize,
-                                  nextAxis, rightChildUBounds, rightChildLBounds);
+                                  nextAxis, rightChildUBounds, rightChildLBounds, lastId);
 
             myChildren.push_back(rightChild);
         }

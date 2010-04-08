@@ -115,7 +115,7 @@ linkTracklets(const std::vector<Detection> &allDetections,
 
 
 //only declared for unit testing
-void getBestFitVelocityAndAcceleration(std::vector<double> positions, std::vector<double>times,
+void getBestFitVelocityAndAcceleration(std::vector<double> positions, const std::vector<double>&times,
                                        double & velocity, double &acceleration, double &position0);
 
 

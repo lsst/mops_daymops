@@ -245,7 +245,7 @@ namespace KDTree {
         myK = k;  
         myUBounds = UBounds;
         myLBounds = LBounds;
-        
+       
         lastId++;
         id = lastId;
 

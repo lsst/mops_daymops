@@ -361,8 +361,7 @@ void KDTree<T>::buildFromData(std::vector<PointAndValue <T> > pointsAndValues,
 {
 
     myK = k;
-    
-    
+
     if (pointsAndValues.size() > 0) 
     {
     

@@ -588,6 +588,46 @@ BOOST_AUTO_TEST_CASE( Common_regionsOverlap1D_blackbox_1 )
     BOOST_CHECK((KDTree::Common::regionsOverlap1D(M_PI, M_PI + 1, M_PI+.5, .1, KDTree::Common::CIRCULAR_RADIANS) == true));
 }
 
+
+
+BOOST_AUTO_TEST_CASE( Common_angularRegionsOvelapSafe_blackbox_1 )
+{
+     
+    BOOST_CHECK((KDTree::Common::angularRegionsOverlapSafe(10., 20., 15., 30.) == true));
+    BOOST_CHECK((KDTree::Common::angularRegionsOverlapSafe(10., 20., 30., 15.) == true));
+    BOOST_CHECK((KDTree::Common::angularRegionsOverlapSafe(10., 20., 15., 17.) == true));
+    BOOST_CHECK((KDTree::Common::angularRegionsOverlapSafe(10., 20., 17., 15.) == true));
+    BOOST_CHECK((KDTree::Common::angularRegionsOverlapSafe(10., 20., 0., 30.) == true));
+    BOOST_CHECK((KDTree::Common::angularRegionsOverlapSafe(10., 20., 30., 0.) == true));
+
+    BOOST_CHECK((KDTree::Common::angularRegionsOverlapSafe(20., 10., 15., 30.) == true));
+    BOOST_CHECK((KDTree::Common::angularRegionsOverlapSafe(20., 10., 30., 15.) == true));
+    BOOST_CHECK((KDTree::Common::angularRegionsOverlapSafe(20., 10., 15., 17.) == true));
+    BOOST_CHECK((KDTree::Common::angularRegionsOverlapSafe(20., 10., 17., 15.) == true));
+    BOOST_CHECK((KDTree::Common::angularRegionsOverlapSafe(20., 10., 0., 30.) == true));
+    BOOST_CHECK((KDTree::Common::angularRegionsOverlapSafe(20., 10., 30., 0.) == true));
+
+    BOOST_CHECK((KDTree::Common::angularRegionsOverlapSafe(10., 350., 15., 30.) == false));
+    BOOST_CHECK((KDTree::Common::angularRegionsOverlapSafe(10., 350., 5., 20.) == true));
+    BOOST_CHECK((KDTree::Common::angularRegionsOverlapSafe(10., 350., 0., 5.) == true));
+    BOOST_CHECK((KDTree::Common::angularRegionsOverlapSafe(10., 350., -5., 5.) == true));
+    BOOST_CHECK((KDTree::Common::angularRegionsOverlapSafe(10., 350., 355., 5.) == true));
+    BOOST_CHECK((KDTree::Common::angularRegionsOverlapSafe(10., 350., 355., 359.) == true));
+    BOOST_CHECK((KDTree::Common::angularRegionsOverlapSafe(10., 350., -20., 20.) == true));
+
+    BOOST_CHECK((KDTree::Common::angularRegionsOverlapSafe(350., 10., 15., 30.) == false));
+    BOOST_CHECK((KDTree::Common::angularRegionsOverlapSafe(350., 10., 5., 20.) == true));
+    BOOST_CHECK((KDTree::Common::angularRegionsOverlapSafe(350., 10., 0., 5.) == true));
+    BOOST_CHECK((KDTree::Common::angularRegionsOverlapSafe(350., 10., -5., 5.) == true));
+    BOOST_CHECK((KDTree::Common::angularRegionsOverlapSafe(350., 10., 355., 5.) == true));
+    BOOST_CHECK((KDTree::Common::angularRegionsOverlapSafe(350., 10., 355., 359.) == true));
+    BOOST_CHECK((KDTree::Common::angularRegionsOverlapSafe(350., 10., -20., 20.) == true));
+
+}
+
+
+
+
 // blackbox coverage here should be 100% except for the error cases, TBD
 
 BOOST_AUTO_TEST_CASE( convertToStandardDegrees_blackbox_1 )

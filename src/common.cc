@@ -262,6 +262,16 @@ namespace KDTree {
         }
 
 
+        /*
+         * when dealing with circles, this version ASSUMES that aLo < aHi and
+         * fabs(aLo - aHi) < 180 - that is, that we are looking at a normal
+         * range of angles, not something which crosses 0/360.
+         * 
+         * it is used by the tree classes, which can make this assumption safely
+         * (because they are careful to maintain this property).
+         */
+
+
         bool regionsOverlap1D(double aLo, double aHi, double b1, double b2, 
                               GeometryType type)
         {
@@ -329,6 +339,62 @@ namespace KDTree {
             // we should never reach this point.
             return false;
             
+        }
+        
+
+
+
+        /*
+         * this is a safe, general-purpose check for whether two ranges of
+         * angles overlap.
+         *
+         * a region spanning 180 degrees is understood to overlap with ALL other
+         * ranges.
+         *
+         */
+
+
+        bool angularRegionsOverlapSafe(double a1, double a2, double b1, double b2)
+        {
+
+            double aLo = minOfTwo(a1, a2);
+            double aHi = maxOfTwo(a1, a2);
+
+            double bLo = minOfTwo(b1, b2);
+            double bHi = maxOfTwo(b1, b2);
+
+            if ((areEqual(fabs(aLo - aHi), 180.)) ||
+                (areEqual(fabs(bLo - bHi), 180.))) {
+                // take care of this weird degenerate case.                
+                return true;
+            }
+
+            // make a and b each into ranges which are
+            // can be treated as euclidean (do not cross the 0/360 line)
+            while ( bHi - bLo > 180.) {
+                bLo += 360.;
+            }
+            while ( aHi - aLo > 180.) {
+                aLo += 360.;
+            }
+
+            double aLo2 = minOfTwo(aHi, aLo);
+            double aHi2 = maxOfTwo(aHi, aLo);
+            double bLo2 = minOfTwo(bHi, bLo);
+            double bHi2 = maxOfTwo(bHi, bLo);
+
+            // now get a and b on some contiguous 360-degree region.
+            while ( bHi2 - aLo2 > 180) {
+                aHi2 += 360;
+                aLo2 += 360;
+            }
+            while (aHi2 - bLo2 > 180) {
+                bHi2 += 360;
+                bLo2 += 360;
+            }
+
+            //now we can treat them as euclidean.
+            return  regionsOverlap1D_unsafe(aLo2, aHi2, bLo2, bHi2);
         }
         
 

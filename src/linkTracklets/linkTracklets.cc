@@ -365,6 +365,10 @@ inline void modifyWithAcceleration(double &position, double &velocity,
 
 
 
+
+
+
+
 inline bool positionAndVelocityRangesOverlap(double firstPositionMin, double firstPositionMax, 
                                              double firstVelocityMin, double firstVelocityMax,
                                              double secondPositionMin, double secondPositionMax,
@@ -380,9 +384,15 @@ inline bool positionAndVelocityRangesOverlap(double firstPositionMin, double fir
         positionAndVelocityRangesOverlapAfterAccelerationTime += timeSince(start);
         return false;
     }
-    bool positionCompatible = KDTree::Common::regionsOverlap1D(firstPositionMin, firstPositionMax,
-                                                               secondPositionMin, secondPositionMax,
-                                                               KDTree::Common::CIRCULAR_DEGREES);
+
+    firstPositionMin = KDTree::Common::convertToStandardDegrees(firstPositionMin);
+    firstPositionMax = KDTree::Common::convertToStandardDegrees(firstPositionMax);
+
+    secondPositionMin = KDTree::Common::convertToStandardDegrees(secondPositionMin);
+    secondPositionMax = KDTree::Common::convertToStandardDegrees(secondPositionMax);
+
+    bool positionCompatible = KDTree::Common::angularRegionsOverlapSafe(firstPositionMin, firstPositionMax,
+                                                                        secondPositionMin, secondPositionMax);
     if (!positionCompatible) {
         rejectedOnPosition++;
         positionAndVelocityRangesOverlapAfterAccelerationTime += timeSince(start);
@@ -626,9 +636,27 @@ void setTrackletVelocities(const std::vector<Detection> &allDetections,
 
 
 
-void getBestFitVelocityAndAcceleration(std::vector<double> positions, std::vector<double>times,
+void getBestFitVelocityAndAcceleration(std::vector<double> positions, const std::vector<double> & times,
                                        double & velocity, double &acceleration, double &position0)
 {
+    if (positions.size() < 1) {
+        velocity = 0; 
+        acceleration = 0;
+        position0 = 0;
+        return;
+    }
+
+    // try to get these guys along the same 180-degree stretch of degrees...
+    double p0 = positions.at(0);
+    for (unsigned int i = 1; i < positions.size(); i++) {
+        while ( positions.at(i) - p0 > 180) {
+            positions.at(i) -= 360;
+        }
+        while ( p0 - positions.at(i) > 180) {
+            positions.at(i) += 360;
+        }
+    }
+    
     double start = std::clock();
     if (positions.size() != times.size()) {
         LSST_EXCEPT(ctExcept::ProgrammerErrorException,
@@ -1299,7 +1327,74 @@ void doLinkingRecurse2(const std::vector<Detection> &allDetections,
 
 
 
+void debugPrintTimingInfo(const std::vector<Track> &results)
+{
 
+    std::cout << " so far we've found " << results.size() << " tracks.\n";
+    std::cout << "TIMING STATS: \n---------------------\n";
+    std::cout << "getAllDetectionsForTracklet: :\t" << getAllDetectionsForTrackletTime << "sec\n"; 
+    std::cout << "getFirstDetectionForTracklet:\t" << getFirstDetectionForTrackletTime << "sec\n"; 
+    std::cout << "modifyWithAcceleration:\t" << modifyWithAccelerationTime << "sec\n"; 
+    std::cout << "positionAndVelocityRangesOverlapAfterAcceleration:\t" << positionAndVelocityRangesOverlapAfterAccelerationTime << "sec\n"; 
+    std::cout << "areCompatible:\t" << areCompatibleTime << "sec\n"; 
+    std::cout << "getBestFitVelocityAndAcceleration:\t" << getBestFitVelocityAndAccelerationTime << "sec\n";
+    std::cout << "getBestFitVelocityAndAccelerationForTracklets:\t" << getBestFitVelocityAndAccelerationForTrackletsTime << "sec\n"; 
+    std::cout << "addBestCompatibleTrackletsAndDetectionsToTrack:\t" << addBestCompatibleTrackletsAndDetectionsToTrackTime << "sec\n"; 
+    std::cout << "trackMeetsRequirements:\t" << trackMeetsRequirementsTime << "sec\n"; 
+    std::cout << "endpointTrackletsAreCompatible:\t" << endpointTrackletsAreCompatibleTime << "sec\n"; 
+    std::cout << "buildTracksAddToResults:\t" << buildTracksAddToResultsTime << "sec\n"; 
+    std::cout << "areAllLeaves:\t" << areAllLeavesTime << "sec\n"; 
+    std::cout << "nodeWidth:\t" << nodeWidthTime << "sec\n"; 
+    std::cout << "addAllDetectedObjectsToSet:\t" << addAllDetectedObjectsToSetTime << "sec\n"; 
+    std::cout << "doLinkingRecurse:\t" << doLinkingRecurseTime << "sec\n";
+                                
+    std::cout << "\n\nVisited doLinkingRecurse " << doLinkingRecurseVisits  << " times.\n";
+    std::cout << "Visited buildTracksAddToResults " << buildTracksAddToResultsVisits << " times.\n";
+    std::cout << "found " << compatibleEndpointsFound << " compatible endpoint pairs.\n";
+    std::cout << "generated " << results.size() << " Tracks.\n";
+                                
+    std::cout << "cache had " << cacheHits << " hits.\n";
+    std::cout << "cache had " << cacheMisses << " misses.\n";
+                                
+    std::cout << "While examining tracklets, found " << wereCompatible 
+              << " compatibilities, counted separately in RA and Dec.\n";
+    std::cout << "   - rejected " << rejectedOnVelocity << " based on velocity.\n";
+    std::cout << "   - rejected " << rejectedOnPosition 
+              << " based on position, after finding the compatible in velocity.\n";
+
+
+
+}
+
+
+
+void initDebugTimingInfo()
+{
+
+    rejectedOnVelocity = 0;
+    rejectedOnPosition = 0;
+    wereCompatible = 0;
+    cacheHits = 0; 
+    cacheMisses = 0;
+    doLinkingRecurseVisits = 0;
+    buildTracksAddToResultsVisits = 0;
+    compatibleEndpointsFound = 0;
+    getAllDetectionsForTrackletTime = 0; 
+    getFirstDetectionForTrackletTime = 0; 
+    modifyWithAccelerationTime = 0; 
+    positionAndVelocityRangesOverlapAfterAccelerationTime = 0; 
+    areCompatibleTime = 0; 
+    getBestFitVelocityAndAccelerationTime = 0;
+    getBestFitVelocityAndAccelerationForTrackletsTime = 0; 
+    addBestCompatibleTrackletsAndDetectionsToTrackTime = 0; 
+    trackMeetsRequirementsTime = 0; 
+    endpointTrackletsAreCompatibleTime = 0; 
+    buildTracksAddToResultsTime = 0; 
+    areAllLeavesTime = 0; 
+    nodeWidthTime = 0; 
+    addAllDetectedObjectsToSetTime = 0; 
+    doLinkingRecurseTime = 0;    
+}
 
 
 
@@ -1326,35 +1421,13 @@ void doLinking(const std::vector<Detection> &allDetections,
      * doLinking, we start the searching with the head (i.e. root) node of each
      * tree.
      */
-    bool DEBUG = true;
+    bool DEBUG = false;
 
     bool limitedRun = false;
     double limitedRunFirstEndpoint = 49616.249649999998 ;
     double limitedRunSecondEndpoint = 49623.023787999999 ;
 
-    rejectedOnVelocity = 0;
-    rejectedOnPosition = 0;
-    wereCompatible = 0;
-    cacheHits = 0; 
-    cacheMisses = 0;
-    doLinkingRecurseVisits = 0;
-    buildTracksAddToResultsVisits = 0;
-    compatibleEndpointsFound = 0;
-    getAllDetectionsForTrackletTime = 0; 
-    getFirstDetectionForTrackletTime = 0; 
-    modifyWithAccelerationTime = 0; 
-    positionAndVelocityRangesOverlapAfterAccelerationTime = 0; 
-    areCompatibleTime = 0; 
-    getBestFitVelocityAndAccelerationTime = 0;
-    getBestFitVelocityAndAccelerationForTrackletsTime = 0; 
-    addBestCompatibleTrackletsAndDetectionsToTrackTime = 0; 
-    trackMeetsRequirementsTime = 0; 
-    endpointTrackletsAreCompatibleTime = 0; 
-    buildTracksAddToResultsTime = 0; 
-    areAllLeavesTime = 0; 
-    nodeWidthTime = 0; 
-    addAllDetectedObjectsToSetTime = 0; 
-    doLinkingRecurseTime = 0;
+    initDebugTimingInfo();
 
     double iterationTime = std::clock();
     
@@ -1400,51 +1473,21 @@ void doLinking(const std::vector<Detection> &allDetections,
                         
                         if (DEBUG) {
                             time_t rawtime;
+                            
+                            if (timeSince(iterationTime) > 5) {
+                                debugPrintTimingInfo(results);
+                            }
+                            iterationTime = std::clock();
                             struct tm * timeinfo;
-                    
+                            
                             time ( &rawtime );
                             timeinfo = localtime ( &rawtime );                    
                             
-                            if (timeSince(iterationTime) > 5) {
-
-                                std::cout << "attempting linking between times " << std::setprecision(12)  
-                                          << firstEndpointIter->first.getMJD() << " and " 
-                                          << std::setprecision(12) << secondEndpointIter->first.getMJD() << std::endl;
-                                std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
-                                std::cout << " so far we've found " << results.size() << " tracks.\n";
-                                std::cout << "TIMING STATS: \n---------------------\n";
-                                std::cout << "getAllDetectionsForTracklet: :\t" << getAllDetectionsForTrackletTime << "sec\n"; 
-                                std::cout << "getFirstDetectionForTracklet:\t" << getFirstDetectionForTrackletTime << "sec\n"; 
-                                std::cout << "modifyWithAcceleration:\t" << modifyWithAccelerationTime << "sec\n"; 
-                                std::cout << "positionAndVelocityRangesOverlapAfterAcceleration:\t" << positionAndVelocityRangesOverlapAfterAccelerationTime << "sec\n"; 
-                                std::cout << "areCompatible:\t" << areCompatibleTime << "sec\n"; 
-                                std::cout << "getBestFitVelocityAndAcceleration:\t" << getBestFitVelocityAndAccelerationTime << "sec\n";
-                                std::cout << "getBestFitVelocityAndAccelerationForTracklets:\t" << getBestFitVelocityAndAccelerationForTrackletsTime << "sec\n"; 
-                                std::cout << "addBestCompatibleTrackletsAndDetectionsToTrack:\t" << addBestCompatibleTrackletsAndDetectionsToTrackTime << "sec\n"; 
-                                std::cout << "trackMeetsRequirements:\t" << trackMeetsRequirementsTime << "sec\n"; 
-                                std::cout << "endpointTrackletsAreCompatible:\t" << endpointTrackletsAreCompatibleTime << "sec\n"; 
-                                std::cout << "buildTracksAddToResults:\t" << buildTracksAddToResultsTime << "sec\n"; 
-                                std::cout << "areAllLeaves:\t" << areAllLeavesTime << "sec\n"; 
-                                std::cout << "nodeWidth:\t" << nodeWidthTime << "sec\n"; 
-                                std::cout << "addAllDetectedObjectsToSet:\t" << addAllDetectedObjectsToSetTime << "sec\n"; 
-                                std::cout << "doLinkingRecurse:\t" << doLinkingRecurseTime << "sec\n";
-                                
-                                std::cout << "\n\nVisited doLinkingRecurse " << doLinkingRecurseVisits  << " times.\n";
-                                std::cout << "Visited buildTracksAddToResults " << buildTracksAddToResultsVisits << " times.\n";
-                                std::cout << "found " << compatibleEndpointsFound << " compatible endpoint pairs.\n";
-                                std::cout << "generated " << results.size() << " Tracks.\n";
-                                
-                                std::cout << "cache had " << cacheHits << " hits.\n";
-                                std::cout << "cache had " << cacheMisses << " misses.\n";
-                                
-                                std::cout << "While examining tracklets, found " << wereCompatible 
-                                          << " compatibilities, counted separately in RA and Dec.\n";
-                                std::cout << "   - rejected " << rejectedOnVelocity << " based on velocity.\n";
-                                std::cout << "   - rejected " << rejectedOnPosition 
-                                          << " based on position, after finding the compatible in velocity.\n";
-
-                            }
-                            iterationTime = std::clock();
+                            std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
+                            std::cout << "attempting linking between times " << std::setprecision(12)  
+                                      << firstEndpointIter->first.getMJD() << " and " 
+                                      << std::setprecision(12) << secondEndpointIter->first.getMJD() 
+                                      << std::endl;
                         }
 
                         // get all intermediate points as support nodes.
@@ -1491,11 +1534,6 @@ void doLinking(const std::vector<Detection> &allDetections,
                 
                         //call the recursive linker with the endpoint nodes and support point nodes.
 
-                        double last;
-                        if (limitedRun) {
-                            last = std::clock();
-                        }
-
                         // use a cache to avoid doing math in isCompatible!
                         // we use a new cache for each pair of endpoints, because
                         // isCompatible projects the location of the endpoint regions
@@ -1508,52 +1546,15 @@ void doLinking(const std::vector<Detection> &allDetections,
                                           supportPoints,  
                                           results, 2, rangeCache);
 
-                        double dif = getTimeElapsed(last);
-                        if (limitedRun)
-                        {
-                            std::cout << "doLinkingRecurse2 took " << std::fixed << std::setprecision(10)
-                                      << dif << " seconds." << std::endl;
-                            
-                        }
-                            
-
 
                     }
                 }
             }
         }
     }
-    std::cout << "TIMING STATS: \n---------------------\n";
-    std::cout << "getAllDetectionsForTracklet: :\t" << getAllDetectionsForTrackletTime << "sec\n"; 
-    std::cout << "getFirstDetectionForTracklet:\t" << getFirstDetectionForTrackletTime << "sec\n"; 
-    std::cout << "modifyWithAcceleration:\t" << modifyWithAccelerationTime << "sec\n"; 
-    std::cout << "positionAndVelocityRangesOverlapAfterAcceleration:\t" << positionAndVelocityRangesOverlapAfterAccelerationTime << "sec\n"; 
-    std::cout << "areCompatible:\t" << areCompatibleTime << "sec\n"; 
-    std::cout << "getBestFitVelocityAndAcceleration:\t" << getBestFitVelocityAndAccelerationTime << "sec\n";
-    std::cout << "getBestFitVelocityAndAccelerationForTracklets:\t" << getBestFitVelocityAndAccelerationForTrackletsTime << "sec\n"; 
-    std::cout << "addBestCompatibleTrackletsAndDetectionsToTrack:\t" << addBestCompatibleTrackletsAndDetectionsToTrackTime << "sec\n"; 
-    std::cout << "trackMeetsRequirements:\t" << trackMeetsRequirementsTime << "sec\n"; 
-    std::cout << "endpointTrackletsAreCompatible:\t" << endpointTrackletsAreCompatibleTime << "sec\n"; 
-    std::cout << "buildTracksAddToResults:\t" << buildTracksAddToResultsTime << "sec\n"; 
-    std::cout << "areAllLeaves:\t" << areAllLeavesTime << "sec\n"; 
-    std::cout << "nodeWidth:\t" << nodeWidthTime << "sec\n"; 
-    std::cout << "addAllDetectedObjectsToSet:\t" << addAllDetectedObjectsToSetTime << "sec\n"; 
-    std::cout << "doLinkingRecurse:\t" << doLinkingRecurseTime << "sec\n";
-
-    std::cout << "\n\nVisited doLinkingRecurse " << doLinkingRecurseVisits  << " times.\n";
-    std::cout << "Visited buildTracksAddToResults " << buildTracksAddToResultsVisits << " times.\n";
-    std::cout << "found " << compatibleEndpointsFound << " compatible endpoint pairs.\n";
-    std::cout << "generated " << results.size() << " Tracks.\n";
-
-    std::cout << "cache had " << cacheHits << " hits.\n";
-    std::cout << "cache had " << cacheMisses << " misses.\n";
-
-    std::cout << "While examining tracklets, found " << wereCompatible 
-              << " compatibilities, counted separately in RA and Dec.\n";
-    std::cout << "   - rejected " << rejectedOnVelocity << " based on velocity.\n";
-    std::cout << "   - rejected " << rejectedOnPosition 
-              << " based on position, after finding the compatible in velocity.\n";
-
+    if (DEBUG) {
+        debugPrintTimingInfo(results);
+    }
 }
 
 
@@ -1574,12 +1575,12 @@ linkTracklets(const std::vector<Detection> &allDetections,
       the points in the trees are in [RA, Dec, RAVelocity, DecVelocity] and the
       returned keys are indices into queryTracklets.
     */
-    std::cout << "setting velocities of tracklets.\n";
+    //std::cout << "setting velocities of tracklets.\n";
     setTrackletVelocities(allDetections, queryTracklets);
-    std::cout << "Building trees on tracklets.\n";
+    //std::cout << "Building trees on tracklets.\n";
     std::map<ImageTime, KDTree::KDTree <unsigned int> > trackletTimeToTreeMap;    
     makeTrackletTimeToTreeMap(allDetections, queryTracklets, trackletTimeToTreeMap);
-    std::cout << "Beginning the linking process.\n";
+    //std::cout << "Beginning the linking process.\n";
     doLinking(allDetections, queryTracklets, searchConfig, trackletTimeToTreeMap, toRet);
     
     return toRet;

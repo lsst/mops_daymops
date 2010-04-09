@@ -15,6 +15,7 @@
 #include "../Detection.h"
 #include "../Tracklet.h"
 #include "linkTracklets.h"
+#include "../Exceptions.h"
 
 bool Eq(double a, double b) 
 {
@@ -22,6 +23,142 @@ bool Eq(double a, double b)
     return (fabs(a - b) < epsilon);
 }
 
+
+void debugPrintTrackletsAndDets(std::vector<Detection> allDets, std::vector<Tracklet> allTracklets) 
+{
+
+    for (unsigned int i = 0; i < allDets.size(); i++) {
+        Detection* curDet = &allDets.at(i);
+        std::cout << curDet->getID() << "\t" << curDet->getRA() << "\t" << curDet->getDec() << '\n';
+    }
+    std::cout << "all tracklets:\n";
+
+    for (unsigned int i = 0; i < allTracklets.size(); i++) {
+        Tracklet* curTracklet = &allTracklets.at(i);
+        std::set<unsigned int>::const_iterator dIter;
+        for (dIter = curTracklet->indices.begin(); dIter != curTracklet->indices.end(); dIter++) {
+            std::cout << *dIter << " ";
+        }
+        std::cout << '\n';
+    }
+
+}
+
+void debugPrintTrackSet(const TrackSet &tracks, const std::vector<Detection> &allDets) 
+{
+    std::set<Track>::const_iterator trackIter;
+    unsigned int trackCount = 0;
+    for (trackIter = tracks.componentTracks.begin();
+         trackIter != tracks.componentTracks.end();
+         trackIter++) {
+        std::cout << " track " << trackCount << ":\n";
+        std::set<unsigned int>::const_iterator detIdIter;
+        for (detIdIter = trackIter->componentDetectionIndices.begin();
+             detIdIter != trackIter->componentDetectionIndices.end();
+             detIdIter++) {
+            std::cout << '\t' << *detIdIter << ": " << allDets.at(*detIdIter).getID() << " "
+                      << allDets.at(*detIdIter).getEpochMJD() << 
+                " " << allDets.at(*detIdIter).getRA() << " "<< allDets.at(*detIdIter).getDec() << std::endl;
+        }
+        trackCount++;
+    }
+
+}
+
+
+
+namespace ctExcept = collapseTracklets::exceptions;
+
+
+/*
+ * generateTrack: create a new ground-truth track with specified
+ * sky-plane behavior and specified obstimes.
+ *
+ * for each inner vector of trackletObsTimes, we will create a tracklet
+ * and add it to allTracklets. It will be given detections at times specified
+ * by the doubles contained in the vector.
+ * 
+ * we will ASSUME that the track is expected to have RA0, Dec0 at time
+ * trackletObsTimes[0][0].  If trackletObsTimes is in a non-sorted order, expect
+ * weird behavior.
+ *
+ * each detection will be given a new, unique ID > lastDetId and lastDetId will
+ * be MODIFIED to be the last, greated detection ID created. allDetections will
+ * be MODIFIED and the new detection will be added to it.
+ *
+ * similarly, allTracklets will be MODIFIED with new tracklets. Each tracklet
+ * will have a new, unique ID > lastTrackletID, and lastTrackletId will be
+ * MODIFIED to the last, largest ID we assign.
+ *
+ * Finally, return a Track containing the IDs of all detections and tracklets
+ * created.
+ * 
+ */
+Track generateTrack(double ra0, double dec0, double raV, double decV,
+                    double raAcc, double decAcc,
+                    std::vector<std::vector <double> > trackletObsTimes,
+                    std::vector<Detection> &allDetections,
+                    std::vector<Tracklet> &allTracklets, 
+                    unsigned int & lastDetId,
+                    unsigned int & lastTrackletId) {
+
+    if (trackletObsTimes.size() == 0) {
+        throw LSST_EXCEPT(ctExcept::BadParameterException, 
+                          std::string(__FUNCTION__)+
+                          std::string(": cannot build a track with 0 obs times!"));
+    }
+    if (trackletObsTimes.at(0).size() == 0) {
+        throw LSST_EXCEPT(ctExcept::BadParameterException, 
+                          std::string(__FUNCTION__)+
+                          std::string(": cannot build a tracklet with 0 obs times!"));
+    }
+    
+    double time0 = trackletObsTimes.at(0).at(0);
+    std::vector<std::vector <double > >::const_iterator trackletIter;
+    std::vector<double>::const_iterator obsTime;
+
+    Track newTrack;
+    for(trackletIter = trackletObsTimes.begin();
+        trackletIter != trackletObsTimes.end();
+        trackletIter++) {
+        if (trackletIter->size() == 0) {
+            throw LSST_EXCEPT(ctExcept::BadParameterException, 
+                              std::string(__FUNCTION__)+
+                              std::string(": cannot build tracklet with 0 obs times!"));
+        }
+        lastTrackletId++;
+        Tracklet newTracklet;
+        for (obsTime = trackletIter->begin();
+             obsTime != trackletIter->end();
+             obsTime++) {
+            double resultRa = ra0;
+            double resultDec = dec0;
+            double tempRaV = raV;
+            double tempDecV = decV;
+            // calculate ra, dec at this obs time.
+            double deltaTime = *obsTime - time0;
+            modifyWithAcceleration(resultRa,  tempRaV,  raAcc,  deltaTime);
+            modifyWithAcceleration(resultDec, tempDecV, decAcc, deltaTime);
+            // create new det, add it to our total set of dets,
+            // add its ID to the cur tracklet, and cur track.
+            lastDetId++;
+            Detection newDet(lastDetId, *obsTime, resultRa, resultDec);
+            allDetections.push_back(newDet);
+            newTracklet.indices.insert(lastDetId);
+            newTrack.componentDetectionIndices.insert(lastDetId);           
+        }
+        allTracklets.push_back(newTracklet);
+        if (allTracklets.size() -1 != lastTrackletId) {
+            throw LSST_EXCEPT(ctExcept::BadParameterException,
+                              std::string(__FUNCTION__)+
+                              std::string(": tracklet IDs are assumed to be the index of the tracklet into the tracklet vector."));
+        }
+        newTrack.componentTrackletIndices.insert(lastTrackletId);
+        
+    }
+
+    return newTrack;
+}
 
 
 
@@ -100,6 +237,66 @@ BOOST_AUTO_TEST_CASE( trackSet_2) {
 }
 
 
+BOOST_AUTO_TEST_CASE (trackSet_3) {
+
+    Track t1;
+    Track t2;
+    Track t11;
+    Track t22;
+
+    Track t3;
+
+    t1.componentDetectionIndices.insert(1);
+    t1.componentDetectionIndices.insert(2);
+
+    t1.componentTrackletIndices.insert(1);
+
+
+    t2.componentDetectionIndices.insert(3);
+    t2.componentDetectionIndices.insert(4);
+
+    t2.componentTrackletIndices.insert(2);
+
+
+    t11.componentDetectionIndices.insert(10);
+    t11.componentDetectionIndices.insert(20);
+
+    t11.componentTrackletIndices.insert(10);
+
+
+    t22.componentDetectionIndices.insert(30);
+    t22.componentDetectionIndices.insert(40);
+
+    t22.componentTrackletIndices.insert(20);
+
+
+    t3.componentDetectionIndices.insert(4);
+    t3.componentDetectionIndices.insert(5);
+
+    t3.componentTrackletIndices.insert(3);
+
+    TrackSet ts1;
+    TrackSet ts2;
+
+    ts1.insert(t1);
+    ts1.insert(t2);
+    BOOST_CHECK(ts1.size() == 2);
+    ts2.insert(t1);
+    ts2.insert(t2);
+    BOOST_CHECK(ts2.size() == 2);
+    
+    BOOST_CHECK(ts1 == ts2);
+    
+    ts2.insert(t3);
+    BOOST_CHECK(ts2.size() == 3);
+
+    BOOST_CHECK(ts1 != ts2);
+    BOOST_CHECK(ts1.isSubsetOf(ts2));
+
+}
+
+
+
 
 
 BOOST_AUTO_TEST_CASE( linkTracklets_whitebox_getBestFitVelocityAndAcceleration_test0) 
@@ -171,7 +368,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_blackbox_1 )
   std::vector<Detection> myDets;
   std::vector<Tracklet> pairs;
   linkTrackletsConfig myConfig;
-  std::vector<Track> results = linkTracklets(myDets, pairs, myConfig);
+  TrackSet results = linkTracklets(myDets, pairs, myConfig);
   BOOST_CHECK(pairs.size() == 0);
 }
 
@@ -199,7 +396,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_easy_1 )
   
   linkTrackletsConfig myConfig;
 
-  std::vector<Track> results = linkTracklets(myDets, pairs, myConfig);
+  TrackSet results = linkTracklets(myDets, pairs, myConfig);
 
   BOOST_CHECK(results.size() == 1);
 }
@@ -234,7 +431,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_easy_2 )
   
   linkTrackletsConfig myConfig;
 
-  std::vector<Track> results = linkTracklets(myDets, pairs, myConfig);
+  TrackSet results = linkTracklets(myDets, pairs, myConfig);
 
   BOOST_CHECK(results.size() == 10);
 }
@@ -268,7 +465,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_easy_3 )
   
   linkTrackletsConfig myConfig;
 
-  std::vector<Track> results = linkTracklets(myDets, pairs, myConfig);
+  TrackSet results = linkTracklets(myDets, pairs, myConfig);
 
   BOOST_CHECK(results.size() == 10);
 }
@@ -297,7 +494,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_easy_4_1 )
   
   linkTrackletsConfig myConfig;
 
-  std::vector<Track> results = linkTracklets(myDets, pairs, myConfig);
+  TrackSet results = linkTracklets(myDets, pairs, myConfig);
 
   //std::cout << "results size = " << results.size() << '\n';
   BOOST_CHECK(results.size() == 1);
@@ -329,7 +526,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_easy_4 )
   
   linkTrackletsConfig myConfig;
 
-  std::vector<Track> results = linkTracklets(myDets, pairs, myConfig);
+  TrackSet results = linkTracklets(myDets, pairs, myConfig);
 
   //std::cout << "results size = " << results.size() << '\n';
   BOOST_CHECK(results.size() == 10);
@@ -363,7 +560,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_easy_5 )
   
   linkTrackletsConfig myConfig;
 
-  std::vector<Track> results = linkTracklets(myDets, pairs, myConfig);
+  TrackSet results = linkTracklets(myDets, pairs, myConfig);
 
   //std::cout << "results size = " << results.size() << '\n';
   // for (unsigned int i = 0; i < results.size(); i++) {
@@ -386,5 +583,274 @@ BOOST_AUTO_TEST_CASE( linkTracklets_easy_5 )
   BOOST_CHECK(results.size() == 10);
 }
 
+
+
+// Track generateTrack(double ra0, double dec0, double raV, double decV,
+//                     double raAcc, double decAcc,
+//                     std::vector<std::vector <double> > trackletObsTimes,
+//                     std::vector<Detection> &allDetections,
+//                     std::vector<Tracklet> &allTracklets, 
+//                     unsigned int & lastDetId,
+//                     unsigned int & lastTrackletId) {
+
+BOOST_AUTO_TEST_CASE( linkTracklets_1 )
+{
+    TrackSet expectedTracks;
+    std::vector<Detection> allDets;
+    std::vector<Tracklet> allTracklets;
+    unsigned int firstDetId = -1;
+    unsigned int firstTrackletId = -1;
+
+  
+    linkTrackletsConfig myConfig;
+
+    std::vector<std::vector<double> > imgTimes(3);
+
+    imgTimes.at(0).push_back(5300);
+    imgTimes.at(0).push_back(5300.03);
+
+    imgTimes.at(1).push_back(5301);
+    imgTimes.at(1).push_back(5301.03);
+
+    imgTimes.at(2).push_back(5302);
+    imgTimes.at(2).push_back(5302.03);
+
+    expectedTracks.insert(generateTrack(20., 20., 
+                                        .25, .01, 
+                                        .0002, .002,
+                                        imgTimes, 
+                                        allDets, allTracklets, 
+                                        firstDetId, firstTrackletId));
+
+
+
+    TrackSet foundTracks = linkTracklets(allDets, allTracklets, myConfig);
+
+    BOOST_CHECK(foundTracks == expectedTracks);
+
+}
+
+
+BOOST_AUTO_TEST_CASE( linkTracklets_2 )
+{
+    // lots of support nodes!
+    TrackSet expectedTracks;
+    std::vector<Detection> allDets;
+    std::vector<Tracklet> allTracklets;
+    unsigned int firstDetId = -1;
+    unsigned int firstTrackletId = -1;
+
+  
+    linkTrackletsConfig myConfig;
+
+    std::vector<std::vector<double> > imgTimes(7);
+
+    imgTimes.at(0).push_back(5300);
+    imgTimes.at(0).push_back(5300.03);
+
+    imgTimes.at(1).push_back(5301);
+    imgTimes.at(1).push_back(5301.03);
+
+    imgTimes.at(2).push_back(5302);
+    imgTimes.at(2).push_back(5302.03);
+
+    imgTimes.at(3).push_back(5303);
+    imgTimes.at(3).push_back(5303.03);
+
+    imgTimes.at(4).push_back(5304);
+    imgTimes.at(4).push_back(5304.03);
+
+    imgTimes.at(5).push_back(5305);
+    imgTimes.at(5).push_back(5305.03);
+
+    imgTimes.at(6).push_back(5306);
+    imgTimes.at(6).push_back(5306.03);
+
+    expectedTracks.insert(generateTrack(20., 20., 
+                                        .25, .01, 
+                                        .0002, .002,
+                                        imgTimes, 
+                                        allDets, allTracklets, 
+                                        firstDetId, firstTrackletId));
+
+
+
+    TrackSet foundTracks = linkTracklets(allDets, allTracklets, myConfig);
+
+
+    BOOST_CHECK(expectedTracks.isSubsetOf(foundTracks));
+
+}
+
+
+
+BOOST_AUTO_TEST_CASE( linkTracklets_3 )
+{
+    // lots of support nodes, and a psuedo-deep stack
+    TrackSet expectedTracks;
+    std::vector<Detection> allDets;
+    std::vector<Tracklet> allTracklets;
+    unsigned int firstDetId = -1;
+    unsigned int firstTrackletId = -1;
+
+  
+    linkTrackletsConfig myConfig;
+
+    std::vector<std::vector<double> > imgTimes(7);
+
+    imgTimes.at(0).push_back(5300);
+    imgTimes.at(0).push_back(5300.03);
+
+    imgTimes.at(1).push_back(5301);
+    imgTimes.at(1).push_back(5301.03);
+
+    imgTimes.at(2).push_back(5302);
+    imgTimes.at(2).push_back(5302.03);
+
+    imgTimes.at(3).push_back(5303);
+    imgTimes.at(3).push_back(5303.005);    
+    imgTimes.at(3).push_back(5303.01);
+    imgTimes.at(3).push_back(5303.015);
+    imgTimes.at(3).push_back(5303.02);
+    imgTimes.at(3).push_back(5303.025);
+    imgTimes.at(3).push_back(5303.03);
+    imgTimes.at(3).push_back(5303.035);
+    imgTimes.at(3).push_back(5303.04);
+    imgTimes.at(3).push_back(5303.045);
+    imgTimes.at(3).push_back(5303.05);
+    imgTimes.at(3).push_back(5303.055);
+
+    imgTimes.at(4).push_back(5304);
+    imgTimes.at(4).push_back(5304.03);
+
+    imgTimes.at(5).push_back(5305);
+    imgTimes.at(5).push_back(5305.03);
+
+    imgTimes.at(6).push_back(5306);
+    imgTimes.at(6).push_back(5306.03);
+
+    expectedTracks.insert(generateTrack(20., 20., 
+                                        .25, .01, 
+                                        .0002, .002,
+                                        imgTimes, 
+                                        allDets, allTracklets, 
+                                        firstDetId, firstTrackletId));
+
+
+
+    TrackSet foundTracks = linkTracklets(allDets, allTracklets, myConfig);
+
+    
+
+    BOOST_CHECK(expectedTracks.isSubsetOf(foundTracks));
+    // std::cout << " got tracks: \n";
+    // debugPrintTrackSet(foundTracks, allDets);
+    // std::cout << " expected tracks: \n";
+    // debugPrintTrackSet(expectedTracks, allDets);
+
+}
+
+
+
+BOOST_AUTO_TEST_CASE( linkTracklets_4 )
+{
+
+    // lots of tracks this time. still simple cadence.
+    TrackSet expectedTracks;
+    std::vector<Detection> allDets;
+    std::vector<Tracklet> allTracklets;
+    unsigned int firstDetId = -1;
+    unsigned int firstTrackletId = -1;
+
+  
+    linkTrackletsConfig myConfig;
+
+    std::vector<std::vector<double> > imgTimes(3);
+
+    imgTimes.at(0).push_back(5300);
+    imgTimes.at(0).push_back(5300.03);
+
+    imgTimes.at(1).push_back(5301);
+    imgTimes.at(1).push_back(5301.03);
+
+    imgTimes.at(2).push_back(5302);
+    imgTimes.at(2).push_back(5302.03);
+
+    expectedTracks.insert(generateTrack(20., 20., 
+                                        .25, .01, 
+                                        .0002, .002,
+                                        imgTimes, 
+                                        allDets, allTracklets, 
+                                        firstDetId, firstTrackletId));
+
+    expectedTracks.insert(generateTrack(10., 10., 
+                                        -.02, .015, 
+                                        .00025, .0002,
+                                        imgTimes, 
+                                        allDets, allTracklets, 
+                                        firstDetId, firstTrackletId));
+
+    expectedTracks.insert(generateTrack(15., 10., 
+                                        .001, .00001, 
+                                        .00015, .000023,
+                                        imgTimes, 
+                                        allDets, allTracklets, 
+                                        firstDetId, firstTrackletId));
+
+    expectedTracks.insert(generateTrack(12.5, 12.5, 
+                                        -.01, -.001, 
+                                        .000001, -.00023,
+                                        imgTimes, 
+                                        allDets, allTracklets, 
+                                        firstDetId, firstTrackletId));
+
+    expectedTracks.insert(generateTrack(13, 14., 
+                                        .001, -.01, 
+                                        -.001, -.00023,
+                                        imgTimes, 
+                                        allDets, allTracklets, 
+                                        firstDetId, firstTrackletId));
+
+    expectedTracks.insert(generateTrack(14.5, 14., 
+                                        .01, -.000001, 
+                                        -.00015, .00023,
+                                        imgTimes, 
+                                        allDets, allTracklets, 
+                                        firstDetId, firstTrackletId));
+
+    expectedTracks.insert(generateTrack(16.5, 14., 
+                                        .0155, .000001, 
+                                        -.00015, -.00023,
+                                        imgTimes, 
+                                        allDets, allTracklets, 
+                                        firstDetId, firstTrackletId));
+
+    expectedTracks.insert(generateTrack(10.5, 13., 
+                                        .000155, .0001, 
+                                        .00066, -.00066,
+                                        imgTimes, 
+                                        allDets, allTracklets, 
+                                        firstDetId, firstTrackletId));
+
+    expectedTracks.insert(generateTrack(17.5, 12.5, 
+                                        -.011, -.001, 
+                                        .0001112, -.0002388,
+                                        imgTimes, 
+                                        allDets, allTracklets, 
+                                        firstDetId, firstTrackletId));
+
+
+    expectedTracks.insert(generateTrack(12, 19.5, 
+                                        .001333, -.008888, 
+                                        -.0039083, -.001999,
+                                        imgTimes, 
+                                        allDets, allTracklets, 
+                                        firstDetId, firstTrackletId));
+
+    TrackSet foundTracks = linkTracklets(allDets, allTracklets, myConfig);
+
+    BOOST_CHECK(foundTracks == expectedTracks);
+
+}
 
 

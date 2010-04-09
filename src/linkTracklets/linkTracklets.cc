@@ -348,7 +348,7 @@ void makeTrackletTimeToTreeMap(const std::vector<Detection> &allDetections,
 /*
  * update position and velocity given acceleration over time.
  */
-inline void modifyWithAcceleration(double &position, double &velocity, 
+void modifyWithAcceleration(double &position, double &velocity, 
                             double acceleration, double time)
 {
     double start = std::clock();
@@ -999,7 +999,7 @@ void buildTracksAddToResults(const std::vector<Detection> &allDetections,
                              TreeNodeAndTime &firstEndpoint,
                              TreeNodeAndTime &secondEndpoint,
                              std::vector<TreeNodeAndTime> &supportNodes,
-                             std::vector<Track> & results)
+                             TrackSet & results)
 {
     double start = std::clock();
     buildTracksAddToResultsVisits++;
@@ -1093,7 +1093,7 @@ void buildTracksAddToResults(const std::vector<Detection> &allDetections,
                                            RAVelocity, RAAcceleration, RAPosition0, 
                                            DecVelocity, DecAcceleration, DecPosition0,
                                            time0,searchConfig)) {
-                    results.push_back(newTrack);
+                    results.insert(newTrack);
                 }
             }
         }    
@@ -1163,7 +1163,7 @@ void doLinkingRecurse2(const std::vector<Detection> &allDetections,
                        TreeNodeAndTime &firstEndpoint,
                        TreeNodeAndTime &secondEndpoint,
                        std::vector<TreeNodeAndTime> &supportNodes,
-                       std::vector<Track> & results,
+                       TrackSet & results,
                        int iterationsTillSplit,
                        LTCache &rangeCache)
 {
@@ -1355,7 +1355,7 @@ void doLinkingRecurse2(const std::vector<Detection> &allDetections,
 
 
 
-void debugPrintTimingInfo(const std::vector<Track> &results)
+void debugPrintTimingInfo(const TrackSet &results)
 {
 
     std::cout << " so far we've found " << results.size() << " tracks.\n";
@@ -1432,7 +1432,7 @@ void doLinking(const std::vector<Detection> &allDetections,
                std::vector<Tracklet> &allTracklets,
                linkTrackletsConfig searchConfig,
                std::map<ImageTime, KDTree::KDTree <unsigned int> > &trackletTimeToTreeMap,
-               std::vector<Track> &results)
+               TrackSet &results)
 {
     /* for every pair of trees, using the set of every intermediate (temporally) tree as a
      * set possible support nodes, call the recursive linker.
@@ -1592,14 +1592,13 @@ void doLinking(const std::vector<Detection> &allDetections,
 
 
 
-std::vector <Track> 
-linkTracklets(const std::vector<Detection> &allDetections,
-	      std::vector<Tracklet> &queryTracklets,
-              linkTrackletsConfig searchConfig) {
-    std::vector<Track> toRet;
+TrackSet linkTracklets(const std::vector<Detection> &allDetections,
+                       std::vector<Tracklet> &queryTracklets,
+                       linkTrackletsConfig searchConfig) {
+    TrackSet toRet;
     /*create a sorted list of KDtrees, each tree holding tracklets
       with unique start times (times of first detection in the tracklet).
-
+      
       the points in the trees are in [RA, Dec, RAVelocity, DecVelocity] and the
       returned keys are indices into queryTracklets.
     */

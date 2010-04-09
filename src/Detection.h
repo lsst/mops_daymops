@@ -34,6 +34,9 @@ public:
               double elongationLength, double elongationAngle, 
               double exposureTime);
 
+    //create a "lightweight" detection. don't do this unless you know what you're doing.
+    Detection(long int ID, double epochMJD, double RA, double Dec);
+    
     // a detection is only initialized after we have assigned
     // it values from a string.  If you try to use a getter
     // function before data is initialized, you will get an

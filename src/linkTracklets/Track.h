@@ -30,8 +30,10 @@ public:
     }
 
     bool operator==(const Track &other) const {
-        return (componentDetectionIndices == other.componentDetectionIndices)
-            && (componentTrackletIndices == other.componentTrackletIndices);
+        bool toRet = componentDetectionIndices == other.componentDetectionIndices;
+        //std::cout << " Track operator == called. returning " << (toRet ? "TRUE\n" : "FALSE\n");
+
+        return toRet ;
     }
 
     bool operator!=(const Track &other) const {
@@ -39,12 +41,10 @@ public:
     }
 
     bool operator<(const Track &other) const {
-        if (componentDetectionIndices != other.componentDetectionIndices) {
-            return componentDetectionIndices < other.componentDetectionIndices;
-        }
-        else {
-            return componentTrackletIndices < other.componentTrackletIndices;
-        }
+        //std::cout << "Track operator< called." << std::endl;
+        bool toRet = componentDetectionIndices < other.componentDetectionIndices;
+        //std::cout << "Track operator< called. returning " << (toRet ? "TRUE" : "FALSE")  << std::endl;
+        return toRet;
         
     }
 

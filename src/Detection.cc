@@ -61,6 +61,21 @@ Detection::Detection(long int ID, double epochMJD, double RA, double Dec,
 
 
 
+Detection::Detection(long int ID, double epochMJD, double RA, double Dec) 
+{
+    hasETime = false;
+    initialized = true;
+    this->ID = ID;
+    MJD = epochMJD;
+    this->RA = RA;
+    this->dec = Dec;
+    this->obscode = 0;
+    this->mag = 0.;
+    fileIndex = -1;
+}
+
+
+
 long int Detection::getID() const 
 {
     if (!initialized) {
@@ -251,3 +266,6 @@ int Detection::getFileIndex() const
     return fileIndex;
   }
 }
+
+
+

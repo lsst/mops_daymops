@@ -9,7 +9,7 @@
 #include "../Detection.h"
 #include "../Tracklet.h"
 #include "Track.h"
-
+#include "TrackSet.h"
 
 /*
  * linkTrackletsConfig is a simple class which holds the many configurable
@@ -102,10 +102,9 @@ public:
 
 /* queryTracklets are non-const because we set their velocityRA and velocityDec fields. 
    otherwise queryTracklets will not be changed. */
-std::vector <Track> 
-linkTracklets(const std::vector<Detection> &allDetections,
-              std::vector<Tracklet> &queryTracklets,
-              linkTrackletsConfig searchConfig);
+TrackSet linkTracklets(const std::vector<Detection> &allDetections,
+                       std::vector<Tracklet> &queryTracklets,
+                       linkTrackletsConfig searchConfig);
 
 
 
@@ -115,8 +114,11 @@ linkTracklets(const std::vector<Detection> &allDetections,
 
 
 //only declared for unit testing
-void getBestFitVelocityAndAcceleration(std::vector<double> positions, std::vector<double>times,
+void getBestFitVelocityAndAcceleration(std::vector<double> positions, const std::vector<double>&times,
                                        double & velocity, double &acceleration, double &position0);
 
+// note that position and velocity will be MODIFIED. 
+void modifyWithAcceleration(double &position, double &velocity, 
+                            double acceleration, double time);
 
 #endif 

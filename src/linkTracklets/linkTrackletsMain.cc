@@ -29,13 +29,16 @@ double timeElapsed(clock_t priorEvent)
 void writeResults(std::string outFileName, 
 		  const std::vector<Detection> &allDets,
 		  const std::vector<Tracklet> &allTracklets,
-		  const std::vector<Track> & tracks) 
+		  const TrackSet tracks) 
 {
      std::ofstream outFile;
      outFile.open(outFileName.c_str());
-     for (unsigned int i = 0; i < tracks.size(); i++) {
+     std::set<Track>::const_iterator curTrack;
+     for (curTrack = tracks.componentTracks.begin(); 
+	  curTrack != tracks.componentTracks.end();
+	  curTrack++) {
 	  std::set<unsigned int>::const_iterator detIter;
-	  const Track* curTrack = &(tracks.at(i));
+	  
 	  for (detIter = curTrack->componentDetectionIndices.begin();
 	       detIter != curTrack->componentDetectionIndices.end();
 	       detIter++) {
@@ -130,7 +133,7 @@ int main(int argc, char* argv[])
 
      std::vector<Detection> allDets;
      std::vector<Tracklet> allTracklets;
-     std::vector<Track> resultTracks;
+     TrackSet resultTracks;
 
      clock_t last;
      double dif;

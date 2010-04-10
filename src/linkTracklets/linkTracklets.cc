@@ -16,7 +16,7 @@
 
 //#define LEAF_SIZE 1024
 //#define LEAF_SIZE 256
-#define LEAF_SIZE 2
+#define LEAF_SIZE 16
 
 
 
@@ -531,6 +531,31 @@ inline bool positionAndVelocityRangesOverlap(double firstPositionMin, double fir
 
 
 
+/*
+ * to be used by areCompatible and probably nothing else.  extend the
+ * position/velocity region BACKWARD in time; we expect deltaTime to be
+ * NEGATIVE.
+ *
+ * This answers the question: what range contains all objects (accelerating no
+ * faster than accel) that COULD reach this region of position/velocity space?
+ */
+void extendRangeBackward(double &p0Min,  double &p0Max,  double &vMin,
+                         double &vMax,   double accel,  double deltaTime)
+{
+    if (deltaTime > 0) {
+        throw LSST_EXCEPT(ctExcept::ProgrammerErrorException, 
+                          "extendRangeBackward: Expected deltaTime to be negative!");
+    }
+    double newVMax = vMax + accel*fabs(deltaTime);
+    double newVMin = vMin - accel*fabs(deltaTime);
+    double newP0Max = p0Max + vMin*deltaTime + accel*deltaTime*deltaTime;
+    double newP0Min = p0Min + vMax*deltaTime - accel*deltaTime*deltaTime;
+
+    p0Min = newP0Min;
+    p0Max = newP0Max;
+    vMax = newVMax;
+    vMin = newVMin;
+}
 
 
 
@@ -657,64 +682,57 @@ bool areCompatible(TreeNodeAndTime  &nodeA,
         firstRAPositionMin = first->getLBounds()->at(POINT_RA) - searchConfig.detectionLocationErrorThresh;
         firstRAVelocityMin = first->getLBounds()->at(POINT_RA_VELOCITY) - searchConfig.velocityErrorThresh;
 
-        double oldRAVelocityMax = firstRAVelocityMax;
-        double oldRAVelocityMin = firstRAVelocityMin;
-
-        double maxRAAccel, minRAAccel;
-        double maxDecAccel, minDecAccel;
-        double maxRAV, minRAV, maxDecV, minDecV;
-        if (deltaTime < 0) {
-            // we need to GROW our velocity range, so invert everything.
-            maxRAAccel = -searchConfig.maxRAAccel;
-            minRAAccel = searchConfig.maxRAAccel;
-            maxDecAccel = -searchConfig.maxDecAccel;
-            minDecAccel = searchConfig.maxDecAccel;
-            maxRAV = firstRAVelocityMin;
-            minRAV = firstRAVelocityMax;
-            maxDecV = firstDecVelocityMin;
-            minDecV = firstDecVelocityMax;            
-        }
-        else {
-            maxRAAccel = searchConfig.maxRAAccel;
-            minRAAccel = -searchConfig.maxRAAccel;
-            maxDecAccel = searchConfig.maxDecAccel;
-            minDecAccel = -searchConfig.maxDecAccel;
-            maxRAV = firstRAVelocityMax;
-            minRAV = firstRAVelocityMin;
-            maxDecV = firstDecVelocityMax;
-            minDecV = firstDecVelocityMin;            
-        }
-
-        modifyWithAcceleration(firstRAPositionMax, maxRAV, 
-                               maxRAAccel, deltaTime);
-        
-
-        modifyWithAcceleration(firstRAPositionMin, minRAV, 
-                               minRAAccel, deltaTime);
-
-        if (
-            (oldRAVelocityMax < firstRAVelocityMax) ||
-            (oldRAVelocityMin > firstRAVelocityMin)
-            ) {
-            throw LSST_EXCEPT(ctExcept::ProgrammerErrorException, "Found velocity range SHRUNK");
-        }
-        
-        
         //get upper and lower bounds of node's Dec position, velocity
-        
+                
         firstDecPositionMax = first->getUBounds()->at(POINT_DEC) + searchConfig.detectionLocationErrorThresh;
         firstDecVelocityMax = first->getUBounds()->at(POINT_DEC_VELOCITY) + searchConfig.velocityErrorThresh;
 
         firstDecPositionMin = first->getLBounds()->at(POINT_DEC) - searchConfig.detectionLocationErrorThresh;
         firstDecVelocityMin = first->getLBounds()->at(POINT_DEC_VELOCITY) - searchConfig.velocityErrorThresh;
+
+        double oldRAVelocityMax = firstRAVelocityMax;
+        double oldRAVelocityMin = firstRAVelocityMin;
+        double oldDecVelocityMax = firstDecVelocityMax;
+        double oldDecVelocityMin = firstDecVelocityMin;
+
+        if (deltaTime >= 0) {
+
+            modifyWithAcceleration(firstRAPositionMax, firstRAVelocityMax, 
+                                   searchConfig.maxRAAccel, deltaTime);
+            
+            modifyWithAcceleration(firstRAPositionMin, firstRAVelocityMin, 
+                                   searchConfig.maxRAAccel * -1.0, deltaTime);
+
+            modifyWithAcceleration(firstDecPositionMax, firstDecVelocityMax, 
+                                   searchConfig.maxDecAccel, deltaTime);
+            
+            modifyWithAcceleration(firstDecPositionMin, firstDecVelocityMin, 
+                                   searchConfig.maxDecAccel * -1.0, fabs(deltaTime));
+            
+            
+        }
+        else {
+            // we are asking what region of RA/Dec/dRA/dDec space could
+            // *reach* this point 
+
+            extendRangeBackward(firstRAPositionMin,  firstRAPositionMax,  
+                                firstRAVelocityMin,  firstRAVelocityMax,  
+                                searchConfig.maxRAAccel, deltaTime);
+
+            extendRangeBackward(firstDecPositionMin, firstDecPositionMax, 
+                                firstDecVelocityMin, firstDecVelocityMax, searchConfig.maxDecAccel, deltaTime);
+            
+        }
+
+        if ((oldRAVelocityMax - oldRAVelocityMin) > (firstRAVelocityMax - firstRAVelocityMin)) {
+            throw LSST_EXCEPT(ctExcept::ProgrammerErrorException, "Found dec velocity range SHRUNK");
+        }
+        if ((oldDecVelocityMax - oldDecVelocityMin) > (firstDecVelocityMax - firstDecVelocityMin)) {
+            throw LSST_EXCEPT(ctExcept::ProgrammerErrorException, "Found RA velocity range SHRUNK");
+        }
+        
         
 
-        modifyWithAcceleration(firstDecPositionMax, maxDecV, 
-                               maxDecAccel, deltaTime);
-        
-        modifyWithAcceleration(firstDecPositionMin, minDecV, 
-                               minDecAccel, fabs(deltaTime));
-    
         // save these newly-computed values to cache!
         std::vector<std::vector <double> > boundsForStorage(2);
         std::vector<double> uBounds(4);
@@ -828,8 +846,8 @@ void getBestFitVelocityAndAcceleration(std::vector<double> positions, const std:
     
     double start = std::clock();
     if (positions.size() != times.size()) {
-        LSST_EXCEPT(ctExcept::ProgrammerErrorException,
-                    "getBestFitVelocityAndAcceleration: position and time vectors not same size!");
+        throw LSST_EXCEPT(ctExcept::ProgrammerErrorException,
+                          "getBestFitVelocityAndAcceleration: position and time vectors not same size!");
     }
 
     /* we're using GSL for this. this is roughly adapted from the GSL
@@ -1346,8 +1364,8 @@ void doLinkingRecurse2(const std::vector<Detection> &allDetections,
     double start = std::clock();
     doLinkingRecurseVisits++;
     firstEndpoint.myTree->addVisit();
-    std::cout << "entering doLinkingRecurse2." << std::endl;
-    debugPrint(firstEndpoint, secondEndpoint, supportNodes, allDetections, allTracklets);
+    //std::cout << "entering doLinkingRecurse2." << std::endl;
+    // debugPrint(firstEndpoint, secondEndpoint, supportNodes, allDetections, allTracklets);
     
     if (areCompatible(firstEndpoint, secondEndpoint, searchConfig, rangeCache) == false)
     {
@@ -1410,13 +1428,13 @@ void doLinkingRecurse2(const std::vector<Detection> &allDetections,
             // we still need to get newSupportNodes set up. just use the old ones.
             newSupportNodes = supportNodes;
         }
-        std::cout << "After filtering support nodes, we now have:\n";
-        debugPrint(firstEndpoint, secondEndpoint, newSupportNodes, allDetections, allTracklets);
+        // std::cout << "After filtering support nodes, we now have:\n";
+        // debugPrint(firstEndpoint, secondEndpoint, newSupportNodes, allDetections, allTracklets);
 
         if (uniqueSupportMJDs.size() < searchConfig.minSupportTracklets) {
             // we can't possibly have enough distinct support tracklets between endpoints
             doLinkingRecurseTime += timeSince(start);
-            std::cout << "Exiting doLinkingRecurse2 due to lack of support.\n";
+            // std::cout << "Exiting doLinkingRecurse2 due to lack of support.\n";
             return; 
         }
         else 
@@ -1432,12 +1450,12 @@ void doLinkingRecurse2(const std::vector<Detection> &allDetections,
                 // we checked for compatibility, then split off the children. of course, buildTracksAddToResults won't 
                 // be affected with regards to correctness, just performance. So it may not even be wise to add a
                 // mostly-needless check.
-                std::cout << "Calling buildTracksAddToResults\n";
+                // std::cout << "Calling buildTracksAddToResults\n";
                 unsigned int numResults = results.size();
                 buildTracksAddToResults(allDetections, allTracklets, searchConfig,
                                         firstEndpoint, secondEndpoint, newSupportNodes,
                                         results);
-                std::cout << "Found " << results.size() - numResults << " new tracks. Exiting. \n";
+                // std::cout << "Found " << results.size() - numResults << " new tracks. Exiting. \n";
             }
             else  {
                
@@ -1465,7 +1483,7 @@ void doLinkingRecurse2(const std::vector<Detection> &allDetections,
                     // just call this function again until they *are* all leaves.
                     iterationsTillSplit = 0;
                     doLinkingRecurseTime += timeSince(start);
-                    std::cout << "Recursing on self in order to force splitting of endpoints.\n";
+                    // std::cout << "Recursing on self in order to force splitting of endpoints.\n";
                     doLinkingRecurse2(allDetections, allTracklets, searchConfig,
                                       firstEndpoint, secondEndpoint,
                                       newSupportNodes, results, iterationsTillSplit, rangeCache);
@@ -1483,24 +1501,24 @@ void doLinkingRecurse2(const std::vector<Detection> &allDetections,
                     {
                         TreeNodeAndTime newTAT(firstEndpoint.myTree->getLeftChild(), firstEndpoint.myTime);
                         doLinkingRecurseTime += timeSince(start);
-                        std::cout << "Recursing on left child of first endpoint.\n";
+                        // std::cout << "Recursing on left child of first endpoint.\n";
                         doLinkingRecurse2(allDetections, allTracklets, searchConfig,
                                           newTAT,secondEndpoint,
                                           newSupportNodes,
                                           results, iterationsTillSplit, rangeCache); 
-                        std::cout << "Returned from recursion on left child of first endpoint.\n";
+                        // std::cout << "Returned from recursion on left child of first endpoint.\n";
                     }
                     
                     if (firstEndpoint.myTree->hasRightChild())
                     {
                         TreeNodeAndTime newTAT(firstEndpoint.myTree->getRightChild(), firstEndpoint.myTime);
                         doLinkingRecurseTime += timeSince(start);
-                        std::cout << "recursing on right child of first endpoint..\n";
+                        // std::cout << "recursing on right child of first endpoint..\n";
                         doLinkingRecurse2(allDetections, allTracklets, searchConfig,
                                           newTAT,secondEndpoint,
                                           newSupportNodes,
                                           results, iterationsTillSplit, rangeCache);  
-                        std::cout << "Returned from recursion on right child of first endpoint.\n";
+                        // std::cout << "Returned from recursion on right child of first endpoint.\n";
                     }
                 }
                 else {
@@ -1515,24 +1533,24 @@ void doLinkingRecurse2(const std::vector<Detection> &allDetections,
                     {
                         TreeNodeAndTime newTAT(secondEndpoint.myTree->getLeftChild(), secondEndpoint.myTime);
                         doLinkingRecurseTime += timeSince(start);
-                        std::cout << "Recursing on left child of second endpoint.\n";
+                        // std::cout << "Recursing on left child of second endpoint.\n";
                         doLinkingRecurse2(allDetections, allTracklets, searchConfig,
                                           firstEndpoint,newTAT,
                                           newSupportNodes,
                                           results, iterationsTillSplit, rangeCache);
-                        std::cout << "Returned from recursion on left child of second endpoint.\n";
+                        // std::cout << "Returned from recursion on left child of second endpoint.\n";
                     }
                     
                     if (secondEndpoint.myTree->hasRightChild())
                     {
                         TreeNodeAndTime newTAT(secondEndpoint.myTree->getRightChild(), secondEndpoint.myTime);
                         doLinkingRecurseTime += timeSince(start);
-                        std::cout << "Recursing on right child of second endpoint.\n";
+                        // std::cout << "Recursing on right child of second endpoint.\n";
                         doLinkingRecurse2(allDetections, allTracklets, searchConfig,
                                           firstEndpoint,newTAT,
                                           newSupportNodes,
                                           results, iterationsTillSplit, rangeCache);
-                        std::cout << "Returned from recursion on right child of second endpoint.\n";
+                        // std::cout << "Returned from recursion on right child of second endpoint.\n";
                         
                     }
                 }

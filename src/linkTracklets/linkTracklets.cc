@@ -1659,7 +1659,7 @@ void doLinking(const std::vector<Detection> &allDetections,
      * doLinking, we start the searching with the head (i.e. root) node of each
      * tree.
      */
-    bool DEBUG = false;
+    bool DEBUG = true;
 
     bool limitedRun = false;
     double limitedRunFirstEndpoint = 49616.249649999998 ;

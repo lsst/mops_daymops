@@ -33,7 +33,7 @@ private:
 
 /* fieldProximity deals with a very simple notion of 'track' as a set of unique
  * points.  This is quite different from the tracks/tracklets we use elsewhere,
- * which are linkages between Detections (DIASources).  Hence, fieldProximity
+ * which are linkages between MopsDetections (DIASources).  Hence, fieldProximity
  * gets its own special track class
  */
 class FieldProximityTrack {

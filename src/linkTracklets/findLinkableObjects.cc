@@ -59,7 +59,7 @@ MJD maxMJD(std::set<MJD> mjds)
 }
 
 
-bool trackletIsCorrect(const std::vector<Detection> & allDets,
+bool trackletIsCorrect(const std::vector<MopsDetection> & allDets,
                        Tracklet t) 
 {
     std::string inferredName = "";
@@ -86,7 +86,7 @@ bool trackletIsCorrect(const std::vector<Detection> & allDets,
 
 
 
-MJD firstDetectionTime(const std::vector<Detection> & allDets,
+MJD firstDetectionTime(const std::vector<MopsDetection> & allDets,
                        const Tracklet &t)
 {
     bool foundOne = false;
@@ -104,7 +104,7 @@ MJD firstDetectionTime(const std::vector<Detection> & allDets,
 
 
 
-void findLinkableObjects(const std::vector<Detection> & allDets, 
+void findLinkableObjects(const std::vector<MopsDetection> & allDets, 
                          const std::vector<Tracklet> &allTracklets, 
                          linkTrackletsConfig searchConfig, 
                          std::vector<std::string> &findableObjectNames) 
@@ -270,7 +270,7 @@ int main(int argc, char** argv)
 	  return 1;
      }
 
-     std::vector<lsst::mops::Detection> allDets;
+     std::vector<lsst::mops::MopsDetection> allDets;
      std::vector<lsst::mops::Tracklet> allTracklets;
 
 

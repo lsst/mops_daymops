@@ -13,7 +13,7 @@
 #include <math.h>
 
 #include "lsst/mops/KDTree.h"
-#include "lsst/mops/Detection.h"
+#include "lsst/mops/MopsDetection.h"
 #include "lsst/mops/daymops/findTracklets/findTracklets.h"
 
 
@@ -28,15 +28,15 @@ namespace lsst {
  * Populate 2D vector of detections.
  * Each outer vector contains Detections of equal MJD.
  *****************************************************************/
-void generateMJDTrees(const std::vector<Detection>*,
-		      std::vector< std::vector<Detection> >*);
+void generateMJDTrees(const std::vector<MopsDetection>*,
+		      std::vector< std::vector<MopsDetection> >*);
 
 
 /******************************************************************
  * Take 2D vector of detections and create a map linking
  * each MJD vector to its MJD double value.
  ******************************************************************/
-void generateTreeMap(std::vector< std::vector<Detection> >*, 
+void generateTreeMap(std::vector< std::vector<MopsDetection> >*, 
 		     std::map<double, KDTree<int> >*);
 
 
@@ -46,7 +46,7 @@ void generateTreeMap(std::vector< std::vector<Detection> >*,
  * query point within a distance determined by maxVelocity.
  ******************************************************************/
 void getTracklets(std::vector<int>*, std::map<double, KDTree<int> >*, 
-		  const std::vector<Detection>*, double);
+		  const std::vector<MopsDetection>*, double);
 
 
 
@@ -57,7 +57,7 @@ void getTracklets(std::vector<int>*, std::map<double, KDTree<int> >*,
  * distance of query points.
  **************************************************************************/
 void prune(std::vector<int>*, std::map<double, KDTree<int> >*,
-	   const std::vector<Detection>*, double);
+	   const std::vector<MopsDetection>*, double);
 
 
 /****************************************************************
@@ -71,17 +71,17 @@ int vectorPosition(const std::vector<double>*, double);
  * Determine all unique epochs found in a set of detections.
  * Populate "epochs" vector with these unique values.
  **************************************************************/
-void getEpochs(const std::vector<Detection>*, std::vector<double>*);
+void getEpochs(const std::vector<MopsDetection>*, std::vector<double>*);
 
 
 /*****************************************************************
  *The main function of this file.
  *****************************************************************/
-std::vector<Tracklet> findTracklets(const std::vector<Detection> &myDets, 
+std::vector<Tracklet> findTracklets(const std::vector<MopsDetection> &myDets, 
                                     double maxVelocity, double minVelocity)
 {
     //detection vectors, each vector of unique MJD
-    std::vector< std::vector<Detection> > detectionSets; 
+    std::vector< std::vector<MopsDetection> > detectionSets; 
 
     //vector of RA and dec pairs for later searching
     std::vector<double> queryPoints; 
@@ -125,8 +125,8 @@ std::vector<Tracklet> findTracklets(const std::vector<Detection> &myDets,
  * Populate 2D vector of detections.
  * Each outer vector contains Detections of equal MJD.
  *****************************************************************/
-void generateMJDTrees(const std::vector<Detection> *myDets, 
-		      std::vector< std::vector<Detection> > *detectionSets)
+void generateMJDTrees(const std::vector<MopsDetection> *myDets, 
+		      std::vector< std::vector<MopsDetection> > *detectionSets)
 {
     if(myDets->size() > 0){
 
@@ -142,7 +142,7 @@ void generateMJDTrees(const std::vector<Detection> *myDets,
         int numDetections = myDets->size();
         int insertIndex;
 
-        Detection tempD;
+        MopsDetection tempD;
     
         //populate 2D vector, ordered by EpochMJD, from 1D 
         //vector myDets
@@ -167,7 +167,7 @@ void generateMJDTrees(const std::vector<Detection> *myDets,
  * Take 2D vector of detections and create a map linking
  * each MJD vector to its MJD double value.
  ******************************************************************/
-void generateTreeMap(std::vector< std::vector<Detection> > *detectionSets, 
+void generateTreeMap(std::vector< std::vector<MopsDetection> > *detectionSets, 
 		     std::map<double, KDTree<int> > *myTreeMap)
 {
     // for each vector representing a single EpochMJD, created
@@ -177,7 +177,7 @@ void generateTreeMap(std::vector< std::vector<Detection> > *detectionSets,
         int thisTreeSize = detectionSets->at(i).size();
     
         if(thisTreeSize > 0){
-            std::vector<Detection> thisDetVec = detectionSets->at(i);
+            std::vector<MopsDetection> thisDetVec = detectionSets->at(i);
 
             if(thisDetVec.size() > 0){
                 double thisEpoch = thisDetVec.at(0).getEpochMJD();
@@ -213,7 +213,7 @@ void generateTreeMap(std::vector< std::vector<Detection> > *detectionSets,
  ******************************************************************/
 void getTracklets(std::vector<int> *resultsVec,  
 		  std::map<double, KDTree<int> > *myTreeMap,
-		  const std::vector<Detection> *queryPoints,
+		  const std::vector<MopsDetection> *queryPoints,
 		  double maxVelocity)
 {
     // vectors of RADecRangeSearch parameters
@@ -238,7 +238,7 @@ void getTracklets(std::vector<int> *resultsVec,
     KDTree<int> tempKDTree;
     std::vector<double> queryPt;
     PointAndValue<int> tempPV;
-    Detection tempD;
+    MopsDetection tempD;
 
     // iterate through list of collected Detections, as read from input
     // file, and search over them
@@ -298,7 +298,7 @@ void getTracklets(std::vector<int> *resultsVec,
  **************************************************************************/
 void prune(std::vector<int> *resultsVec, 
 	   std::map<double, KDTree<int> > *myTreeMap,
-	   const std::vector<Detection> *queryPoints, double minVelocity)
+	   const std::vector<MopsDetection> *queryPoints, double minVelocity)
 {
     std::set <std::vector<int> > maxSet, minSet, diffSet;
   
@@ -345,7 +345,7 @@ void prune(std::vector<int> *resultsVec,
  * Determine all unique epochs found in a set of detections.
  * Populate "epochs" vector with these unique values.
  **************************************************************/
-void getEpochs(const std::vector<Detection> *myDets, 
+void getEpochs(const std::vector<MopsDetection> *myDets, 
 	       std::vector<double> *epochs)
 {
     double tempEpoch;

@@ -17,27 +17,27 @@
 namespace lsst {
 namespace mops {
 
-class Detection {
+class MopsDetection {
 public:
 
     //create an empty detection
-    Detection();
+    MopsDetection();
 
 
     // these two added 6/19/09 (jmyers)
     // create a detection with initialized data, but no exposure time
-    Detection(long int ID, double epochMJD, double RA, double Dec, 
+    MopsDetection(long int ID, double epochMJD, double RA, double Dec, 
               int obsCode, std::string objName, double mag,
               double elongationLength, double elongationAngle);
 
     //create a detection with initialized data, including exposure time data
-    Detection(long int ID, double epochMJD, double RA, double Dec, 
+    MopsDetection(long int ID, double epochMJD, double RA, double Dec, 
               int obsCode, std::string objName, double mag, 
               double elongationLength, double elongationAngle, 
               double exposureTime);
 
     //create a "lightweight" detection. don't do this unless you know what you're doing.
-    Detection(long int ID, double epochMJD, double RA, double Dec);
+    MopsDetection(long int ID, double epochMJD, double RA, double Dec);
     
     // a detection is only initialized after we have assigned
     // it values from a string.  If you try to use a getter

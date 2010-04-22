@@ -19,7 +19,7 @@
 
 
 #include "lsst/mops/TrackSet.h"
-#include "lsst/mops/Detection.h"
+#include "lsst/mops/MopsDetection.h"
 #include "lsst/mops/Tracklet.h"
 #include "lsst/mops/daymops/linkTracklets/linkTracklets.h"
 #include "lsst/mops/Exceptions.h"
@@ -37,11 +37,11 @@ bool Eq(double a, double b)
 }
 
 
-void debugPrintTrackletsAndDets(std::vector<Detection> allDets, std::vector<Tracklet> allTracklets) 
+void debugPrintTrackletsAndDets(std::vector<MopsDetection> allDets, std::vector<Tracklet> allTracklets) 
 {
 
     for (unsigned int i = 0; i < allDets.size(); i++) {
-        Detection* curDet = &allDets.at(i);
+        MopsDetection* curDet = &allDets.at(i);
         std::cout << curDet->getID() << "\t" << curDet->getRA() << "\t" << curDet->getDec() << '\n';
     }
     std::cout << "all tracklets:\n";
@@ -57,7 +57,7 @@ void debugPrintTrackletsAndDets(std::vector<Detection> allDets, std::vector<Trac
 
 }
 
-void debugPrintTrackSet(const TrackSet &tracks, const std::vector<Detection> &allDets) 
+void debugPrintTrackSet(const TrackSet &tracks, const std::vector<MopsDetection> &allDets) 
 {
     std::set<Track>::const_iterator trackIter;
     unsigned int trackCount = 0;
@@ -95,7 +95,7 @@ void debugPrintTrackSet(const TrackSet &tracks, const std::vector<Detection> &al
  * weird behavior.
  *
  * each detection will be given a new, unique ID > lastDetId and lastDetId will
- * be MODIFIED to be the last, greated detection ID created. allDetections will
+ * be MODIFIED to be the last, greated detection ID created. allMopsDetections will
  * be MODIFIED and the new detection will be added to it.
  *
  * similarly, allTracklets will be MODIFIED with new tracklets. Each tracklet
@@ -109,7 +109,7 @@ void debugPrintTrackSet(const TrackSet &tracks, const std::vector<Detection> &al
 Track generateTrack(double ra0, double dec0, double raV, double decV,
                     double raAcc, double decAcc,
                     std::vector<std::vector <double> > trackletObsTimes,
-                    std::vector<Detection> &allDetections,
+                    std::vector<MopsDetection> &allDetections,
                     std::vector<Tracklet> &allTracklets, 
                     unsigned int & lastDetId,
                     unsigned int & lastTrackletId) {
@@ -154,7 +154,7 @@ Track generateTrack(double ra0, double dec0, double raV, double decV,
             // create new det, add it to our total set of dets,
             // add its ID to the cur tracklet, and cur track.
             lastDetId++;
-            Detection newDet(lastDetId, *obsTime, resultRa, resultDec);
+            MopsDetection newDet(lastDetId, *obsTime, resultRa, resultDec);
             allDetections.push_back(newDet);
             newTracklet.indices.insert(lastDetId);
             newTrack.componentDetectionIndices.insert(lastDetId);           
@@ -357,9 +357,9 @@ BOOST_AUTO_TEST_CASE( linkTracklets_whitebox_getBestFitVelocityAndAcceleration_t
 
 
 // helper function for creating sets of detections
-void addDetectionAt(double MJD, double RA, double dec,  std::vector<Detection> &detVec)
+void addDetectionAt(double MJD, double RA, double dec,  std::vector<MopsDetection> &detVec)
 {
-    Detection tmpDet(detVec.size(), MJD, RA, dec, 566, "dummy",
+    MopsDetection tmpDet(detVec.size(), MJD, RA, dec, 566, "dummy",
                      24.0, 0., 0.);
     detVec.push_back(tmpDet);
 }
@@ -377,7 +377,7 @@ void addPair(unsigned int id1, unsigned int id2, std::vector<Tracklet> &tracklet
 BOOST_AUTO_TEST_CASE( linkTracklets_blackbox_1 )
 {
   // call with empty dets
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   std::vector<Tracklet> pairs;
   linkTrackletsConfig myConfig;
   TrackSet results = linkTracklets(myDets, pairs, myConfig);
@@ -392,7 +392,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_blackbox_1 )
 
 BOOST_AUTO_TEST_CASE( linkTracklets_easy_1 )
 {
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   addDetectionAt(5300.0,  50,     50, myDets);
   addDetectionAt(5300.01, 50.001, 50.001, myDets);
   addDetectionAt(5301.0,  50.1,   50.1, myDets);
@@ -423,7 +423,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_easy_2 )
 {
     // same as 1, but with more tracks (all clearly separated)
 
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   std::vector<Tracklet> pairs;
   for (unsigned int i = 0; i < 10; i++) {
 
@@ -457,7 +457,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_easy_3 )
 {
     // same as 2, but with tracks crossing RA 0 line
 
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   std::vector<Tracklet> pairs;
   for (unsigned int i = 0; i < 10; i++) {
 
@@ -490,7 +490,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_easy_4_1 )
 {
     // same as 1, but with track crossing RA 0 line
 
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   std::vector<Tracklet> pairs;
 
   addDetectionAt(5300.0,  359.9,       50, myDets);
@@ -518,7 +518,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_easy_4 )
 {
     // same as 2, but with tracks crossing RA 0 line
 
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   std::vector<Tracklet> pairs;
   for (unsigned int i = 0; i < 10; i++) {
 
@@ -550,7 +550,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_easy_5 )
 {
     // same as 4, but going the other way!
 
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   std::vector<Tracklet> pairs;
   for (unsigned int i = 0; i < 10; i++) {
 
@@ -600,7 +600,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_easy_5 )
 // Track generateTrack(double ra0, double dec0, double raV, double decV,
 //                     double raAcc, double decAcc,
 //                     std::vector<std::vector <double> > trackletObsTimes,
-//                     std::vector<Detection> &allDetections,
+//                     std::vector<MopsDetection> &allMopsDetections,
 //                     std::vector<Tracklet> &allTracklets, 
 //                     unsigned int & lastDetId,
 //                     unsigned int & lastTrackletId) {
@@ -608,7 +608,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_easy_5 )
 BOOST_AUTO_TEST_CASE( linkTracklets_1 )
 {
     TrackSet expectedTracks;
-    std::vector<Detection> allDets;
+    std::vector<MopsDetection> allDets;
     std::vector<Tracklet> allTracklets;
     unsigned int firstDetId = -1;
     unsigned int firstTrackletId = -1;
@@ -647,7 +647,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_2 )
 {
     // lots of support nodes!
     TrackSet expectedTracks;
-    std::vector<Detection> allDets;
+    std::vector<MopsDetection> allDets;
     std::vector<Tracklet> allTracklets;
     unsigned int firstDetId = -1;
     unsigned int firstTrackletId = -1;
@@ -700,7 +700,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_3 )
 {
     // lots of support nodes, and a psuedo-deep stack
     TrackSet expectedTracks;
-    std::vector<Detection> allDets;
+    std::vector<MopsDetection> allDets;
     std::vector<Tracklet> allTracklets;
     unsigned int firstDetId = -1;
     unsigned int firstTrackletId = -1;
@@ -769,7 +769,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_4 )
 
     // lots of tracks this time. still simple cadence.
     TrackSet expectedTracks;
-    std::vector<Detection> allDets;
+    std::vector<MopsDetection> allDets;
     std::vector<Tracklet> allTracklets;
     unsigned int firstDetId = -1;
     unsigned int firstTrackletId = -1;
@@ -876,7 +876,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_4_pt_5 )
 
     // lots of tracks, following a coherent pattern but randomly perturbed.
     TrackSet expectedTracks;
-    std::vector<Detection> allDets;
+    std::vector<MopsDetection> allDets;
     std::vector<Tracklet> allTracklets;
     unsigned int firstDetId = -1;
     unsigned int firstTrackletId = -1;
@@ -955,7 +955,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_5 )
 
     // " << expectedTracks.size() << " tracks, following a coherent pattern but randomly perturbed.
     TrackSet expectedTracks;
-    std::vector<Detection> allDets;
+    std::vector<MopsDetection> allDets;
     std::vector<Tracklet> allTracklets;
     unsigned int firstDetId = -1;
     unsigned int firstTrackletId = -1;
@@ -1024,7 +1024,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_5_1 )
 
     // " << expectedTracks.size() << " tracks, following a coherent pattern but randomly perturbed.
     TrackSet expectedTracks;
-    std::vector<Detection> allDets;
+    std::vector<MopsDetection> allDets;
     std::vector<Tracklet> allTracklets;
     unsigned int firstDetId = -1;
     unsigned int firstTrackletId = -1;
@@ -1096,7 +1096,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_5_2 )
 
     // " << expectedTracks.size() << " tracks, following a coherent pattern but randomly perturbed.
     TrackSet expectedTracks;
-    std::vector<Detection> allDets;
+    std::vector<MopsDetection> allDets;
     std::vector<Tracklet> allTracklets;
     unsigned int firstDetId = -1;
     unsigned int firstTrackletId = -1;
@@ -1169,7 +1169,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_5_3 )
 
     // " << expectedTracks.size() << " tracks, following a coherent pattern but randomly perturbed.
     TrackSet expectedTracks;
-    std::vector<Detection> allDets;
+    std::vector<MopsDetection> allDets;
     std::vector<Tracklet> allTracklets;
     unsigned int firstDetId = -1;
     unsigned int firstTrackletId = -1;
@@ -1238,7 +1238,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_5_4 )
 
     // " << expectedTracks.size() << " tracks, following a coherent pattern but randomly perturbed.
     TrackSet expectedTracks;
-    std::vector<Detection> allDets;
+    std::vector<MopsDetection> allDets;
     std::vector<Tracklet> allTracklets;
     unsigned int firstDetId = -1;
     unsigned int firstTrackletId = -1;
@@ -1312,7 +1312,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_5_5 )
 
     // " << expectedTracks.size() << " tracks, following a coherent pattern but randomly perturbed.
     TrackSet expectedTracks;
-    std::vector<Detection> allDets;
+    std::vector<MopsDetection> allDets;
     std::vector<Tracklet> allTracklets;
     unsigned int firstDetId = -1;
     unsigned int firstTrackletId = -1;

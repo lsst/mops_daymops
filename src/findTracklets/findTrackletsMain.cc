@@ -11,7 +11,7 @@
 #include <sstream>
 #include <math.h>
 
-#include "lsst/mops/Detection.h"
+#include "lsst/mops/MopsDetection.h"
 #include "lsst/mops/fileUtils.h"
 #include "lsst/mops/daymops/findTracklets/findTracklets.h"
 
@@ -23,7 +23,7 @@
 int main(int argc, char* argv[])
 {
     //list of all detections
-    std::vector <lsst::mops::Detection> myDets; 
+    std::vector <lsst::mops::MopsDetection> myDets; 
 
 
     // parse command-line options

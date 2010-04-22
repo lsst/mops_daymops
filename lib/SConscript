@@ -11,7 +11,7 @@ j = os.path.join
 
 env.SharedLibrary(pkg, [j("..","src","rmsLineFit.cc"),
                         j("..","src","common.cc"),
-                        j("..","src","Detection.cc"),
+                        j("..","src","MopsDetection.cc"),
                         j("..","src","removeSubsets.cc"),
                         j("..","src","collapseTrackletsAndPostfilters","collapseTracklets.cc"),
                         j("..","src","detectionProximity","detectionProximity.cc"),

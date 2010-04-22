@@ -9,7 +9,7 @@
 #include <cmath>
 
 
-#include "lsst/mops/Detection.h"
+#include "lsst/mops/MopsDetection.h"
 #include "lsst/mops/Exceptions.h"
 #include "lsst/mops/Tracklet.h"
 #include "lsst/mops/PointAndValue.h"
@@ -43,9 +43,9 @@ bool Eq(double a, double b)
 
 
 
-BOOST_AUTO_TEST_CASE( Detection_blackbox_1 )
+BOOST_AUTO_TEST_CASE( MopsDetection_blackbox_1 )
 {
-    Detection myDet;
+    MopsDetection myDet;
     long int ID = 10001;
     double MJD = 1234.5678;
     double RA = 2.02;
@@ -78,10 +78,10 @@ BOOST_AUTO_TEST_CASE( Detection_blackbox_1 )
 }
 
 
-BOOST_AUTO_TEST_CASE( Detection_blackbox_2 )
+BOOST_AUTO_TEST_CASE( MopsDetection_blackbox_2 )
 {
     //same as above, but with trailing whitespace
-    Detection myDet;
+    MopsDetection myDet;
     long int ID = 10001;
     double MJD = 1234.5678;
     double RA = 2.02;
@@ -113,10 +113,10 @@ BOOST_AUTO_TEST_CASE( Detection_blackbox_2 )
 }
 
 
-BOOST_AUTO_TEST_CASE( Detection_blackbox_3 )
+BOOST_AUTO_TEST_CASE( MopsDetection_blackbox_3 )
 {
     //same as 1, with whitespace in front
-    Detection myDet;
+    MopsDetection myDet;
     long int ID = 10001;
     double MJD = 1234.5678;
     double RA = 2.02;
@@ -147,10 +147,10 @@ BOOST_AUTO_TEST_CASE( Detection_blackbox_3 )
     BOOST_CHECK (myDet.hasExposureTime() == false);
 }
 
-BOOST_AUTO_TEST_CASE( Detection_blackbox_4 )
+BOOST_AUTO_TEST_CASE( MopsDetection_blackbox_4 )
 {
     //same as 1, with tabs in the whitespace
-    Detection myDet;
+    MopsDetection myDet;
     long int ID = 10001;
     double MJD = 1234.5678;
     double RA = 2.02;
@@ -184,10 +184,10 @@ BOOST_AUTO_TEST_CASE( Detection_blackbox_4 )
 
 
 
-BOOST_AUTO_TEST_CASE( Detection_blackbox_5 )
+BOOST_AUTO_TEST_CASE( MopsDetection_blackbox_5 )
 {
     //same as above, but with trailing newline
-    Detection myDet;
+    MopsDetection myDet;
     long int ID = 10001;
     double MJD = 1234.5678;
     double RA = 2.02;
@@ -224,10 +224,10 @@ BOOST_AUTO_TEST_CASE( Detection_blackbox_5 )
 
 
 
-BOOST_AUTO_TEST_CASE( Detection_blackbox_6 )
+BOOST_AUTO_TEST_CASE( MopsDetection_blackbox_6 )
 {
     //straightforward, but with an etime parameter.
-    Detection myDet;
+    MopsDetection myDet;
     long int ID = 10001;
     double MJD = 1234.5678;
     double RA = 2.02;
@@ -265,7 +265,7 @@ BOOST_AUTO_TEST_CASE( Detection_blackbox_6 )
 
 
 
-BOOST_AUTO_TEST_CASE( Detection_blackbox_7 )
+BOOST_AUTO_TEST_CASE( MopsDetection_blackbox_7 )
 {
     //uses the new constructor which doesn't use MITI string (no etime)
     long int ID = 10001;
@@ -279,7 +279,7 @@ BOOST_AUTO_TEST_CASE( Detection_blackbox_7 )
     double angle = -6.06;
     //double eTime = 7.07;
 
-    Detection myDet(ID, MJD, RA, dec, obscode, objName, mag, len, angle);
+    MopsDetection myDet(ID, MJD, RA, dec, obscode, objName, mag, len, angle);
 
     BOOST_CHECK(myDet.isInitialized() == true);
 
@@ -297,7 +297,7 @@ BOOST_AUTO_TEST_CASE( Detection_blackbox_7 )
 }
 
 
-BOOST_AUTO_TEST_CASE( Detection_blackbox_8 )
+BOOST_AUTO_TEST_CASE( MopsDetection_blackbox_8 )
 {
     //uses the new constructor which doesn't use MITI string (also, use etime)
     long int ID = 10001;
@@ -311,7 +311,7 @@ BOOST_AUTO_TEST_CASE( Detection_blackbox_8 )
     double angle = -6.06;
     double eTime = 7.07;
 
-    Detection myDet(ID, MJD, RA, dec, obscode, objName, mag, len, angle, eTime);
+    MopsDetection myDet(ID, MJD, RA, dec, obscode, objName, mag, len, angle, eTime);
 
     BOOST_CHECK(myDet.isInitialized() == true);
 
@@ -333,7 +333,7 @@ BOOST_AUTO_TEST_CASE( Detection_blackbox_8 )
 
 
 /* 
-   Detection whitebox tests: Actually, aside from error cases, we have 100%
+   MopsDetection whitebox tests: Actually, aside from error cases, we have 100%
    coverage through blackbox tests.
 
    TBD: possibly find a good way to test that we handle bad input sanely?
@@ -1448,9 +1448,9 @@ BOOST_AUTO_TEST_CASE( rmsForTracklet_blackbox_1 )
 
     // try four points which have a perfect linear fit; 
 
-    std::vector<Detection> dets;
+    std::vector<MopsDetection> dets;
 
-    Detection tmpDet;
+    MopsDetection tmpDet;
     tmpDet.fromMITIString("0 5330.0 10.0 10.0 20.0 1337 dummy 0.0 0.0"); 
     dets.push_back(tmpDet);
     tmpDet.fromMITIString("0 5330.1 11.0 11.0 20.0 1337 dummy 0.0 0.0"); 
@@ -1477,9 +1477,9 @@ BOOST_AUTO_TEST_CASE( rmsForTracklet_blackbox_2 )
     // try four points which deviate very regularly from perfect linear fit - exactly
     // .1 in deg deviation at each point
 
-    std::vector<Detection> dets;
+    std::vector<MopsDetection> dets;
 
-    Detection tmpDet;
+    MopsDetection tmpDet;
     tmpDet.fromMITIString("0 5330.0 10.0 9.9 20.0 1337 dummy 0.0 0.0"); 
     dets.push_back(tmpDet);
     tmpDet.fromMITIString("0 5330.1 11.0 11.1 20.0 1337 dummy 0.0 0.0"); 
@@ -1520,9 +1520,9 @@ BOOST_AUTO_TEST_CASE( rmsForTracklet_blackbox_3 )
 {
 
     // no deviation, but RA, Dec both cross the 0 line
-    std::vector<Detection> dets;
+    std::vector<MopsDetection> dets;
 
-    Detection tmpDet;
+    MopsDetection tmpDet;
     tmpDet.fromMITIString("0 5330.0 358.0 358.0 20.0 1337 dummy 0.0 0.0"); 
     dets.push_back(tmpDet);
     tmpDet.fromMITIString("0 5330.1 359.0 359.0 20.0 1337 dummy 0.0 0.0"); 
@@ -1548,9 +1548,9 @@ BOOST_AUTO_TEST_CASE( rmsForTracklet_blackbox_4 )
 {
 
     //same as 3, but going the opposite direction
-    std::vector<Detection> dets;
+    std::vector<MopsDetection> dets;
 
-    Detection tmpDet;
+    MopsDetection tmpDet;
     tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
     dets.push_back(tmpDet);
     tmpDet.fromMITIString("0 5330.1 0.0 0.0 20.0 1337 dummy 0.0 0.0"); 
@@ -1577,9 +1577,9 @@ BOOST_AUTO_TEST_CASE( rmsForTracklet_blackbox_4 )
 BOOST_AUTO_TEST_CASE( getAverageMagnitude_blackbox_1 )
 {
 
-    std::vector<Detection> dets;
+    std::vector<MopsDetection> dets;
 
-    Detection tmpDet;
+    MopsDetection tmpDet;
     tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
     dets.push_back(tmpDet);
     tmpDet.fromMITIString("0 5330.1 0.0 0.0 20.0 1337 dummy 0.0 0.0"); 
@@ -1602,9 +1602,9 @@ BOOST_AUTO_TEST_CASE( getAverageMagnitude_blackbox_1 )
 BOOST_AUTO_TEST_CASE( getAverageMagnitude_blackbox_2 )
 {
 
-    std::vector<Detection> dets;
+    std::vector<MopsDetection> dets;
 
-    Detection tmpDet;
+    MopsDetection tmpDet;
     tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
     dets.push_back(tmpDet);
     tmpDet.fromMITIString("0 5330.1 0.0 0.0 22.0 1337 dummy 0.0 0.0"); 
@@ -1629,9 +1629,9 @@ BOOST_AUTO_TEST_CASE( getAverageMagnitude_blackbox_2 )
 // {
 //     //try to cause trouble with empty tracklet
 
-//     std::vector<Detection> dets;
+//     std::vector<MopsDetection> dets;
 
-//     Detection tmpDet;
+//     MopsDetection tmpDet;
 //     tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
 //     dets.push_back(tmpDet);
 //     tmpDet.fromMITIString("0 5330.1 0.0 0.0 20.0 1337 dummy 0.0 0.0"); 
@@ -1652,9 +1652,9 @@ BOOST_AUTO_TEST_CASE( getAverageMagnitude_blackbox_2 )
 BOOST_AUTO_TEST_CASE( filterByLineFitAddToOutputVector_blackbox_1 )
 {
 
-    std::vector<Detection> dets;
+    std::vector<MopsDetection> dets;
 
-    Detection tmpDet;
+    MopsDetection tmpDet;
     // 4 matching detections
     tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
     dets.push_back(tmpDet);
@@ -1706,9 +1706,9 @@ BOOST_AUTO_TEST_CASE( filterByLineFitAddToOutputVector_blackbox_2 )
 {
     //try to cause an error by sending in no tracklets
 
-    std::vector<Detection> dets;
+    std::vector<MopsDetection> dets;
 
-    Detection tmpDet;
+    MopsDetection tmpDet;
     // 4 matching detections
     tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
     dets.push_back(tmpDet);
@@ -1746,9 +1746,9 @@ BOOST_AUTO_TEST_CASE( filterByLineFitAddToOutputVector_blackbox_2 )
 // {
 //     //try to cause an error by sending in *empty* tracklets...
 
-//     std::vector<Detection> dets;
+//     std::vector<MopsDetection> dets;
 
-//     Detection tmpDet;
+//     MopsDetection tmpDet;
 //     // 4 matching detections
 //     tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
 //     dets.push_back(tmpDet);
@@ -1787,9 +1787,9 @@ BOOST_AUTO_TEST_CASE( filterByLineFitAddToOutputVector_blackbox_2 )
 BOOST_AUTO_TEST_CASE( filterByLineFitAddToOutputVector_blackbox_4 )
 {
     // test with one 'perfect' tracklet, one with a way-off detection.
-    std::vector<Detection> dets;
+    std::vector<MopsDetection> dets;
 
-    Detection tmpDet;
+    MopsDetection tmpDet;
     // 4 matching detections
     tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
     dets.push_back(tmpDet);
@@ -1839,9 +1839,9 @@ BOOST_AUTO_TEST_CASE( filterByLineFitAddToOutputVector_blackbox_4 )
 BOOST_AUTO_TEST_CASE( filterByLineFitAddToOutputVector_blackbox_5 )
 {
     // test with one 'perfect' tracklet, one with all detections all a little off.
-    std::vector<Detection> dets;
+    std::vector<MopsDetection> dets;
 
-    Detection tmpDet;
+    MopsDetection tmpDet;
     // 4 matching detections
     tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
     dets.push_back(tmpDet);
@@ -1892,9 +1892,9 @@ BOOST_AUTO_TEST_CASE( filterByLineFitAddToOutputVector_blackbox_5 )
 BOOST_AUTO_TEST_CASE( purifyTracklet_blackbox_1 )
 {
     // test with one 'perfect' tracklet, one with a barely-off detection.
-    std::vector<Detection> dets;
+    std::vector<MopsDetection> dets;
 
-    Detection tmpDet;
+    MopsDetection tmpDet;
     // 4 matching detections
     tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
     dets.push_back(tmpDet);

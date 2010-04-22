@@ -12,7 +12,7 @@
 
 
 
-#include "lsst/mops/Detection.h"
+#include "lsst/mops/MopsDetection.h"
 #include "lsst/mops/Tracklet.h"
 #include "lsst/mops/PointAndValue.h"
 #include "lsst/mops/common.h"
@@ -31,7 +31,7 @@ bool Eq(double a, double b)
 BOOST_AUTO_TEST_CASE( findTracklets_blackbox_1 )
 {
   // call with empty dets
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   std::vector<Tracklet> pairs;
   pairs = findTracklets(myDets, 1, 0);
   BOOST_CHECK(pairs.size() == 0);
@@ -39,9 +39,9 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_1 )
 
 
 // helper function for creating sets of detections
-void addDetectionAt(double MJD, double RA, double dec,  std::vector<Detection> &detVec)
+void addDetectionAt(double MJD, double RA, double dec,  std::vector<MopsDetection> &detVec)
 {
-    Detection tmpDet(detVec.size(), MJD, RA, dec, 566, "dummy",
+    MopsDetection tmpDet(detVec.size(), MJD, RA, dec, 566, "dummy",
                      24.0, 0., 0.);
     detVec.push_back(tmpDet);
 }
@@ -64,7 +64,7 @@ bool containsPair(unsigned int ID1, unsigned int ID2, std::vector<Tracklet> pair
 // test that tracklet of 2 dets is created
 BOOST_AUTO_TEST_CASE( findTracklets_blackbox_2 )
 {
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   addDetectionAt(53736.0, 100.0, 10.0, myDets);
   addDetectionAt(53737.0, 100.1, 10.1, myDets);
 
@@ -81,7 +81,7 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_2 )
 // test 3 dets of same object gets 3 pairs
 BOOST_AUTO_TEST_CASE( findTracklets_blackbox_3 )
 {
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   addDetectionAt(53736.0, 100.0, 10.0, myDets); // id 0
   addDetectionAt(53737.0, 100.1, 10.1, myDets); // id 1
   addDetectionAt(53738.0, 100.2, 10.2, myDets); // id 2
@@ -97,7 +97,7 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_3 )
 // 2 image times, 2 objects = 2 tracklets
 BOOST_AUTO_TEST_CASE( findTracklets_blackbox_4 )
 {
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   // first "object"
   addDetectionAt(53736.0, 100.0, -10.0, myDets); // id 0
   addDetectionAt(53737.0, 100.1, -10.1, myDets); // id 1
@@ -117,7 +117,7 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_4 )
 // check that velocity filter is working
 BOOST_AUTO_TEST_CASE( findTracklets_blackbox_5 )
 {
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   // first "object"
   addDetectionAt(53736.0, 100.0, 80.0, myDets); // id 0
   addDetectionAt(53737.0, 100.1, 80.1, myDets); // id 1
@@ -133,7 +133,7 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_5 )
 // check that velocity filter is working (for time separation != 1 day)
 BOOST_AUTO_TEST_CASE( findTracklets_blackbox_5_1 )
 {
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   // first "object"
   addDetectionAt(53736.0, 100.0, -80.0, myDets); // id 0
   addDetectionAt(53736.5, 100.02, -80.1, myDets); // id 1
@@ -148,7 +148,7 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_5_1 )
 // check that velocity filter is working, with things moving too fast in dec
 BOOST_AUTO_TEST_CASE( findTracklets_blackbox_5_2 )
 {
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   // first "object"
   addDetectionAt(53736.0, 100.0, -80.0, myDets); // id 0
   addDetectionAt(53736.5, 100.02, -80.1, myDets); // id 1
@@ -163,7 +163,7 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_5_2 )
 // check that velocity filter is working, with things moving too fast in RA near a pole
 BOOST_AUTO_TEST_CASE( findTracklets_blackbox_5_3 )
 {
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   // first "object"
   addDetectionAt(53736.0, 100.0, -80.0, myDets); // id 0
   addDetectionAt(53736.5, 100.02, -80.1, myDets); // id 1
@@ -181,7 +181,7 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_5_3 )
 // check that velocity filter is working *correctly* - that we search in a circle, not a square.
 BOOST_AUTO_TEST_CASE( findTracklets_blackbox_6 )
 {
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   // first "object"
   addDetectionAt(53736.0, 100.0, 20.0, myDets); // id 0
   addDetectionAt(53737.0, 100.1, 20.1, myDets); // id 1
@@ -201,7 +201,7 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_6 )
 // and also that this works for time separation != 1 day
 BOOST_AUTO_TEST_CASE( findTracklets_blackbox_6_1 )
 {
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   // first "object"
   addDetectionAt(53736.0, 100.0, 60.0, myDets); // id 0
   addDetectionAt(53736.5, 100.05, 60.05, myDets); // id 1
@@ -222,7 +222,7 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_6_1 )
 // see if we catch an object crossing the RA 0/360 line
 BOOST_AUTO_TEST_CASE( findTracklets_blackbox_7 )
 {
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   // first "object"
   addDetectionAt(53736.0, 359.9, 60.0, myDets); // id 0
   addDetectionAt(53737.0, 000.1, 60.1, myDets); // id 1
@@ -236,7 +236,7 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_7 )
 // see if we catch an object crossing the north pole
 BOOST_AUTO_TEST_CASE( findTracklets_blackbox_8 )
 {
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   // first "object"
   addDetectionAt(53736.0, 0.0, 89.9, myDets); // id 0
   addDetectionAt(53737.0, 180.0, 89.9, myDets); // id 1
@@ -253,7 +253,7 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_8 )
 // see if we catch an object crossing the RA 0/360 line (backwards)
 BOOST_AUTO_TEST_CASE( findTracklets_blackbox_9 )
 {
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   // first "object"
   addDetectionAt(53736.0, 000.1, 50.0, myDets); // id 0
   addDetectionAt(53737.0, 359.9, 50.1, myDets); // id 1
@@ -269,7 +269,7 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_9 )
 // see if we catch an object crossing the north pole
 BOOST_AUTO_TEST_CASE( findTracklets_blackbox_10 )
 {
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   // first "object"
   addDetectionAt(53736.0, 100.0, 89.9, myDets); // id 0
   addDetectionAt(53737.0, 280.0, 89.9, myDets); // id 1
@@ -284,7 +284,7 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_10 )
 // see if we catch an object crossing the south pole (backwards)
 BOOST_AUTO_TEST_CASE( findTracklets_blackbox_11 )
 {
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   // first "object"
   addDetectionAt(53736.0, 100.0, -89.9, myDets); // id 0
   addDetectionAt(53737.0, 280.0, -89.9, myDets); // id 1
@@ -300,7 +300,7 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_11 )
 // non-standard dec values, crossing south pole!
 BOOST_AUTO_TEST_CASE( findTracklets_blackbox_112)
 {
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   // first "object"
   addDetectionAt(53736.0, 100.0, -89.9, myDets); // id 0
   addDetectionAt(53737.0, 280.0, -90.1, myDets); // id 1
@@ -320,7 +320,7 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_112)
 // check that velocity is still handled correctly on pole crossing
 BOOST_AUTO_TEST_CASE( findTracklets_blackbox_13 )
 {
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   // first "object" - too fast for 1 deg/day velocity filter (1.1 deg/day)
   addDetectionAt(53736.0, 180.45, 89.45, myDets); // id 0
   addDetectionAt(53737.0, 000.45, 89.45, myDets); // id 1
@@ -336,7 +336,7 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_13 )
 // check that negative RA, Dec are interpreted correctly
 BOOST_AUTO_TEST_CASE( findTracklets_blackbox_14 )
 {
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   // first "object"
   addDetectionAt(53736.0, -180.1, -0.1, myDets); // id 0
   addDetectionAt(53737.0, 180.0, 359.9, myDets); // id 1
@@ -361,7 +361,7 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_14 )
 // lots and lots of noise
 BOOST_AUTO_TEST_CASE( findTracklets_blackbox_15 )
 {
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   // first "object"
   addDetectionAt(53736.0, 100.0, 100.0, myDets); // id 0
   addDetectionAt(53737.0, 100.5, 100.0, myDets); // id 1
@@ -414,7 +414,7 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_15 )
 //make sure we don't link detections from the same image.
 BOOST_AUTO_TEST_CASE( findTracklets_blackbox_16 )
 {
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   // first "object"
   addDetectionAt(53736.0, 100.0, 100.0, myDets); // id 0
   addDetectionAt(53736.0, 100.1, 100.0, myDets); // id 1
@@ -429,7 +429,7 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_16 )
 // test that negative RA is handled sanely
 BOOST_AUTO_TEST_CASE( findTracklets_blackbox_17 )
 {
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   // first "object"
   addDetectionAt(53736.0, 000.1, 0.0, myDets); // id 0
   addDetectionAt(53737.0, -00.1, 0.0, myDets); // id 1
@@ -447,7 +447,7 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_17 )
 // test that negative Dec is handled sanely
 BOOST_AUTO_TEST_CASE( findTracklets_blackbox_18 )
 {
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   // first "object"
   addDetectionAt(53736.0, 000.1, -00.1, myDets); // id 0
   addDetectionAt(53737.0, 000.1, 000.1, myDets); // id 1
@@ -466,7 +466,7 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_18 )
 // check that behavior is sane when no results are returned
 BOOST_AUTO_TEST_CASE( findTracklets_blackbox_19 )
 {
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   // only "object" - too fast!
   addDetectionAt(53736.0, 150.0, 0.0, myDets); // id 0
   addDetectionAt(53737.0, 151.1, 0.1, myDets); // id 1
@@ -490,7 +490,7 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_19 )
 // test that minv does something in RA
 BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_1 )
 {
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   // first "object" -- too slow
   addDetectionAt(53736.0, 100.0, 100.0, myDets); // id 0
   addDetectionAt(53737.0, 100.1, 100.0, myDets); // id 1
@@ -512,7 +512,7 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_1 )
 // (again, with time separation != exactly 1 day)
 BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_1_1 )
 {
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   // first "object" -- too slow (.017 deg/day)
   addDetectionAt(53736.0, 100.0, 80.0, myDets); // id 0
   addDetectionAt(53736.5, 100.05, 80.0, myDets); // id 1
@@ -534,7 +534,7 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_1_1 )
 // test that minv does something in dec
 BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_2 )
 {
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   // first "object" -- too slow
   addDetectionAt(53736.0, 100.0, -10.0, myDets); // id 0
   addDetectionAt(53737.0, 100.0, -10.1, myDets); // id 1
@@ -556,7 +556,7 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_2 )
 // again, with time separation != exactly one day
 BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_2_1 )
 {
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   // first "object" -- too slow
   addDetectionAt(53736.0, 100.0, 100.0, myDets); // id 0
   addDetectionAt(53736.5, 100.0, 100.05, myDets); // id 1
@@ -577,7 +577,7 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_2_1 )
 // test that minv does something in RA.dec
 BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_3 )
 {
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   // first "object" -- too slow (distance of ~.14)
   addDetectionAt(53736.0, 100.0, 10.0, myDets); // id 0
   addDetectionAt(53737.0, 100.1, 10.1, myDets); // id 1
@@ -600,7 +600,7 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_3 )
 // test that minv works with crossing RA 0 line
 BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_4 )
 {
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   // first "object" -- too slow
   addDetectionAt(53736.0, 000.05, 000.05, myDets); // id 0
   addDetectionAt(53737.0, 359.95, 000.05, myDets); // id 1
@@ -624,7 +624,7 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_4 )
 // test that minv works with crossing north pole
 BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_5 )
 {
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   // first "object" -- too slow (distance of .1)
   addDetectionAt(53736.0, 000.05, 89.95, myDets); // id 0
   addDetectionAt(53737.0, 180.05, 89.95, myDets); // id 1
@@ -648,7 +648,7 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_5 )
 // test that minv works with crossing RA *and* dec 0 lines
 BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_6 )
 {
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   // first "object" -- too slow (distance of ~.14)
   addDetectionAt(53736.0, 000.05, 000.05, myDets); // id 0
   addDetectionAt(53737.0, 359.95, -00.05, myDets); // id 1
@@ -674,7 +674,7 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_6 )
 // test that behavior is sane when no tracklets are returned
 BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_7 )
 {
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   // first "object" -- too slow (distance of ~.14)
   addDetectionAt(53736.0, 000.05, 000.05, myDets); // id 0
   addDetectionAt(53737.0, 359.05, 359.05, myDets); // id 1
@@ -699,7 +699,7 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_7 )
 // lots and lots of noise
 BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_8 )
 {
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   // first "object"
   addDetectionAt(53736.0, 100.0, 10.0, myDets); // id 0
   addDetectionAt(53737.0, 100.5, 10.0, myDets); // id 1

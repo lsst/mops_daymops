@@ -2,7 +2,7 @@
 #include <iomanip>
 #include <sstream>
 
-#include "lsst/mops/Detection.h"
+#include "lsst/mops/MopsDetection.h"
 #include "lsst/mops/Exceptions.h"
 
 
@@ -15,7 +15,7 @@
 namespace lsst {
     namespace mops {
 
-Detection::Detection()
+MopsDetection::MopsDetection()
 {
     hasETime = false;
     initialized = false;
@@ -23,7 +23,7 @@ Detection::Detection()
 }
 
 
-Detection::Detection(long int ID, double epochMJD, double RA, double Dec, 
+MopsDetection::MopsDetection(long int ID, double epochMJD, double RA, double Dec, 
                      int obsCode, std::string objName, double mag, 
                      double elongationLength, double elongationAngle)
 {
@@ -41,7 +41,7 @@ Detection::Detection(long int ID, double epochMJD, double RA, double Dec,
     fileIndex = -1;
 }
 
-Detection::Detection(long int ID, double epochMJD, double RA, double Dec, 
+MopsDetection::MopsDetection(long int ID, double epochMJD, double RA, double Dec, 
                      int obsCode, std::string objName, double mag, 
                      double elongationLength, double elongationAngle,
                      double exposureTime)
@@ -63,7 +63,7 @@ Detection::Detection(long int ID, double epochMJD, double RA, double Dec,
 
 
 
-Detection::Detection(long int ID, double epochMJD, double RA, double Dec) 
+MopsDetection::MopsDetection(long int ID, double epochMJD, double RA, double Dec) 
 {
     hasETime = false;
     initialized = true;
@@ -78,11 +78,11 @@ Detection::Detection(long int ID, double epochMJD, double RA, double Dec)
 
 
 
-long int Detection::getID() const 
+long int MopsDetection::getID() const 
 {
     if (!initialized) {
         throw LSST_EXCEPT(UninitializedException, 
-                          "Detection: request for ID from uninitialized Detection\n");
+                          "MopsDetection: request for ID from uninitialized MopsDetection\n");
         return -1;
     }
     else {
@@ -91,11 +91,11 @@ long int Detection::getID() const
 
 }
 
-double Detection::getEpochMJD() const  
+double MopsDetection::getEpochMJD() const  
 {
     if (!initialized) {
         throw LSST_EXCEPT(UninitializedException, 
-                          "Detection: request for EpochMJD from uninitialized Detection\n");
+                          "MopsDetection: request for EpochMJD from uninitialized MopsDetection\n");
         return -1;
     }
     else {
@@ -104,11 +104,11 @@ double Detection::getEpochMJD() const
 }
 
 
-double Detection::getRA()  const 
+double MopsDetection::getRA()  const 
 {
     if (!initialized) {
         throw LSST_EXCEPT(UninitializedException, 
-                          "Detection: request for RA from uninitialized Detection\n");
+                          "MopsDetection: request for RA from uninitialized MopsDetection\n");
         return -1;
     }
     else {
@@ -117,11 +117,11 @@ double Detection::getRA()  const
 }
 
 
-double Detection::getDec()  const 
+double MopsDetection::getDec()  const 
 {
     if (!initialized) {
         throw LSST_EXCEPT(UninitializedException, 
-                          "Detection: request for Dec from uninitialized Detection\n");
+                          "MopsDetection: request for Dec from uninitialized MopsDetection\n");
         return -1;
     }
     else {
@@ -130,11 +130,11 @@ double Detection::getDec()  const
 }
 
 
-int  Detection::getObscode() const  
+int  MopsDetection::getObscode() const  
 {
     if (!initialized) {
         throw LSST_EXCEPT(UninitializedException, 
-                          "Detection: request for ObsCode from uninitialized Detection\n");
+                          "MopsDetection: request for ObsCode from uninitialized MopsDetection\n");
         return -1;
     }
     else {
@@ -143,11 +143,11 @@ int  Detection::getObscode() const
 
 }
 
-std::string Detection::getObjName() const  
+std::string MopsDetection::getObjName() const  
 {
     if (!initialized) {
         throw LSST_EXCEPT(UninitializedException, 
-                          "Detection: request for ObjName from uninitialized Detection\n");
+                          "MopsDetection: request for ObjName from uninitialized MopsDetection\n");
         return "";
     }
     else {
@@ -155,11 +155,11 @@ std::string Detection::getObjName() const
     }
 }
 
-double Detection::getMag()  const 
+double MopsDetection::getMag()  const 
 {
     if (!initialized) {
         throw LSST_EXCEPT(UninitializedException, 
-                          "Detection: request for magnitude from uninitialized Detection\n");
+                          "MopsDetection: request for magnitude from uninitialized MopsDetection\n");
         return -1000;
     }
     else {
@@ -168,11 +168,11 @@ double Detection::getMag()  const
 }
 
 
-double Detection::getLength()  const 
+double MopsDetection::getLength()  const 
 {
     if (!initialized) {
         throw LSST_EXCEPT(UninitializedException, 
-                          "Detection: request for length from uninitialized Detection\n");
+                          "MopsDetection: request for length from uninitialized MopsDetection\n");
         return -1000;
     }
     else {
@@ -182,11 +182,11 @@ double Detection::getLength()  const
 
 
 
-double Detection::getAngle() const 
+double MopsDetection::getAngle() const 
 {
     if (!initialized) {
         throw LSST_EXCEPT(UninitializedException, 
-                          "Detection: request for angle from uninitialized Detection\n");
+                          "MopsDetection: request for angle from uninitialized MopsDetection\n");
         return -1000;
     }
     else {
@@ -196,15 +196,15 @@ double Detection::getAngle() const
 }
 
 
-bool Detection::hasExposureTime() const {
+bool MopsDetection::hasExposureTime() const {
     return hasETime;
 }
 
-double Detection::getExposureTime() const 
+double MopsDetection::getExposureTime() const 
 {
     if ((!initialized) || (!hasETime)) {
         throw LSST_EXCEPT(UninitializedException, 
-                          "Detection: request for exposure from Detection which is uninitialized or has no etime data\n");
+                          "MopsDetection: request for exposure from MopsDetection which is uninitialized or has no etime data\n");
         return -1000;
     }
     else {
@@ -216,7 +216,7 @@ double Detection::getExposureTime() const
 
 
 
-void Detection::fromMITIString(std::string mitiString) {
+void MopsDetection::fromMITIString(std::string mitiString) {
     /*     --------- PANSTARRS Input File Format (from Larry Denneau's Spec):
            ID EPOCH_MJD RA_DEG DEC_DEG MAG OBSCODE OBJECT_NAME LENGTH ANGLE [ETIME]*/
     std::istringstream ss(mitiString);
@@ -249,19 +249,19 @@ void Detection::fromMITIString(std::string mitiString) {
 
 
 
-void Detection::setFileIndex(int v)
+void MopsDetection::setFileIndex(int v)
 {
   fileIndex = v;
 }
 
 
 
-int Detection::getFileIndex() const
+int MopsDetection::getFileIndex() const
 {
 
   if ((!initialized)) {
     throw LSST_EXCEPT(UninitializedException, 
-		      "Detection: request for exposure from Detection which is uninitialized or has no etime data\n");
+		      "MopsDetection: request for exposure from MopsDetection which is uninitialized or has no etime data\n");
     return -1000;
   }
   else {

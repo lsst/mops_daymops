@@ -22,7 +22,7 @@ namespace lsst {
 
     // declare some helper functions - these don't need to be exposed.
 
-    void populateTrackletsForTreeVector(const std::vector<Detection> *detections,
+    void populateTrackletsForTreeVector(const std::vector<MopsDetection> *detections,
                                         const std::vector<Tracklet> *tracklets,
                                         std::vector<PointAndValue <unsigned int> >
                                         &trackletsForTree);
@@ -36,7 +36,7 @@ namespace lsst {
        then they ARE compatible if B, C have different times (because their
        combined detections are ABC). */
 
-    bool trackletsAreCompatible(const std::vector<Detection> * detections,
+    bool trackletsAreCompatible(const std::vector<MopsDetection> * detections,
                                 Tracklet t1, Tracklet t2);
 
 
@@ -44,7 +44,7 @@ namespace lsst {
     /* returns the average of the squared distances of each detection in queryTracklet from
      * the line described by slopeAndOffsetRA, slopeAndOffsetDec. */ 
     double getAverageSqDist(std::vector<double> slopeAndOffsetRA, std::vector<double> slopeAndOffsetDec,
-                            const std::vector<Detection>* allDets, const Tracklet* queryTracklet, 
+                            const std::vector<MopsDetection>* allDets, const Tracklet* queryTracklet, 
                             double timeOffset=0.0);
 
 
@@ -110,7 +110,7 @@ namespace lsst {
 
 
     double getSqDist(std::vector<double> slopeAndOffsetRA, std::vector<double> slopeAndOffsetDec,
-                     const Detection* det, double timeOffset) {
+                     const MopsDetection* det, double timeOffset) {
         double mjd = det->getEpochMJD();
         double projectedRA = slopeAndOffsetRA[0]*(mjd - timeOffset) + slopeAndOffsetRA[1];
         double projectedDec = slopeAndOffsetDec[0]*(mjd - timeOffset) + slopeAndOffsetDec[1];
@@ -126,7 +126,7 @@ namespace lsst {
 
 
     double getAverageSqDist(std::vector<double> slopeAndOffsetRA, std::vector<double> slopeAndOffsetDec,
-                            const std::vector<Detection>* allDets, const Tracklet* queryTracklet, 
+                            const std::vector<MopsDetection>* allDets, const Tracklet* queryTracklet, 
                             double timeOffset) {
         std::set<unsigned int>::const_iterator iter;
         double totalSqDist = 0.0;
@@ -144,7 +144,7 @@ namespace lsst {
 
 
 
-    bool trackletsAreCompatible(const std::vector<Detection> *detections, Tracklet t1, Tracklet t2) {
+    bool trackletsAreCompatible(const std::vector<MopsDetection> *detections, Tracklet t1, Tracklet t2) {
         std::set<unsigned int> uniqueIndices; 
         std::set<unsigned int>::iterator indexIter;
         std::set<unsigned int>::iterator uniqueIndicesIter;
@@ -205,7 +205,7 @@ namespace lsst {
      * put the resulting tracklets into collapsedPairs.
      */
     void TrackletCollapser::doCollapsingPopulateOutputVector(
-        const std::vector<Detection> * detections, 
+        const std::vector<MopsDetection> * detections, 
         std::vector<Tracklet> &pairs,
         std::vector<double> tolerances, 
         std::vector<Tracklet> &collapsedPairs,       
@@ -320,7 +320,7 @@ namespace lsst {
                         unsigned int bestMatchID = 1337;
                         std::vector <double> currentRAFunc;
                         std::vector <double> currentDecFunc;
-                        std::vector <Detection> trackletDets;
+                        std::vector <MopsDetection> trackletDets;
                         std::set<unsigned int>::iterator detIter;
                         for (detIter = newTracklet.indices.begin(); 
                              detIter != newTracklet.indices.end(); 
@@ -462,7 +462,7 @@ namespace lsst {
    * 
    * ASSUME that physicalParams was allocated with 4 slots.
    */
-    void TrackletCollapser::setPhysicalParamsVector(const std::vector<Detection> *trackletDets,
+    void TrackletCollapser::setPhysicalParamsVector(const std::vector<MopsDetection> *trackletDets,
                                                     std::vector<double> &physicalParams,
                                                     double normalTime) {
         std::vector<double> RASlopeAndOffset;
@@ -487,7 +487,7 @@ namespace lsst {
 
 
     /* returns average of first obs time + last obs time */
-    double getMidPointTime(const std::vector<Detection> *detections) {
+    double getMidPointTime(const std::vector<MopsDetection> *detections) {
         // these are reasonable extremes.
         double firstTime = IMPOSSIBLY_LATE_MJD;
         double lastTime = IMPOSSIBLY_EARLY_MJD;
@@ -509,7 +509,7 @@ namespace lsst {
 
 
 
-    void TrackletCollapser::populateTrackletsForTreeVector(const std::vector<Detection> *detections,
+    void TrackletCollapser::populateTrackletsForTreeVector(const std::vector<MopsDetection> *detections,
                                                            const std::vector<Tracklet> * tracklets,
                                                            std::vector<PointAndValue <unsigned int> >
                                                            &trackletsForTree) {
@@ -522,7 +522,7 @@ namespace lsst {
         for (trackletIter = (*tracklets).begin(); trackletIter != (*tracklets).end(); trackletIter++) {
             PointAndValue <unsigned int> curTracklet;
             std::vector<double> physicalParams(4); /* will hold RA0, Dec0, angle, velocity */
-            std::vector<Detection> trackletDets;
+            std::vector<MopsDetection> trackletDets;
 
             for (indicesIter = trackletIter->indices.begin(); 
                  indicesIter != trackletIter->indices.end();

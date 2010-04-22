@@ -24,7 +24,7 @@ namespace lsst {
         char* outFileName = NULL;
 
         std::vector <Tracklet> trackletsVector;
-        std::vector <Detection> detsVector;
+        std::vector <MopsDetection> detsVector;
         
         double maxRMSb = .001;
         double maxRMSm = 0.;
@@ -109,7 +109,7 @@ namespace lsst {
                 
         std::cout << "lineFitFilter: " << std::endl;
         std::cout << "==========================================" << std::endl;
-        std::cout << "Detections file:        " << detsFileName << std::endl;
+        std::cout << "MopsDetections file:        " << detsFileName << std::endl;
         std::cout << "Pairs (tracklets) file: " << pairsFileName << std::endl;
         std::cout << "Output file:            " << outFileName << std::endl;
         std::cout << "max RMS:                " 
@@ -140,7 +140,7 @@ namespace lsst {
 
 
     /* purifyTracklet:  assuming *t is an allocated tracklet, and allDets is an allocated vector of
-     * Detections into which t's indices are indeed indices.
+     * MopsDetections into which t's indices are indeed indices.
      * 
      * return a corresponding tracklet, possibly empty, s.t. the tracklet's max
      * RMS is less than average magnitude * maxRMSm + maxRMSb.  This tracklet
@@ -155,7 +155,7 @@ namespace lsst {
         char* outFileName = NULL;
 
         std::vector <Tracklet> trackletsVector;
-        std::vector <Detection> detsVector;
+        std::vector <MopsDetection> detsVector;
         
         double maxRMSb = .001;
         double maxRMSm = 0.;

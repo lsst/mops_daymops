@@ -14,7 +14,7 @@ namespace lsst {
     namespace mops {
 
 
-    bool detectionsHaveGT2UniqueTimes(const std::vector<Detection> *detections) {
+    bool detectionsHaveGT2UniqueTimes(const std::vector<MopsDetection> *detections) {
         std::vector<double> observedMJDs;
         double curMJD = -1;
         std::vector<double>::iterator fIter;
@@ -67,7 +67,7 @@ Only used if useRMSfilt == true.  Describes the function for RMS filtering.  Tra
         std::vector <double> tolerances;
         std::ofstream outFile;
         std::string line;
-        std::vector <Detection> detections;
+        std::vector <MopsDetection> detections;
         /* pairs holds indices into detections. */
         std::vector <Tracklet> pairs;
         std::vector<Tracklet> collapsedPairs;        

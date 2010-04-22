@@ -16,7 +16,7 @@
 #include <utility> //for 'pair'
 
 #include "lsst/mops/KDTree.h"
-#include "lsst/mops/Detection.h"
+#include "lsst/mops/MopsDetection.h"
 
 
 namespace lsst {
@@ -30,8 +30,8 @@ namespace lsst {
  * index into dataPoints.
  */
 std::vector<std::pair <unsigned int, unsigned int> > 
-detectionProximity(const std::vector<Detection>& queryPoints,
-		   const std::vector<Detection>& dataPoints,
+detectionProximity(const std::vector<MopsDetection>& queryPoints,
+		   const std::vector<MopsDetection>& dataPoints,
 		   double distanceThreshold,
 		   double brightnessThreshold,
 		   double timeThreshold);

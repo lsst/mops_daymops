@@ -9,7 +9,7 @@
 #include <cmath>
 
 
-#include "lsst/mops/Detection.h"
+#include "lsst/mops/MopsDetection.h"
 #include "lsst/mops/Tracklet.h"
 #include "lsst/mops/PointAndValue.h"
 #include "lsst/mops/common.h"
@@ -75,8 +75,8 @@ BOOST_AUTO_TEST_CASE( isSane_blackbox_1 )
 // BOOST_AUTO_TEST_CASE( trackletsAreCompatible_blackbox_1 )
 // {
 
-//     std::vector<Detection> dets;
-//     Detection tmpDet;
+//     std::vector<MopsDetection> dets;
+//     MopsDetection tmpDet;
 //     // 4 matching detections
 //     tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
 //     dets.push_back(tmpDet);
@@ -164,8 +164,8 @@ BOOST_AUTO_TEST_CASE( collapse_blackbox_2)
 
 BOOST_AUTO_TEST_CASE( leastSquaresSolveForRADecLinear_blackbox_1)
 {
-    std::vector<Detection> dets;
-    Detection tmpDet;
+    std::vector<MopsDetection> dets;
+    MopsDetection tmpDet;
 
     tmpDet.fromMITIString("0 5330.0 10.0 10.0 20.0 1337 dummy 0.0 0.0"); 
     dets.push_back(tmpDet);
@@ -197,8 +197,8 @@ BOOST_AUTO_TEST_CASE( leastSquaresSolveForRADecLinear_blackbox_1)
 // {
     
     
-//     std::vector<Detection> dets;
-//     Detection tmpDet;
+//     std::vector<MopsDetection> dets;
+//     MopsDetection tmpDet;
 
 //     tmpDet.fromMITIString("0 5330.0 10.0 10.0 20.0 1337 dummy 0.0 0.0"); 
 //     dets.push_back(tmpDet);
@@ -231,8 +231,8 @@ BOOST_AUTO_TEST_CASE( leastSquaresSolveForRADecLinear_blackbox_1)
 // {
     
     
-//     std::vector<Detection> dets;
-//     Detection tmpDet;
+//     std::vector<MopsDetection> dets;
+//     MopsDetection tmpDet;
 
 //     // note that detections are each 1 degree off of the ideal
 //     tmpDet.fromMITIString("0 5330.0 10.0 11.0 20.0 1337 dummy 0.0 0.0"); 
@@ -276,8 +276,8 @@ BOOST_AUTO_TEST_CASE( leastSquaresSolveForRADecLinear_blackbox_1)
 BOOST_AUTO_TEST_CASE( doCollapsingPopulateOutputVector_blackbox_1)
 {
 
-    std::vector<Detection> dets;
-    Detection tmpDet;
+    std::vector<MopsDetection> dets;
+    MopsDetection tmpDet;
 
     tmpDet.fromMITIString("0 5330.0 10.0 10.0 20.0 1337 dummy 0.0 0.0"); 
     dets.push_back(tmpDet);
@@ -324,8 +324,8 @@ BOOST_AUTO_TEST_CASE( doCollapsingPopulateOutputVector_blackbox_1)
 BOOST_AUTO_TEST_CASE( doCollapsingPopulateOutputVector_blackbox_2)
 {
 
-    std::vector<Detection> dets;
-    Detection tmpDet;
+    std::vector<MopsDetection> dets;
+    MopsDetection tmpDet;
 
     //slightly fuzzier data as well as fuzzier search
     tmpDet.fromMITIString("0 5330.0 10.0 10.0 20.0 1337 dummy 0.0 0.0"); 
@@ -373,8 +373,8 @@ BOOST_AUTO_TEST_CASE( doCollapsingPopulateOutputVector_blackbox_2)
 BOOST_AUTO_TEST_CASE( doCollapsingPopulateOutputVector_blackbox_3)
 {
 
-    std::vector<Detection> dets;
-    Detection tmpDet;
+    std::vector<MopsDetection> dets;
+    MopsDetection tmpDet;
 
     //slightly fuzzier data, strict search - should not collapse anything.
     tmpDet.fromMITIString("0 5330.0 10.0 10.0 20.0 1337 dummy 0.0 0.0"); 
@@ -422,8 +422,8 @@ BOOST_AUTO_TEST_CASE( doCollapsingPopulateOutputVector_blackbox_3)
 // this function is now hidden.  It should probably be tested by whitebox testing of doCollapsing.
 // BOOST_AUTO_TEST_CASE( detectionsHaveGT2UniqueTimes_blackbox_1)
 // {
-//     std::vector<Detection> dets;
-//     Detection tmpDet;
+//     std::vector<MopsDetection> dets;
+//     MopsDetection tmpDet;
 
 //     tmpDet.fromMITIString("0 5330.0 10.0 10.0 20.0 1337 dummy 0.0 0.0"); 
 //     dets.push_back(tmpDet);
@@ -456,8 +456,8 @@ BOOST_AUTO_TEST_CASE( doCollapsingPopulateOutputVector_blackbox_3)
 
 // BOOST_AUTO_TEST_CASE( setPhysicalParamsVector_blackbox_1)
 // {
-//     std::vector<Detection> dets;
-//     Detection tmpDet;
+//     std::vector<MopsDetection> dets;
+//     MopsDetection tmpDet;
 
 //     tmpDet.fromMITIString("0 5330.0 10.0 10.0 20.0 1337 dummy 0.0 0.0"); 
 //     dets.push_back(tmpDet);
@@ -480,8 +480,8 @@ BOOST_AUTO_TEST_CASE( doCollapsingPopulateOutputVector_blackbox_3)
 
 // BOOST_AUTO_TEST_CASE( setPhysicalParamsVector_blackbox_2)
 // {
-//     std::vector<Detection> dets;
-//     Detection tmpDet;
+//     std::vector<MopsDetection> dets;
+//     MopsDetection tmpDet;
 
 //     tmpDet.fromMITIString("0 5330.0 358.0 358.0 20.0 1337 dummy 0.0 0.0"); 
 //     dets.push_back(tmpDet);

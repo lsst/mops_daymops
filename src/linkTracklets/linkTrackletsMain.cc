@@ -30,7 +30,7 @@ double timeElapsed(clock_t priorEvent)
 
 
 void writeResults(std::string outFileName, 
-		  const std::vector<Detection> &allDets,
+		  const std::vector<MopsDetection> &allDets,
 		  const std::vector<Tracklet> &allTracklets,
 		  const TrackSet tracks) 
 {
@@ -134,7 +134,7 @@ int main(int argc, char* argv[])
 	  return 1;
      }
 
-     std::vector<lsst::mops::Detection> allDets;
+     std::vector<lsst::mops::MopsDetection> allDets;
      std::vector<lsst::mops::Tracklet> allTracklets;
      TrackSet resultTracks;
 

@@ -13,7 +13,7 @@
 #include <vector>
 
 #include "lsst/mops/Tracklet.h"
-#include "lsst/mops/Detection.h"
+#include "lsst/mops/MopsDetection.h"
 
 
 namespace lsst {
@@ -23,7 +23,7 @@ namespace lsst {
  * Main function
  *****************************************************************/
 std::vector <Tracklet> 
-findTracklets(const std::vector<Detection> &allDetections, 
+findTracklets(const std::vector<MopsDetection> &allDetections, 
 	      double maxVelocity, double minVelocity);
 
     }} // close lsst::mops

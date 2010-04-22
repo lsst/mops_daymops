@@ -12,17 +12,17 @@ namespace lsst {
 
 // prototypes not to be seen outside this file
 
-void buildKDTree(const std::vector<Detection>, KDTree<unsigned int>&);
+void buildKDTree(const std::vector<MopsDetection>, KDTree<unsigned int>&);
 
 std::vector<std::pair<unsigned int, unsigned int> > 
-getProximity(const std::vector<Detection>& queryPoints,
+getProximity(const std::vector<MopsDetection>& queryPoints,
 	     const KDTree<unsigned int>& searchTree, double,
 	     double, double);
 
 
 
-std::vector<std::pair <unsigned int, unsigned int> > detectionProximity(const std::vector<Detection>& queryPoints,
-								   const std::vector<Detection>& dataPoints,
+std::vector<std::pair <unsigned int, unsigned int> > detectionProximity(const std::vector<MopsDetection>& queryPoints,
+								   const std::vector<MopsDetection>& dataPoints,
 								   double distanceThreshold,
 								   double brightnessThreshold,
 								   double timeThreshold)
@@ -48,7 +48,7 @@ std::vector<std::pair <unsigned int, unsigned int> > detectionProximity(const st
 /**********************************************************************
  * Populate a KDTree 'tree' from the Detections in vector 'points'
  ***********************************************************************/
-void buildKDTree(const std::vector<Detection> points, KDTree<unsigned int> &tree)
+void buildKDTree(const std::vector<MopsDetection> points, KDTree<unsigned int> &tree)
 {
 
   if(points.size() > 0){
@@ -79,7 +79,7 @@ void buildKDTree(const std::vector<Detection> points, KDTree<unsigned int> &tree
 /*
  *
  */
-std::vector<std::pair <unsigned int, unsigned int> > getProximity(const std::vector<Detection>& queryPoints,
+std::vector<std::pair <unsigned int, unsigned int> > getProximity(const std::vector<MopsDetection>& queryPoints,
 								  const KDTree<unsigned int>& searchTree,
 								  double maxDist, double maxBrightness,
 								  double maxTime)

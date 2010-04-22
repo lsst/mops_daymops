@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include "lsst/mops/Detection.h"
+#include "lsst/mops/MopsDetection.h"
 #include "lsst/mops/Tracklet.h"
 #include "lsst/mops/Track.h"
 #include "lsst/mops/TrackSet.h"
@@ -106,7 +106,7 @@ public:
 
 /* queryTracklets are non-const because we set their velocityRA and velocityDec fields. 
    otherwise queryTracklets will not be changed. */
-TrackSet linkTracklets(const std::vector<Detection> &allDetections,
+TrackSet linkTracklets(const std::vector<MopsDetection> &allDetections,
                        std::vector<Tracklet> &queryTracklets,
                        linkTrackletsConfig searchConfig);
 

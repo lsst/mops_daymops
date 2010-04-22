@@ -31,7 +31,7 @@ namespace lsst {
 
 
 
-    void leastSquaresSolveForRADecLinear(const std::vector <Detection> *trackletDets,
+    void leastSquaresSolveForRADecLinear(const std::vector <MopsDetection> *trackletDets,
                                          std::vector<double> &RASlopeAndOffsetOut,
                                          std::vector<double> &DecSlopeAndOffsetOut,
                                          double timeOffset) {
@@ -114,7 +114,7 @@ namespace lsst {
 
 
 
-    double getAverageMagnitude(const Tracklet t, const::std::vector<Detection>* detections) {
+    double getAverageMagnitude(const Tracklet t, const::std::vector<MopsDetection>* detections) {
         double sum = 0.;
         unsigned int count = 0;
         std::set<unsigned int>::const_iterator detIndexIter;
@@ -131,12 +131,12 @@ namespace lsst {
 
 
 
-    double rmsForTracklet(const Tracklet t, const std::vector<Detection> *detections, 
+    double rmsForTracklet(const Tracklet t, const std::vector<MopsDetection> *detections, 
                           std::vector<double> *perDetSqDist) {
         std::vector<double> RASlopeAndOffset, DecSlopeAndOffset;
         std::set<unsigned int>::iterator indicesIter;
-        std::vector<Detection> trackletDets;
-        std::vector<Detection>::iterator detIter;
+        std::vector<MopsDetection> trackletDets;
+        std::vector<MopsDetection>::iterator detIter;
         for (indicesIter = t.indices.begin(); 
              indicesIter != t.indices.end();
              indicesIter++) {
@@ -206,7 +206,7 @@ namespace lsst {
 
     
     void filterByLineFitAddToOutputVector(const std::vector<Tracklet> *tracklets, 
-                                          const std::vector<Detection> *allDets,
+                                          const std::vector<MopsDetection> *allDets,
                                           double maxRMSm, double maxRMSb,
                                           std::vector<Tracklet> &output) {
         std::vector<Tracklet>::const_iterator tIter;
@@ -228,7 +228,7 @@ namespace lsst {
      * given a pair of functions relating MJD to RA, Dec s.t. RA = RASlope*(MJD - tOffset) + RAintercept and
      * the similarly for declination, return a map which relates indices of *t to squared distance to the projected point.
      */
-    std::map <unsigned int, double> getPerDetSqDistanceToLine(const Tracklet *t, const std::vector<Detection>* allDets, 
+    std::map <unsigned int, double> getPerDetSqDistanceToLine(const Tracklet *t, const std::vector<MopsDetection>* allDets, 
                                                               double RASlope, double RAIntercept, double DecSlope, double DecIntercept, 
                                                               double tOffset) {
         std::map <unsigned int, double> results;
@@ -264,8 +264,8 @@ namespace lsst {
 
 
 
-    std::vector<Detection> getTrackletDets(const Tracklet *t, const std::vector<Detection>* allDets) {
-        std::vector<Detection> results;
+    std::vector<MopsDetection> getTrackletDets(const Tracklet *t, const std::vector<MopsDetection>* allDets) {
+        std::vector<MopsDetection> results;
         for (std::set<unsigned int>::const_iterator iIter = t->indices.begin();
              iIter != t->indices.end();
              iIter++) {
@@ -277,14 +277,14 @@ namespace lsst {
 
 
     
-    Tracklet TrackletPurifier::purifyTracklet(const Tracklet *t, const std::vector<Detection>* allDets, 
+    Tracklet TrackletPurifier::purifyTracklet(const Tracklet *t, const std::vector<MopsDetection>* allDets, 
                                               double maxRMSm, double maxRMSb) {
         Tracklet curTracklet = *t;
         bool isClean = false;
 
         while (isClean == false) {
             double t0 = (*allDets)[*(curTracklet.indices.begin())].getEpochMJD();
-            std::vector<Detection> curTrackletDets = getTrackletDets(&curTracklet, allDets);
+            std::vector<MopsDetection> curTrackletDets = getTrackletDets(&curTracklet, allDets);
             std::vector<double> RASlopeAndOffset, DecSlopeAndOffset;
             leastSquaresSolveForRADecLinear(&curTrackletDets, RASlopeAndOffset, 
                                                  DecSlopeAndOffset, t0);
@@ -316,7 +316,7 @@ namespace lsst {
 
 
     void TrackletPurifier::purifyTracklets(const std::vector<Tracklet> *trackletsVector,
-                                           const std::vector<Detection> *detsVector,
+                                           const std::vector<MopsDetection> *detsVector,
                                            double maxRMSm, double maxRMSb, unsigned int minObs,
                                            std::vector<Tracklet> &output)
     {

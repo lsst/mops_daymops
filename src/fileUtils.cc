@@ -60,9 +60,9 @@ void writeTrackletsToOutFile(const std::vector<Tracklet> * tracklets, std::ofstr
 
 
 
-void populateDetVectorFromFile(std::ifstream &detsFile, std::vector <Detection> &myDets) {
+void populateDetVectorFromFile(std::ifstream &detsFile, std::vector <MopsDetection> &myDets) {
      std::string line;
-     Detection tmpDet;
+     MopsDetection tmpDet;
      line.clear();
      std::getline(detsFile, line);
      while (detsFile.fail() == false) {
@@ -126,7 +126,7 @@ void writeTrackletsToOutFile(const std::vector<Tracklet> * tracklets, std::strin
      writeTrackletsToOutFile(tracklets, outFile);
 }
     
-void populateDetVectorFromFile(std::string detsFileName, std::vector <Detection> &myDets)
+void populateDetVectorFromFile(std::string detsFileName, std::vector <MopsDetection> &myDets)
 {
      std::ifstream detsFile;
      detsFile.open(detsFileName.c_str());

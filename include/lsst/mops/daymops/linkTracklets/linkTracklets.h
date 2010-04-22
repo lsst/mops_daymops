@@ -6,10 +6,14 @@
 
 #include <vector>
 
-#include "../Detection.h"
-#include "../Tracklet.h"
-#include "Track.h"
-#include "TrackSet.h"
+#include "lsst/mops/Detection.h"
+#include "lsst/mops/Tracklet.h"
+#include "lsst/mops/Track.h"
+#include "lsst/mops/TrackSet.h"
+
+
+namespace lsst {
+    namespace mops {
 
 /*
  * linkTrackletsConfig is a simple class which holds the many configurable
@@ -120,5 +124,9 @@ void getBestFitVelocityAndAcceleration(std::vector<double> positions, const std:
 // note that position and velocity will be MODIFIED. 
 void modifyWithAcceleration(double &position, double &velocity, 
                             double acceleration, double time);
+
+
+
+    }} // close lsst::mops
 
 #endif 

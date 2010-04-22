@@ -12,10 +12,13 @@
 #include <sstream>
 #include <math.h>
 
-#include "../KDTree.h"
-#include "../Detection.h"
-#include "findTracklets.h"
+#include "lsst/mops/KDTree.h"
+#include "lsst/mops/Detection.h"
+#include "lsst/mops/daymops/findTracklets/findTracklets.h"
 
+
+namespace lsst {
+    namespace mops {
 
 /***
     Prototypes - these don't need to be seen by files which include findTracklets.h
@@ -34,7 +37,7 @@ void generateMJDTrees(const std::vector<Detection>*,
  * each MJD vector to its MJD double value.
  ******************************************************************/
 void generateTreeMap(std::vector< std::vector<Detection> >*, 
-		     std::map<double, KDTree::KDTree<int> >*);
+		     std::map<double, KDTree<int> >*);
 
 
 /******************************************************************
@@ -42,7 +45,7 @@ void generateTreeMap(std::vector< std::vector<Detection> >*,
  * index by file line number index, generate tracklets for each 
  * query point within a distance determined by maxVelocity.
  ******************************************************************/
-void getTracklets(std::vector<int>*, std::map<double, KDTree::KDTree<int> >*, 
+void getTracklets(std::vector<int>*, std::map<double, KDTree<int> >*, 
 		  const std::vector<Detection>*, double);
 
 
@@ -53,7 +56,7 @@ void getTracklets(std::vector<int>*, std::map<double, KDTree::KDTree<int> >*,
  * and then remove them from the set of tracklets within maxVelocity
  * distance of query points.
  **************************************************************************/
-void prune(std::vector<int>*, std::map<double, KDTree::KDTree<int> >*,
+void prune(std::vector<int>*, std::map<double, KDTree<int> >*,
 	   const std::vector<Detection>*, double);
 
 
@@ -84,7 +87,7 @@ std::vector<Tracklet> findTracklets(const std::vector<Detection> &myDets,
     std::vector<double> queryPoints; 
 
     //link MJD to KDTree of unique MJD detections
-    std::map<double, KDTree::KDTree<int> > myTreeMap; 
+    std::map<double, KDTree<int> > myTreeMap; 
 
     generateMJDTrees(&myDets, &detectionSets);
 
@@ -165,7 +168,7 @@ void generateMJDTrees(const std::vector<Detection> *myDets,
  * each MJD vector to its MJD double value.
  ******************************************************************/
 void generateTreeMap(std::vector< std::vector<Detection> > *detectionSets, 
-		     std::map<double, KDTree::KDTree<int> > *myTreeMap)
+		     std::map<double, KDTree<int> > *myTreeMap)
 {
     // for each vector representing a single EpochMJD, created
     // a KDTree containing its line number in the input file 
@@ -179,20 +182,20 @@ void generateTreeMap(std::vector< std::vector<Detection> > *detectionSets,
             if(thisDetVec.size() > 0){
                 double thisEpoch = thisDetVec.at(0).getEpochMJD();
       
-                std::vector<KDTree::PointAndValue<int> > vecPV;
+                std::vector<PointAndValue<int> > vecPV;
 	
                 for(int j=0; j < thisTreeSize; j++){
-                    KDTree::PointAndValue<int> tempPV;
+                    PointAndValue<int> tempPV;
                     std::vector<double> pairRADec;
 
-                    pairRADec.push_back(KDTree::Common::convertToStandardDegrees(thisDetVec.at(j).getRA()));                    
-                    pairRADec.push_back(KDTree::Common::convertToStandardDegrees(thisDetVec.at(j).getDec()));
+                    pairRADec.push_back(convertToStandardDegrees(thisDetVec.at(j).getRA()));                    
+                    pairRADec.push_back(convertToStandardDegrees(thisDetVec.at(j).getDec()));
 	  
                     tempPV.setPoint(pairRADec);
                     tempPV.setValue(thisDetVec.at(j).getFileIndex());
                     vecPV.push_back(tempPV);
                 }
-                KDTree::KDTree<int> tempKDTree;
+                KDTree<int> tempKDTree;
 
                 tempKDTree.buildFromData(vecPV, 2, 100);
                 myTreeMap->insert(std::make_pair(thisEpoch, tempKDTree) );
@@ -209,7 +212,7 @@ void generateTreeMap(std::vector< std::vector<Detection> > *detectionSets,
  * query point within a distance determined by maxVelocity.
  ******************************************************************/
 void getTracklets(std::vector<int> *resultsVec,  
-		  std::map<double, KDTree::KDTree<int> > *myTreeMap,
+		  std::map<double, KDTree<int> > *myTreeMap,
 		  const std::vector<Detection> *queryPoints,
 		  double maxVelocity)
 {
@@ -220,21 +223,21 @@ void getTracklets(std::vector<int> *resultsVec,
     otherDimsTolerances.resize(0);
     otherDimsPt.resize(0);
     double maxDistance;
-    std::vector<KDTree::Common::GeometryType> myGeos;
+    std::vector<GeometryType> myGeos;
     // we search RA, Dec only.
-    myGeos.push_back(KDTree::Common::RA_DEGREES);
-    myGeos.push_back(KDTree::Common::DEC_DEGREES);
+    myGeos.push_back(RA_DEGREES);
+    myGeos.push_back(DEC_DEGREES);
 
     // hyperRectangleSearch result container
-    std::vector<KDTree::PointAndValue<int> > queryResults;
-    std::map<double, KDTree::KDTree<int> >::iterator iter;
+    std::vector<PointAndValue<int> > queryResults;
+    std::map<double, KDTree<int> >::iterator iter;
 
     // loop variables
     int leftIndex, rightIndex, count=0;
     double treeMJD, tempDec, tempRA, tempMJD;
-    KDTree::KDTree<int> tempKDTree;
+    KDTree<int> tempKDTree;
     std::vector<double> queryPt;
-    KDTree::PointAndValue<int> tempPV;
+    PointAndValue<int> tempPV;
     Detection tempD;
 
     // iterate through list of collected Detections, as read from input
@@ -246,8 +249,8 @@ void getTracklets(std::vector<int> *resultsVec,
         for(iter = myTreeMap->begin(); iter != myTreeMap->end(); ++iter) {
 
             tempD = queryPoints->at(i);
-            tempRA = KDTree::Common::convertToStandardDegrees(tempD.getRA());
-            tempDec = KDTree::Common::convertToStandardDegrees(tempD.getDec());
+            tempRA = convertToStandardDegrees(tempD.getRA());
+            tempDec = convertToStandardDegrees(tempD.getDec());
             tempMJD = tempD.getEpochMJD();
 	
             treeMJD = iter->first;     //map key
@@ -294,7 +297,7 @@ void getTracklets(std::vector<int> *resultsVec,
  * distance of query points.
  **************************************************************************/
 void prune(std::vector<int> *resultsVec, 
-	   std::map<double, KDTree::KDTree<int> > *myTreeMap,
+	   std::map<double, KDTree<int> > *myTreeMap,
 	   const std::vector<Detection> *queryPoints, double minVelocity)
 {
     std::set <std::vector<int> > maxSet, minSet, diffSet;
@@ -379,3 +382,9 @@ int vectorPosition(const std::vector<double>* lookUp, double val)
         return -1;
     }
 }
+
+
+
+
+
+    }} // close lsst::mops

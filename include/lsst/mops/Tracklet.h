@@ -15,6 +15,9 @@
 #define LSST_TRACKLET_H
 #include <set>
 
+namespace lsst {
+namespace mops {
+
 class Tracklet {
 public: 
     Tracklet() { isCollapsed = false; velocityRA = 0; velocityDec = 0;}
@@ -27,5 +30,7 @@ public:
     double velocityDec;
 };
 
+
+} } //close namespace lsst::mops
 
 #endif

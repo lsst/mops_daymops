@@ -15,9 +15,12 @@
 #include <fstream>
 #include <utility> //for 'pair'
 
-#include "../KDTree.h"
-#include "../Detection.h"
+#include "lsst/mops/KDTree.h"
+#include "lsst/mops/Detection.h"
 
+
+namespace lsst {
+    namespace mops {
 
 /*
  * for each query point, find data points sufficiently nearby.
@@ -32,5 +35,7 @@ detectionProximity(const std::vector<Detection>& queryPoints,
 		   double distanceThreshold,
 		   double brightnessThreshold,
 		   double timeThreshold);
+
+    }} // close lsst::mops
 
 #endif

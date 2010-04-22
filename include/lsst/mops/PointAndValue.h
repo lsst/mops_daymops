@@ -25,7 +25,9 @@
 #include <iostream>
 #include <vector>
 
-namespace KDTree {
+namespace lsst {
+namespace mops {
+
 
     template <class T>
     class PointAndValue {
@@ -50,7 +52,7 @@ namespace KDTree {
         std::vector <double> myPoint;
     };
 
-}
+}} // close namespace lsst::mops
 
 
 #endif

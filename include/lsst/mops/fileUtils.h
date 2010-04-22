@@ -11,6 +11,9 @@
  */
 
 
+#ifndef __MOPS_FILE_UTILS_H__
+#define __MOPS_FILE_UTILS_H__
+
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -23,6 +26,8 @@
 #include "Tracklet.h"
 
 
+namespace lsst {
+namespace mops {
 
 /* if any index in pairs is >= detsSize, return false, else return true.
  * ALWAYS do this sanity check before anything else - particularly
@@ -46,3 +51,8 @@ void populateDetVectorFromFile(std::string detsFileName, std::vector <Detection>
 void populatePairsVectorFromFile(std::string pairsFileName,
 				 std::vector <Tracklet> &pairsVector);
 
+
+}} // close namespace lsst::mops
+
+
+#endif

@@ -8,7 +8,6 @@
 
 #include "Exceptions.h"
 
-namespace ctExcept = collapseTracklets::exceptions;
 
 /*
  * the actual implementation of nodes in the KDTree.
@@ -30,8 +29,10 @@ namespace ctExcept = collapseTracklets::exceptions;
  * 
  */
 
+namespace lsst {
+namespace mops {
 
-namespace KDTree {
+
     template <class T>
     class KDTreeNode {
     public: 
@@ -66,7 +67,7 @@ namespace KDTree {
         std::vector<PointAndValue <T> > 
         hyperRectangleSearch(const std::vector<double> &queryPt, 
                              const std::vector<double> &tolerances, 
-                             const std::vector<Common::GeometryType> &spaceTypesByDimension) const;
+                             const std::vector<GeometryType> &spaceTypesByDimension) const;
 
         // these are to be used by linkTracklets.
         bool hasLeftChild() const;
@@ -193,7 +194,7 @@ namespace KDTree {
     const std::vector<PointAndValue <T> > * KDTreeNode<T>::getMyData() const
     {
         if (!isLeaf()) {
-            LSST_EXCEPT(ctExcept::BadParameterException,
+            LSST_EXCEPT(BadParameterException,
                         "KDTreeNode got request for data, but is not a leaf node.");
         }
         return &myData;
@@ -284,7 +285,7 @@ namespace KDTree {
         bool forceLeaf = true;
         for (unsigned int i = 0; (i < myUBounds.size()) && (forceLeaf == true); i++) 
         {
-            if (!KDTree::Common::areEqual(myUBounds[i], myLBounds[i])) {
+            if (!areEqual(myUBounds[i], myLBounds[i])) {
                 forceLeaf = false;
             } 
         }
@@ -369,10 +370,10 @@ namespace KDTree {
         std::vector<double>::iterator myIter;
   
         std::cout << "UBounds: ";
-        Common::printDoubleVec(myUBounds);
+        printDoubleVec(myUBounds);
 
         std::cout << std::endl << "LBounds: ";
-        Common::printDoubleVec(myLBounds);
+        printDoubleVec(myLBounds);
 
         if (myChildren.size() == 0) { 
 
@@ -381,7 +382,7 @@ namespace KDTree {
             for (dataIter = myData.begin(); dataIter != myData.end(); dataIter++)
             {
                 std::cout << "Data point: ";
-                Common::printDoubleVec(dataIter->getPoint());
+                printDoubleVec(dataIter->getPoint());
             }
             std::cout << std::endl;
         }
@@ -429,7 +430,7 @@ namespace KDTree {
     }
   
     /*we know that we have at least one element here, so we're fine (fastMedian demands non-empty vector)*/
-    tmpMedian = Common::fastMedian(splitAxisPointData);
+    tmpMedian = fastMedian(splitAxisPointData);
   
     return tmpMedian;
 
@@ -464,8 +465,8 @@ namespace KDTree {
             query[0] = queryPt[i];
             uBound[0] = myUBounds[i];
             lBound[0] = myLBounds[i];
-            if ((Common::euclideanDistance(query, uBound, 1) > queryRange) && 
-                (Common::euclideanDistance(query, lBound, 1) > queryRange))
+            if ((euclideanDistance(query, uBound, 1) > queryRange) && 
+                (euclideanDistance(query, lBound, 1) > queryRange))
                 isInRange = false;
         }
         if (isInRange == true)
@@ -475,7 +476,7 @@ namespace KDTree {
                 /* this is a leaf node, search through the data */
                 for (dataIter = myData.begin(); dataIter != myData.end();
                      dataIter++) {
-                    if (Common::euclideanDistance(queryPt, dataIter->getPoint(), myK) <= queryRange)
+                    if (euclideanDistance(queryPt, dataIter->getPoint(), myK) <= queryRange)
                     {
                         myResults.push_back(*dataIter);
                     }
@@ -506,7 +507,7 @@ template <class T>
 std::vector<PointAndValue <T> > 
 KDTreeNode<T>::hyperRectangleSearch(const std::vector<double> &queryPt,
 				    const std::vector<double> &tolerances,
-				    const std::vector<Common::GeometryType> &spaceTypesByDimension) const 
+				    const std::vector<GeometryType> &spaceTypesByDimension) const 
 {
     std::vector<PointAndValue <T> > myResults;
 
@@ -520,12 +521,12 @@ KDTreeNode<T>::hyperRectangleSearch(const std::vector<double> &queryPt,
     bool isInRange = true;
 
     for (unsigned int i = 0; i < spaceTypesByDimension.size(); i++) {
-        if (spaceTypesByDimension[i] == Common::CIRCULAR_DEGREES) {
-            if ((myUBounds[i] != Common::convertToStandardDegrees(myUBounds[i]))
+        if (spaceTypesByDimension[i] == CIRCULAR_DEGREES) {
+            if ((myUBounds[i] != convertToStandardDegrees(myUBounds[i]))
                 ||
-                (myLBounds[i] != Common::convertToStandardDegrees(myLBounds[i]))
+                (myLBounds[i] != convertToStandardDegrees(myLBounds[i]))
                 ||
-                (queryPt[i] != Common::convertToStandardDegrees(queryPt[i]))) {
+                (queryPt[i] != convertToStandardDegrees(queryPt[i]))) {
                 // TBD: use LSST-standard exceptions...
                 std::cerr <<  "KDTreeNode: Data error: got that dimension " << i << 
                     " is of type CIRCULAR_DEGREES but data and/or query do not lie along [0,360)." << std::endl;
@@ -544,10 +545,10 @@ KDTreeNode<T>::hyperRectangleSearch(const std::vector<double> &queryPt,
         /* NB: since tolerances may be up to 180 degrees, it is necessary to do
          *two* tests here - one for each semicircle, one for the
          'bottom' half.  this is due to the slightly curious implementation of regionsOverlap1D*/
-        if ((Common::regionsOverlap1D(myLBounds[i], myUBounds[i], 
+        if ((regionsOverlap1D(myLBounds[i], myUBounds[i], 
                                       UBoundTolerance, queryPt[i],
                                       spaceTypesByDimension[i]) == false) && 
-	    (Common::regionsOverlap1D(myLBounds[i], myUBounds[i], 
+	    (regionsOverlap1D(myLBounds[i], myUBounds[i], 
 				      queryPt[i], LBoundTolerance,
 				      spaceTypesByDimension[i]) == false)) { 
             isInRange = false;
@@ -597,7 +598,6 @@ KDTreeNode<T>::hyperRectangleSearch(const std::vector<double> &queryPt,
 
 
 
-
-} /* close namepace KDTree */
+}} // close namespace lsst::mops
 
 #endif

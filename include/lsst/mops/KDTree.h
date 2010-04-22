@@ -38,10 +38,9 @@
 #include "KDTreeNode.h"
   
 
-namespace ctExcept = collapseTracklets::exceptions;
+namespace lsst {
+namespace mops {
 
-
-namespace KDTree {
     
     template <class T>
     class KDTree {
@@ -119,7 +118,7 @@ namespace KDTree {
          * queryRange = 4.0
          * otherDimsPoint = []
          * otherTolerances = []
-         * spaceTypesByDimension = [Common::RA_DEGREES, Common::DEC_DEGREES]
+         * spaceTypesByDimension = [RA_DEGREES, DEC_DEGREES]
          * 
          * (note that otherTolerances is basically ignored).
          *
@@ -139,8 +138,8 @@ namespace KDTree {
          * queryRange = 4.0
          * otherDimsPoint = [ 10, 80 ]
          * otherTolerances = [ 3, 5 ]
-         * spaceTypeByDimension = [Common::RA_DEGREES, Common::DEC_DEGREES, 
-         *                         Common::EUCLIDEAN, Common::CIRCULAR_DEGREES]
+         * spaceTypeByDimension = [RA_DEGREES, DEC_DEGREES, 
+         *                         EUCLIDEAN, CIRCULAR_DEGREES]
          *
          * 
          * 
@@ -156,8 +155,8 @@ namespace KDTree {
          * queryRange = 2.0
          * otherDimsPoint = [50]
          * otherTolerances = [3]
-         * spaceTypesByDimension = [ Common::Euclidean, 
-         *                           Common::DEC_DEGREES, Common::RA_DEGREES]
+         * spaceTypesByDimension = [ Euclidean, 
+         *                           DEC_DEGREES, RA_DEGREES]
          *
          * 
          * More formal documentation is TBD.  Hopefully the examples are
@@ -168,7 +167,7 @@ namespace KDTree {
                              double RADecQueryRange, 
 			     const std::vector<double> &otherDimsPoint,
                              const std::vector<double> &otherDimsTolerances,
-                             const std::vector<Common::GeometryType> &spaceTypesByDimension) const; 
+                             const std::vector<GeometryType> &spaceTypesByDimension) const; 
     
         /* execute a hyperRectangle-shaped range search around queryPt.  queryPt and tolerances
          * must have the same dimensions as the tree.
@@ -204,7 +203,7 @@ namespace KDTree {
         std::vector<PointAndValue <T> > 
         hyperRectangleSearch(const std::vector<double> &queryPt, 
                              const std::vector<double> &tolerances, 
-                             const std::vector<Common::GeometryType> &spaceTypesByDimension) const;
+                             const std::vector<GeometryType> &spaceTypesByDimension) const;
 
 
         void debugPrint() const;
@@ -505,7 +504,7 @@ KDTree<T>::RADecRangeSearch(const std::vector<double> &RADecQueryPoint,
                             double RADecQueryRange, 
 			    const std::vector<double> &otherDimsPoint,
                             const std::vector<double> &otherDimsTolerances,
-                            const std::vector<Common::GeometryType> &spaceTypesByDimension)  const
+                            const std::vector<GeometryType> &spaceTypesByDimension)  const
 {
     /*
      * this function is implemented by finding a series of rectangles which will
@@ -519,25 +518,25 @@ KDTree<T>::RADecRangeSearch(const std::vector<double> &RADecQueryPoint,
         (otherDimsTolerances.size() != myK - 2) || (spaceTypesByDimension.size() != myK) ||
         (RADecQueryRange <= 0.0))
     {
-        throw LSST_EXCEPT(ctExcept::BadParameterException, 
+        throw LSST_EXCEPT(BadParameterException, 
                           "KDTree::RADecRangeSearch called with illegal parameters.");
     }
     int RADimIndex = -1;
     int DecDimIndex = -1;
     for (unsigned int i = 0; i < spaceTypesByDimension.size(); i++) {
-        if (spaceTypesByDimension.at(i) == Common::RA_DEGREES) {
+        if (spaceTypesByDimension.at(i) == RA_DEGREES) {
             RADimIndex = i;
         }
-        else if (spaceTypesByDimension.at(i) == Common::DEC_DEGREES) {
+        else if (spaceTypesByDimension.at(i) == DEC_DEGREES) {
             DecDimIndex = i;
         }
     }
     if ((RADimIndex == -1) || (DecDimIndex == -1)) {
-        LSST_EXCEPT(ctExcept::BadParameterException,
+        LSST_EXCEPT(BadParameterException,
                     "KDTree::RADecRangeSearch called with spaceTypesByDimension missing either RA, Dec, or both - this is illegal");        
     }
-    double RACenter =  Common::convertToStandardDegrees(RADecQueryPoint.at(0));
-    double DecCenter = Common::convertToStandardDegrees(RADecQueryPoint.at(1));
+    double RACenter =  convertToStandardDegrees(RADecQueryPoint.at(0));
+    double DecCenter = convertToStandardDegrees(RADecQueryPoint.at(1));
 
     /* now, find a set of rectangles which enscribe the RA Dec range.
      * there will be at most 2.
@@ -555,7 +554,7 @@ KDTree<T>::RADecRangeSearch(const std::vector<double> &RADecQueryPoint,
 
     std::vector<double> realQueryPoint;
     std::vector<double> realQueryTolerances;
-    std::vector<Common::GeometryType> realQueryTypes;
+    std::vector<GeometryType> realQueryTypes;
     //Constants
     const double northPole_Dec = 90;
     const double southPole_Dec = 270;
@@ -563,16 +562,16 @@ KDTree<T>::RADecRangeSearch(const std::vector<double> &RADecQueryPoint,
     double RAHalfWidth = 0;
     double DecHalfWidth = 0;
 
-    if ((Common::circularShortestPathLen_Deg(DecCenter, northPole_Dec) < RADecQueryRange) ||
-        (Common::circularShortestPathLen_Deg(DecCenter, southPole_Dec) < RADecQueryRange))
+    if ((circularShortestPathLen_Deg(DecCenter, northPole_Dec) < RADecQueryRange) ||
+        (circularShortestPathLen_Deg(DecCenter, southPole_Dec) < RADecQueryRange))
     {
         // this query range crosses a pole, ergo a complicated case
         RAHalfWidth = 180; 
         /* at a pole, we need to search all 360 degrees around
          * the pole.
          */
-        if ((Common::circularShortestPathLen_Deg(DecCenter, northPole_Dec) < RADecQueryRange)  && 
-            (Common::circularShortestPathLen_Deg(DecCenter, southPole_Dec) < RADecQueryRange))
+        if ((circularShortestPathLen_Deg(DecCenter, northPole_Dec) < RADecQueryRange)  && 
+            (circularShortestPathLen_Deg(DecCenter, southPole_Dec) < RADecQueryRange))
         {
             /* the query range crosses both poles - so we really search the whole sphere! */
             DecHalfWidth = 180;            
@@ -583,24 +582,24 @@ KDTree<T>::RADecRangeSearch(const std::vector<double> &RADecQueryPoint,
     }
     else { 
         // case 1: just one query 
-        RAHalfWidth = Common::maxOfTwo(
-            Common::arcToRA(DecCenter + RADecQueryRange, RADecQueryRange),
-            Common::arcToRA(DecCenter - RADecQueryRange, RADecQueryRange)
+        RAHalfWidth = maxOfTwo(
+            arcToRA(DecCenter + RADecQueryRange, RADecQueryRange),
+            arcToRA(DecCenter - RADecQueryRange, RADecQueryRange)
             );        
         DecHalfWidth = RADecQueryRange;
     }
     //build the real search params, pass them off to hyperRectangleSearch.
     unsigned int otherParamsIndexCounter = 0;
     for (unsigned int i = 0; i < myK; i++) {
-        if (spaceTypesByDimension.at(i) == Common::RA_DEGREES) {
+        if (spaceTypesByDimension.at(i) == RA_DEGREES) {
             realQueryPoint.push_back(RACenter);
             realQueryTolerances.push_back(RAHalfWidth);            
-            realQueryTypes.push_back(Common::CIRCULAR_DEGREES);
+            realQueryTypes.push_back(CIRCULAR_DEGREES);
         }
-        else if (spaceTypesByDimension.at(i) == Common::DEC_DEGREES) {
+        else if (spaceTypesByDimension.at(i) == DEC_DEGREES) {
             realQueryPoint.push_back(DecCenter);
             realQueryTolerances.push_back(DecHalfWidth);
-            realQueryTypes.push_back(Common::CIRCULAR_DEGREES);
+            realQueryTypes.push_back(CIRCULAR_DEGREES);
         }
         else {
             realQueryPoint.push_back(otherDimsPoint.at(otherParamsIndexCounter));
@@ -621,7 +620,7 @@ KDTree<T>::RADecRangeSearch(const std::vector<double> &RADecQueryPoint,
         double resultRA = point.at(RADimIndex);
         double resultDec = point.at(DecDimIndex);
 
-        if (Common::angularDistanceRADec_deg(resultRA, resultDec, RACenter, DecCenter) 
+        if (angularDistanceRADec_deg(resultRA, resultDec, RACenter, DecCenter) 
             < RADecQueryRange) {
             prunedResults.push_back(searchResults.at(i));
         }
@@ -637,7 +636,7 @@ template <class T>
 std::vector<PointAndValue <T> > 
 KDTree<T>::hyperRectangleSearch(const std::vector<double> &queryPt,
 				const std::vector<double> &tolerances,
-				const std::vector<Common::GeometryType> &spaceTypesByDimensions) const
+				const std::vector<GeometryType> &spaceTypesByDimensions) const
 {
     
   /* sanity check */
@@ -660,9 +659,9 @@ KDTree<T>::hyperRectangleSearch(const std::vector<double> &queryPt,
   else {
       for (unsigned int i = 0; i < myK; i++) {
           
-          if (((spaceTypesByDimensions[i] == Common::CIRCULAR_DEGREES) 
+          if (((spaceTypesByDimensions[i] == CIRCULAR_DEGREES) 
                && (tolerances[i] > 180.)) ||
-              (((spaceTypesByDimensions[i] == Common::CIRCULAR_RADIANS) 
+              (((spaceTypesByDimensions[i] == CIRCULAR_RADIANS) 
                 && (tolerances[i] > M_PI)))) {
               // TBD: again, real LSST exceptions
               std::cerr<<  "EE: KDTree.hyperRectangleSearch: searching a radius greater than 180 degrees (pi radians) is meaningless.\n";
@@ -679,10 +678,9 @@ KDTree<T>::hyperRectangleSearch(const std::vector<double> &queryPt,
 
 
 
-} /* close namespace KDtree */
 
 
 
-
+}} // close namespace lsst::mops
 
 #endif

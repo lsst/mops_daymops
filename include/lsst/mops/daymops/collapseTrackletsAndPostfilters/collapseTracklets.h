@@ -20,13 +20,14 @@
 #include <string>
 #include <vector>
 
-#include "../KDTree.h"
-#include "../Detection.h" 
-#include "../Exceptions.h"
-#include "../Tracklet.h"
+#include "lsst/mops/KDTree.h"
+#include "lsst/mops/Detection.h" 
+#include "lsst/mops/Exceptions.h"
+#include "lsst/mops/Tracklet.h"
 
+namespace lsst {
+    namespace mops {
 
-namespace collapseTracklets {
 
     class TrackletCollapser {
     public:
@@ -56,12 +57,12 @@ namespace collapseTracklets {
 
         void populateTrackletsForTreeVector(const std::vector<Detection> *detections,
                                             const std::vector<Tracklet> * tracklets,
-                                            std::vector<KDTree::PointAndValue <unsigned int> >
+                                            std::vector<PointAndValue <unsigned int> >
                                             &trackletsForTree);
 
             
     };
     
-}
+    }} // close lsst::mops
 
 #endif

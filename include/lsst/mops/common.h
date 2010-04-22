@@ -15,8 +15,8 @@
 
 #include <string>
 
-namespace KDTree {
-    namespace Common {
+namespace lsst {
+namespace mops {
         
         enum GeometryType {
             EUCLIDEAN,
@@ -122,9 +122,7 @@ namespace KDTree {
 
         std::string stringToLower(std::string strToConvert);
         
-    }
-}
 
-
+}} // close namespace lsst::mops
 
 #endif

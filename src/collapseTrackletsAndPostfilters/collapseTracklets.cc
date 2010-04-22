@@ -6,8 +6,8 @@
 #include <istream>
 #include <sstream>
 
-#include "collapseTracklets.h"
-#include "../rmsLineFit.h"
+#include "lsst/mops/daymops/collapseTrackletsAndPostfilters/collapseTracklets.h"
+#include "lsst/mops/rmsLineFit.h"
 
 // these just need to be greater or less than any date we'll ever see...
 #define IMPOSSIBLY_EARLY_MJD -1.0E16
@@ -17,15 +17,14 @@
 #define MAX_LEAF_SIZE 50 
 
 
-namespace ctExcept = collapseTracklets::exceptions;
-
-namespace collapseTracklets {
+namespace lsst {
+    namespace mops {
 
     // declare some helper functions - these don't need to be exposed.
 
     void populateTrackletsForTreeVector(const std::vector<Detection> *detections,
                                         const std::vector<Tracklet> *tracklets,
-                                        std::vector<KDTree::PointAndValue <unsigned int> >
+                                        std::vector<PointAndValue <unsigned int> >
                                         &trackletsForTree);
 
 
@@ -132,7 +131,7 @@ namespace collapseTracklets {
         std::set<unsigned int>::const_iterator iter;
         double totalSqDist = 0.0;
         if (queryTracklet->indices.size() == 0) {
-            throw LSST_EXCEPT(ctExcept::BadParameterException, 
+            throw LSST_EXCEPT(BadParameterException, 
                               "getAverageSqDist called with tracklet of length 0\n");
         }
         for (iter = queryTracklet->indices.begin(); iter != queryTracklet->indices.end(); iter++) {
@@ -216,18 +215,18 @@ namespace collapseTracklets {
 
         /* each t in trackletsForTree maps tracklet physical parameters (RA0,
          * Dec0, angle, vel.) to an index into pairs. */
-        std::vector<KDTree::PointAndValue <unsigned int> >
+        std::vector<PointAndValue <unsigned int> >
             trackletsForTree;
-        std::vector<KDTree::PointAndValue<unsigned int> >::iterator trackletIter;
-        std::vector<KDTree::PointAndValue<unsigned int> >::iterator similarTrackletIter;
+        std::vector<PointAndValue<unsigned int> >::iterator trackletIter;
+        std::vector<PointAndValue<unsigned int> >::iterator similarTrackletIter;
 
-        std::vector<KDTree::Common::GeometryType> geometryTypes(4);
+        std::vector<GeometryType> geometryTypes(4);
         /* RA0, Dec0, and angle are all degree measures along [0,360).
 	   Velocity is purely euclidean.*/
-        geometryTypes[0] = KDTree::Common::CIRCULAR_DEGREES;
-        geometryTypes[1] = KDTree::Common::CIRCULAR_DEGREES;
-        geometryTypes[2] = KDTree::Common::CIRCULAR_DEGREES;
-        geometryTypes[3] = KDTree::Common::EUCLIDEAN;
+        geometryTypes[0] = CIRCULAR_DEGREES;
+        geometryTypes[1] = CIRCULAR_DEGREES;
+        geometryTypes[2] = CIRCULAR_DEGREES;
+        geometryTypes[3] = EUCLIDEAN;
 
         if (beVerbose) {
             std::cout << "Extrapolating linear movement functions for each tracklet." << std::endl;
@@ -238,7 +237,7 @@ namespace collapseTracklets {
             
             std::cout << "Building KDTree of all tracklets.." << std::endl;
         }
-        KDTree::KDTree<unsigned int> searchTree(trackletsForTree, 4, MAX_LEAF_SIZE);       
+        KDTree<unsigned int> searchTree(trackletsForTree, 4, MAX_LEAF_SIZE);       
         if (beVerbose) {
             std::cout << "done." << std::endl;
             std::cout << "Doing many, many tree queries and collapses..." << std::endl;
@@ -259,7 +258,7 @@ namespace collapseTracklets {
                 collapse(pairs[trackletIter->getValue()], newTracklet);
 
                 /* find all similar tracklets */
-                std::vector<KDTree::PointAndValue<unsigned int> > queryResults = 
+                std::vector<PointAndValue<unsigned int> > queryResults = 
                     searchTree.hyperRectangleSearch((*trackletIter).getPoint(), 
                                                     tolerances, 
                                                     geometryTypes);
@@ -286,8 +285,8 @@ namespace collapseTracklets {
 			    if ((pairs[similarTrackletID].isCollapsed == false) && 
                                 (trackletsAreCompatible(detections, pairs[similarTrackletID], newTracklet))) {
                                 Tracklet tmp = unionTracklets(newTracklet, pairs[similarTrackletID]);
-                                double tmpRMS = rmsLineFit::rmsForTracklet(tmp, detections);
-                                double trackletAvMag = rmsLineFit::getAverageMagnitude(tmp, detections);  
+                                double tmpRMS = rmsForTracklet(tmp, detections);
+                                double trackletAvMag = getAverageMagnitude(tmp, detections);  
                                if ((useRMSFilt == false) || 
                                     (tmpRMS <= trackletAvMag * maxRMSm + maxRMSb)) {
                                     if ((foundOne == false) || (bestMatchRMS > tmpRMS)) {
@@ -329,7 +328,7 @@ namespace collapseTracklets {
                             trackletDets.push_back((*detections)[*detIter]);
                         }
                         double t0 = (*detections)[*newTracklet.indices.begin()].getEpochMJD();
-                        rmsLineFit::leastSquaresSolveForRADecLinear(&trackletDets, currentRAFunc, 
+                        leastSquaresSolveForRADecLinear(&trackletDets, currentRAFunc, 
                                                                     currentDecFunc, t0);
 
                         for (similarTrackletIter = queryResults.begin();
@@ -372,8 +371,8 @@ namespace collapseTracklets {
                         if (foundOne == true) {
                             // if newTracklet + best match has higher RMS than filter allows, we're done!
                             Tracklet tmp = unionTracklets(newTracklet, pairs[bestMatchID]);
-                            double tmpRMS = rmsLineFit::rmsForTracklet(tmp, detections);
-                            double trackletAvMag = rmsLineFit::getAverageMagnitude(tmp, detections); 
+                            double tmpRMS = rmsForTracklet(tmp, detections);
+                            double trackletAvMag = getAverageMagnitude(tmp, detections); 
                             if ((useRMSFilt == true) && 
                                 (tmpRMS > trackletAvMag * maxRMSm + maxRMSb)) {
                                 done = true;
@@ -409,8 +408,8 @@ namespace collapseTracklets {
                                 Tracklet tmp = newTracklet;
                                 /* subtly abuse the 'collapse' function as a union operation */
                                 collapse(pairs[similarTrackletIter->getValue()], newTracklet);
-                                if (rmsLineFit::rmsForTracklet(tmp, detections) >
-                                    rmsLineFit::getAverageMagnitude(tmp, detections) * maxRMSm + maxRMSb) {
+                                if (rmsForTracklet(tmp, detections) >
+                                    getAverageMagnitude(tmp, detections) * maxRMSm + maxRMSb) {
                                     collapseIsLegal = false;
                                 }
                             }
@@ -471,17 +470,17 @@ namespace collapseTracklets {
         
 
         // physical params 0, 1 are initial RA, initial Dec at normalTime.
-        rmsLineFit::leastSquaresSolveForRADecLinear(trackletDets, RASlopeAndOffset, DecSlopeAndOffset,
+        leastSquaresSolveForRADecLinear(trackletDets, RASlopeAndOffset, DecSlopeAndOffset,
                                                     normalTime);
-        physicalParams[0] = KDTree::Common::convertToStandardDegrees(RASlopeAndOffset[1]);
-        physicalParams[1] = KDTree::Common::convertToStandardDegrees(DecSlopeAndOffset[1]);
+        physicalParams[0] = convertToStandardDegrees(RASlopeAndOffset[1]);
+        physicalParams[1] = convertToStandardDegrees(DecSlopeAndOffset[1]);
         double RAv = RASlopeAndOffset[0];
         double Decv = DecSlopeAndOffset[0];
         double velocity = sqrt(pow(RAv, 2) + pow(Decv, 2));
         physicalParams[3] = velocity;
         double sineOfTheta = Decv/velocity;
         double theta = asin(sineOfTheta) * (360./(2*M_PI));
-        physicalParams[2] = KDTree::Common::convertToStandardDegrees(theta);
+        physicalParams[2] = convertToStandardDegrees(theta);
     }
 
 
@@ -512,7 +511,7 @@ namespace collapseTracklets {
 
     void TrackletCollapser::populateTrackletsForTreeVector(const std::vector<Detection> *detections,
                                                            const std::vector<Tracklet> * tracklets,
-                                                           std::vector<KDTree::PointAndValue <unsigned int> >
+                                                           std::vector<PointAndValue <unsigned int> >
                                                            &trackletsForTree) {
         
         double midPointTime = getMidPointTime(detections);
@@ -521,7 +520,7 @@ namespace collapseTracklets {
 
         unsigned int i = 0;
         for (trackletIter = (*tracklets).begin(); trackletIter != (*tracklets).end(); trackletIter++) {
-            KDTree::PointAndValue <unsigned int> curTracklet;
+            PointAndValue <unsigned int> curTracklet;
             std::vector<double> physicalParams(4); /* will hold RA0, Dec0, angle, velocity */
             std::vector<Detection> trackletDets;
 
@@ -546,6 +545,6 @@ namespace collapseTracklets {
 
 
 
-}
+    }} // close lsst::mops
 
 

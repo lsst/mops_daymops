@@ -4,7 +4,11 @@
  * Purpose: Implements Orbit object
  */
 
-#include "Orbit.h"
+#include "lsst/mops/Orbit.h"
+
+
+namespace lsst {
+    namespace mops {
 
 
 /**************************************************
@@ -52,7 +56,7 @@ void Orbit::populateOrbitFromString(std::string values, int index)
   
   /*  }
       catch (...){
-      throw LSST_EXCEPT(ctExcept::BadParameterException, 
+      throw LSST_EXCEPT(BadParameterException, 
       "Badly-formatted Orbit string\n");
       }*/
 }
@@ -148,3 +152,8 @@ double Orbit::getOrbitID() const
   return orbitID;
 }
 
+
+
+
+
+    }} //close lsst::mops

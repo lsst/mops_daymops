@@ -8,10 +8,11 @@
 #include <istream>
 #include <sstream>
 
-#include "fileUtils.h"
+#include "lsst/mops/fileUtils.h"
 
 
-
+namespace lsst {
+    namespace mops {
 
 
 
@@ -96,12 +97,12 @@ void populatePairsVectorFromFile(std::ifstream &pairsFile,
                     ss >> std::ws;
 	       }
 	       catch (...) {
-                    throw LSST_EXCEPT(ctExcept::InputFileFormatErrorException, "Improperly-formatted pairs file.\n");
+                    throw LSST_EXCEPT(InputFileFormatErrorException, "Improperly-formatted pairs file.\n");
 	       }
 	       tmpPair.indices.insert(tmpInt);
 	  }
 	  if (tmpPair.indices.size() < 2) {
-	       throw LSST_EXCEPT(ctExcept::InputFileFormatErrorException, "EE: CollapseTracklets: pairs in pairs file must be length >= 2!\n");
+	       throw LSST_EXCEPT(InputFileFormatErrorException, "EE: CollapseTracklets: pairs in pairs file must be length >= 2!\n");
 	  }
 	  pairsVector.push_back(tmpPair);
 	  tmpPair.indices.clear();
@@ -119,7 +120,7 @@ void writeTrackletsToOutFile(const std::vector<Tracklet> * tracklets, std::strin
      std::ofstream outFile;
      outFile.open(outFileName.c_str());
      if (!outFile.is_open()) {
-	  throw LSST_EXCEPT(ctExcept::FileException,
+	  throw LSST_EXCEPT(FileException,
 			    "Failed to open output file " + outFileName + " - do you have permission?\n");
      }
      writeTrackletsToOutFile(tracklets, outFile);
@@ -130,7 +131,7 @@ void populateDetVectorFromFile(std::string detsFileName, std::vector <Detection>
      std::ifstream detsFile;
      detsFile.open(detsFileName.c_str());
      if (!detsFile.is_open()) {
-	  throw LSST_EXCEPT(ctExcept::FileException,
+	  throw LSST_EXCEPT(FileException,
 			    "Failed to open dets file " + detsFileName + " - does this file exist?\n");
      }
      populateDetVectorFromFile(detsFile, myDets);
@@ -143,10 +144,11 @@ void populatePairsVectorFromFile(std::string pairsFileName,
      std::ifstream pairsFile;
      pairsFile.open(pairsFileName.c_str());
      if (!pairsFile.is_open()) {
-	  throw LSST_EXCEPT(ctExcept::FileException,
+	  throw LSST_EXCEPT(FileException,
 			    "Failed to open pairs file " + pairsFileName + " - does this file exist?\n");
      }
      populatePairsVectorFromFile(pairsFile, pairsVector);
         
 }
 
+    }} // close lsst::mops

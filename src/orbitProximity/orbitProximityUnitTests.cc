@@ -9,13 +9,16 @@
 #include <cmath>
 
 
-#include "../Exceptions.h"
-#include "../PointAndValue.h"
-#include "../common.h"
-#include "../KDTree.h"
-#include "../Orbit.h"
-#include "orbitProximity.h"
+#include "lsst/mops/Exceptions.h"
+#include "lsst/mops/PointAndValue.h"
+#include "lsst/mops/common.h"
+#include "lsst/mops/KDTree.h"
+#include "lsst/mops/Orbit.h"
+#include "lsst/mops/daymops/orbitProximity/orbitProximity.h"
 
+
+namespace lsst {
+     namespace mops {
 
 bool Eq(double a, double b) 
 {
@@ -256,3 +259,5 @@ BOOST_AUTO_TEST_CASE( orbitProximity6 )
 }
 
 
+
+     }} // close lsst::mops

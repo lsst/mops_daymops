@@ -9,13 +9,11 @@
 #include <unistd.h>
 #include <getopt.h>
 
-#include "../fileUtils.h"
-#include "../rmsLineFit.h"
+#include "lsst/mops/fileUtils.h"
+#include "lsst/mops/rmsLineFit.h"
 
-namespace ctExcept = collapseTracklets::exceptions;
-
-namespace rmsLineFit {
-    
+namespace lsst {
+    namespace mops {    
 
 
     // this is a deprecated technique.  Don't bother with it.
@@ -79,7 +77,7 @@ namespace rmsLineFit {
                 return 0;
                 break;
             default:
-                throw LSST_EXCEPT(ctExcept::ProgrammerErrorException,
+                throw LSST_EXCEPT(ProgrammerErrorException,
                                   "EE: Unexpected programmer error in options parsing\n");
                 break;
             }        
@@ -87,7 +85,7 @@ namespace rmsLineFit {
         }
 
         if ((pairsFileName == NULL) || (detsFileName == NULL) || (outFileName == NULL)) {
-            throw LSST_EXCEPT(ctExcept::CommandlineParseErrorException,
+            throw LSST_EXCEPT(CommandlineParseErrorException,
                               "Did not get required parameters \n\n"
                               + USAGE + "\n");
         }
@@ -96,15 +94,15 @@ namespace rmsLineFit {
         std::ofstream outFile(outFileName);
 
         if (!detsFile.is_open()) {
-            throw LSST_EXCEPT(ctExcept::FileException,
+            throw LSST_EXCEPT(FileException,
                               "Failed to open dets file " + std::string(detsFileName) + " - does this file exist?\n");                          
         }
         if (!pairsFile.is_open()) {
-            throw LSST_EXCEPT(ctExcept::FileException,
+            throw LSST_EXCEPT(FileException,
                               "Failed to open pairs file " + std::string(pairsFileName) + " - does this file exist?\n");                          
         }
         if (!outFile.is_open()){
-            throw LSST_EXCEPT(ctExcept::FileException,
+            throw LSST_EXCEPT(FileException,
                               "Failed to open output file " + 
                               std::string(outFileName) + " - do you have write permissions?\n");
         }
@@ -124,7 +122,7 @@ namespace rmsLineFit {
         std::cout << "Done!" << std::endl;
 
         if (!isSane(detsVector.size(), &trackletsVector)) {
-            throw LSST_EXCEPT(ctExcept::InputFileFormatErrorException, "EE: Pairs file does not seem to correspond with detections file.\n");
+            throw LSST_EXCEPT(InputFileFormatErrorException, "EE: Pairs file does not seem to correspond with detections file.\n");
         }
 
 
@@ -218,7 +216,7 @@ namespace rmsLineFit {
                 return 0;
                 break;
             default:
-                throw LSST_EXCEPT(ctExcept::ProgrammerErrorException,
+                throw LSST_EXCEPT(ProgrammerErrorException,
                                   "EE: Unexpected programmer error in options parsing\n");
                 break;
             }        
@@ -226,7 +224,7 @@ namespace rmsLineFit {
         }
 
         if ((pairsFileName == NULL) || (detsFileName == NULL) || (outFileName == NULL)) {
-            throw LSST_EXCEPT(ctExcept::CommandlineParseErrorException,
+            throw LSST_EXCEPT(CommandlineParseErrorException,
                               "Did not get required parameters \n\n"
                               + USAGE + "\n");
         }
@@ -235,15 +233,15 @@ namespace rmsLineFit {
         std::ofstream outFile(outFileName);
 
         if (!detsFile.is_open()) {
-            throw LSST_EXCEPT(ctExcept::FileException,
+            throw LSST_EXCEPT(FileException,
                               "Failed to open dets file " + std::string(detsFileName) + " - does this file exist?\n");                          
         }
         if (!pairsFile.is_open()) {
-            throw LSST_EXCEPT(ctExcept::FileException,
+            throw LSST_EXCEPT(FileException,
                               "Failed to open pairs file " + std::string(pairsFileName) + " - does this file exist?\n");                          
         }
         if (!outFile.is_open()){
-            throw LSST_EXCEPT(ctExcept::FileException,
+            throw LSST_EXCEPT(FileException,
                               "Failed to open output file " + 
                               std::string(outFileName) + " - do you have write permissions?\n");
         }
@@ -263,7 +261,7 @@ namespace rmsLineFit {
         std::cout << "Done!" << std::endl;
 
         if (!isSane(detsVector.size(), &trackletsVector)) {
-            throw LSST_EXCEPT(ctExcept::InputFileFormatErrorException, 
+            throw LSST_EXCEPT(InputFileFormatErrorException, 
                               "EE: Pairs file does not seem to correspond with detections file.\n");
         }
 
@@ -281,8 +279,13 @@ namespace rmsLineFit {
 
 
 
-}
+
+
+
+}} // close lsst::mops
 
 int main(int argc, char** argv) {
-    CALL_AND_CATCH_EXCEPTIONS(return rmsLineFit::rmsPurifyMain(argc, argv));
+    return lsst::mops::rmsPurifyMain(argc, argv);
 }
+
+

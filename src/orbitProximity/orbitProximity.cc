@@ -4,21 +4,26 @@
  * Purpose: 
  */
 
-#include "../KDTree.h"
-#include "orbitProximity.h"
+#include "lsst/mops/KDTree.h"
+#include "lsst/mops/daymops/orbitProximity/orbitProximity.h"
 
 
 #define DEBUG false
 
+
+namespace lsst {
+    namespace mops { 
+
+
 // "internal" declarations
 
-KDTree::KDTree<unsigned int> buildKDTree(const std::vector<Orbit>);
+KDTree<unsigned int> buildKDTree(const std::vector<Orbit>);
 
 
 
 /* use const by reference to avoid copying lots of memory */
 std::vector<std::pair <unsigned int, unsigned int>  > 
-getResults(const KDTree::KDTree<unsigned int>&,
+getResults(const KDTree<unsigned int>&,
            const std::vector<Orbit>&,
            double, double, double,
            double, double, double);
@@ -43,7 +48,7 @@ orbitProximity(std::vector<Orbit> dataOrbits,
                double perihelionTimeTolerance)
 {
     //build KDTrees from Orbit vectors
-    KDTree::KDTree<unsigned int> dataTree;
+    KDTree<unsigned int> dataTree;
     dataTree = buildKDTree(dataOrbits);
     
     if (DEBUG) {
@@ -74,17 +79,17 @@ orbitProximity(std::vector<Orbit> dataOrbits,
 /**********************************************************************
  * Populate a KDTree 'tree' from the Orbits in vector 'orbits'
  ***********************************************************************/
-KDTree::KDTree<unsigned int> buildKDTree(const std::vector<Orbit> orbits)
+KDTree<unsigned int> buildKDTree(const std::vector<Orbit> orbits)
 {
-    KDTree::KDTree<unsigned int> toReturn;
+    KDTree<unsigned int> toReturn;
     
-    std::vector<KDTree::PointAndValue<unsigned int> > vecPV;
+    std::vector<PointAndValue<unsigned int> > vecPV;
     
     const int orbitDimensions = 6;
     
     for(unsigned int i=0; i < orbits.size(); i++){
         
-	KDTree::PointAndValue<unsigned int> tempPV;
+	PointAndValue<unsigned int> tempPV;
 	std::vector<double> orbitDims;
 
 	orbitDims.push_back(orbits.at(i).getPerihelion());
@@ -109,7 +114,7 @@ KDTree::KDTree<unsigned int> buildKDTree(const std::vector<Orbit> orbits)
  *
  **************************************************/
 std::vector<std::pair<unsigned int, unsigned int> > 
-getResults(const KDTree::KDTree<unsigned int> &searchTree,
+getResults(const KDTree<unsigned int> &searchTree,
            const std::vector<Orbit> &queryPoints,
            double maxPerihelion,
            double maxEccentricity,
@@ -119,17 +124,17 @@ getResults(const KDTree::KDTree<unsigned int> &searchTree,
            double maxPerihelionTime)
 {
     std::vector<std::pair<unsigned int, unsigned int> > results;
-    std::vector<KDTree::PointAndValue<unsigned int> > queryResults;
+    std::vector<PointAndValue<unsigned int> > queryResults;
     std::vector<double> queryPt;
 
-    std::vector<KDTree::Common::GeometryType> myGeos;
+    std::vector<GeometryType> myGeos;
 
-    myGeos.push_back(KDTree::Common::CIRCULAR_DEGREES); //perihelion
-    myGeos.push_back(KDTree::Common::EUCLIDEAN);        //eccentricity 
-    myGeos.push_back(KDTree::Common::CIRCULAR_DEGREES); //inclination
-    myGeos.push_back(KDTree::Common::CIRCULAR_DEGREES); //arg. of perihelion
-    myGeos.push_back(KDTree::Common::CIRCULAR_DEGREES); //longitude
-    myGeos.push_back(KDTree::Common::EUCLIDEAN);        //time of perihelion
+    myGeos.push_back(CIRCULAR_DEGREES); //perihelion
+    myGeos.push_back(EUCLIDEAN);        //eccentricity 
+    myGeos.push_back(CIRCULAR_DEGREES); //inclination
+    myGeos.push_back(CIRCULAR_DEGREES); //arg. of perihelion
+    myGeos.push_back(CIRCULAR_DEGREES); //longitude
+    myGeos.push_back(EUCLIDEAN);        //time of perihelion
 
     std::vector<double> tolerances;
     tolerances.push_back(maxPerihelion);
@@ -143,18 +148,18 @@ getResults(const KDTree::KDTree<unsigned int> &searchTree,
 
         // degrees - perihelion (periapsis)
         queryPt.push_back(
-            KDTree::Common::convertToStandardDegrees(queryPoints.at(i).getPerihelion()));
+            convertToStandardDegrees(queryPoints.at(i).getPerihelion()));
         //euclidean - eccentricity
         queryPt.push_back(queryPoints.at(i).getEccentricity());
         // degrees - inclination
         queryPt.push_back(
-            KDTree::Common::convertToStandardDegrees(queryPoints.at(i).getInclination()));
+            convertToStandardDegrees(queryPoints.at(i).getInclination()));
         //degrees - arg. of perihelion (periapsis)
         queryPt.push_back(
-            KDTree::Common::convertToStandardDegrees(queryPoints.at(i).getPerihelionArg()));
+            convertToStandardDegrees(queryPoints.at(i).getPerihelionArg()));
         //degrees - longitude
         queryPt.push_back(
-            KDTree::Common::convertToStandardDegrees(queryPoints.at(i).getLongitude()));
+            convertToStandardDegrees(queryPoints.at(i).getLongitude()));
         //euclidean - perihelion time (time of periapsis)
         queryPt.push_back(queryPoints.at(i).getPerihelionTime());
 
@@ -177,3 +182,4 @@ getResults(const KDTree::KDTree<unsigned int> &searchTree,
 
 
 
+    }} // close lsst::mops

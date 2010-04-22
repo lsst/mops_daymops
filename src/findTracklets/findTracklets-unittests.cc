@@ -12,12 +12,15 @@
 
 
 
-#include "../Detection.h"
-#include "../Tracklet.h"
-#include "../PointAndValue.h"
-#include "../common.h"
-#include "../KDTree.h"
-#include "findTracklets.h"
+#include "lsst/mops/Detection.h"
+#include "lsst/mops/Tracklet.h"
+#include "lsst/mops/PointAndValue.h"
+#include "lsst/mops/common.h"
+#include "lsst/mops/KDTree.h"
+#include "lsst/mops/daymops/findTracklets/findTracklets.h"
+
+
+using namespace lsst::mops;
 
 bool Eq(double a, double b) 
 {

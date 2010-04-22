@@ -6,14 +6,12 @@
 #include <unistd.h>
 #include <getopt.h>
 
-#include "../common.h"
-#include "collapseTracklets.h"
-#include "../fileUtils.h"
+#include "lsst/mops/common.h"
+#include "lsst/mops/daymops/collapseTrackletsAndPostfilters/collapseTracklets.h"
+#include "lsst/mops/fileUtils.h"
 
-namespace ctExcept = collapseTracklets::exceptions;
-
-namespace collapseTracklets {
-
+namespace lsst {
+    namespace mops {
 
 
     bool detectionsHaveGT2UniqueTimes(const std::vector<Detection> *detections) {
@@ -28,7 +26,7 @@ namespace collapseTracklets {
             for (fIter = observedMJDs.begin(); 
                  (fIter != observedMJDs.end()) && (isInList == false);
                  fIter++) {
-                if (KDTree::Common::areEqual(*fIter, curMJD)) {
+                if (areEqual(*fIter, curMJD)) {
                     isInList = true;
                 }
             }
@@ -79,7 +77,7 @@ Only used if useRMSfilt == true.  Describes the function for RMS filtering.  Tra
         /* read long options, then get required options */
 
         if (argc < 8) {
-            throw LSST_EXCEPT(ctExcept::CommandlineParseErrorException, USAGE + "\n");            
+            throw LSST_EXCEPT(CommandlineParseErrorException, USAGE + "\n");            
         }
 
         
@@ -124,14 +122,14 @@ Only used if useRMSfilt == true.  Describes the function for RMS filtering.  Tra
 		    useGreedy = false;
                 }
                 else {
-                    throw LSST_EXCEPT(ctExcept::CommandlineParseErrorException, 
+                    throw LSST_EXCEPT(CommandlineParseErrorException, 
                                       "ERROR: options for method are: greedy, minimumRMS\n\n" +
                                       USAGE + "\n"); 
                 }
                 break;
 
             case 'u':
-                useRMSFilt = KDTree::Common::guessBoolFromStringOrGiveErr(optarg, USAGE);
+                useRMSFilt = guessBoolFromStringOrGiveErr(optarg, USAGE);
                 break;
                 
             case 'm':
@@ -153,7 +151,7 @@ Only used if useRMSfilt == true.  Describes the function for RMS filtering.  Tra
                 return 0;
                 break;
             default:
-                throw LSST_EXCEPT(ctExcept::ProgrammerErrorException, 
+                throw LSST_EXCEPT(ProgrammerErrorException, 
                                   "Unexpected programmer error in options parsing\n");
                 break;
             }        
@@ -173,14 +171,14 @@ Only used if useRMSfilt == true.  Describes the function for RMS filtering.  Tra
         detsFileName = argv[optind];
         detsFile.open(detsFileName.c_str());
         if (!detsFile.is_open()) {
-            throw LSST_EXCEPT(ctExcept::FileException,
+            throw LSST_EXCEPT(FileException,
                               "Failed to open dets file " + detsFileName + " - does this file exist?\n"); 
         }
         optind++;
         pairsFileName = argv[optind];
         pairsFile.open(pairsFileName.c_str());
         if (!pairsFile.is_open()) {
-            throw LSST_EXCEPT(ctExcept::FileException,
+            throw LSST_EXCEPT(FileException,
                               "Failed to open pairs file " + pairsFileName + " - does this file exist?\n");
         }
         optind++;
@@ -194,7 +192,7 @@ Only used if useRMSfilt == true.  Describes the function for RMS filtering.  Tra
         outFileName = argv[optind];
         outFile.open(outFileName.c_str());
         if (!outFile.is_open()){
-            throw LSST_EXCEPT(ctExcept::FileException,
+            throw LSST_EXCEPT(FileException,
                               "Failed to open output file " + 
                               outFileName + " - do you have write permissions?\n");
         }
@@ -236,7 +234,7 @@ Only used if useRMSfilt == true.  Describes the function for RMS filtering.  Tra
         std::cout << "Found " << pairs.size() << " pairs.\n";
           
         if (!isSane(detections.size(), &pairs)) {
-            throw LSST_EXCEPT(ctExcept::InputFileFormatErrorException, 
+            throw LSST_EXCEPT(InputFileFormatErrorException, 
                               "EE: Pairs file does not seem to correspond with detections file.\n");
         }
           
@@ -266,14 +264,21 @@ Only used if useRMSfilt == true.  Describes the function for RMS filtering.  Tra
     }
   
 
-}
 
+
+
+
+
+
+
+
+}} // close lsst::mops
 
 
 
 int main(int argc, char** argv) {
     
-    CALL_AND_CATCH_EXCEPTIONS(return collapseTracklets::collapseTrackletsMain(argc, argv) );
+    return lsst::mops::collapseTrackletsMain(argc, argv);
     
-
 }
+

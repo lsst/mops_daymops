@@ -2,16 +2,18 @@
 #include <iomanip>
 #include <sstream>
 
-#include "Detection.h"
-#include "Exceptions.h"
+#include "lsst/mops/Detection.h"
+#include "lsst/mops/Exceptions.h"
 
-namespace ctExcept = collapseTracklets::exceptions;
+
 
 /*
  * jmyers 7/29/08
  * 
  */
 
+namespace lsst {
+    namespace mops {
 
 Detection::Detection()
 {
@@ -79,7 +81,7 @@ Detection::Detection(long int ID, double epochMJD, double RA, double Dec)
 long int Detection::getID() const 
 {
     if (!initialized) {
-        throw LSST_EXCEPT(ctExcept::UninitializedException, 
+        throw LSST_EXCEPT(UninitializedException, 
                           "Detection: request for ID from uninitialized Detection\n");
         return -1;
     }
@@ -92,7 +94,7 @@ long int Detection::getID() const
 double Detection::getEpochMJD() const  
 {
     if (!initialized) {
-        throw LSST_EXCEPT(ctExcept::UninitializedException, 
+        throw LSST_EXCEPT(UninitializedException, 
                           "Detection: request for EpochMJD from uninitialized Detection\n");
         return -1;
     }
@@ -105,7 +107,7 @@ double Detection::getEpochMJD() const
 double Detection::getRA()  const 
 {
     if (!initialized) {
-        throw LSST_EXCEPT(ctExcept::UninitializedException, 
+        throw LSST_EXCEPT(UninitializedException, 
                           "Detection: request for RA from uninitialized Detection\n");
         return -1;
     }
@@ -118,7 +120,7 @@ double Detection::getRA()  const
 double Detection::getDec()  const 
 {
     if (!initialized) {
-        throw LSST_EXCEPT(ctExcept::UninitializedException, 
+        throw LSST_EXCEPT(UninitializedException, 
                           "Detection: request for Dec from uninitialized Detection\n");
         return -1;
     }
@@ -131,7 +133,7 @@ double Detection::getDec()  const
 int  Detection::getObscode() const  
 {
     if (!initialized) {
-        throw LSST_EXCEPT(ctExcept::UninitializedException, 
+        throw LSST_EXCEPT(UninitializedException, 
                           "Detection: request for ObsCode from uninitialized Detection\n");
         return -1;
     }
@@ -144,7 +146,7 @@ int  Detection::getObscode() const
 std::string Detection::getObjName() const  
 {
     if (!initialized) {
-        throw LSST_EXCEPT(ctExcept::UninitializedException, 
+        throw LSST_EXCEPT(UninitializedException, 
                           "Detection: request for ObjName from uninitialized Detection\n");
         return "";
     }
@@ -156,7 +158,7 @@ std::string Detection::getObjName() const
 double Detection::getMag()  const 
 {
     if (!initialized) {
-        throw LSST_EXCEPT(ctExcept::UninitializedException, 
+        throw LSST_EXCEPT(UninitializedException, 
                           "Detection: request for magnitude from uninitialized Detection\n");
         return -1000;
     }
@@ -169,7 +171,7 @@ double Detection::getMag()  const
 double Detection::getLength()  const 
 {
     if (!initialized) {
-        throw LSST_EXCEPT(ctExcept::UninitializedException, 
+        throw LSST_EXCEPT(UninitializedException, 
                           "Detection: request for length from uninitialized Detection\n");
         return -1000;
     }
@@ -183,7 +185,7 @@ double Detection::getLength()  const
 double Detection::getAngle() const 
 {
     if (!initialized) {
-        throw LSST_EXCEPT(ctExcept::UninitializedException, 
+        throw LSST_EXCEPT(UninitializedException, 
                           "Detection: request for angle from uninitialized Detection\n");
         return -1000;
     }
@@ -201,7 +203,7 @@ bool Detection::hasExposureTime() const {
 double Detection::getExposureTime() const 
 {
     if ((!initialized) || (!hasETime)) {
-        throw LSST_EXCEPT(ctExcept::UninitializedException, 
+        throw LSST_EXCEPT(UninitializedException, 
                           "Detection: request for exposure from Detection which is uninitialized or has no etime data\n");
         return -1000;
     }
@@ -232,7 +234,7 @@ void Detection::fromMITIString(std::string mitiString) {
         ss >> angle;
     }
     catch (...) {
-        throw LSST_EXCEPT(ctExcept::BadParameterException, 
+        throw LSST_EXCEPT(BadParameterException, 
                           "Badly-formatted MITI string\n");
     }
     try {
@@ -258,7 +260,7 @@ int Detection::getFileIndex() const
 {
 
   if ((!initialized)) {
-    throw LSST_EXCEPT(ctExcept::UninitializedException, 
+    throw LSST_EXCEPT(UninitializedException, 
 		      "Detection: request for exposure from Detection which is uninitialized or has no etime data\n");
     return -1000;
   }
@@ -269,3 +271,4 @@ int Detection::getFileIndex() const
 
 
 
+    } } // close lsst::mops namespace

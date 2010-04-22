@@ -17,12 +17,13 @@
 #include <vector>
 #include <map>
 
-#include "Tracklet.h"
-#include "Detection.h"
-#include "Exceptions.h"
+#include "lsst/mops/Tracklet.h"
+#include "lsst/mops/Detection.h"
+#include "lsst/mops/Exceptions.h"
 
+namespace lsst {
+namespace mops {
 
-namespace rmsLineFit {
 
     /*
      * return the root mean squared distance of the tracklet from the line.
@@ -81,6 +82,6 @@ namespace rmsLineFit {
     };
 
 
-}
+}} // close lsst::mops
 
 #endif

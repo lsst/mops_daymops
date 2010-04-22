@@ -3,14 +3,13 @@
 #include <algorithm> //for nth_element
 #include <iostream>
 
-#include "common.h"
-#include "Exceptions.h"
+#include "lsst/mops/common.h"
+#include "lsst/mops/Exceptions.h"
 
 
-namespace ctExcept = collapseTracklets::exceptions;
 
-namespace KDTree {
-    namespace Common {
+namespace lsst {
+namespace mops {
 
 
 
@@ -93,7 +92,7 @@ namespace KDTree {
                 return circularShortestPathLen_Rad(a, b);
             }
             else {
-                throw LSST_EXCEPT(ctExcept::BadParameterException, "EE: distance1D: got unexpected geometry type.\n");
+                throw LSST_EXCEPT(BadParameterException, "EE: distance1D: got unexpected geometry type.\n");
             }
         }
 
@@ -276,7 +275,7 @@ namespace KDTree {
                               GeometryType type)
         {
             if (aLo > aHi) {
-                throw LSST_EXCEPT(ctExcept::BadParameterException, "EE: common.cc:regionsOverlap1D:  we DEMAND that aLo < aHi.\n");
+                throw LSST_EXCEPT(BadParameterException, "EE: common.cc:regionsOverlap1D:  we DEMAND that aLo < aHi.\n");
             }
             
             if (type == EUCLIDEAN)
@@ -301,7 +300,7 @@ namespace KDTree {
             else if (type == CIRCULAR_DEGREES) {
                 if ((aLo > 360.) || (aLo < 0.) || (aHi > 360) || (aHi < 0))
                 {
-                    throw LSST_EXCEPT(ctExcept::BadParameterException, "EE: unexpected condition in common.cc:regionsOverlap1D.  aLo or aHi are outside normal degree bounds (0-360).\n");
+                    throw LSST_EXCEPT(BadParameterException, "EE: unexpected condition in common.cc:regionsOverlap1D.  aLo or aHi are outside normal degree bounds (0-360).\n");
                 }
                 b1 = convertToStandardDegrees(b1);
                 b2 = convertToStandardDegrees(b2);
@@ -333,7 +332,7 @@ namespace KDTree {
 
             }
             else {
-                throw LSST_EXCEPT(ctExcept::BadParameterException, 
+                throw LSST_EXCEPT(BadParameterException, 
                                   "EE: regionsOverlap1D: got unexpected value for geometry type, must be one of EUCLIDEAN, CIRCULAR_DEGREES or CIRCULAR_RADIANS\n");
             }
             // we should never reach this point.
@@ -435,7 +434,7 @@ namespace KDTree {
                 return false;
             }
             else {
-                throw LSST_EXCEPT(ctExcept::CommandlineParseErrorException, errStr);
+                throw LSST_EXCEPT(CommandlineParseErrorException, errStr);
             }
             
         }
@@ -443,5 +442,4 @@ namespace KDTree {
         
         
 
-    }
-}
+}} // close namespace lsst::mops

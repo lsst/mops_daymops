@@ -14,6 +14,8 @@
 #include <string>
 
 
+namespace lsst {
+namespace mops {
 
 class Detection {
 public:
@@ -81,6 +83,6 @@ private:
     bool initialized;
 };
 
-
+}} // close namespace lsst::mops
 
 #endif

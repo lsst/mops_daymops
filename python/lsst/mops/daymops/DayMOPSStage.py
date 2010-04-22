@@ -4,13 +4,13 @@ DayMOPSStage
 Abstract class that provides some basic functionality shared by all DayMOPS 
 Stages.
 """
-import lsst.pex.harness.Stage as Stage
+import lsst.pex.harness.stage as Stage
 import lsst.pex.policy as policy
 import lsst.pex.logging as logging
 
 
 
-class DayMOPSStage(object, Stage.Stage):
+class DayMOPSStage(Stage.SerialProcessing):
     def __init__(self, stageId=-1, policy=None):
         """
         Standard Stage initializer.

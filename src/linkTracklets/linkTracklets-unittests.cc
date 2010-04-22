@@ -16,11 +16,19 @@
 #include <time.h>
 
 
-#include "TrackSet.h"
-#include "../Detection.h"
-#include "../Tracklet.h"
-#include "linkTracklets.h"
-#include "../Exceptions.h"
+
+
+#include "lsst/mops/TrackSet.h"
+#include "lsst/mops/Detection.h"
+#include "lsst/mops/Tracklet.h"
+#include "lsst/mops/daymops/linkTracklets/linkTracklets.h"
+#include "lsst/mops/Exceptions.h"
+
+
+namespace lsst {
+    namespace mops {
+
+
 
 bool Eq(double a, double b) 
 {
@@ -72,7 +80,6 @@ void debugPrintTrackSet(const TrackSet &tracks, const std::vector<Detection> &al
 
 
 
-namespace ctExcept = collapseTracklets::exceptions;
 
 
 /*
@@ -108,12 +115,12 @@ Track generateTrack(double ra0, double dec0, double raV, double decV,
                     unsigned int & lastTrackletId) {
 
     if (trackletObsTimes.size() == 0) {
-        throw LSST_EXCEPT(ctExcept::BadParameterException, 
+        throw LSST_EXCEPT(BadParameterException, 
                           std::string(__FUNCTION__)+
                           std::string(": cannot build a track with 0 obs times!"));
     }
     if (trackletObsTimes.at(0).size() == 0) {
-        throw LSST_EXCEPT(ctExcept::BadParameterException, 
+        throw LSST_EXCEPT(BadParameterException, 
                           std::string(__FUNCTION__)+
                           std::string(": cannot build a tracklet with 0 obs times!"));
     }
@@ -127,7 +134,7 @@ Track generateTrack(double ra0, double dec0, double raV, double decV,
         trackletIter != trackletObsTimes.end();
         trackletIter++) {
         if (trackletIter->size() == 0) {
-            throw LSST_EXCEPT(ctExcept::BadParameterException, 
+            throw LSST_EXCEPT(BadParameterException, 
                               std::string(__FUNCTION__)+
                               std::string(": cannot build tracklet with 0 obs times!"));
         }
@@ -154,7 +161,7 @@ Track generateTrack(double ra0, double dec0, double raV, double decV,
         }
         allTracklets.push_back(newTracklet);
         if (allTracklets.size() -1 != lastTrackletId) {
-            throw LSST_EXCEPT(ctExcept::BadParameterException,
+            throw LSST_EXCEPT(BadParameterException,
                               std::string(__FUNCTION__)+
                               std::string(": tracklet IDs are assumed to be the index of the tracklet into the tracklet vector."));
         }
@@ -1372,3 +1379,6 @@ BOOST_AUTO_TEST_CASE( linkTracklets_5_5 )
 
 
 // TBD: check that tracks with too-high acceleration are correctly rejected, etc.
+
+
+}} // close lsst::mops

@@ -4,12 +4,13 @@
  * Purpose: 
  */
 
-#include "orbitProximity.h"
+#include "lsst/mops/daymops/orbitProximity/orbitProximity.h"
+
 
 //internal declaration, used only for this file
 void writeResults(std::string, std::vector<std::pair<unsigned int, unsigned int> >);
 
-std::vector<Orbit> populateOrbitVec(std::string);
+std::vector<lsst::mops::Orbit> populateOrbitVec(std::string);
 
 
 
@@ -102,8 +103,8 @@ int main(int argc, char *argv[]){
 
 
   //populate Orbit vectors
-  std::vector<Orbit> dataOrbits;
-  std::vector<Orbit> queryOrbits;
+  std::vector<lsst::mops::Orbit> dataOrbits;
+  std::vector<lsst::mops::Orbit> queryOrbits;
   dataOrbits = populateOrbitVec(dataOrbitsFile);
   queryOrbits = populateOrbitVec(queryOrbitsFile);
 
@@ -133,10 +134,10 @@ int main(int argc, char *argv[]){
  * Read data from 'dataFile' and populate the vector
  * 'dataOrbits' with the Orbit information it contains
  **************************************************/
-std::vector<Orbit> populateOrbitVec(std::string dataFile)
+std::vector<lsst::mops::Orbit> populateOrbitVec(std::string dataFile)
 {
 
-    std::vector<Orbit> dataOrbits;
+    std::vector<lsst::mops::Orbit> dataOrbits;
     std::ifstream myFile(dataFile.c_str());
     std::string line;
 
@@ -150,7 +151,7 @@ std::vector<Orbit> populateOrbitVec(std::string dataFile)
             getline(myFile, line);
 
             //create orbit object from file line
-            Orbit myOrbit;
+            lsst::mops::Orbit myOrbit;
             myOrbit.populateOrbitFromString(line, lineIndex);
       
             //myOrbit.print();

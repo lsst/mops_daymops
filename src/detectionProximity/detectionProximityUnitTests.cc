@@ -10,8 +10,11 @@
 #include <cmath>
 
 
-#include "../Exceptions.h"
-#include "detectionProximity.h"
+#include "lsst/mops/Exceptions.h"
+#include "lsst/mops/daymops/detectionProximity/detectionProximity.h"
+
+
+using namespace lsst::mops;
 
 
 bool Eq(double a, double b) 

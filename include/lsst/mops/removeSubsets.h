@@ -11,7 +11,9 @@
 
 #include "Tracklet.h"
 
-namespace removeSubsets {
+
+namespace lsst {
+namespace mops {
 
 
     class SubsetRemover {
@@ -25,7 +27,7 @@ namespace removeSubsets {
     void putLongestPerDetInOutputVector(const std::vector<Tracklet> *pairsVector, 
                                         std::vector<Tracklet> &outputVector);
 
-}
+}} // close namespace lsst::mops
 
 
 

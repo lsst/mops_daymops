@@ -17,7 +17,10 @@
 
 
 
-#include "../Orbit.h"
+#include "lsst/mops/Orbit.h"
+
+namespace lsst {
+    namespace mops {
 
 /* orbitProximity: find similar orbits, where "similar" is
  * defined by the *Tolerance arguments. 
@@ -38,5 +41,6 @@ orbitProximity(std::vector<Orbit> dataOrbits,
                double longitudeArgTolerance,
                double perihelionTimeTolerance);
 
+    }} // close lsst::mops
 
 #endif

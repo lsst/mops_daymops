@@ -8,8 +8,8 @@
 #include <iomanip>
 
 
-#include "linkTracklets.h"
-#include "../fileUtils.h"
+#include "lsst/mops/daymops/linkTracklets/linkTracklets.h"
+#include "lsst/mops/fileUtils.h"
 
 
 
@@ -18,6 +18,9 @@
 #ifdef PRINT_TIMING_INFO
 #include <ctime>
 #endif
+
+namespace lsst {
+     namespace mops {
 
 double timeElapsed(clock_t priorEvent)
 {
@@ -49,7 +52,7 @@ void writeResults(std::string outFileName,
      outFile.close();
 }
 
-
+     }} // close lsst::mops
 
 int main(int argc, char* argv[])
 {
@@ -75,7 +78,7 @@ int main(int argc, char* argv[])
      std::string trackletsFileName = "";
      std::string outputFileName = "";
 
-     linkTrackletsConfig searchConfig; 
+     lsst::mops::linkTrackletsConfig searchConfig; 
      
      int longIndex = -1;
      const char *optString = "d:t:o:e:v:D:R:h";
@@ -131,8 +134,8 @@ int main(int argc, char* argv[])
 	  return 1;
      }
 
-     std::vector<Detection> allDets;
-     std::vector<Tracklet> allTracklets;
+     std::vector<lsst::mops::Detection> allDets;
+     std::vector<lsst::mops::Tracklet> allTracklets;
      TrackSet resultTracks;
 
      clock_t last;
@@ -144,7 +147,7 @@ int main(int argc, char* argv[])
      populatePairsVectorFromFile(trackletsFileName, allTracklets);
 
      if(PRINT_TIMING_INFO) {     	  
-	  dif = timeElapsed(last);
+	  dif = lsst::mops::timeElapsed(last);
 	  std::cout << "Reading input took " << std::fixed << std::setprecision(10) 
 		    <<  dif  << " seconds." <<std::endl;     
      }
@@ -154,10 +157,10 @@ int main(int argc, char* argv[])
 	  last = std::clock();
      }
 
-     resultTracks = linkTracklets(allDets, allTracklets, searchConfig);
+     resultTracks = lsst::mops::linkTracklets(allDets, allTracklets, searchConfig);
 
      if(PRINT_TIMING_INFO) {     
-	  dif = timeElapsed (last);
+	  dif = lsst::mops::timeElapsed (last);
 	  std::cout << "linking took " << std::fixed << std::setprecision(10) <<  dif 
 		    << " seconds."<<std::endl;     
      }
@@ -166,10 +169,10 @@ int main(int argc, char* argv[])
 	  last = std::clock();
      }
 
-     writeResults(outputFileName, allDets, allTracklets, resultTracks);
+     lsst::mops::writeResults(outputFileName, allDets, allTracklets, resultTracks);
 
      if(PRINT_TIMING_INFO) {     	  
-	  dif = timeElapsed(last);
+	  dif = lsst::mops::timeElapsed(last);
 	  std::cout << "Writing output took " << std::fixed << std::setprecision(10) 
 		    <<  dif  << " seconds." <<std::endl;     
      }

@@ -11,9 +11,9 @@
 #include <sstream>
 #include <math.h>
 
-#include "../Detection.h"
-#include "../fileUtils.h"
-#include "findTracklets.h"
+#include "lsst/mops/Detection.h"
+#include "lsst/mops/fileUtils.h"
+#include "lsst/mops/daymops/findTracklets/findTracklets.h"
 
 
 
@@ -23,7 +23,7 @@
 int main(int argc, char* argv[])
 {
     //list of all detections
-    std::vector <Detection> myDets; 
+    std::vector <lsst::mops::Detection> myDets; 
 
 
     // parse command-line options
@@ -81,9 +81,9 @@ int main(int argc, char* argv[])
     
     populateDetVectorFromFile(detsFile, myDets);
     
-    std::vector<Tracklet> results;
+    std::vector<lsst::mops::Tracklet> results;
     
-    results = findTracklets(myDets, maxVelocity, minVelocity);
+    results = lsst::mops::findTracklets(myDets, maxVelocity, minVelocity);
     
     
     //print results

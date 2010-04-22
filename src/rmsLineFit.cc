@@ -8,14 +8,14 @@
 
 #include <gsl/gsl_fit.h>
 
-#include "rmsLineFit.h"
-#include "KDTree.h"
+#include "lsst/mops/rmsLineFit.h"
+#include "lsst/mops/KDTree.h"
 
 
-namespace ctExcept = collapseTracklets::exceptions;
 
-namespace rmsLineFit {
 
+namespace lsst {
+    namespace mops {
 
 
 
@@ -42,7 +42,7 @@ namespace rmsLineFit {
         std::vector<double> Decs(numDets);
 
         if ((RASlopeAndOffsetOut.size() != 0) || (DecSlopeAndOffsetOut.size() != 0)) {
-            throw LSST_EXCEPT(ctExcept::BadParameterException, 
+            throw LSST_EXCEPT(BadParameterException, 
                               "EE:  leastSquaresSolveForRADecLinear: output vectors were not empty.\n");
         }
 
@@ -66,7 +66,7 @@ namespace rmsLineFit {
         }
         if ((*std::max_element(RAs.begin(), RAs.end()) - *std::min_element(RAs.begin(), RAs.end()) > 180.) ||
             (*std::max_element(Decs.begin(), Decs.end()) - *std::min_element(Decs.begin(), Decs.end()) > 180.)) {
-            throw LSST_EXCEPT(ctExcept::ProgrammerErrorException, 
+            throw LSST_EXCEPT(ProgrammerErrorException, 
                               "EE: Unexpected coding error: could not move data into a contiguous < 180 degree range.\n");
         }
 
@@ -103,7 +103,7 @@ namespace rmsLineFit {
         DecSlopeAndOffsetOut.push_back(offset);
 
         if (gslRV != 0) {
-            throw LSST_EXCEPT(ctExcept::GSLException, "EE: gsl_fit_linear unexpectedly returned error.\n");
+            throw LSST_EXCEPT(GSLException, "EE: gsl_fit_linear unexpectedly returned error.\n");
         }
 
         free(arrayRAs);
@@ -123,7 +123,7 @@ namespace rmsLineFit {
             count++;
         }
         if (count < 1) {
-            throw LSST_EXCEPT(ctExcept::BadParameterException, "EE: getAverageMagnitude: highly unexpected error - tracklet has no detections?\n");
+            throw LSST_EXCEPT(BadParameterException, "EE: getAverageMagnitude: highly unexpected error - tracklet has no detections?\n");
         }
         return sum/count;
     }
@@ -144,13 +144,13 @@ namespace rmsLineFit {
         }
         
         if ((perDetSqDist != NULL) && (perDetSqDist->size() != 0)) {
-            throw LSST_EXCEPT(ctExcept::ProgrammerErrorException, 
+            throw LSST_EXCEPT(ProgrammerErrorException, 
                               "EE: PROGRAMMING ERROR: perDetSqDist argument to rmsForTracklet must be either NULL or a pointer to an allocated, empty vector!\n");
         }
         
 
         if (t.indices.size() == 0) {
-            throw LSST_EXCEPT(ctExcept::ProgrammerErrorException, 
+            throw LSST_EXCEPT(ProgrammerErrorException, 
                               "EE: PROGRAMMING ERROR: rmsForTracklet received a tracklet associated with 0 detection indices.\n");
         }
         
@@ -165,13 +165,13 @@ namespace rmsLineFit {
             double tOffset = detIter->getEpochMJD() - t0;
             
             double projectedRA = RASlopeAndOffset[0] * tOffset + RASlopeAndOffset[1];
-	    projectedRA = KDTree::Common::convertToStandardDegrees(projectedRA);
+	    projectedRA = convertToStandardDegrees(projectedRA);
             
             double projectedDec = DecSlopeAndOffset[0] * tOffset + DecSlopeAndOffset[1];
-	    projectedDec = KDTree::Common::convertToStandardDegrees(projectedDec);
+	    projectedDec = convertToStandardDegrees(projectedDec);
 
-	    double actualRA = KDTree::Common::convertToStandardDegrees(detIter->getRA());
-	    double actualDec = KDTree::Common::convertToStandardDegrees(detIter->getDec());
+	    double actualRA = convertToStandardDegrees(detIter->getRA());
+	    double actualDec = convertToStandardDegrees(detIter->getDec());
 
 	    // 	    std::cout << " projected position: (" << projectedRA << ", " << projectedDec << ")" << std::endl;
 	    // 	    std::cout << " Actual position: (" << actualRA << ", " << actualDec <<  ")" << std::endl;
@@ -185,7 +185,7 @@ namespace rmsLineFit {
 	      DecDist = fabs(DecDist - 360);
 	    }
 	    if ((RADist > 180.)  || (DecDist > 180.)) {
-                throw LSST_EXCEPT(ctExcept::ProgrammerErrorException,
+                throw LSST_EXCEPT(ProgrammerErrorException,
                                   "EE: rmsLineFit: Unexpected programming error\n");
             }
 	    double localDistSquared = RADist*RADist + DecDist*DecDist;
@@ -236,15 +236,15 @@ namespace rmsLineFit {
              indicesIter != t->indices.end();
              indicesIter++) {
             double t = (*allDets)[*indicesIter].getEpochMJD() - tOffset;
-            double projectedRA = KDTree::Common::convertToStandardDegrees(RASlope * t + RAIntercept);
-            double projectedDec = KDTree::Common::convertToStandardDegrees(DecSlope *t + DecIntercept);
-            double obsRA = KDTree::Common::convertToStandardDegrees((*allDets)[*indicesIter].getRA());
-            double obsDec = KDTree::Common::convertToStandardDegrees((*allDets)[*indicesIter].getDec());
+            double projectedRA = convertToStandardDegrees(RASlope * t + RAIntercept);
+            double projectedDec = convertToStandardDegrees(DecSlope *t + DecIntercept);
+            double obsRA = convertToStandardDegrees((*allDets)[*indicesIter].getRA());
+            double obsDec = convertToStandardDegrees((*allDets)[*indicesIter].getDec());
             double RADist = fabs(projectedRA - obsRA);
             if (RADist > 180.) {
                 RADist = fabs(RADist - 360);
                 if (RADist > 180.) {
-                    throw LSST_EXCEPT(ctExcept::ProgrammerErrorException,
+                    throw LSST_EXCEPT(ProgrammerErrorException,
                                       "EE: getPerDetSqDistanceToLine: Unexpected programming error: failed to get distance < 360 between two degree points\n");
                 }
             }
@@ -252,7 +252,7 @@ namespace rmsLineFit {
             if (DecDist > 180.) {
                 DecDist = fabs(DecDist - 360);
                 if (DecDist > 180.) {
-                    throw LSST_EXCEPT(ctExcept::ProgrammerErrorException,
+                    throw LSST_EXCEPT(ProgrammerErrorException,
                                       "EE: Unexpected programming error: failed to get distance < 360 between two degree points\n");
                 }
             }
@@ -321,7 +321,7 @@ namespace rmsLineFit {
                                            std::vector<Tracklet> &output)
     {
         if (output.size() != 0) {
-            throw LSST_EXCEPT(ctExcept::BadParameterException, 
+            throw LSST_EXCEPT(BadParameterException, 
                               "purifyTracklets: output vector not empty\n");
         }
         
@@ -337,4 +337,4 @@ namespace rmsLineFit {
     }
 
 
-}
+    }} // close lsst::mops namespace

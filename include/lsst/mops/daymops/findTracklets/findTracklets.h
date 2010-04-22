@@ -12,9 +12,12 @@
 
 #include <vector>
 
-#include "../Tracklet.h"
-#include "../Detection.h"
+#include "lsst/mops/Tracklet.h"
+#include "lsst/mops/Detection.h"
 
+
+namespace lsst {
+    namespace mops {
 
 /*****************************************************************
  * Main function
@@ -22,5 +25,7 @@
 std::vector <Tracklet> 
 findTracklets(const std::vector<Detection> &allDetections, 
 	      double maxVelocity, double minVelocity);
+
+    }} // close lsst::mops
 
 #endif

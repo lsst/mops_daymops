@@ -307,7 +307,7 @@ BOOST_AUTO_TEST_CASE( doCollapsingPopulateOutputVector_blackbox_1)
     std::vector<Tracklet> output;
 
     TrackletCollapser myTC;
-    myTC.doCollapsingPopulateOutputVector(&dets, pairs, tolerances, output, false, false, false, 0.0, 0.0, false);
+    myTC.doCollapsingPopulateOutputVector(&dets, pairs, tolerances, output, false, false, false, 0.0, false);
     std::set <unsigned int> allIndices;
     allIndices.insert(0);
     allIndices.insert(1);
@@ -356,7 +356,7 @@ BOOST_AUTO_TEST_CASE( doCollapsingPopulateOutputVector_blackbox_2)
     std::vector<Tracklet> output;
 
     TrackletCollapser myTC;
-    myTC.doCollapsingPopulateOutputVector(&dets, pairs, tolerances, output, false, false, false, 0.0, 0.0, false);
+    myTC.doCollapsingPopulateOutputVector(&dets, pairs, tolerances, output, false, false, false, 0.0, false);
     std::set <unsigned int> allIndices;
     allIndices.insert(0);
     allIndices.insert(1);
@@ -405,7 +405,7 @@ BOOST_AUTO_TEST_CASE( doCollapsingPopulateOutputVector_blackbox_3)
     std::vector<Tracklet> output;
 
     TrackletCollapser myTC;
-    myTC.doCollapsingPopulateOutputVector(&dets, pairs, tolerances, output, false, false, false, 0.0, 0.0, false);
+    myTC.doCollapsingPopulateOutputVector(&dets, pairs, tolerances, output, false, false, false, 0.0, false);
     std::set <unsigned int> allIndices;
     allIndices.insert(0);
     allIndices.insert(1);

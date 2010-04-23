@@ -17,200 +17,43 @@ namespace lsst {
 
 MopsDetection::MopsDetection()
 {
-    hasETime = false;
-    initialized = false;
-    fileIndex = -1;
+    RA = -380;
+    dec = -380;
+    MJD = 0;
 }
-
-
-MopsDetection::MopsDetection(long int ID, double epochMJD, double RA, double Dec, 
-                     int obsCode, std::string objName, double mag, 
-                     double elongationLength, double elongationAngle)
-{
-    hasETime = false;
-    initialized = true;
-    this->ID = ID; 
-    MJD = epochMJD;
-    this->RA = RA;
-    this->dec = Dec;
-    this->obscode = obsCode;
-    this->objName = objName;
-    this->mag = mag;
-    length = elongationLength;
-    angle = elongationAngle;
-    fileIndex = -1;
-}
-
-MopsDetection::MopsDetection(long int ID, double epochMJD, double RA, double Dec, 
-                     int obsCode, std::string objName, double mag, 
-                     double elongationLength, double elongationAngle,
-                     double exposureTime)
-{
-    hasETime = true;
-    initialized = true;
-    this->ID = ID; 
-    MJD = epochMJD;
-    this->RA = RA;
-    this->dec = Dec;
-    this->obscode = obsCode;
-    this->objName = objName;
-    this->mag = mag;
-    length = elongationLength;
-    angle = elongationAngle;
-    etime = exposureTime;
-    fileIndex = -1;
-}
-
 
 
 MopsDetection::MopsDetection(long int ID, double epochMJD, double RA, double Dec) 
 {
-    hasETime = false;
-    initialized = true;
     this->ID = ID;
     MJD = epochMJD;
     this->RA = RA;
     this->dec = Dec;
-    this->obscode = 0;
-    this->mag = 0.;
-    fileIndex = -1;
 }
 
 
 
 long int MopsDetection::getID() const 
 {
-    if (!initialized) {
-        throw LSST_EXCEPT(UninitializedException, 
-                          "MopsDetection: request for ID from uninitialized MopsDetection\n");
-        return -1;
-    }
-    else {
-        return ID;
-    }
+    return ID;
 
 }
 
 double MopsDetection::getEpochMJD() const  
 {
-    if (!initialized) {
-        throw LSST_EXCEPT(UninitializedException, 
-                          "MopsDetection: request for EpochMJD from uninitialized MopsDetection\n");
-        return -1;
-    }
-    else {
-        return MJD;
-    }
+    return MJD;
 }
 
 
 double MopsDetection::getRA()  const 
 {
-    if (!initialized) {
-        throw LSST_EXCEPT(UninitializedException, 
-                          "MopsDetection: request for RA from uninitialized MopsDetection\n");
-        return -1;
-    }
-    else {
-        return RA;
-    }
+    return RA;
 }
 
 
 double MopsDetection::getDec()  const 
 {
-    if (!initialized) {
-        throw LSST_EXCEPT(UninitializedException, 
-                          "MopsDetection: request for Dec from uninitialized MopsDetection\n");
-        return -1;
-    }
-    else {
-        return dec;
-    }
-}
-
-
-int  MopsDetection::getObscode() const  
-{
-    if (!initialized) {
-        throw LSST_EXCEPT(UninitializedException, 
-                          "MopsDetection: request for ObsCode from uninitialized MopsDetection\n");
-        return -1;
-    }
-    else {
-        return obscode;
-    }
-
-}
-
-std::string MopsDetection::getObjName() const  
-{
-    if (!initialized) {
-        throw LSST_EXCEPT(UninitializedException, 
-                          "MopsDetection: request for ObjName from uninitialized MopsDetection\n");
-        return "";
-    }
-    else {
-        return objName;
-    }
-}
-
-double MopsDetection::getMag()  const 
-{
-    if (!initialized) {
-        throw LSST_EXCEPT(UninitializedException, 
-                          "MopsDetection: request for magnitude from uninitialized MopsDetection\n");
-        return -1000;
-    }
-    else {
-        return mag;
-    }
-}
-
-
-double MopsDetection::getLength()  const 
-{
-    if (!initialized) {
-        throw LSST_EXCEPT(UninitializedException, 
-                          "MopsDetection: request for length from uninitialized MopsDetection\n");
-        return -1000;
-    }
-    else {
-        return length;
-    }
-}
-
-
-
-double MopsDetection::getAngle() const 
-{
-    if (!initialized) {
-        throw LSST_EXCEPT(UninitializedException, 
-                          "MopsDetection: request for angle from uninitialized MopsDetection\n");
-        return -1000;
-    }
-    else {
-        return angle;
-    }
-    
-}
-
-
-bool MopsDetection::hasExposureTime() const {
-    return hasETime;
-}
-
-double MopsDetection::getExposureTime() const 
-{
-    if ((!initialized) || (!hasETime)) {
-        throw LSST_EXCEPT(UninitializedException, 
-                          "MopsDetection: request for exposure from MopsDetection which is uninitialized or has no etime data\n");
-        return -1000;
-    }
-    else {
-        return etime;
-    }
-    
+    return dec;
 }
 
 
@@ -219,6 +62,14 @@ double MopsDetection::getExposureTime() const
 void MopsDetection::fromMITIString(std::string mitiString) {
     /*     --------- PANSTARRS Input File Format (from Larry Denneau's Spec):
            ID EPOCH_MJD RA_DEG DEC_DEG MAG OBSCODE OBJECT_NAME LENGTH ANGLE [ETIME]*/
+    // read these parameters to local vars; we don't save them.
+    double mag;
+    std::string obscode;
+    std::string objName;
+    double length;
+    double angle;
+    double etime;
+    bool hasETime;
     std::istringstream ss(mitiString);
     /* make SS raise an exception if reading doesn't happen correctly */
     ss.exceptions(std::ifstream::failbit | std::ifstream::badbit);    
@@ -244,31 +95,10 @@ void MopsDetection::fromMITIString(std::string mitiString) {
     catch (...) {
         hasETime = false;
     }
-    initialized = true;
 }
 
 
 
-void MopsDetection::setFileIndex(int v)
-{
-  fileIndex = v;
-}
 
 
-
-int MopsDetection::getFileIndex() const
-{
-
-  if ((!initialized)) {
-    throw LSST_EXCEPT(UninitializedException, 
-		      "MopsDetection: request for exposure from MopsDetection which is uninitialized or has no etime data\n");
-    return -1000;
-  }
-  else {
-    return fileIndex;
-  }
-}
-
-
-
-    } } // close lsst::mops namespace
+} } // close lsst::mops namespace

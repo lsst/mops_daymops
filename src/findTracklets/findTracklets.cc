@@ -16,9 +16,12 @@
 #include "lsst/mops/MopsDetection.h"
 #include "lsst/mops/daymops/findTracklets/findTracklets.h"
 
+#define LEAF_NODE_SIZE 16
+
+#define uint unsigned int
 
 namespace lsst {
-    namespace mops {
+namespace mops {
 
 /***
     Prototypes - these don't need to be seen by files which include findTracklets.h
@@ -28,16 +31,16 @@ namespace lsst {
  * Populate 2D vector of detections.
  * Each outer vector contains Detections of equal MJD.
  *****************************************************************/
-void generateMJDTrees(const std::vector<MopsDetection>*,
-		      std::vector< std::vector<MopsDetection> >*);
+void groupByImageTime(const std::vector<MopsDetection>&,
+		      std::map<double, std::vector<MopsDetection> >&);
 
 
 /******************************************************************
  * Take 2D vector of detections and create a map linking
  * each MJD vector to its MJD double value.
  ******************************************************************/
-void generateTreeMap(std::vector< std::vector<MopsDetection> >*, 
-		     std::map<double, KDTree<int> >*);
+void generatePerImageTrees(const std::map<double, std::vector<MopsDetection> >&, 
+                           std::map<double, KDTree<long int> >&);
 
 
 /******************************************************************
@@ -45,78 +48,42 @@ void generateTreeMap(std::vector< std::vector<MopsDetection> >*,
  * index by file line number index, generate tracklets for each 
  * query point within a distance determined by maxVelocity.
  ******************************************************************/
-void getTracklets(std::vector<int>*, std::map<double, KDTree<int> >*, 
-		  const std::vector<MopsDetection>*, double);
+void getTracklets(std::vector<Tracklet>&, const std::map<double, KDTree<long int> >&, 
+		  const std::vector<MopsDetection>&, double);
 
 
 
 
-/**************************************************************************
- * Find the tracklets within minVelocity distance of the query points
- * and then remove them from the set of tracklets within maxVelocity
- * distance of query points.
- **************************************************************************/
-void prune(std::vector<int>*, std::map<double, KDTree<int> >*,
-	   const std::vector<MopsDetection>*, double);
 
-
-/****************************************************************
- * Find the position of a double in a vector of doubles.  Return
- * position index or -1 if not found.
- ****************************************************************/
-int vectorPosition(const std::vector<double>*, double);
-
-
-/**************************************************************
- * Determine all unique epochs found in a set of detections.
- * Populate "epochs" vector with these unique values.
- **************************************************************/
-void getEpochs(const std::vector<MopsDetection>*, std::vector<double>*);
 
 
 /*****************************************************************
  *The main function of this file.
  *****************************************************************/
 std::vector<Tracklet> findTracklets(const std::vector<MopsDetection> &myDets, 
-                                    double maxVelocity, double minVelocity)
+                                    double maxVelocity)
 {
     //detection vectors, each vector of unique MJD
-    std::vector< std::vector<MopsDetection> > detectionSets; 
+    std::map<double,  std::vector<MopsDetection> > detectionSets; 
 
     //vector of RA and dec pairs for later searching
     std::vector<double> queryPoints; 
 
     //link MJD to KDTree of unique MJD detections
-    std::map<double, KDTree<int> > myTreeMap; 
+    std::map<double, KDTree<long int> > myTreeMap; 
 
-    generateMJDTrees(&myDets, &detectionSets);
-
-    generateTreeMap(&detectionSets, &myTreeMap);
+    groupByImageTime(myDets, 
+                     detectionSets);
+    
+    generatePerImageTrees(detectionSets, myTreeMap);
 
     //get results
-    std::vector<int> results;
+    std::vector<Tracklet> results;
     results.resize(0);
-    getTracklets(&results, &myTreeMap, 
-                 &myDets, maxVelocity);
+    getTracklets(results, myTreeMap, 
+                 myDets, maxVelocity);
 
-    //prune results if minimum velocity is specified
-    if(minVelocity > 0){
-        prune(&results, &myTreeMap, &myDets, minVelocity);
-    }
-
-    //Create Tracklet vector from results vector and return it.
-    std::vector<Tracklet> tracklets;
-  
-    for(unsigned int i=0; i<results.size(); i++){
-
-        Tracklet tempTracklet;
-        tempTracklet.indices.insert(results.at(i));
-        i++;
-        tempTracklet.indices.insert(results.at(i));
-        tracklets.push_back(tempTracklet);
-    }
-  
-    return tracklets;
+    return results;
 }
 
 
@@ -125,39 +92,17 @@ std::vector<Tracklet> findTracklets(const std::vector<MopsDetection> &myDets,
  * Populate 2D vector of detections.
  * Each outer vector contains Detections of equal MJD.
  *****************************************************************/
-void generateMJDTrees(const std::vector<MopsDetection> *myDets, 
-		      std::vector< std::vector<MopsDetection> > *detectionSets)
+void groupByImageTime(const std::vector<MopsDetection> &myDets, 
+		      std::map<double, std::vector<MopsDetection> > &detectionSets)
 {
-    if(myDets->size() > 0){
+    // maps by default sort on their first parameter.
+    // build a map from detection time to all dets at that time. we'll have a nice sorted
+    // set of vectors.
 
-        std::vector<double> epochs;
-        epochs.resize(0); //initialize
-        getEpochs(myDets, &epochs);
-    
-        double epochTime;
-
-        //initialize vector to number of different epochs found
-        detectionSets->resize(epochs.size());
-    
-        int numDetections = myDets->size();
-        int insertIndex;
-
-        MopsDetection tempD;
-    
-        //populate 2D vector, ordered by EpochMJD, from 1D 
-        //vector myDets
-        for(int i=0; i < numDetections; i++){
-            epochTime = myDets->at(i).getEpochMJD();
-
-            //get the current detection and set its file index value
-            tempD = myDets->at(i);
-            tempD.setFileIndex(i);
-
-            insertIndex = vectorPosition(&epochs, epochTime);
-
-            detectionSets->at(insertIndex).push_back(tempD);
-        }
+    for (unsigned int i = 0; i < myDets.size(); i++) {
+        detectionSets[myDets.at(i).getEpochMJD()].push_back(myDets.at(i));
     }
+    
 }
 
 
@@ -167,40 +112,38 @@ void generateMJDTrees(const std::vector<MopsDetection> *myDets,
  * Take 2D vector of detections and create a map linking
  * each MJD vector to its MJD double value.
  ******************************************************************/
-void generateTreeMap(std::vector< std::vector<MopsDetection> > *detectionSets, 
-		     std::map<double, KDTree<int> > *myTreeMap)
+void generatePerImageTrees(const std::map<double, std::vector<MopsDetection> > &detectionSets, 
+                           std::map<double, KDTree<long int> > &myTreeMap)
 {
+
     // for each vector representing a single EpochMJD, created
-    // a KDTree containing its line number in the input file 
-    // and PointAndValue pair
-    for(unsigned int i=0; i < detectionSets->size(); i++){
-        int thisTreeSize = detectionSets->at(i).size();
-    
-        if(thisTreeSize > 0){
-            std::vector<MopsDetection> thisDetVec = detectionSets->at(i);
+    // a KDTree containing mapping detection RA, Decs -> detection IDs
 
-            if(thisDetVec.size() > 0){
-                double thisEpoch = thisDetVec.at(0).getEpochMJD();
-      
-                std::vector<PointAndValue<int> > vecPV;
-	
-                for(int j=0; j < thisTreeSize; j++){
-                    PointAndValue<int> tempPV;
-                    std::vector<double> pairRADec;
+    std::map<double, std::vector<MopsDetection> >::const_iterator imageIter;
 
-                    pairRADec.push_back(convertToStandardDegrees(thisDetVec.at(j).getRA()));                    
-                    pairRADec.push_back(convertToStandardDegrees(thisDetVec.at(j).getDec()));
-	  
-                    tempPV.setPoint(pairRADec);
-                    tempPV.setValue(thisDetVec.at(j).getFileIndex());
-                    vecPV.push_back(tempPV);
-                }
-                KDTree<int> tempKDTree;
+    for(imageIter = detectionSets.begin(); imageIter != detectionSets.end(); imageIter++) {
 
-                tempKDTree.buildFromData(vecPV, 2, 100);
-                myTreeMap->insert(std::make_pair(thisEpoch, tempKDTree) );
-            }
+        const std::vector<MopsDetection> *thisDetVec = &(imageIter->second);
+        double thisEpoch = imageIter->first;
+        std::vector<PointAndValue<long int> > vecPV;
+        
+        for(unsigned int j=0; j < thisDetVec->size(); j++) {
+
+            PointAndValue<long int> tempPV;
+            std::vector<double> pairRADec;
+            
+            pairRADec.push_back(convertToStandardDegrees(thisDetVec->at(j).getRA()));                    
+            pairRADec.push_back(convertToStandardDegrees(thisDetVec->at(j).getDec()));
+            
+            tempPV.setPoint(pairRADec);
+            tempPV.setValue(thisDetVec->at(j).getID());
+            vecPV.push_back(tempPV);
         }
+        
+        KDTree<long int> tempKDTree;
+        
+        tempKDTree.buildFromData(vecPV, 2, LEAF_NODE_SIZE);
+        myTreeMap.insert(std::make_pair(thisEpoch, tempKDTree) );
     }
 }
 
@@ -211,180 +154,90 @@ void generateTreeMap(std::vector< std::vector<MopsDetection> > *detectionSets,
  * index by file line number index, generate tracklets for each 
  * query point within a distance determined by maxVelocity.
  ******************************************************************/
-void getTracklets(std::vector<int> *resultsVec,  
-		  std::map<double, KDTree<int> > *myTreeMap,
-		  const std::vector<MopsDetection> *queryPoints,
+void getTracklets(std::vector<Tracklet> &resultsVec,  
+		  const std::map<double, KDTree<long int> > &myTreeMap,
+		  const std::vector<MopsDetection> &queryPoints,
 		  double maxVelocity)
 {
-    // vectors of RADecRangeSearch parameters
-    // we search exclusively in RA, Dec, so the 'other dimensions' are all empty
+    // vectors of RADecRangeSearch parameters we search exclusively in RA, Dec;
+    // the "otherDims" parameters sent to KDTree range search are empty.
     std::vector<double> otherDimsTolerances;
     std::vector<double> otherDimsPt;
     otherDimsTolerances.resize(0);
     otherDimsPt.resize(0);
-    double maxDistance;
     std::vector<GeometryType> myGeos;
     // we search RA, Dec only.
     myGeos.push_back(RA_DEGREES);
     myGeos.push_back(DEC_DEGREES);
 
-    // hyperRectangleSearch result container
-    std::vector<PointAndValue<int> > queryResults;
-    std::map<double, KDTree<int> >::iterator iter;
-
-    // loop variables
-    int leftIndex, rightIndex, count=0;
-    double treeMJD, tempDec, tempRA, tempMJD;
-    KDTree<int> tempKDTree;
-    std::vector<double> queryPt;
-    PointAndValue<int> tempPV;
-    MopsDetection tempD;
 
     // iterate through list of collected Detections, as read from input
     // file, and search over them
-    for(unsigned int i=0; i<queryPoints->size(); i++){
+    for(unsigned int i=0; i<queryPoints.size(); i++){
+        
+        const MopsDetection * curQuery = &(queryPoints.at(i));
+        double queryRA = convertToStandardDegrees(curQuery->getRA());
+        double queryDec = convertToStandardDegrees(curQuery->getDec());
+        double queryMJD = curQuery->getEpochMJD();
 
         // iterate through each KDTree of detections, where each KDTree
         // represents a unique MJD
-        for(iter = myTreeMap->begin(); iter != myTreeMap->end(); ++iter) {
+        std::map<double, KDTree<long int> >::const_iterator iter;
+        for(iter = myTreeMap.begin(); iter != myTreeMap.end(); iter++) {
 
-            tempD = queryPoints->at(i);
-            tempRA = convertToStandardDegrees(tempD.getRA());
-            tempDec = convertToStandardDegrees(tempD.getDec());
-            tempMJD = tempD.getEpochMJD();
-	
-            treeMJD = iter->first;     //map key
-            tempKDTree = iter->second; //value associated with key
+            double curMJD = iter->first;     //map key
+            const KDTree<long int> *curTree = &(iter->second); //value associated with key
 
             //only consider this tree if it contains detections
             //that occurred after the current one
-            if(treeMJD > tempMJD){      
+            if(curMJD > queryMJD){      
 	  
-                maxDistance = (treeMJD - tempMJD) * maxVelocity;
-
-                queryPt.push_back(tempRA);
-                queryPt.push_back(tempDec);
-
-                leftIndex = i; //index of query point in input file
+                double maxDistance = (curMJD - queryMJD) * maxVelocity;
+                std::vector<double> queryPt;
+                queryPt.push_back(queryRA);
+                queryPt.push_back(queryDec);
 	
-                queryResults = tempKDTree.RADecRangeSearch(queryPt, maxDistance,
-                                                           otherDimsPt, otherDimsTolerances,
-                                                           myGeos);
+                std::vector<PointAndValue<long int> > queryResults;
 
-                // collect results for each query point's results for each MJD
-                for(unsigned int j=0; j<queryResults.size(); j++){
-	  
-                    rightIndex = queryResults.at(j).getValue();                    
-                    resultsVec->push_back(leftIndex);
-                    resultsVec->push_back(rightIndex);
+                // do a rectangular search around this point. note that we 
+                // use the haversine great-circle distance in the tree, so we are
+                // sure that we get any object within maxDistance (and a few others)
+                queryResults = curTree->RADecRangeSearch(queryPt, maxDistance,
+                                                         otherDimsPt, otherDimsTolerances,
+                                                         myGeos);
+                
+                // filter the results, getting the items which are actually within
+                // the circle we are searching, not the rectangle enclosing it.
+                std::vector<long int> closeEnoughResults;
+                    
+                for (unsigned int ii = 0; ii < queryResults.size(); ii++) {
+                    PointAndValue<long int> * curResult = &(queryResults.at(ii));
+                    double properDistance =  angularDistanceRADec_deg(queryRA, 
+                                                                      queryDec, 
+                                                                      curResult->getPoint().at(0),
+                                                                      curResult->getPoint().at(1));
+                    if (properDistance <= maxDistance) {
+                        closeEnoughResults.push_back(curResult->getValue());
+                    }
                 }
-	
-                count = i; /* count is used so that when iterating through query points, those
-                            * that are of a MJD less than the current one are not considered */
+                
+                // collect results for each query point's results for each MJD
+                Tracklet newTracklet;
+                newTracklet.indices.insert(curQuery->getID());               
+                
+                for(unsigned int j=0; j < closeEnoughResults.size(); j++){
+                    newTracklet.indices.insert(closeEnoughResults.at(j));
+                }
+
+                if (newTracklet.indices.size() >= 2) {
+                    resultsVec.push_back(newTracklet);
+                }
+                queryResults.clear();
+                queryPt.clear();
             }
-            queryPt.clear();
-            queryResults.clear();
         }
     }
 }
 
 
-
-
-/**************************************************************************
- * Find the tracklets within minVelocity distance of the query points
- * and then remove them from the set of tracklets within maxVelocity
- * distance of query points.
- **************************************************************************/
-void prune(std::vector<int> *resultsVec, 
-	   std::map<double, KDTree<int> > *myTreeMap,
-	   const std::vector<MopsDetection> *queryPoints, double minVelocity)
-{
-    std::set <std::vector<int> > maxSet, minSet, diffSet;
-  
-    std::vector<int> insertTemp;
-
-    for(unsigned int i=0; i < resultsVec->size();i++){
-        insertTemp.push_back(resultsVec->at(i));
-        i++;
-        insertTemp.push_back(resultsVec->at(i));
-        maxSet.insert(insertTemp);
-        insertTemp.clear();
-    }
-
-    std::vector<int> minResults;
-    minResults.resize(0);
-    getTracklets(&minResults, myTreeMap, queryPoints, minVelocity);
-  
-    for(unsigned int i=0; i < minResults.size(); i++){
-        insertTemp.push_back(minResults.at(i));
-        i++;
-        insertTemp.push_back(minResults.at(i));
-        minSet.insert(insertTemp);
-        insertTemp.clear();
-    }
-
-    std::insert_iterator <std::set <std::vector<int> > > ii(diffSet, diffSet.begin());
-  
-    std::set_difference(maxSet.begin(), maxSet.end(), minSet.begin(), minSet.end(), ii);
-
-    resultsVec->clear();
-  
-    std::set <std::vector<int> >::iterator iter;
-    for(iter = diffSet.begin(); iter != diffSet.end(); iter++){
-        resultsVec->push_back(iter->at(0));
-        resultsVec->push_back(iter->at(1));
-    }
-}
-
-
-
-
-
-/**************************************************************
- * Determine all unique epochs found in a set of detections.
- * Populate "epochs" vector with these unique values.
- **************************************************************/
-void getEpochs(const std::vector<MopsDetection> *myDets, 
-	       std::vector<double> *epochs)
-{
-    double tempEpoch;
-    int vPos;
-
-    for(unsigned int i=0; i<myDets->size(); i++){
-        tempEpoch=myDets->at(i).getEpochMJD();
-    
-        vPos = vectorPosition(epochs, tempEpoch);
-
-        if(vPos == -1){
-            epochs->push_back(tempEpoch);
-        }
-    }
-}
-
-
-
-
-/****************************************************************
- * Find the position of a double in a vector of doubles.  Return
- * position index or -1 if not found.
- ****************************************************************/
-int vectorPosition(const std::vector<double>* lookUp, double val)
-{
-    std::vector<double>::iterator result;
-  
-    unsigned int position = std::find(lookUp->begin(), lookUp->end(), val) - lookUp->begin();
-
-    if(position < lookUp->size()){
-        return position;
-    }
-    else{
-        return -1;
-    }
-}
-
-
-
-
-
-    }} // close lsst::mops
+}} // close lsst::mops

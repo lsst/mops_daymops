@@ -16,124 +16,6 @@ namespace lsst {
     namespace mops {    
 
 
-    // this is a deprecated technique.  Don't bother with it.
-    int rmsLineFitMain(int argc, char** argv) {
-        std::string USAGE("USAGE: lineFitFilter --detsFile <detections file> --pairsFile <tracklets (pairs) file) [--maxRMSm <number> --maxRMSb <number> ] --outFile <output tracklets (pairs) file>");
-        char* pairsFileName = NULL;
-        char* detsFileName = NULL;
-        char* outFileName = NULL;
-
-        std::vector <Tracklet> trackletsVector;
-        std::vector <MopsDetection> detsVector;
-        
-        double maxRMSb = .001;
-        double maxRMSm = 0.;
-
-        static const struct option longOpts[] = {
-            { "pairsFile", required_argument, NULL, 'p' },
-            { "detsFile", required_argument, NULL, 'd' },
-            { "outFile", required_argument, NULL, 'o' },
-            { "maxRMSm", required_argument, NULL, 'm'},
-            { "maxRMSb", required_argument, NULL, 'b'},
-            { "help", no_argument, NULL, 'h' },
-            { NULL, no_argument, NULL, 0 }
-        };
-
-        int longIndex = -1;
-        const char* optString = "p:d:o:m:b:h";        
-        int opt = getopt_long( argc, argv, optString, longOpts, &longIndex );        
-        std::stringstream ss;
-
-        while( opt != -1 ) {
-            switch( opt ) {
-            case 'p':
-                pairsFileName = optarg; 
-                break;
-                
-            case 'd':
-                detsFileName = optarg ; 
-                break;
-                
-            case 'o':
-                outFileName = optarg;
-                break;
-                
-            case 'm':
-                ss.clear();
-                ss << optarg;
-                ss >> maxRMSm;
-                break;
-
-            case 'b':
-                ss.clear();
-                ss << optarg;
-                ss >> maxRMSb;
-                break;
-                
-            case 'h':   /* fall-through is intentional */
-            case '?':
-                std::cout << "got request for help " << std::endl;
-                std::cout<<USAGE<<std::endl;
-                return 0;
-                break;
-            default:
-                throw LSST_EXCEPT(ProgrammerErrorException,
-                                  "EE: Unexpected programmer error in options parsing\n");
-                break;
-            }        
-            opt = getopt_long( argc, argv, optString, longOpts, &longIndex );
-        }
-
-        if ((pairsFileName == NULL) || (detsFileName == NULL) || (outFileName == NULL)) {
-            throw LSST_EXCEPT(CommandlineParseErrorException,
-                              "Did not get required parameters \n\n"
-                              + USAGE + "\n");
-        }
-        std::ifstream pairsFile(pairsFileName);
-        std::ifstream detsFile(detsFileName);
-        std::ofstream outFile(outFileName);
-
-        if (!detsFile.is_open()) {
-            throw LSST_EXCEPT(FileException,
-                              "Failed to open dets file " + std::string(detsFileName) + " - does this file exist?\n");                          
-        }
-        if (!pairsFile.is_open()) {
-            throw LSST_EXCEPT(FileException,
-                              "Failed to open pairs file " + std::string(pairsFileName) + " - does this file exist?\n");                          
-        }
-        if (!outFile.is_open()){
-            throw LSST_EXCEPT(FileException,
-                              "Failed to open output file " + 
-                              std::string(outFileName) + " - do you have write permissions?\n");
-        }
-                
-        std::cout << "lineFitFilter: " << std::endl;
-        std::cout << "==========================================" << std::endl;
-        std::cout << "MopsDetections file:        " << detsFileName << std::endl;
-        std::cout << "Pairs (tracklets) file: " << pairsFileName << std::endl;
-        std::cout << "Output file:            " << outFileName << std::endl;
-        std::cout << "max RMS:                " 
-                  << maxRMSm << " * av. magnitude of tracklet + " << maxRMSb << std::endl;
-
-        std::cout << "Reading detections file...." << std::endl;
-        populateDetVectorFromFile(detsFile, detsVector);
-        std::cout << "Reading tracklets (pairs) file...." << std::endl;
-        populatePairsVectorFromFile(pairsFile, trackletsVector);
-        std::cout << "Done!" << std::endl;
-
-        if (!isSane(detsVector.size(), &trackletsVector)) {
-            throw LSST_EXCEPT(InputFileFormatErrorException, "EE: Pairs file does not seem to correspond with detections file.\n");
-        }
-
-
-        std::vector<Tracklet> postFilteredTracklets;
-        std::cout << "Doing the filtering..." << std::endl;
-        filterByLineFitAddToOutputVector(&trackletsVector, &detsVector, maxRMSm, maxRMSb, postFilteredTracklets);
-        std::cout << "Done. Writing output." << std::endl;
-        writeTrackletsToOutFile(&postFilteredTracklets, outFile);
-
-        return 0;
-    }
 
 
 
@@ -157,23 +39,21 @@ namespace lsst {
         std::vector <Tracklet> trackletsVector;
         std::vector <MopsDetection> detsVector;
         
-        double maxRMSb = .001;
-        double maxRMSm = 0.;
+        double maxRMS = .001;
         unsigned int minObs = 2;
 
         static const struct option longOpts[] = {
             { "pairsFile", required_argument, NULL, 'p' },
             { "detsFile", required_argument, NULL, 'd' },
             { "outFile", required_argument, NULL, 'o' },
-            { "maxRMSm", required_argument, NULL, 'm'},
-            { "maxRMSb", required_argument, NULL, 'b'},
+            { "maxRMS", required_argument, NULL, 'm'},
             { "minobs", required_argument, NULL, 'n'},
             { "help", no_argument, NULL, 'h' },
             { NULL, no_argument, NULL, 0 }
         };
 
         int longIndex = -1;
-        const char* optString = "p:d:o:m:b:h";        
+        const char* optString = "p:d:o:m:h";        
         int opt = getopt_long( argc, argv, optString, longOpts, &longIndex );        
         std::stringstream ss;
 
@@ -194,19 +74,13 @@ namespace lsst {
             case 'm':
                 ss.clear();
                 ss << optarg;
-                ss >> maxRMSm;
+                ss >> maxRMS;
                 break;
 
             case 'n':
                 ss.clear();
                 ss << optarg;
                 ss >> minObs;
-                break;
-
-            case 'b':
-                ss.clear();
-                ss << optarg;
-                ss >> maxRMSb;
                 break;
                 
             case 'h':   /* fall-through is intentional */
@@ -251,8 +125,7 @@ namespace lsst {
         std::cout << "Detections file:        " << detsFileName << std::endl;
         std::cout << "Pairs (tracklets) file: " << pairsFileName << std::endl;
         std::cout << "Output file:            " << outFileName << std::endl;
-        std::cout << "max RMS:                " 
-                  << maxRMSm << " * av. magnitude of tracklet + " << maxRMSb << std::endl;
+        std::cout << "max RMS:                " <<  maxRMS << std::endl;
 
         std::cout << "Reading detections file...." << std::endl;
         populateDetVectorFromFile(detsFile, detsVector);
@@ -269,7 +142,7 @@ namespace lsst {
         std::cout << "Doing the filtering..." << std::endl;
         TrackletPurifier myTP;
         
-        myTP.purifyTracklets(&trackletsVector, &detsVector, maxRMSm, maxRMSb, minObs, postFilteredTracklets);
+        myTP.purifyTracklets(&trackletsVector, &detsVector, maxRMS, minObs, postFilteredTracklets);
         
         std::cout << "Done. Writing output." << std::endl;
         writeTrackletsToOutFile(&postFilteredTracklets, outFile);

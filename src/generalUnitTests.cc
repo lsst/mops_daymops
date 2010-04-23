@@ -60,21 +60,13 @@ BOOST_AUTO_TEST_CASE( MopsDetection_blackbox_1 )
        << " " << objName << " " << len << " " << angle;
 
     std::string MITIString(ss.str());
-    BOOST_CHECK(myDet.isInitialized() == false);
     myDet.fromMITIString(MITIString);
-    BOOST_CHECK(myDet.isInitialized() == true);
 
     BOOST_CHECK (ID == myDet.getID() );    
 
     BOOST_CHECK (Eq(MJD, myDet.getEpochMJD())) ;
     BOOST_CHECK (Eq(RA,myDet.getRA()));
     BOOST_CHECK (Eq(dec,myDet.getDec())) ; 
-    BOOST_CHECK (Eq(obscode,myDet.getObscode() ));
-    BOOST_CHECK (objName == myDet.getObjName()); 
-    BOOST_CHECK (Eq(mag,myDet.getMag()) ); 
-    BOOST_CHECK (Eq(len,myDet.getLength())); 
-    BOOST_CHECK (Eq(angle,myDet.getAngle()));
-    BOOST_CHECK (myDet.hasExposureTime() == false);
 }
 
 
@@ -96,20 +88,13 @@ BOOST_AUTO_TEST_CASE( MopsDetection_blackbox_2 )
        << " " << objName << " " << len << " " << angle << "  ";
 
     std::string MITIString(ss.str());
-    BOOST_CHECK(myDet.isInitialized() == false);
     myDet.fromMITIString(MITIString);
-    BOOST_CHECK(myDet.isInitialized() == true);
+    
 
     BOOST_CHECK (ID == myDet.getID() );
     BOOST_CHECK (Eq(MJD, myDet.getEpochMJD())) ;
     BOOST_CHECK (Eq(RA,myDet.getRA()));
     BOOST_CHECK (Eq(dec,myDet.getDec())) ; 
-    BOOST_CHECK (Eq(obscode,myDet.getObscode() ));
-    BOOST_CHECK (objName == myDet.getObjName()); 
-    BOOST_CHECK (Eq(mag,myDet.getMag()) ); 
-    BOOST_CHECK (Eq(len,myDet.getLength())); 
-    BOOST_CHECK (Eq(angle,myDet.getAngle()));
-    BOOST_CHECK (myDet.hasExposureTime() == false);
 }
 
 
@@ -131,20 +116,14 @@ BOOST_AUTO_TEST_CASE( MopsDetection_blackbox_3 )
        << " " << objName << " " << len << " " << angle;
 
     std::string MITIString(ss.str());
-    BOOST_CHECK(myDet.isInitialized() == false);
+    
     myDet.fromMITIString(MITIString);
-    BOOST_CHECK(myDet.isInitialized() == true);
+    
 
     BOOST_CHECK (ID == myDet.getID() );
     BOOST_CHECK (Eq(MJD, myDet.getEpochMJD())) ;
     BOOST_CHECK (Eq(RA,myDet.getRA()));
     BOOST_CHECK (Eq(dec,myDet.getDec())) ; 
-    BOOST_CHECK (Eq(obscode,myDet.getObscode() ));
-    BOOST_CHECK (objName == myDet.getObjName()); 
-    BOOST_CHECK (Eq(mag,myDet.getMag()) ); 
-    BOOST_CHECK (Eq(len,myDet.getLength())); 
-    BOOST_CHECK (Eq(angle,myDet.getAngle()));
-    BOOST_CHECK (myDet.hasExposureTime() == false);
 }
 
 BOOST_AUTO_TEST_CASE( MopsDetection_blackbox_4 )
@@ -165,20 +144,14 @@ BOOST_AUTO_TEST_CASE( MopsDetection_blackbox_4 )
        << "\t" << objName << "\t" << len << "\t" << angle;
     std::string MITIString(ss.str());
 
-    BOOST_CHECK(myDet.isInitialized() == false);
+    
     myDet.fromMITIString(MITIString);
-    BOOST_CHECK(myDet.isInitialized() == true);
+    
 
     BOOST_CHECK (ID == myDet.getID() );
     BOOST_CHECK (Eq(MJD, myDet.getEpochMJD())) ;
     BOOST_CHECK (Eq(RA,myDet.getRA()));
     BOOST_CHECK (Eq(dec,myDet.getDec())) ; 
-    BOOST_CHECK (Eq(obscode,myDet.getObscode() ));
-    BOOST_CHECK (objName == myDet.getObjName()); 
-    BOOST_CHECK (Eq(mag,myDet.getMag()) ); 
-    BOOST_CHECK (Eq(len,myDet.getLength())); 
-    BOOST_CHECK (Eq(angle,myDet.getAngle()));
-    BOOST_CHECK (myDet.hasExposureTime() == false);
 }
 
 
@@ -203,21 +176,15 @@ BOOST_AUTO_TEST_CASE( MopsDetection_blackbox_5 )
 
     std::string MITIString(ss.str());
 
-    BOOST_CHECK(myDet.isInitialized() == false);
+    
     myDet.fromMITIString(MITIString);
-    BOOST_CHECK(myDet.isInitialized() == true);
+    
 
     BOOST_CHECK (ID == myDet.getID() );
 
     BOOST_CHECK (Eq(MJD, myDet.getEpochMJD())) ;
     BOOST_CHECK (Eq(RA,myDet.getRA()));
     BOOST_CHECK (Eq(dec,myDet.getDec())) ; 
-    BOOST_CHECK (Eq(obscode,myDet.getObscode() ));
-    BOOST_CHECK (objName == myDet.getObjName()); 
-    BOOST_CHECK (Eq(mag,myDet.getMag()) ); 
-    BOOST_CHECK (Eq(len,myDet.getLength())); 
-    BOOST_CHECK (Eq(angle,myDet.getAngle()));
-    BOOST_CHECK (myDet.hasExposureTime() == false);
 }
 
 
@@ -244,89 +211,15 @@ BOOST_AUTO_TEST_CASE( MopsDetection_blackbox_6 )
 
     std::string MITIString(ss.str());
 
-    BOOST_CHECK(myDet.isInitialized() == false);
+    
     myDet.fromMITIString(MITIString);
-    BOOST_CHECK(myDet.isInitialized() == true);
+    
 
     BOOST_CHECK (ID == myDet.getID() );
 
     BOOST_CHECK (Eq(MJD, myDet.getEpochMJD())) ;
     BOOST_CHECK (Eq(RA,myDet.getRA()));
     BOOST_CHECK (Eq(dec,myDet.getDec())) ; 
-    BOOST_CHECK (Eq(obscode,myDet.getObscode() ));
-    BOOST_CHECK (objName == myDet.getObjName()); 
-    BOOST_CHECK (Eq(mag,myDet.getMag()) ); 
-    BOOST_CHECK (Eq(len,myDet.getLength())); 
-    BOOST_CHECK (Eq(angle,myDet.getAngle()));
-    BOOST_CHECK (myDet.hasExposureTime() == true);
-    BOOST_CHECK (Eq(myDet.getExposureTime(), eTime));
-}
-
-
-
-
-BOOST_AUTO_TEST_CASE( MopsDetection_blackbox_7 )
-{
-    //uses the new constructor which doesn't use MITI string (no etime)
-    long int ID = 10001;
-    double MJD = 1234.5678;
-    double RA = 2.02;
-    double dec = 3.03;
-    double obscode = 1337;
-    std::string objName = "TestingObject1";
-    double mag = 4.04;
-    double len = 5.05;
-    double angle = -6.06;
-    //double eTime = 7.07;
-
-    MopsDetection myDet(ID, MJD, RA, dec, obscode, objName, mag, len, angle);
-
-    BOOST_CHECK(myDet.isInitialized() == true);
-
-    BOOST_CHECK (ID == myDet.getID() );
-
-    BOOST_CHECK (Eq(MJD, myDet.getEpochMJD())) ;
-    BOOST_CHECK (Eq(RA,myDet.getRA()));
-    BOOST_CHECK (Eq(dec,myDet.getDec())) ; 
-    BOOST_CHECK (Eq(obscode,myDet.getObscode() ));
-    BOOST_CHECK (objName == myDet.getObjName()); 
-    BOOST_CHECK (Eq(mag,myDet.getMag()) ); 
-    BOOST_CHECK (Eq(len,myDet.getLength())); 
-    BOOST_CHECK (Eq(angle,myDet.getAngle()));
-    BOOST_CHECK (myDet.hasExposureTime() == false);
-}
-
-
-BOOST_AUTO_TEST_CASE( MopsDetection_blackbox_8 )
-{
-    //uses the new constructor which doesn't use MITI string (also, use etime)
-    long int ID = 10001;
-    double MJD = 1234.5678;
-    double RA = 2.02;
-    double dec = 3.03;
-    double obscode = 1337;
-    std::string objName = "TestingObject1";
-    double mag = 4.04;
-    double len = 5.05;
-    double angle = -6.06;
-    double eTime = 7.07;
-
-    MopsDetection myDet(ID, MJD, RA, dec, obscode, objName, mag, len, angle, eTime);
-
-    BOOST_CHECK(myDet.isInitialized() == true);
-
-    BOOST_CHECK (ID == myDet.getID() );
-
-    BOOST_CHECK (Eq(MJD, myDet.getEpochMJD())) ;
-    BOOST_CHECK (Eq(RA,myDet.getRA()));
-    BOOST_CHECK (Eq(dec,myDet.getDec())) ; 
-    BOOST_CHECK (Eq(obscode,myDet.getObscode() ));
-    BOOST_CHECK (objName == myDet.getObjName()); 
-    BOOST_CHECK (Eq(mag,myDet.getMag()) ); 
-    BOOST_CHECK (Eq(len,myDet.getLength())); 
-    BOOST_CHECK (Eq(angle,myDet.getAngle()));
-    BOOST_CHECK (myDet.hasExposureTime() == true);
-    BOOST_CHECK (Eq(myDet.getExposureTime(), eTime));
 }
 
 
@@ -1574,55 +1467,6 @@ BOOST_AUTO_TEST_CASE( rmsForTracklet_blackbox_4 )
 
 
 
-BOOST_AUTO_TEST_CASE( getAverageMagnitude_blackbox_1 )
-{
-
-    std::vector<MopsDetection> dets;
-
-    MopsDetection tmpDet;
-    tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.1 0.0 0.0 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.2 359. 359. 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.3 358. 358. 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-
-    Tracklet t;
-    t.indices.insert(0);
-    t.indices.insert(1);
-    t.indices.insert(2);
-    t.indices.insert(3);
-    
-    BOOST_CHECK(Eq(getAverageMagnitude(t, &dets), 20.0));
-}
-
-
-BOOST_AUTO_TEST_CASE( getAverageMagnitude_blackbox_2 )
-{
-
-    std::vector<MopsDetection> dets;
-
-    MopsDetection tmpDet;
-    tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.1 0.0 0.0 22.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.2 359. 359. 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.3 358. 358. 22.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-
-    Tracklet t;
-    t.indices.insert(0);
-    t.indices.insert(1);
-    t.indices.insert(2);
-    t.indices.insert(3);
-    
-    BOOST_CHECK(Eq(getAverageMagnitude(t, &dets), 21.0));
-}
-
 
 // TBD: uncomment this and use real exceptions. (It's commented out because it causes an exit()
 // BOOST_AUTO_TEST_CASE( getAverageMagnitude_blackbox_3 )
@@ -1692,7 +1536,7 @@ BOOST_AUTO_TEST_CASE( filterByLineFitAddToOutputVector_blackbox_1 )
     
     std::vector<Tracklet> results;
 
-    filterByLineFitAddToOutputVector(&allTracklets, &dets, 0., .1, results);
+    filterByLineFitAddToOutputVector(&allTracklets, &dets, .1, results);
     
     BOOST_REQUIRE(results.size() == 1);
     
@@ -1734,7 +1578,7 @@ BOOST_AUTO_TEST_CASE( filterByLineFitAddToOutputVector_blackbox_2 )
     std::vector<Tracklet> results;
     std::vector<Tracklet> allTracklets;
 
-    filterByLineFitAddToOutputVector(&allTracklets, &dets, 0., .1, results);
+    filterByLineFitAddToOutputVector(&allTracklets, &dets, .1, results);
     
     BOOST_REQUIRE(results.size() == 0);
     
@@ -1828,7 +1672,7 @@ BOOST_AUTO_TEST_CASE( filterByLineFitAddToOutputVector_blackbox_4 )
     allTracklets.push_back(t2);
 
     std::vector<Tracklet> resultTracklets;
-    filterByLineFitAddToOutputVector(&allTracklets, &dets, 0.0, .1, resultTracklets);
+    filterByLineFitAddToOutputVector(&allTracklets, &dets, .1, resultTracklets);
     
     BOOST_REQUIRE(resultTracklets.size() == 1);
     BOOST_CHECK(resultTracklets[0].indices == t1.indices);
@@ -1879,7 +1723,7 @@ BOOST_AUTO_TEST_CASE( filterByLineFitAddToOutputVector_blackbox_5 )
     allTracklets.push_back(t2);
 
     std::vector<Tracklet> resultTracklets;
-    filterByLineFitAddToOutputVector(&allTracklets, &dets, 0.0, .05, resultTracklets);
+    filterByLineFitAddToOutputVector(&allTracklets, &dets, .05, resultTracklets);
     
     BOOST_REQUIRE(resultTracklets.size() == 1);
     BOOST_CHECK(resultTracklets[0].indices == t1.indices);
@@ -1935,8 +1779,8 @@ BOOST_AUTO_TEST_CASE( purifyTracklet_blackbox_1 )
 
     std::vector<Tracklet> resultTracklets;
     TrackletPurifier myPure;
-    t1Pure = myPure.purifyTracklet(&t1, &dets, 0.0, .1);
-    t2Pure = myPure.purifyTracklet(&t2, &dets, 0.0, .1);
+    t1Pure = myPure.purifyTracklet(&t1, &dets, .1);
+    t2Pure = myPure.purifyTracklet(&t2, &dets, .1);
     
     BOOST_CHECK(t1Pure.indices == t1.indices);
     std::set<unsigned int> t2Expected;

@@ -114,19 +114,6 @@ namespace lsst {
 
 
 
-    double getAverageMagnitude(const Tracklet t, const::std::vector<MopsDetection>* detections) {
-        double sum = 0.;
-        unsigned int count = 0;
-        std::set<unsigned int>::const_iterator detIndexIter;
-        for (detIndexIter = t.indices.begin(); detIndexIter != t.indices.end(); detIndexIter++) {
-            sum += (*detections)[*detIndexIter].getMag();
-            count++;
-        }
-        if (count < 1) {
-            throw LSST_EXCEPT(BadParameterException, "EE: getAverageMagnitude: highly unexpected error - tracklet has no detections?\n");
-        }
-        return sum/count;
-    }
 
 
 
@@ -207,13 +194,12 @@ namespace lsst {
     
     void filterByLineFitAddToOutputVector(const std::vector<Tracklet> *tracklets, 
                                           const std::vector<MopsDetection> *allDets,
-                                          double maxRMSm, double maxRMSb,
+                                          double maxRMS,
                                           std::vector<Tracklet> &output) {
         std::vector<Tracklet>::const_iterator tIter;
         for (tIter = tracklets->begin(); tIter != tracklets->end(); tIter++) {
 	  double rms = rmsForTracklet(*tIter, allDets);
 	  // std::cout << "got RMS = " << rms << ", tracklet length = " <<  tIter->indices.size() << std::endl;
-	  double maxRMS =  maxRMSm * getAverageMagnitude(*tIter, allDets) + maxRMSb;
 	  if ( maxRMS >= rms) {
                 output.push_back(*tIter);
             }
@@ -278,7 +264,7 @@ namespace lsst {
 
     
     Tracklet TrackletPurifier::purifyTracklet(const Tracklet *t, const std::vector<MopsDetection>* allDets, 
-                                              double maxRMSm, double maxRMSb) {
+                                              double maxRMS) {
         Tracklet curTracklet = *t;
         bool isClean = false;
 
@@ -297,7 +283,7 @@ namespace lsst {
             unsigned int worstDetIndex = 0;
             for (std::map<unsigned int, double>::iterator distIter = indexToSqDist.begin();
                  distIter != indexToSqDist.end(); distIter++) {
-                double distMax = maxRMSm * (*allDets)[distIter->first].getMag() + maxRMSb;
+                double distMax = maxRMS;
                 if ((distIter->second > distMax*distMax) && (distIter->second > worstDetVal)) {
                     worstDetVal = distIter->second;
 		    if (worstDetVal > 1) {
@@ -317,7 +303,7 @@ namespace lsst {
 
     void TrackletPurifier::purifyTracklets(const std::vector<Tracklet> *trackletsVector,
                                            const std::vector<MopsDetection> *detsVector,
-                                           double maxRMSm, double maxRMSb, unsigned int minObs,
+                                           double maxRMS, unsigned int minObs,
                                            std::vector<Tracklet> &output)
     {
         if (output.size() != 0) {
@@ -327,7 +313,7 @@ namespace lsst {
         
         std::vector<Tracklet>::const_iterator tIter;
         for (tIter = trackletsVector->begin(); tIter != trackletsVector->end(); tIter++) {
-            Tracklet tmp = purifyTracklet(&(*tIter), detsVector, maxRMSm, maxRMSb);
+            Tracklet tmp = purifyTracklet(&(*tIter), detsVector, maxRMS);
             if (tmp.indices.size() >= minObs) {
                 output.push_back(tmp);
             }

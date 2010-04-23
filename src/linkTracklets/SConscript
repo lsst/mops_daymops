@@ -27,7 +27,6 @@ env.Program('linkTracklets', ['linkTrackletsMain.cc', 'linkTracklets.o'] + commo
 
 
 
-
-if doExtras:
-    env.Program('findLinkableObjects', ['findLinkableObjects.cc'] + common_libs, 
-				       LIBS=ext_libs)
+#if doExtras:
+#    env.Program('findLinkableObjects', ['findLinkableObjects.cc'] + common_libs, 
+#				       LIBS=ext_libs)

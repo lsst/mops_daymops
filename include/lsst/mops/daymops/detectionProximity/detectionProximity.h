@@ -32,8 +32,7 @@ namespace lsst {
 std::vector<std::pair <unsigned int, unsigned int> > 
 detectionProximity(const std::vector<MopsDetection>& queryPoints,
 		   const std::vector<MopsDetection>& dataPoints,
-		   double distanceThreshold,
-		   double brightnessThreshold,
+                   double distanceThreshold,
 		   double timeThreshold);
 
     }} // close lsst::mops

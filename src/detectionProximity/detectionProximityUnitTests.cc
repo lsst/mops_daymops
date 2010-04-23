@@ -54,14 +54,14 @@ BOOST_AUTO_TEST_CASE( detectionProximity1 )
 	    int obsCode, std::string objName, double mag,
 	    double elongationLength, double elongationAngle); */
 
-  //           ID    MJD      RA      DEC     obs  NAME      MAG 
-  MopsDetection qd1(0, 53736,    100.00,   50.00, 566, "dummy1", 20.0, 0, 0);
-  MopsDetection dd1(1, 53736,    100.01,   50.01, 566, "dummy1", 20.0, 0, 0);
+  //           ID    MJD      RA      DEC     
+  MopsDetection qd1(0, 53736,    100.00,   50.00);
+  MopsDetection dd1(1, 53736,    100.01,   50.01);
   queryDets.push_back(qd1);
   dataDets.push_back(dd1);
 
   // these two are .0118 apart in angular distance
-  queryResult = detectionProximity(queryDets, dataDets, .1, 1, 0.1);
+  queryResult = detectionProximity(queryDets, dataDets, .1, 0.1);
   BOOST_CHECK(queryResult.size() == 1);
   BOOST_CHECK(containsPair(0,0,queryResult));
 
@@ -81,11 +81,11 @@ BOOST_AUTO_TEST_CASE( detectionProximity2 )
 	    int obsCode, std::string objName, double mag,
 	    double elongationLength, double elongationAngle); */
 
-  //           ID    MJD      RA      DEC     obs  NAME      MAG 
-  MopsDetection qd1(0, 53736,    100.00,   50.00, 566, "dummy1", 20.0, 0, 0);
+  //           ID    MJD      RA      DEC    
+  MopsDetection qd1(0, 53736,    100.00,   50.00);
   queryDets.push_back(qd1);
 
-  queryResult = detectionProximity(queryDets, dataDets, .1, 1, 0.1);
+  queryResult = detectionProximity(queryDets, dataDets, .1, 0.1);
   BOOST_CHECK(queryResult.size() == 0);
 
 }
@@ -105,10 +105,10 @@ BOOST_AUTO_TEST_CASE( detectionProximity3 )
 	    double elongationLength, double elongationAngle); */
 
   //           ID    MJD      RA      DEC     obs  NAME      MAG 
-  MopsDetection dd1(0, 53736,    100.00,   50.00, 566, "dummy1", 20.0, 0, 0);
+  MopsDetection dd1(0, 53736,    100.00,   50.00);
   dataDets.push_back(dd1);
 
-  queryResult = detectionProximity(queryDets, dataDets, .1, 1, 0.1);
+  queryResult = detectionProximity(queryDets, dataDets, .1, 0.1);
   BOOST_CHECK(queryResult.size() == 0);
 
 }
@@ -128,7 +128,7 @@ BOOST_AUTO_TEST_CASE( detectionProximity4 )
 	    int obsCode, std::string objName, double mag,
 	    double elongationLength, double elongationAngle); */
 
-  queryResult = detectionProximity(queryDets, dataDets, .1, 1, 0.1);
+  queryResult = detectionProximity(queryDets, dataDets, .1, 0.1);
   BOOST_CHECK(queryResult.size() == 0);
 
 }
@@ -150,13 +150,13 @@ BOOST_AUTO_TEST_CASE( detectionProximity5 )
 	    double elongationLength, double elongationAngle); */
 
   //           ID    MJD      RA      DEC     obs  NAME      MAG 
-  MopsDetection qd1(0, 53736,    100.00,   89.50, 566, "dummy1", 20.0, 0, 0);
-  MopsDetection dd1(1, 53736,    280.00,   89.50, 566, "dummy1", 20.0, 0, 0);
+  MopsDetection qd1(0, 53736,    100.00,   89.50);
+  MopsDetection dd1(1, 53736,    280.00,   89.50);
   queryDets.push_back(qd1);
   dataDets.push_back(dd1);
 
   // these two are exactly 1.0 apart in angular distance
-  queryResult = detectionProximity(queryDets, dataDets, 1.5, 1, 0.1);
+  queryResult = detectionProximity(queryDets, dataDets, 1.5, 0.1);
   BOOST_CHECK(queryResult.size() == 1);
   BOOST_CHECK(containsPair(0,0,queryResult));
 
@@ -177,13 +177,13 @@ BOOST_AUTO_TEST_CASE( detectionProximity6 )
 	    double elongationLength, double elongationAngle); */
 
   //           ID    MJD      RA      DEC     obs  NAME      MAG 
-  MopsDetection qd1(0, 53736,    100.00,   -89.50, 566, "dummy1", 20.0, 0, 0);
-  MopsDetection dd1(1, 53736,    280.00,   -89.50, 566, "dummy1", 20.0, 0, 0);
+  MopsDetection qd1(0, 53736,    100.00,   -89.50);
+  MopsDetection dd1(1, 53736,    280.00,   -89.50);
   queryDets.push_back(qd1);
   dataDets.push_back(dd1);
 
   // these two are exactly 1.0 apart in angular distance
-  queryResult = detectionProximity(queryDets, dataDets, 1.5, 1, 0.1);
+  queryResult = detectionProximity(queryDets, dataDets, 1.5, 0.1);
   BOOST_CHECK(queryResult.size() == 1);
   BOOST_CHECK(containsPair(0,0,queryResult));
 
@@ -205,13 +205,13 @@ BOOST_AUTO_TEST_CASE( detectionProximity7 )
 	    double elongationLength, double elongationAngle); */
 
   //           ID    MJD      RA      DEC     obs  NAME      MAG 
-  MopsDetection qd1(0, 53736,   -100.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  MopsDetection dd1(1, 53736,    260.01,   -10.00, 566, "dummy1", 20.0, 0, 0);
+  MopsDetection qd1(0, 53736,   -100.00,   -10.00);
+  MopsDetection dd1(1, 53736,    260.01,   -10.00);
   queryDets.push_back(qd1);
   dataDets.push_back(dd1);
 
   // these two are ~.0098 apart in angular distance
-  queryResult = detectionProximity(queryDets, dataDets, .1, 1, 0.1);
+  queryResult = detectionProximity(queryDets, dataDets, .1, 0.1);
   BOOST_CHECK(queryResult.size() == 1);
   BOOST_CHECK(containsPair(0,0,queryResult));
 
@@ -234,13 +234,13 @@ BOOST_AUTO_TEST_CASE( detectionProximity8 )
 	    double elongationLength, double elongationAngle); */
 
   //           ID    MJD      RA      DEC     obs  NAME      MAG 
-  MopsDetection qd1(0, 53736,    010.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  MopsDetection dd1(1, 53736,    007.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  MopsDetection dd2(2, 53736,    008.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  MopsDetection dd3(3, 53736,    009.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  MopsDetection dd4(4, 53736,    011.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  MopsDetection dd5(5, 53736,    012.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  MopsDetection dd6(6, 53736,    013.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
+  MopsDetection qd1(0, 53736,    010.00,   -10.00);
+  MopsDetection dd1(1, 53736,    007.00,   -10.00);
+  MopsDetection dd2(2, 53736,    008.00,   -10.00);
+  MopsDetection dd3(3, 53736,    009.00,   -10.00);
+  MopsDetection dd4(4, 53736,    011.00,   -10.00);
+  MopsDetection dd5(5, 53736,    012.00,   -10.00);
+  MopsDetection dd6(6, 53736,    013.00,   -10.00);
   queryDets.push_back(qd1);
   dataDets.push_back(dd1);
   dataDets.push_back(dd2);
@@ -250,7 +250,7 @@ BOOST_AUTO_TEST_CASE( detectionProximity8 )
   dataDets.push_back(dd6);
 
   // each is ~.98 apart in angular distance
-  queryResult = detectionProximity(queryDets, dataDets, 1.01, 1, 0.1);
+  queryResult = detectionProximity(queryDets, dataDets, 1.01, 0.1);
   BOOST_CHECK(queryResult.size() == 2);
   BOOST_CHECK(containsPair(0,2,queryResult));
   BOOST_CHECK(containsPair(0,3,queryResult));
@@ -273,13 +273,13 @@ BOOST_AUTO_TEST_CASE( detectionProximity9 )
 	    double elongationLength, double elongationAngle); */
 
   //           ID    MJD      RA      DEC     obs  NAME      MAG 
-  MopsDetection qd1(0, 53736,    010.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  MopsDetection dd1(1, 53736,    007.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  MopsDetection dd2(2, 53736,    008.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  MopsDetection dd3(3, 53736,    009.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  MopsDetection dd4(4, 53736,    011.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  MopsDetection dd5(5, 53736,    012.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  MopsDetection dd6(6, 53736,    013.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
+  MopsDetection qd1(0, 53736,    010.00,   -10.00);
+  MopsDetection dd1(1, 53736,    007.00,   -10.00);
+  MopsDetection dd2(2, 53736,    008.00,   -10.00);
+  MopsDetection dd3(3, 53736,    009.00,   -10.00);
+  MopsDetection dd4(4, 53736,    011.00,   -10.00);
+  MopsDetection dd5(5, 53736,    012.00,   -10.00);
+  MopsDetection dd6(6, 53736,    013.00,   -10.00);
   queryDets.push_back(qd1);
   dataDets.push_back(dd1);
   dataDets.push_back(dd2);
@@ -289,7 +289,7 @@ BOOST_AUTO_TEST_CASE( detectionProximity9 )
   dataDets.push_back(dd6);
 
   // each is ~.98 apart in angular distance
-  queryResult = detectionProximity(queryDets, dataDets, .999, 1, 0.1);
+  queryResult = detectionProximity(queryDets, dataDets, .999, 0.1);
   // if they used euclidean approximation, FAIL.
   BOOST_CHECK(queryResult.size() == 2);
   BOOST_CHECK(containsPair(0,2,queryResult));
@@ -309,13 +309,13 @@ BOOST_AUTO_TEST_CASE( detectionProximity10 )
 	    double elongationLength, double elongationAngle); */
 
   //           ID    MJD      RA      DEC     obs  NAME      MAG 
-  MopsDetection dd1(0, 53736,    010.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  MopsDetection qd1(1, 53736,    007.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  MopsDetection qd2(2, 53736,    008.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  MopsDetection qd3(3, 53736,    009.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  MopsDetection qd4(4, 53736,    011.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  MopsDetection qd5(5, 53736,    012.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  MopsDetection qd6(6, 53736,    013.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
+  MopsDetection dd1(0, 53736,    010.00,   -10.00);
+  MopsDetection qd1(1, 53736,    007.00,   -10.00);
+  MopsDetection qd2(2, 53736,    008.00,   -10.00);
+  MopsDetection qd3(3, 53736,    009.00,   -10.00);
+  MopsDetection qd4(4, 53736,    011.00,   -10.00);
+  MopsDetection qd5(5, 53736,    012.00,   -10.00);
+  MopsDetection qd6(6, 53736,    013.00,   -10.00);
   dataDets.push_back(dd1);
   queryDets.push_back(qd1);
   queryDets.push_back(qd2);
@@ -325,7 +325,7 @@ BOOST_AUTO_TEST_CASE( detectionProximity10 )
   queryDets.push_back(qd6);
 
   // each is ~.98 apart in angular distance
-  queryResult = detectionProximity(queryDets, dataDets, 1.1, 1, 0.1);
+  queryResult = detectionProximity(queryDets, dataDets, 1.1, 0.1);
   BOOST_CHECK(queryResult.size() == 2);
   BOOST_CHECK(containsPair(2,0,queryResult));
   BOOST_CHECK(containsPair(3,0,queryResult));
@@ -346,13 +346,13 @@ BOOST_AUTO_TEST_CASE( detectionProximity11 )
 	    double elongationLength, double elongationAngle); */
 
   //           ID    MJD      RA      DEC     obs  NAME      MAG 
-  MopsDetection dd1(0, 53736,    010.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  MopsDetection qd1(1, 53736,    007.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  MopsDetection qd2(2, 53736,    008.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  MopsDetection qd3(3, 53736,    009.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  MopsDetection qd4(4, 53736,    011.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  MopsDetection qd5(5, 53736,    012.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  MopsDetection qd6(6, 53736,    013.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
+  MopsDetection dd1(0, 53736,    010.00,   -10.00);
+  MopsDetection qd1(1, 53736,    007.00,   -10.00);
+  MopsDetection qd2(2, 53736,    008.00,   -10.00);
+  MopsDetection qd3(3, 53736,    009.00,   -10.00);
+  MopsDetection qd4(4, 53736,    011.00,   -10.00);
+  MopsDetection qd5(5, 53736,    012.00,   -10.00);
+  MopsDetection qd6(6, 53736,    013.00,   -10.00);
   dataDets.push_back(dd1);
   queryDets.push_back(qd1);
   queryDets.push_back(qd2);
@@ -362,7 +362,7 @@ BOOST_AUTO_TEST_CASE( detectionProximity11 )
   queryDets.push_back(qd6);
 
   // each is ~.98 apart in angular distance
-  queryResult = detectionProximity(queryDets, dataDets, .999, 1, 0.1);
+  queryResult = detectionProximity(queryDets, dataDets, .999, 0.1);
   // if they used euclidean approximation, FAIL.
   BOOST_CHECK(queryResult.size() == 2);
   BOOST_CHECK(containsPair(2,0,queryResult));
@@ -386,14 +386,14 @@ BOOST_AUTO_TEST_CASE( detectionProximity12 )
 	    double elongationLength, double elongationAngle); */
 
   //           ID    MJD      RA      DEC     obs  NAME      MAG 
-  MopsDetection dd1(0, 53736,    010.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  MopsDetection qd1(1, 53736,    010.00,   -10.00, 566, "dummy1", 20.5, 0, 0);
-  MopsDetection qd2(1, 53736,    010.00,   -10.00, 566, "dummy1", 21.1, 0, 0);
+  MopsDetection dd1(0, 53736,    010.00,   -10.00);
+  MopsDetection qd1(1, 53736,    010.00,   -10.00);
+  MopsDetection qd2(1, 53736,    010.00,   -10.00);
   dataDets.push_back(dd1);
   queryDets.push_back(qd1);
   queryDets.push_back(qd2);
 
-  queryResult = detectionProximity(queryDets, dataDets, .999, 1, 0.1);
+  queryResult = detectionProximity(queryDets, dataDets, .999, 0.1);
   BOOST_CHECK(queryResult.size() == 1);
   BOOST_CHECK(containsPair(0,0,queryResult));
   
@@ -415,14 +415,14 @@ BOOST_AUTO_TEST_CASE( detectionProximity13 )
 	    double elongationLength, double elongationAngle); */
 
   //           ID    MJD      RA      DEC     obs  NAME      MAG 
-  MopsDetection dd1(0, 53736,   010.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  MopsDetection qd1(1, 53736.05,010.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  MopsDetection qd2(1, 53736.11,010.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
+  MopsDetection dd1(0, 53736,   010.00,   -10.00);
+  MopsDetection qd1(1, 53736.05,010.00,   -10.00);
+  MopsDetection qd2(1, 53736.11,010.00,   -10.00);
   dataDets.push_back(dd1);
   queryDets.push_back(qd1);
   queryDets.push_back(qd2);
 
-  queryResult = detectionProximity(queryDets, dataDets, .999, 1, 0.1);
+  queryResult = detectionProximity(queryDets, dataDets, .999, 0.1);
   BOOST_CHECK(queryResult.size() == 1);
   BOOST_CHECK(containsPair(0,0,queryResult));
   
@@ -444,14 +444,14 @@ BOOST_AUTO_TEST_CASE( detectionProximity14 )
 	    double elongationLength, double elongationAngle); */
 
   //           ID    MJD      RA      DEC     obs  NAME      MAG 
-  MopsDetection qd1(0, 53736,   000.00,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  MopsDetection dd1(1, 53736,   359.99,   -10.00, 566, "dummy1", 20.0, 0, 0);
-  MopsDetection dd2(2, 53736,   360.01,   -10.00, 566, "dummy1", 20.0, 0, 0);
+  MopsDetection qd1(0, 53736,   000.00,   -10.00);
+  MopsDetection dd1(1, 53736,   359.99,   -10.00);
+  MopsDetection dd2(2, 53736,   360.01,   -10.00);
   queryDets.push_back(qd1);
   dataDets.push_back(dd1);
   dataDets.push_back(dd2);
 
-  queryResult = detectionProximity(queryDets, dataDets, .999, 1, 0.1);
+  queryResult = detectionProximity(queryDets, dataDets, .999, 0.1);
   BOOST_CHECK(queryResult.size() == 2);
   BOOST_CHECK(containsPair(0,0,queryResult));
   BOOST_CHECK(containsPair(0,1,queryResult));

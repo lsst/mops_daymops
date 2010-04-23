@@ -48,7 +48,7 @@ namespace lsst {
             std::vector<double> tolerances, 
             std::vector<Tracklet> &collapsedPairs,
             bool useMinimumRMS, bool useBestFit, 
-            bool useRMSFilt, double maxRMSm, double maxRMSb, bool beVerbose);
+            bool useRMSFilt, double maxRMS, bool beVerbose);
       
         void setPhysicalParamsVector(const std::vector<MopsDetection> *trackletDets,
                                      std::vector<double> &physicalParams,

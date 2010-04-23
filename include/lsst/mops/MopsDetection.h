@@ -2,6 +2,14 @@
 
 /*
  * jmyers 7/29/08
+ *
+ * "lightened up" on Apr 23 2010
+ *
+ * This is the "lightened" Detection class; it contains only the data needed by
+ * DayMops to do its work.  It does not attempt to hold as much data as real
+ * DiaSource, or even as would be held in Miti format.  But since we expect data
+ * transmission to be an issue in LSST, we're cutting down on the size of data
+ * here.
  * 
  */
 
@@ -23,64 +31,27 @@ public:
     //create an empty detection
     MopsDetection();
 
-
-    // these two added 6/19/09 (jmyers)
-    // create a detection with initialized data, but no exposure time
-    MopsDetection(long int ID, double epochMJD, double RA, double Dec, 
-              int obsCode, std::string objName, double mag,
-              double elongationLength, double elongationAngle);
-
-    //create a detection with initialized data, including exposure time data
-    MopsDetection(long int ID, double epochMJD, double RA, double Dec, 
-              int obsCode, std::string objName, double mag, 
-              double elongationLength, double elongationAngle, 
-              double exposureTime);
-
-    //create a "lightweight" detection. don't do this unless you know what you're doing.
+    //create a "lightweight" detection.
     MopsDetection(long int ID, double epochMJD, double RA, double Dec);
     
-    // a detection is only initialized after we have assigned
-    // it values from a string.  If you try to use a getter
-    // function before data is initialized, you will get an
-    // exception.
-    bool isInitialized() const {return initialized; }    
-
+    // the MITI format holds lots more data than ID, MJD, Ra, and Dec.  
+    // We don't store those items, though!
     void fromMITIString(std::string);
 
-    //getters...
+    //getters...  note that if you don't set values, you'll get bogus
+    // placeholder values from the "getters" - they used to send exceptions in
+    // this case, but to save the extra byte, I dropped the "initialized" flag.
     long int getID() const ;
     double getEpochMJD() const ;
     double getRA() const ;
     double getDec() const ;
-    int  getObscode() const ;
-    std::string getObjName() const ;
-    double getMag() const ;
-    double getLength() const ;
-    double getAngle() const ;
-
-    // exposure time is optional in PanSTARRS MITI format.
-    // also optional in our constructors.
-    bool hasExposureTime() const ;
-    double getExposureTime() const ;
-    void setFileIndex(int);//{fileIndex = v;};
-    
-    int getFileIndex() const;//{return fileIndex;};
 
 private:
 
-    int fileIndex;
     long int ID;
     double MJD;
     double RA;
     double dec;
-    int obscode;
-    double mag;
-    std::string objName;
-    double length;
-    double angle;
-    double etime;
-    bool hasETime;
-    bool initialized;
 };
 
 }} // close namespace lsst::mops

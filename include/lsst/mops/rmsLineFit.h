@@ -37,7 +37,6 @@ namespace mops {
     double rmsForTracklet(Tracklet t, const std::vector<MopsDetection> *detections, 
                           std::vector<double>*perDetSqDist=NULL);
     
-    double getAverageMagnitude(const Tracklet t, const::std::vector<MopsDetection>* detections);
 
 
     
@@ -65,7 +64,7 @@ namespace mops {
     
     void filterByLineFitAddToOutputVector(const std::vector<Tracklet> *tracklets, 
                                           const std::vector<MopsDetection> * allDets,
-                                          double maxRMSm, double maxRMSb,
+                                          double maxRMS,
                                           std::vector<Tracklet> &output);
     
     
@@ -73,11 +72,11 @@ namespace mops {
     class TrackletPurifier {
     public:
         Tracklet purifyTracklet(const Tracklet *t, const std::vector<MopsDetection> *allDets, 
-                                double maxRMSm, double maxRMSb);
+                                double maxRMS);
 
         void purifyTracklets(const std::vector<Tracklet> *trackletsVector,
                              const std::vector<MopsDetection> *detsVector,
-                             double maxRMSm, double maxRMSb, unsigned int minObs,
+                             double maxRMS, unsigned int minObs,
                              std::vector<Tracklet> &output);
     };
 

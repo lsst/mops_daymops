@@ -24,7 +24,7 @@ namespace lsst {
  *****************************************************************/
 std::vector <Tracklet> 
 findTracklets(const std::vector<MopsDetection> &allDetections, 
-	      double maxVelocity, double minVelocity);
+	      double maxVelocity);
 
     }} // close lsst::mops
 

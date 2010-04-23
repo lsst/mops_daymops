@@ -359,8 +359,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_whitebox_getBestFitVelocityAndAcceleration_t
 // helper function for creating sets of detections
 void addDetectionAt(double MJD, double RA, double dec,  std::vector<MopsDetection> &detVec)
 {
-    MopsDetection tmpDet(detVec.size(), MJD, RA, dec, 566, "dummy",
-                     24.0, 0., 0.);
+    MopsDetection tmpDet(detVec.size(), MJD, RA, dec);
     detVec.push_back(tmpDet);
 }
 

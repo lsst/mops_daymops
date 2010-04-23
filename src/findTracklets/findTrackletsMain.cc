@@ -34,7 +34,6 @@ int main(int argc, char* argv[])
 
 
     double maxVelocity = 2.0;
-    double minVelocity = 0.0;
 
 
     if(argc < 2){
@@ -45,14 +44,13 @@ int main(int argc, char* argv[])
     static const struct option longOpts[] = {
         { "inFile", required_argument, NULL, 'i' },
         { "outFile", required_argument, NULL, 'o' },
-        { "minVeloctiy", required_argument, NULL, 'm' },
         { "maxVeloctiy", required_argument, NULL, 'v' },
         { "help", no_argument, NULL, 'h' },
         { NULL, no_argument, NULL, 0 }
     };
 
     int longIndex = -1;
-    const char *optString = "i:o:m:v:h";
+    const char *optString = "i:o:v:h";
     int opt = getopt_long( argc, argv, optString, longOpts, &longIndex );
     while( opt != -1 ) {
         switch( opt ) {
@@ -64,9 +62,6 @@ int main(int argc, char* argv[])
             break;
         case 'v':
             maxVelocity = atof(optarg);
-            break;
-        case 'm':
-            minVelocity = atof(optarg);
             break;
         case 'h':
             std::cout << "Usage: findTracklets -i <input file> -o <output file> -v <max velocity> -m <min velocity>" << std::endl;
@@ -83,7 +78,7 @@ int main(int argc, char* argv[])
     
     std::vector<lsst::mops::Tracklet> results;
     
-    results = lsst::mops::findTracklets(myDets, maxVelocity, minVelocity);
+    results = lsst::mops::findTracklets(myDets, maxVelocity);
     
     
     //print results

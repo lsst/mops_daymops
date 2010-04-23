@@ -211,7 +211,7 @@ namespace lsst {
         std::vector<Tracklet> &collapsedPairs,       
         bool useMinimumRMS, bool useBestFit, 
         bool useRMSFilt,
-        double maxRMSm, double maxRMSb, bool beVerbose) {
+        double maxRMS, bool beVerbose) {
 
         /* each t in trackletsForTree maps tracklet physical parameters (RA0,
          * Dec0, angle, vel.) to an index into pairs. */
@@ -286,9 +286,8 @@ namespace lsst {
                                 (trackletsAreCompatible(detections, pairs[similarTrackletID], newTracklet))) {
                                 Tracklet tmp = unionTracklets(newTracklet, pairs[similarTrackletID]);
                                 double tmpRMS = rmsForTracklet(tmp, detections);
-                                double trackletAvMag = getAverageMagnitude(tmp, detections);  
                                if ((useRMSFilt == false) || 
-                                    (tmpRMS <= trackletAvMag * maxRMSm + maxRMSb)) {
+                                    (tmpRMS <= maxRMS)) {
                                     if ((foundOne == false) || (bestMatchRMS > tmpRMS)) {
                                         foundOne = true;
                                         bestMatchRMS = tmpRMS;
@@ -372,9 +371,7 @@ namespace lsst {
                             // if newTracklet + best match has higher RMS than filter allows, we're done!
                             Tracklet tmp = unionTracklets(newTracklet, pairs[bestMatchID]);
                             double tmpRMS = rmsForTracklet(tmp, detections);
-                            double trackletAvMag = getAverageMagnitude(tmp, detections); 
-                            if ((useRMSFilt == true) && 
-                                (tmpRMS > trackletAvMag * maxRMSm + maxRMSb)) {
+                            if ((useRMSFilt == true) && (tmpRMS >  maxRMS)) {
                                 done = true;
                             }
                             else { /* we got a result, and it was legal */
@@ -408,8 +405,7 @@ namespace lsst {
                                 Tracklet tmp = newTracklet;
                                 /* subtly abuse the 'collapse' function as a union operation */
                                 collapse(pairs[similarTrackletIter->getValue()], newTracklet);
-                                if (rmsForTracklet(tmp, detections) >
-                                    getAverageMagnitude(tmp, detections) * maxRMSm + maxRMSb) {
+                                if (rmsForTracklet(tmp, detections) > maxRMS) {
                                     collapseIsLegal = false;
                                 }
                             }

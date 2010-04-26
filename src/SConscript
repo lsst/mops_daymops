@@ -29,14 +29,14 @@ common_libs.append(env.StaticLibrary('fileUtils', ['fileUtils.cc', 'MopsDetectio
 common_libs.append(env.StaticLibrary('removeSubsets',  ['removeSubsets.cc'] + common_libs, LIBS=ext_libs))
 
 
-env.Program('removeSubsets',  ['removeSubsetsMain.cc'] + common_libs, LIBS=ext_libs)
+env.Program('../bin/removeSubsets',  ['removeSubsetsMain.cc'] + common_libs, LIBS=ext_libs)
 
 
 
 Export("common_libs")
 Export("ext_libs")
 
-env.Program('utilities-unittests', ['generalUnitTests.cc'] + common_libs, 
+env.Program('../tests/utilities-unittests', ['generalUnitTests.cc'] + common_libs, 
             LIBS=ext_libs)
 
 

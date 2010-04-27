@@ -9,15 +9,15 @@
 #include <cmath>
 
 
-#include "../Detection.h"
-#include "../Tracklet.h"
-#include "../PointAndValue.h"
-#include "../common.h"
-#include "../KDTree.h"
-#include "../fileUtils.h"
-#include "../rmsLineFit.h"
-#include "../removeSubsets.h"
-#include "collapseTracklets.h"
+#include "lsst/mops/MopsDetection.h"
+#include "lsst/mops/Tracklet.h"
+#include "lsst/mops/PointAndValue.h"
+#include "lsst/mops/common.h"
+#include "lsst/mops/KDTree.h"
+#include "lsst/mops/fileUtils.h"
+#include "lsst/mops/rmsLineFit.h"
+#include "lsst/mops/removeSubsets.h"
+#include "lsst/mops/daymops/collapseTrackletsAndPostfilters/collapseTracklets.h"
 
 
 bool Eq(double a, double b) 
@@ -35,7 +35,7 @@ bool Eq(double a, double b)
 
 
 
-
+using namespace lsst::mops;
 
 
 
@@ -75,8 +75,8 @@ BOOST_AUTO_TEST_CASE( isSane_blackbox_1 )
 // BOOST_AUTO_TEST_CASE( trackletsAreCompatible_blackbox_1 )
 // {
 
-//     std::vector<Detection> dets;
-//     Detection tmpDet;
+//     std::vector<MopsDetection> dets;
+//     MopsDetection tmpDet;
 //     // 4 matching detections
 //     tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
 //     dets.push_back(tmpDet);
@@ -103,8 +103,8 @@ BOOST_AUTO_TEST_CASE( isSane_blackbox_1 )
 //     t2.indices.insert(4);
 //     t2.indices.insert(5);
 
-//     BOOST_CHECK(collapseTracklets::trackletsAreCompatible(&dets, t1, t2) == false);
-//     BOOST_CHECK(collapseTracklets::trackletsAreCompatible(&dets, t2, t1) == false);
+//     BOOST_CHECK(trackletsAreCompatible(&dets, t1, t2) == false);
+//     BOOST_CHECK(trackletsAreCompatible(&dets, t2, t1) == false);
 
 //     t1.indices.clear();
 //     t2.indices.clear();
@@ -113,7 +113,7 @@ BOOST_AUTO_TEST_CASE( isSane_blackbox_1 )
 //     t2.indices.insert(1);  
 //     t1.indices.insert(4);
 //     t1.indices.insert(5);
-//     BOOST_CHECK(collapseTracklets::trackletsAreCompatible(&dets, t2, t1) == false);
+//     BOOST_CHECK(trackletsAreCompatible(&dets, t2, t1) == false);
 
 //     t1.indices.clear();
 //     t2.indices.clear();
@@ -123,8 +123,8 @@ BOOST_AUTO_TEST_CASE( isSane_blackbox_1 )
 //     t1.indices.insert(2);  
 //     t2.indices.insert(0);
 //     t2.indices.insert(3);
-//     BOOST_CHECK(collapseTracklets::trackletsAreCompatible(&dets, t1, t2) == true);
-//     BOOST_CHECK(collapseTracklets::trackletsAreCompatible(&dets, t2, t1) == true);
+//     BOOST_CHECK(trackletsAreCompatible(&dets, t1, t2) == true);
+//     BOOST_CHECK(trackletsAreCompatible(&dets, t2, t1) == true);
 
 
 //     t1.indices.clear();
@@ -132,8 +132,8 @@ BOOST_AUTO_TEST_CASE( isSane_blackbox_1 )
     
 //     t2.indices.insert(4);
 //     t2.indices.insert(5);
-//     BOOST_CHECK(collapseTracklets::trackletsAreCompatible(&dets, t1, t2) == true);
-//     BOOST_CHECK(collapseTracklets::trackletsAreCompatible(&dets, t2, t1) == true);
+//     BOOST_CHECK(trackletsAreCompatible(&dets, t1, t2) == true);
+//     BOOST_CHECK(trackletsAreCompatible(&dets, t2, t1) == true);
     
 // }
 
@@ -151,7 +151,7 @@ BOOST_AUTO_TEST_CASE( collapse_blackbox_2)
     t2.indices.insert(3);
     t2.indices.insert(4);
 
-    collapseTracklets::TrackletCollapser myTC;
+    TrackletCollapser myTC;
     myTC.collapse(t1, t2);
     BOOST_CHECK(t2.indices.size() == 4);
     BOOST_CHECK(t2.isCollapsed == true);
@@ -164,8 +164,8 @@ BOOST_AUTO_TEST_CASE( collapse_blackbox_2)
 
 BOOST_AUTO_TEST_CASE( leastSquaresSolveForRADecLinear_blackbox_1)
 {
-    std::vector<Detection> dets;
-    Detection tmpDet;
+    std::vector<MopsDetection> dets;
+    MopsDetection tmpDet;
 
     tmpDet.fromMITIString("0 5330.0 10.0 10.0 20.0 1337 dummy 0.0 0.0"); 
     dets.push_back(tmpDet);
@@ -175,7 +175,7 @@ BOOST_AUTO_TEST_CASE( leastSquaresSolveForRADecLinear_blackbox_1)
     dets.push_back(tmpDet);
 
     std::vector<double> RASlopeAndOffset, DecSlopeAndOffset;
-    rmsLineFit::leastSquaresSolveForRADecLinear(&dets, RASlopeAndOffset, DecSlopeAndOffset,
+    leastSquaresSolveForRADecLinear(&dets, RASlopeAndOffset, DecSlopeAndOffset,
 						5330.0);
     BOOST_REQUIRE(RASlopeAndOffset.size() == 2);
     BOOST_REQUIRE(DecSlopeAndOffset.size() == 2);
@@ -197,8 +197,8 @@ BOOST_AUTO_TEST_CASE( leastSquaresSolveForRADecLinear_blackbox_1)
 // {
     
     
-//     std::vector<Detection> dets;
-//     Detection tmpDet;
+//     std::vector<MopsDetection> dets;
+//     MopsDetection tmpDet;
 
 //     tmpDet.fromMITIString("0 5330.0 10.0 10.0 20.0 1337 dummy 0.0 0.0"); 
 //     dets.push_back(tmpDet);
@@ -218,7 +218,7 @@ BOOST_AUTO_TEST_CASE( leastSquaresSolveForRADecLinear_blackbox_1)
 //     t.indices.insert(1);
 //     t.indices.insert(2);
 
-//     double sqDist = collapseTracklets::getAverageSqDist(RASlopeAndOffset, DecSlopeAndOffset,
+//     double sqDist = getAverageSqDist(RASlopeAndOffset, DecSlopeAndOffset,
 //                                                         &dets, &t, 5330.0);
 //     BOOST_CHECK(Eq(sqDist, 0.0));
     
@@ -231,8 +231,8 @@ BOOST_AUTO_TEST_CASE( leastSquaresSolveForRADecLinear_blackbox_1)
 // {
     
     
-//     std::vector<Detection> dets;
-//     Detection tmpDet;
+//     std::vector<MopsDetection> dets;
+//     MopsDetection tmpDet;
 
 //     // note that detections are each 1 degree off of the ideal
 //     tmpDet.fromMITIString("0 5330.0 10.0 11.0 20.0 1337 dummy 0.0 0.0"); 
@@ -253,7 +253,7 @@ BOOST_AUTO_TEST_CASE( leastSquaresSolveForRADecLinear_blackbox_1)
 //     t.indices.insert(1);
 //     t.indices.insert(2);
 
-//     double sqDist = collapseTracklets::getAverageSqDist(RASlopeAndOffset, DecSlopeAndOffset,
+//     double sqDist = getAverageSqDist(RASlopeAndOffset, DecSlopeAndOffset,
 //                                                         &dets, &t, 5330.0);
 //     BOOST_CHECK(Eq(sqDist, 1.0));
     
@@ -276,8 +276,8 @@ BOOST_AUTO_TEST_CASE( leastSquaresSolveForRADecLinear_blackbox_1)
 BOOST_AUTO_TEST_CASE( doCollapsingPopulateOutputVector_blackbox_1)
 {
 
-    std::vector<Detection> dets;
-    Detection tmpDet;
+    std::vector<MopsDetection> dets;
+    MopsDetection tmpDet;
 
     tmpDet.fromMITIString("0 5330.0 10.0 10.0 20.0 1337 dummy 0.0 0.0"); 
     dets.push_back(tmpDet);
@@ -306,8 +306,8 @@ BOOST_AUTO_TEST_CASE( doCollapsingPopulateOutputVector_blackbox_1)
 
     std::vector<Tracklet> output;
 
-    collapseTracklets::TrackletCollapser myTC;
-    myTC.doCollapsingPopulateOutputVector(&dets, pairs, tolerances, output, false, false, false, 0.0, 0.0, false);
+    TrackletCollapser myTC;
+    myTC.doCollapsingPopulateOutputVector(&dets, pairs, tolerances, output, false, false, false, 0.0, false);
     std::set <unsigned int> allIndices;
     allIndices.insert(0);
     allIndices.insert(1);
@@ -324,8 +324,8 @@ BOOST_AUTO_TEST_CASE( doCollapsingPopulateOutputVector_blackbox_1)
 BOOST_AUTO_TEST_CASE( doCollapsingPopulateOutputVector_blackbox_2)
 {
 
-    std::vector<Detection> dets;
-    Detection tmpDet;
+    std::vector<MopsDetection> dets;
+    MopsDetection tmpDet;
 
     //slightly fuzzier data as well as fuzzier search
     tmpDet.fromMITIString("0 5330.0 10.0 10.0 20.0 1337 dummy 0.0 0.0"); 
@@ -355,8 +355,8 @@ BOOST_AUTO_TEST_CASE( doCollapsingPopulateOutputVector_blackbox_2)
 
     std::vector<Tracklet> output;
 
-    collapseTracklets::TrackletCollapser myTC;
-    myTC.doCollapsingPopulateOutputVector(&dets, pairs, tolerances, output, false, false, false, 0.0, 0.0, false);
+    TrackletCollapser myTC;
+    myTC.doCollapsingPopulateOutputVector(&dets, pairs, tolerances, output, false, false, false, 0.0, false);
     std::set <unsigned int> allIndices;
     allIndices.insert(0);
     allIndices.insert(1);
@@ -373,8 +373,8 @@ BOOST_AUTO_TEST_CASE( doCollapsingPopulateOutputVector_blackbox_2)
 BOOST_AUTO_TEST_CASE( doCollapsingPopulateOutputVector_blackbox_3)
 {
 
-    std::vector<Detection> dets;
-    Detection tmpDet;
+    std::vector<MopsDetection> dets;
+    MopsDetection tmpDet;
 
     //slightly fuzzier data, strict search - should not collapse anything.
     tmpDet.fromMITIString("0 5330.0 10.0 10.0 20.0 1337 dummy 0.0 0.0"); 
@@ -404,8 +404,8 @@ BOOST_AUTO_TEST_CASE( doCollapsingPopulateOutputVector_blackbox_3)
 
     std::vector<Tracklet> output;
 
-    collapseTracklets::TrackletCollapser myTC;
-    myTC.doCollapsingPopulateOutputVector(&dets, pairs, tolerances, output, false, false, false, 0.0, 0.0, false);
+    TrackletCollapser myTC;
+    myTC.doCollapsingPopulateOutputVector(&dets, pairs, tolerances, output, false, false, false, 0.0, false);
     std::set <unsigned int> allIndices;
     allIndices.insert(0);
     allIndices.insert(1);
@@ -422,8 +422,8 @@ BOOST_AUTO_TEST_CASE( doCollapsingPopulateOutputVector_blackbox_3)
 // this function is now hidden.  It should probably be tested by whitebox testing of doCollapsing.
 // BOOST_AUTO_TEST_CASE( detectionsHaveGT2UniqueTimes_blackbox_1)
 // {
-//     std::vector<Detection> dets;
-//     Detection tmpDet;
+//     std::vector<MopsDetection> dets;
+//     MopsDetection tmpDet;
 
 //     tmpDet.fromMITIString("0 5330.0 10.0 10.0 20.0 1337 dummy 0.0 0.0"); 
 //     dets.push_back(tmpDet);
@@ -434,7 +434,7 @@ BOOST_AUTO_TEST_CASE( doCollapsingPopulateOutputVector_blackbox_3)
 //     tmpDet.fromMITIString("3 5333.0 13.0 13.5 20.0 1337 dummy 0.0 0.0"); 
 //     dets.push_back(tmpDet);
     
-//     BOOST_CHECK(collapseTracklets::detectionsHaveGT2UniqueTimes(&dets) == true);
+//     BOOST_CHECK(detectionsHaveGT2UniqueTimes(&dets) == true);
 
 //     dets.clear();
 //     tmpDet.fromMITIString("0 5330.0 10.0 10.0 20.0 1337 dummy 0.0 0.0"); 
@@ -446,7 +446,7 @@ BOOST_AUTO_TEST_CASE( doCollapsingPopulateOutputVector_blackbox_3)
 //     tmpDet.fromMITIString("3 5331.0 13.0 13.5 20.0 1337 dummy 0.0 0.0"); 
 //     dets.push_back(tmpDet);
 
-//     BOOST_CHECK(collapseTracklets::detectionsHaveGT2UniqueTimes(&dets) == false);
+//     BOOST_CHECK(detectionsHaveGT2UniqueTimes(&dets) == false);
 
 
 // }
@@ -456,8 +456,8 @@ BOOST_AUTO_TEST_CASE( doCollapsingPopulateOutputVector_blackbox_3)
 
 // BOOST_AUTO_TEST_CASE( setPhysicalParamsVector_blackbox_1)
 // {
-//     std::vector<Detection> dets;
-//     Detection tmpDet;
+//     std::vector<MopsDetection> dets;
+//     MopsDetection tmpDet;
 
 //     tmpDet.fromMITIString("0 5330.0 10.0 10.0 20.0 1337 dummy 0.0 0.0"); 
 //     dets.push_back(tmpDet);
@@ -469,7 +469,7 @@ BOOST_AUTO_TEST_CASE( doCollapsingPopulateOutputVector_blackbox_3)
 //     dets.push_back(tmpDet);     
 
 //     std::vector<double> physicalParams(4);
-//     collapseTracklets::setPhysicalParamsVector(&dets, physicalParams, 5331.5);
+//     setPhysicalParamsVector(&dets, physicalParams, 5331.5);
 //     BOOST_CHECK(Eq(physicalParams[0], 11.5));
 //     BOOST_CHECK(Eq(physicalParams[1], 11.5));
 //     BOOST_CHECK(Eq(physicalParams[2], 45));
@@ -480,8 +480,8 @@ BOOST_AUTO_TEST_CASE( doCollapsingPopulateOutputVector_blackbox_3)
 
 // BOOST_AUTO_TEST_CASE( setPhysicalParamsVector_blackbox_2)
 // {
-//     std::vector<Detection> dets;
-//     Detection tmpDet;
+//     std::vector<MopsDetection> dets;
+//     MopsDetection tmpDet;
 
 //     tmpDet.fromMITIString("0 5330.0 358.0 358.0 20.0 1337 dummy 0.0 0.0"); 
 //     dets.push_back(tmpDet);
@@ -493,7 +493,7 @@ BOOST_AUTO_TEST_CASE( doCollapsingPopulateOutputVector_blackbox_3)
 //     dets.push_back(tmpDet);     
 
 //     std::vector<double> physicalParams(4);
-//     collapseTracklets::setPhysicalParamsVector(&dets, physicalParams, 5331.5);
+//     setPhysicalParamsVector(&dets, physicalParams, 5331.5);
 //     BOOST_CHECK(Eq(physicalParams[0], 359.5));
 //     BOOST_CHECK(Eq(physicalParams[1], 359.5));
 //     BOOST_CHECK(Eq(physicalParams[2], 45));

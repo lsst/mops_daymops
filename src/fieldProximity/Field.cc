@@ -3,8 +3,8 @@
  *
  */
 
-#include "Field.h"
-#include "../Exceptions.h"
+#include "lsst/mops/daymops/fieldProximity/Field.h"
+#include "lsst/mops/Exceptions.h"
 
 
 /**************************************************

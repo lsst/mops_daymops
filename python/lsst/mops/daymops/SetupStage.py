@@ -1,7 +1,7 @@
 """
 BASIC COURSE
 System gets
-1. a list of (NOT ATTRIBUTED AND NOT LINKED and NOT PRECOVERED) DiaSources 
+1. a list of (NOT ATTRIBUTED AND NOT LINKED and NOT PRECOVERED) DIASources 
    belonging to last night.
 as input.
 
@@ -14,7 +14,7 @@ Policy
   1. Database name and location
 
 Input
-  1. [s for s in DiaSources if (not s.ATTRIBUTED and not s.PRECOVERED and not 
+  1. [s for s in DIASources if (not s.ATTRIBUTED and not s.PRECOVERED and not 
       s.LINKED]
 
 Output
@@ -59,7 +59,7 @@ class SetupStage(DayMOPSStage):
         Execute the non-parallel processing for the Intra-night linking Stage.
         
         Pseudo-code:
-        1. Fetch last night's DiaSources (at most one).
+        1. Fetch last night's DIASources (at most one).
         2. Compute night number
         3. Update clipboard.
         """
@@ -67,7 +67,7 @@ class SetupStage(DayMOPSStage):
         super(SetupStage, self).preprocess()
         self.logIt('INFO', 'Started preprocessing.')
         
-        # Retrieve the DiaSources to process.
+        # Retrieve the DIASources to process.
         iter = DiaSourceList.diaSourceListForTonight(self.dbLocStr)
         try:
             source = iter.next()
@@ -94,7 +94,7 @@ class SetupStage(DayMOPSStage):
         Execute the non-parallel processing for the Intra-night linking Stage.
         
         Pseudo-code:
-        1. Fetch last night's DiaSources (at most one).
+        1. Fetch last night's DIASources (at most one).
         2. Compute night number
         3. Update clipboard.
         """
@@ -102,7 +102,7 @@ class SetupStage(DayMOPSStage):
         self.activeClipboard = self.inputQueue.getNextDataset()
         self.logIt('INFO', 'Started processing.')
         
-        # Retrieve the DiaSources to process.
+        # Retrieve the DIASources to process.
         iter = DiaSourceList.diaSourceListForTonight(self.dbLocStr)
         try:
             source = iter.next()

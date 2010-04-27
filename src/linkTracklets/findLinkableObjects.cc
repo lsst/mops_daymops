@@ -13,11 +13,12 @@
 #include <map>
 
 
-#include "linkTracklets.h"
-#include "../fileUtils.h"
+#include "lsst/mops/daymops/linkTracklets/linkTracklets.h"
+#include "lsst/mops/fileUtils.h"
 
 
-
+namespace lsst {
+    namespace mops {
 
 /*
   this is just a tool for looking through a pair of dets/tracklets
@@ -58,7 +59,7 @@ MJD maxMJD(std::set<MJD> mjds)
 }
 
 
-bool trackletIsCorrect(const std::vector<Detection> & allDets,
+bool trackletIsCorrect(const std::vector<MopsDetection> & allDets,
                        Tracklet t) 
 {
     std::string inferredName = "";
@@ -85,7 +86,7 @@ bool trackletIsCorrect(const std::vector<Detection> & allDets,
 
 
 
-MJD firstDetectionTime(const std::vector<Detection> & allDets,
+MJD firstDetectionTime(const std::vector<MopsDetection> & allDets,
                        const Tracklet &t)
 {
     bool foundOne = false;
@@ -103,7 +104,7 @@ MJD firstDetectionTime(const std::vector<Detection> & allDets,
 
 
 
-void findLinkableObjects(const std::vector<Detection> & allDets, 
+void findLinkableObjects(const std::vector<MopsDetection> & allDets, 
                          const std::vector<Tracklet> &allTracklets, 
                          linkTrackletsConfig searchConfig, 
                          std::vector<std::string> &findableObjectNames) 
@@ -212,6 +213,8 @@ void findLinkableObjects(const std::vector<Detection> & allDets,
 
 
 
+    }} // close lsst::mops
+
 
 
 int main(int argc, char** argv) 
@@ -267,18 +270,18 @@ int main(int argc, char** argv)
 	  return 1;
      }
 
-     std::vector<Detection> allDets;
-     std::vector<Tracklet> allTracklets;
+     std::vector<lsst::mops::MopsDetection> allDets;
+     std::vector<lsst::mops::Tracklet> allTracklets;
 
 
      populateDetVectorFromFile(detectionsFileName, allDets);
      populatePairsVectorFromFile(trackletsFileName, allTracklets);
      
-     linkTrackletsConfig searchConfig; 
+     lsst::mops::linkTrackletsConfig searchConfig; 
 
      std::vector<std::string> findableObjectNames;
 
-     findLinkableObjects(allDets, allTracklets, searchConfig, findableObjectNames);
+     lsst::mops::findLinkableObjects(allDets, allTracklets, searchConfig, findableObjectNames);
 
      // write to disk
      std::ofstream outFile;
@@ -289,3 +292,5 @@ int main(int argc, char** argv)
      outFile.close();
 
 }
+
+

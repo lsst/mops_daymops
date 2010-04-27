@@ -1,7 +1,7 @@
 // -*- LSST-C++ -*-
 
 
-#include "PointAndValue.h"
+#include "lsst/mops/PointAndValue.h"
 
 /*
  * jmyers 7/25/08

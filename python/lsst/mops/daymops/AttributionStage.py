@@ -21,7 +21,7 @@ For each (RA, Dec, MJD, FieldRadius) in the input list 2:
          list of predicted ephemeris (i.e. RA, Dec, mag, ErrorEllipse) for the 
          input MovingObject and MJD.
   C. System identifies most likely matches between the aggregated ephemeris list
-     and the input list of Tracklets (by invoking "Identify Best DiaSource 
+     and the input list of Tracklets (by invoking "Identify Best DIASource 
      Match").
   D. System invokes "Orbit Determination" use case and recetives the list of 
      newly improved MovingObjects.

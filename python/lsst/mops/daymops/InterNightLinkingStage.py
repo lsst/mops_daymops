@@ -48,22 +48,17 @@ class InterNightLinkingStage(DayMOPSStage):
         self.slowMaxV = self.getValueFromPolicy('slowMaxV')
         self.slowVtreeThresh = self.getValueFromPolicy('slowVtreeThresh')
         self.slowPredThresh = self.getValueFromPolicy('slowPredThresh')
-        self.slowMaxAccRa = self.getValueFromPolicy('slowMaxAccRa')
-        self.slowMaxAccDec = self.getValueFromPolicy('slowMaxAccDec')
         
         self.fastMinV = self.getValueFromPolicy('fastMinV')
         self.fastMaxV = self.getValueFromPolicy('fastMaxV')
         self.fastVtreeThresh = self.getValueFromPolicy('fastVtreeThresh')
         self.fastPredThresh = self.getValueFromPolicy('fastPredThresh')
-        self.fastMaxAccRa = self.getValueFromPolicy('fastMaxAccRa')
-        self.fastMaxAccDec = self.getValueFromPolicy('fastMaxAccDec')
         
         self.plateWidth = self.getValueFromPolicy('plateWidth')
         
         self.minNights = self.getValueFromPolicy('minNights')
         self.timeSpan = self.getValueFromPolicy('timeSpan')
-        self.utOffset = self.getValueFromPolicy('utOffset')        
-
+        self.utOffset = self.getValueFromPolicy('utOffset')
         return
     
     def preprocess(self):
@@ -116,24 +111,17 @@ class InterNightLinkingStage(DayMOPSStage):
         # and one for fast movers (again as defined in the policy file).
         tracks = []
         i = 0
-        self.logIt('INFO', 'calling linkTracklets with slowMaxAccRa = %f, slowMaxAccDec = %f.'\
-                       % (self.slowMaxAccRa, self.slowMaxAccDec))
         for rawTrack in linking.linkTracklets(tracklets, 
                                               self.slowMinV,
                                               self.slowMaxV,
                                               self.slowVtreeThresh,
                                               self.slowPredThresh,
-                                              self.slowMaxAccRa,
-                                              self.slowMaxAccDec,
                                               self.fastMinV,
                                               self.fastMaxV,
                                               self.fastVtreeThresh,
                                               self.fastPredThresh,
-                                              self.fastMaxAccRa,
-                                              self.fastMaxAccDec,
                                               self.minNights,
-                                              self.plateWidth,
-                                              self.obsCode):
+                                              self.plateWidth):
             # We do not really need the full Tracklet object: just an instance
             # with the appropriate trackletId.
             i += 1

@@ -9,11 +9,13 @@
 #include <cmath>
 
 
-#include "../Exceptions.h"
-#include "Field.h"
-#include "fieldProximity.h"
-#include "TrackForFieldProximity.h"
+#include "lsst/mops/Exceptions.h"
+#include "lsst/mops/daymops/fieldProximity/Field.h"
+#include "lsst/mops/daymops/fieldProximity/fieldProximity.h"
+#include "lsst/mops/daymops/fieldProximity/TrackForFieldProximity.h"
 
+
+using namespace lsst::mops;
 
 bool Eq(double a, double b) 
 {

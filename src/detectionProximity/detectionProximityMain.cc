@@ -78,8 +78,8 @@ int main(int argc, char *argv[]){
   std::ifstream queryDets(queryDetections.c_str());
 
   //used for populating detections vector
-  std::vector<Detection> myDataPoints;
-  std::vector<Detection> myQueryPoints;
+  std::vector<MopsDetection> myDataPoints;
+  std::vector<MopsDetection> myQueryPoints;
   collapseTracklets::TrackletCollapser myTC; 
   myTC.populateDetVectorFromFile(dataDets, myDataPoints);
   myTC.populateDetVectorFromFile(queryDets, myQueryPoints);

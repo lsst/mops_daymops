@@ -3,7 +3,6 @@
 # All angles in degrees. All times are in days.
 databasePolicy: @policy/DataBase.paf
 locationPolicy: @policy/Location.paf
-verbosityLevel: "DEBUG"
 
 residThreshold: 0.20      # attributed orbits must have resid < this
 maxSearchRadius: 0.1      # max search radius, regardless of ephemeris uncertainty.

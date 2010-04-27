@@ -11,8 +11,8 @@ nslices=2
 # --------------------------------------------------------- 
 
 pwd=`pwd`
-#PYTHONPATH=${pwd}/../python:${PYTHONPATH}
-#export PYTHONPATH
+PYTHONPATH=${pwd}/../python:${PYTHONPATH}
+export PYTHONPATH
 
 # Command line arguments 
 if [ "$#" != 2 ]; then
@@ -44,7 +44,6 @@ echo "Running mpdtrace -l"
 mpdtrace -l
 sleep 2s
 
-mpiexec -usize ${usize}  -machinefile $MPDHOSTSFILE -np 1 which python
 echo "Running mpiexec -usize ${usize}  -machinefile $MPDHOSTSFILE -np 1 runPipeline.py ${pipelinePolicyName} ${runId}"
 mpiexec -usize ${usize}  -machinefile $MPDHOSTSFILE -np 1 runPipeline.py ${pipelinePolicyName} ${runId}
 

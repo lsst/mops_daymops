@@ -14,14 +14,14 @@
 #include <map>
 #include <set>
 
-#include "removeSubsets.h"
-#include "Exceptions.h"
+#include "lsst/mops/removeSubsets.h"
+#include "lsst/mops/Exceptions.h"
 
 
-namespace ctExcept = collapseTracklets::exceptions;
 
-namespace removeSubsets {
 
+namespace lsst {
+    namespace mops {
 
     void SubsetRemover::removeSubsetsPopulateOutputVector(const std::vector<Tracklet> *pairsVector, 
                                                           std::vector<Tracklet> &outVector) {
@@ -111,7 +111,7 @@ namespace removeSubsets {
 
             }
             else {
-                throw LSST_EXCEPT(ctExcept::ProgrammerErrorException, "Programming error: impossible case in removeSubsets.cc");
+                throw LSST_EXCEPT(ProgrammerErrorException, "Programming error: impossible case in removeSubsets.cc");
             }
             
         }
@@ -119,14 +119,6 @@ namespace removeSubsets {
 
 
 
-    std::string stringToLower(std::string strToConvert)
-    {
-        for(unsigned int i=0; i<strToConvert.length(); i++)
-        {
-            strToConvert[i] = tolower(strToConvert[i]);
-        }
-        return strToConvert;//return the converted string
-    }
     
 
 
@@ -193,6 +185,6 @@ namespace removeSubsets {
 
 
 
-}
+    }} // close lsst::mops
 
 

@@ -6,17 +6,15 @@
 #include <unistd.h>
 #include <getopt.h>
 
-#include "../common.h"
-#include "collapseTracklets.h"
-#include "../fileUtils.h"
+#include "lsst/mops/common.h"
+#include "lsst/mops/daymops/collapseTrackletsAndPostfilters/collapseTracklets.h"
+#include "lsst/mops/fileUtils.h"
 
-namespace ctExcept = collapseTracklets::exceptions;
-
-namespace collapseTracklets {
-
+namespace lsst {
+    namespace mops {
 
 
-    bool detectionsHaveGT2UniqueTimes(const std::vector<Detection> *detections) {
+    bool detectionsHaveGT2UniqueTimes(const std::vector<MopsDetection> *detections) {
         std::vector<double> observedMJDs;
         double curMJD = -1;
         std::vector<double>::iterator fIter;
@@ -28,7 +26,7 @@ namespace collapseTracklets {
             for (fIter = observedMJDs.begin(); 
                  (fIter != observedMJDs.end()) && (isInList == false);
                  fIter++) {
-                if (KDTree::Common::areEqual(*fIter, curMJD)) {
+                if (areEqual(*fIter, curMJD)) {
                     isInList = true;
                 }
             }
@@ -58,8 +56,7 @@ if greedy, then we choose as many compatible tracklets as possible, as returned 
 --------------------------------------------------\n\
 enforce a maximum RMS distance for any tracklet which is the product of collapsing.  default is false.\n\
 \n\
---maxRMSm=<double>,\n\
---maxRMSb=<double> \n\
+--maxRMS=<double>,\n\
 --------------------------------------------------\n\
 Only used if useRMSfilt == true.  Describes the function for RMS filtering.  Tracklets will not be collapsed unless the resulting tracklet would have RMS <= maxRMSm * average magnitude + maxRMSb.   Defaults are 0. and .001.\n\
 ");
@@ -69,7 +66,7 @@ Only used if useRMSfilt == true.  Describes the function for RMS filtering.  Tra
         std::vector <double> tolerances;
         std::ofstream outFile;
         std::string line;
-        std::vector <Detection> detections;
+        std::vector <MopsDetection> detections;
         /* pairs holds indices into detections. */
         std::vector <Tracklet> pairs;
         std::vector<Tracklet> collapsedPairs;        
@@ -79,7 +76,7 @@ Only used if useRMSfilt == true.  Describes the function for RMS filtering.  Tra
         /* read long options, then get required options */
 
         if (argc < 8) {
-            throw LSST_EXCEPT(ctExcept::CommandlineParseErrorException, USAGE + "\n");            
+            throw LSST_EXCEPT(CommandlineParseErrorException, USAGE + "\n");            
         }
 
         
@@ -87,19 +84,17 @@ Only used if useRMSfilt == true.  Describes the function for RMS filtering.  Tra
 	bool useGreedy = true;
         bool useBestFit = false;
         bool useRMSFilt = false;
-        double maxRMSm = 0.;
-        double maxRMSb = .001;
+        double maxRMS = .001;
         
         static const struct option longOpts[] = {
             { "method", required_argument, NULL, 'e' },
             { "useRMSFilt", required_argument, NULL, 'u' },
-            { "maxRMSm", required_argument, NULL, 'm' },
-            { "maxRMSb", required_argument, NULL, 'b' },
+            { "maxRMS", required_argument, NULL, 'm' },
             { "help", no_argument, NULL, 'h' },
             { NULL, no_argument, NULL, 0 }
         };
 
-        const char* optString = "e:u:m:b:h:v";
+        const char* optString = "e:u:m:h:v";
         int longIndex = -1;
         int opt = getopt_long( argc, argv, optString, longOpts, &longIndex );        
         std::stringstream ss;
@@ -124,26 +119,20 @@ Only used if useRMSfilt == true.  Describes the function for RMS filtering.  Tra
 		    useGreedy = false;
                 }
                 else {
-                    throw LSST_EXCEPT(ctExcept::CommandlineParseErrorException, 
+                    throw LSST_EXCEPT(CommandlineParseErrorException, 
                                       "ERROR: options for method are: greedy, minimumRMS\n\n" +
                                       USAGE + "\n"); 
                 }
                 break;
 
             case 'u':
-                useRMSFilt = KDTree::Common::guessBoolFromStringOrGiveErr(optarg, USAGE);
+                useRMSFilt = guessBoolFromStringOrGiveErr(optarg, USAGE);
                 break;
                 
             case 'm':
                 ss.clear();
                 ss << optarg;
-                ss >> maxRMSm;
-                break;
-
-            case 'b':
-                ss.clear();
-                ss << optarg;
-                ss >> maxRMSb;
+                ss >> maxRMS;
                 break;
                 
             case 'h':   /* fall-through is intentional */
@@ -153,7 +142,7 @@ Only used if useRMSfilt == true.  Describes the function for RMS filtering.  Tra
                 return 0;
                 break;
             default:
-                throw LSST_EXCEPT(ctExcept::ProgrammerErrorException, 
+                throw LSST_EXCEPT(ProgrammerErrorException, 
                                   "Unexpected programmer error in options parsing\n");
                 break;
             }        
@@ -173,14 +162,14 @@ Only used if useRMSfilt == true.  Describes the function for RMS filtering.  Tra
         detsFileName = argv[optind];
         detsFile.open(detsFileName.c_str());
         if (!detsFile.is_open()) {
-            throw LSST_EXCEPT(ctExcept::FileException,
+            throw LSST_EXCEPT(FileException,
                               "Failed to open dets file " + detsFileName + " - does this file exist?\n"); 
         }
         optind++;
         pairsFileName = argv[optind];
         pairsFile.open(pairsFileName.c_str());
         if (!pairsFile.is_open()) {
-            throw LSST_EXCEPT(ctExcept::FileException,
+            throw LSST_EXCEPT(FileException,
                               "Failed to open pairs file " + pairsFileName + " - does this file exist?\n");
         }
         optind++;
@@ -194,7 +183,7 @@ Only used if useRMSfilt == true.  Describes the function for RMS filtering.  Tra
         outFileName = argv[optind];
         outFile.open(outFileName.c_str());
         if (!outFile.is_open()){
-            throw LSST_EXCEPT(ctExcept::FileException,
+            throw LSST_EXCEPT(FileException,
                               "Failed to open output file " + 
                               outFileName + " - do you have write permissions?\n");
         }
@@ -214,8 +203,7 @@ Only used if useRMSfilt == true.  Describes the function for RMS filtering.  Tra
         std::cout << std::endl;
         if (useRMSFilt == true) {
             std::cout << "enforce min. RMS:  true" << std::endl;
-            std::cout << "maximum RMS:       " << maxRMSm << "* tracklet av. mag + " << maxRMSb 
-                      << std::endl;
+            std::cout << "maximum RMS:       " << maxRMS << std::endl;
         }
         std::cout << "Dets File:         " << detsFileName << std::endl;
         std::cout << "Pairs File         " << pairsFileName << std::endl;
@@ -236,7 +224,7 @@ Only used if useRMSfilt == true.  Describes the function for RMS filtering.  Tra
         std::cout << "Found " << pairs.size() << " pairs.\n";
           
         if (!isSane(detections.size(), &pairs)) {
-            throw LSST_EXCEPT(ctExcept::InputFileFormatErrorException, 
+            throw LSST_EXCEPT(InputFileFormatErrorException, 
                               "EE: Pairs file does not seem to correspond with detections file.\n");
         }
           
@@ -244,7 +232,7 @@ Only used if useRMSfilt == true.  Describes the function for RMS filtering.  Tra
         if ((detectionsHaveGT2UniqueTimes(&detections)) && (pairs.size() > 1)) {
             std::cout << "Doing the collapsing..." << std::endl;
             myTC.doCollapsingPopulateOutputVector(&detections, pairs, tolerances, collapsedPairs, 
-                                                  useMinimumRMS, useBestFit, useRMSFilt, maxRMSm, maxRMSb, beVerbose);
+                                                  useMinimumRMS, useBestFit, useRMSFilt, maxRMS, beVerbose);
             std::cout << std::endl << "Done!" << std::endl;
 
         }
@@ -266,14 +254,21 @@ Only used if useRMSfilt == true.  Describes the function for RMS filtering.  Tra
     }
   
 
-}
 
+
+
+
+
+
+
+
+}} // close lsst::mops
 
 
 
 int main(int argc, char** argv) {
     
-    CALL_AND_CATCH_EXCEPTIONS(return collapseTracklets::collapseTrackletsMain(argc, argv) );
+    return lsst::mops::collapseTrackletsMain(argc, argv);
     
-
 }
+

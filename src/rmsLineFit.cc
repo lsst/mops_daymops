@@ -8,14 +8,14 @@
 
 #include <gsl/gsl_fit.h>
 
-#include "rmsLineFit.h"
-#include "KDTree.h"
+#include "lsst/mops/rmsLineFit.h"
+#include "lsst/mops/KDTree.h"
 
 
-namespace ctExcept = collapseTracklets::exceptions;
 
-namespace rmsLineFit {
 
+namespace lsst {
+    namespace mops {
 
 
 
@@ -31,7 +31,7 @@ namespace rmsLineFit {
 
 
 
-    void leastSquaresSolveForRADecLinear(const std::vector <Detection> *trackletDets,
+    void leastSquaresSolveForRADecLinear(const std::vector <MopsDetection> *trackletDets,
                                          std::vector<double> &RASlopeAndOffsetOut,
                                          std::vector<double> &DecSlopeAndOffsetOut,
                                          double timeOffset) {
@@ -42,7 +42,7 @@ namespace rmsLineFit {
         std::vector<double> Decs(numDets);
 
         if ((RASlopeAndOffsetOut.size() != 0) || (DecSlopeAndOffsetOut.size() != 0)) {
-            throw LSST_EXCEPT(ctExcept::BadParameterException, 
+            throw LSST_EXCEPT(BadParameterException, 
                               "EE:  leastSquaresSolveForRADecLinear: output vectors were not empty.\n");
         }
 
@@ -66,7 +66,7 @@ namespace rmsLineFit {
         }
         if ((*std::max_element(RAs.begin(), RAs.end()) - *std::min_element(RAs.begin(), RAs.end()) > 180.) ||
             (*std::max_element(Decs.begin(), Decs.end()) - *std::min_element(Decs.begin(), Decs.end()) > 180.)) {
-            throw LSST_EXCEPT(ctExcept::ProgrammerErrorException, 
+            throw LSST_EXCEPT(ProgrammerErrorException, 
                               "EE: Unexpected coding error: could not move data into a contiguous < 180 degree range.\n");
         }
 
@@ -103,7 +103,7 @@ namespace rmsLineFit {
         DecSlopeAndOffsetOut.push_back(offset);
 
         if (gslRV != 0) {
-            throw LSST_EXCEPT(ctExcept::GSLException, "EE: gsl_fit_linear unexpectedly returned error.\n");
+            throw LSST_EXCEPT(GSLException, "EE: gsl_fit_linear unexpectedly returned error.\n");
         }
 
         free(arrayRAs);
@@ -114,29 +114,16 @@ namespace rmsLineFit {
 
 
 
-    double getAverageMagnitude(const Tracklet t, const::std::vector<Detection>* detections) {
-        double sum = 0.;
-        unsigned int count = 0;
-        std::set<unsigned int>::const_iterator detIndexIter;
-        for (detIndexIter = t.indices.begin(); detIndexIter != t.indices.end(); detIndexIter++) {
-            sum += (*detections)[*detIndexIter].getMag();
-            count++;
-        }
-        if (count < 1) {
-            throw LSST_EXCEPT(ctExcept::BadParameterException, "EE: getAverageMagnitude: highly unexpected error - tracklet has no detections?\n");
-        }
-        return sum/count;
-    }
 
 
 
 
-    double rmsForTracklet(const Tracklet t, const std::vector<Detection> *detections, 
+    double rmsForTracklet(const Tracklet t, const std::vector<MopsDetection> *detections, 
                           std::vector<double> *perDetSqDist) {
         std::vector<double> RASlopeAndOffset, DecSlopeAndOffset;
         std::set<unsigned int>::iterator indicesIter;
-        std::vector<Detection> trackletDets;
-        std::vector<Detection>::iterator detIter;
+        std::vector<MopsDetection> trackletDets;
+        std::vector<MopsDetection>::iterator detIter;
         for (indicesIter = t.indices.begin(); 
              indicesIter != t.indices.end();
              indicesIter++) {
@@ -144,13 +131,13 @@ namespace rmsLineFit {
         }
         
         if ((perDetSqDist != NULL) && (perDetSqDist->size() != 0)) {
-            throw LSST_EXCEPT(ctExcept::ProgrammerErrorException, 
+            throw LSST_EXCEPT(ProgrammerErrorException, 
                               "EE: PROGRAMMING ERROR: perDetSqDist argument to rmsForTracklet must be either NULL or a pointer to an allocated, empty vector!\n");
         }
         
 
         if (t.indices.size() == 0) {
-            throw LSST_EXCEPT(ctExcept::ProgrammerErrorException, 
+            throw LSST_EXCEPT(ProgrammerErrorException, 
                               "EE: PROGRAMMING ERROR: rmsForTracklet received a tracklet associated with 0 detection indices.\n");
         }
         
@@ -165,13 +152,13 @@ namespace rmsLineFit {
             double tOffset = detIter->getEpochMJD() - t0;
             
             double projectedRA = RASlopeAndOffset[0] * tOffset + RASlopeAndOffset[1];
-	    projectedRA = KDTree::Common::convertToStandardDegrees(projectedRA);
+	    projectedRA = convertToStandardDegrees(projectedRA);
             
             double projectedDec = DecSlopeAndOffset[0] * tOffset + DecSlopeAndOffset[1];
-	    projectedDec = KDTree::Common::convertToStandardDegrees(projectedDec);
+	    projectedDec = convertToStandardDegrees(projectedDec);
 
-	    double actualRA = KDTree::Common::convertToStandardDegrees(detIter->getRA());
-	    double actualDec = KDTree::Common::convertToStandardDegrees(detIter->getDec());
+	    double actualRA = convertToStandardDegrees(detIter->getRA());
+	    double actualDec = convertToStandardDegrees(detIter->getDec());
 
 	    // 	    std::cout << " projected position: (" << projectedRA << ", " << projectedDec << ")" << std::endl;
 	    // 	    std::cout << " Actual position: (" << actualRA << ", " << actualDec <<  ")" << std::endl;
@@ -185,7 +172,7 @@ namespace rmsLineFit {
 	      DecDist = fabs(DecDist - 360);
 	    }
 	    if ((RADist > 180.)  || (DecDist > 180.)) {
-                throw LSST_EXCEPT(ctExcept::ProgrammerErrorException,
+                throw LSST_EXCEPT(ProgrammerErrorException,
                                   "EE: rmsLineFit: Unexpected programming error\n");
             }
 	    double localDistSquared = RADist*RADist + DecDist*DecDist;
@@ -206,14 +193,13 @@ namespace rmsLineFit {
 
     
     void filterByLineFitAddToOutputVector(const std::vector<Tracklet> *tracklets, 
-                                          const std::vector<Detection> *allDets,
-                                          double maxRMSm, double maxRMSb,
+                                          const std::vector<MopsDetection> *allDets,
+                                          double maxRMS,
                                           std::vector<Tracklet> &output) {
         std::vector<Tracklet>::const_iterator tIter;
         for (tIter = tracklets->begin(); tIter != tracklets->end(); tIter++) {
 	  double rms = rmsForTracklet(*tIter, allDets);
 	  // std::cout << "got RMS = " << rms << ", tracklet length = " <<  tIter->indices.size() << std::endl;
-	  double maxRMS =  maxRMSm * getAverageMagnitude(*tIter, allDets) + maxRMSb;
 	  if ( maxRMS >= rms) {
                 output.push_back(*tIter);
             }
@@ -228,7 +214,7 @@ namespace rmsLineFit {
      * given a pair of functions relating MJD to RA, Dec s.t. RA = RASlope*(MJD - tOffset) + RAintercept and
      * the similarly for declination, return a map which relates indices of *t to squared distance to the projected point.
      */
-    std::map <unsigned int, double> getPerDetSqDistanceToLine(const Tracklet *t, const std::vector<Detection>* allDets, 
+    std::map <unsigned int, double> getPerDetSqDistanceToLine(const Tracklet *t, const std::vector<MopsDetection>* allDets, 
                                                               double RASlope, double RAIntercept, double DecSlope, double DecIntercept, 
                                                               double tOffset) {
         std::map <unsigned int, double> results;
@@ -236,15 +222,15 @@ namespace rmsLineFit {
              indicesIter != t->indices.end();
              indicesIter++) {
             double t = (*allDets)[*indicesIter].getEpochMJD() - tOffset;
-            double projectedRA = KDTree::Common::convertToStandardDegrees(RASlope * t + RAIntercept);
-            double projectedDec = KDTree::Common::convertToStandardDegrees(DecSlope *t + DecIntercept);
-            double obsRA = KDTree::Common::convertToStandardDegrees((*allDets)[*indicesIter].getRA());
-            double obsDec = KDTree::Common::convertToStandardDegrees((*allDets)[*indicesIter].getDec());
+            double projectedRA = convertToStandardDegrees(RASlope * t + RAIntercept);
+            double projectedDec = convertToStandardDegrees(DecSlope *t + DecIntercept);
+            double obsRA = convertToStandardDegrees((*allDets)[*indicesIter].getRA());
+            double obsDec = convertToStandardDegrees((*allDets)[*indicesIter].getDec());
             double RADist = fabs(projectedRA - obsRA);
             if (RADist > 180.) {
                 RADist = fabs(RADist - 360);
                 if (RADist > 180.) {
-                    throw LSST_EXCEPT(ctExcept::ProgrammerErrorException,
+                    throw LSST_EXCEPT(ProgrammerErrorException,
                                       "EE: getPerDetSqDistanceToLine: Unexpected programming error: failed to get distance < 360 between two degree points\n");
                 }
             }
@@ -252,7 +238,7 @@ namespace rmsLineFit {
             if (DecDist > 180.) {
                 DecDist = fabs(DecDist - 360);
                 if (DecDist > 180.) {
-                    throw LSST_EXCEPT(ctExcept::ProgrammerErrorException,
+                    throw LSST_EXCEPT(ProgrammerErrorException,
                                       "EE: Unexpected programming error: failed to get distance < 360 between two degree points\n");
                 }
             }
@@ -264,8 +250,8 @@ namespace rmsLineFit {
 
 
 
-    std::vector<Detection> getTrackletDets(const Tracklet *t, const std::vector<Detection>* allDets) {
-        std::vector<Detection> results;
+    std::vector<MopsDetection> getTrackletDets(const Tracklet *t, const std::vector<MopsDetection>* allDets) {
+        std::vector<MopsDetection> results;
         for (std::set<unsigned int>::const_iterator iIter = t->indices.begin();
              iIter != t->indices.end();
              iIter++) {
@@ -277,14 +263,14 @@ namespace rmsLineFit {
 
 
     
-    Tracklet TrackletPurifier::purifyTracklet(const Tracklet *t, const std::vector<Detection>* allDets, 
-                                              double maxRMSm, double maxRMSb) {
+    Tracklet TrackletPurifier::purifyTracklet(const Tracklet *t, const std::vector<MopsDetection>* allDets, 
+                                              double maxRMS) {
         Tracklet curTracklet = *t;
         bool isClean = false;
 
         while (isClean == false) {
             double t0 = (*allDets)[*(curTracklet.indices.begin())].getEpochMJD();
-            std::vector<Detection> curTrackletDets = getTrackletDets(&curTracklet, allDets);
+            std::vector<MopsDetection> curTrackletDets = getTrackletDets(&curTracklet, allDets);
             std::vector<double> RASlopeAndOffset, DecSlopeAndOffset;
             leastSquaresSolveForRADecLinear(&curTrackletDets, RASlopeAndOffset, 
                                                  DecSlopeAndOffset, t0);
@@ -297,7 +283,7 @@ namespace rmsLineFit {
             unsigned int worstDetIndex = 0;
             for (std::map<unsigned int, double>::iterator distIter = indexToSqDist.begin();
                  distIter != indexToSqDist.end(); distIter++) {
-                double distMax = maxRMSm * (*allDets)[distIter->first].getMag() + maxRMSb;
+                double distMax = maxRMS;
                 if ((distIter->second > distMax*distMax) && (distIter->second > worstDetVal)) {
                     worstDetVal = distIter->second;
 		    if (worstDetVal > 1) {
@@ -316,18 +302,18 @@ namespace rmsLineFit {
 
 
     void TrackletPurifier::purifyTracklets(const std::vector<Tracklet> *trackletsVector,
-                                           const std::vector<Detection> *detsVector,
-                                           double maxRMSm, double maxRMSb, unsigned int minObs,
+                                           const std::vector<MopsDetection> *detsVector,
+                                           double maxRMS, unsigned int minObs,
                                            std::vector<Tracklet> &output)
     {
         if (output.size() != 0) {
-            throw LSST_EXCEPT(ctExcept::BadParameterException, 
+            throw LSST_EXCEPT(BadParameterException, 
                               "purifyTracklets: output vector not empty\n");
         }
         
         std::vector<Tracklet>::const_iterator tIter;
         for (tIter = trackletsVector->begin(); tIter != trackletsVector->end(); tIter++) {
-            Tracklet tmp = purifyTracklet(&(*tIter), detsVector, maxRMSm, maxRMSb);
+            Tracklet tmp = purifyTracklet(&(*tIter), detsVector, maxRMS);
             if (tmp.indices.size() >= minObs) {
                 output.push_back(tmp);
             }
@@ -337,4 +323,4 @@ namespace rmsLineFit {
     }
 
 
-}
+    }} // close lsst::mops namespace

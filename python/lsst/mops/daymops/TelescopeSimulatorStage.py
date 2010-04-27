@@ -1,5 +1,5 @@
 """
-Simulate the flow of data into DiaSourceIDTonight
+Simulate the flow of data into DIASourceIDTonight
 
 Used for testing purposes only.
 """
@@ -16,7 +16,7 @@ from SafeDbStorage import SafeDbStorage
 class TelescopeSimulatorStage(DayMOPSStage):
     """
     Simulate the telescope observing for one full night and populate the 
-    DiaSourceIDTonight database table with the appropriate DiaSource IDs.
+    DIASourceIDTonight database table with the appropriate DIASource IDs.
     
     This Stage should not be used in operations.
     """
@@ -24,7 +24,6 @@ class TelescopeSimulatorStage(DayMOPSStage):
         """
         Standard Stage initializer.
         """
-        print "Entering TelescopeSimulatorStage.__init__!"
         super(TelescopeSimulatorStage, self).__init__(stageId, policy)
         
         # Get database details from policy
@@ -36,17 +35,17 @@ class TelescopeSimulatorStage(DayMOPSStage):
         
         
         
-        # Fetch the oldest DiaSource time (in UT TAI nsec).
+        # Fetch the oldest DIASource time (in UT TAI nsec).
         # Connect to the database.
         db = SafeDbStorage()
         db.setRetrieveLocation(persistence.LogicalLocation(self.dbLocStr))
         
         # If we do not have data between those two times, go to the next 
         # available times.
-        # sql: select taiMidPoint from DiaSource order by taiMidPoint limit 1;
-        db.setTableForQuery('DiaSource')
-        db.outColumn('min(exposureStartTime)', True)      # isExpr=True
-        db.outColumn('max(exposureStartTime)', True)      # isExpr=True
+        # sql: select taiMidPoint from DIASource order by taiMidPoint limit 1;
+        db.setTableForQuery('DIASource')
+        db.outColumn('min(taiMidPoint)', True)      # isExpr=True
+        db.outColumn('max(taiMidPoint)', True)      # isExpr=True
         db.query()
         if(db.next()):
             tMin = db.getColumnByPosDouble(0)
@@ -54,10 +53,9 @@ class TelescopeSimulatorStage(DayMOPSStage):
             db.finishQuery()
         else:
             db.finishQuery()
-            raise(Exception('No data in %s/DiaSource' %(self.dbLocStr, )))
+            raise(Exception('No data in %s/DIASource' %(self.dbLocStr, )))
         del(db)
         
-        print "got tMin, tMax = ", tMin, tMax
         # Now determine the starting night number.
         self.lastProcessedNight = max(int(startFromNightNumber),
                                       lib.mjdToNightNumber(tMin))
@@ -69,11 +67,10 @@ class TelescopeSimulatorStage(DayMOPSStage):
     
     def preprocess(self):
         """
-        Copy all the DiaSources from night to night into the DiaSourceIDTonight
+        Copy all the DIASources from night to night into the DIASourceIDTonight
         table. Start from the oldest night not grater than 
         self.lastProcessedNight.
         """
-        print "Entering TelescopeSimulatorStage.preprocess!"
         # Call the superclass preprocess() method.
         super(TelescopeSimulatorStage, self).preprocess()
         
@@ -84,7 +81,7 @@ class TelescopeSimulatorStage(DayMOPSStage):
         db = SafeDbStorage()
         db.setPersistLocation(persistence.LogicalLocation(self.dbLocStr))
         db.startTransaction()
-        db.executeSql('delete from DiaSourceIDTonight')
+        db.executeSql('delete from DIASourceIDTonight')
         db.endTransaction()
         del(db)
         
@@ -100,20 +97,20 @@ class TelescopeSimulatorStage(DayMOPSStage):
         (tMin, tMax) = lib.nightNumberToMjdRange(self.lastProcessedNight,
                                                  self.utOffset)
         
-        # Copy the corresponding DiaSource IDs into DiaSourceIDTonight.
-        # sql: insert into DiaSourceIDTonight (DiaSourceId) \
-        #      (select diaSourceId from DiaSource \
-        #       where exposureStartTime between %f and %f);
-        sql = 'insert into DiaSourceIDTonight (DiaSourceId) \
-               (select diaSourceId from DiaSource \
-                where exposureStartTime between %f and %f)'
+        # Copy the corresponding DIASource IDs into DIASourceIDTonight.
+        # sql: insert into DIASourceIDTonight (DIASourceId) \
+        #      (select diaSourceId from DIASource \
+        #       where taiMidPoint between %f and %f);
+        sql = 'insert into DIASourceIDTonight (DIASourceId) \
+               (select diaSourceId from DIASource \
+                where taiMidPoint between %f and %f)'
         db = SafeDbStorage()
         db.setRetrieveLocation(persistence.LogicalLocation(self.dbLocStr))
         db.startTransaction()
         db.executeSql(sql %(tMin, tMax))
         db.endTransaction()
         del(db)
-        self.logIt('INFO', 'Inserted DiaSource IDs into DiaSourceIDTonight')
+        self.logIt('INFO', 'Inserted DiaSource IDs into DIASourceIDTonight')
         self.outputQueue.addDataset(self.activeClipboard)
         return
     

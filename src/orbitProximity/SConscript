@@ -6,13 +6,13 @@ Import("env")
 Import("common_libs")
 Import("ext_libs")
 
-env.Library('orbitProximity', common_libs + ['orbitProximity.cc'])
+env.Library('../../lib/orbitProximity', common_libs + ['orbitProximity.cc'])
 
-env.Program('orbitProximity', ['orbitProximityMain.cc', 
-                               'orbitProximity.o'] + common_libs, 
+env.Program('../../bin/orbitProximity', ['orbitProximityMain.cc', 
+                                         'orbitProximity.o'] + common_libs, 
             LIBS=ext_libs)
 
-env.Program('orbitProximity-unitTests', ['orbitProximityUnitTests.cc', 
+env.Program('../../tests/orbitProximity-unitTests', ['orbitProximityUnitTests.cc', 
 					 'orbitProximity.o'] + common_libs, 
             LIBS=ext_libs)
 

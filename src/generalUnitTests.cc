@@ -9,15 +9,17 @@
 #include <cmath>
 
 
-#include "Detection.h"
-#include "Exceptions.h"
-#include "Tracklet.h"
-#include "PointAndValue.h"
-#include "common.h"
-#include "KDTree.h"
-#include "rmsLineFit.h"
-#include "removeSubsets.h"
+#include "lsst/mops/MopsDetection.h"
+#include "lsst/mops/Exceptions.h"
+#include "lsst/mops/Tracklet.h"
+#include "lsst/mops/PointAndValue.h"
+#include "lsst/mops/common.h"
+#include "lsst/mops/KDTree.h"
+#include "lsst/mops/rmsLineFit.h"
+#include "lsst/mops/removeSubsets.h"
 
+
+using namespace lsst::mops;
 
 bool Eq(double a, double b) 
 {
@@ -41,14 +43,14 @@ bool Eq(double a, double b)
 
 
 
-BOOST_AUTO_TEST_CASE( Detection_blackbox_1 )
+BOOST_AUTO_TEST_CASE( MopsDetection_blackbox_1 )
 {
-    Detection myDet;
+    MopsDetection myDet;
     long int ID = 10001;
     double MJD = 1234.5678;
     double RA = 2.02;
     double dec = 3.03;
-    std::string obscode = "1337";
+    double obscode = 1337;
     std::string objName = "TestingObject1";
     double mag = 4.04;
     double len = 5.05;
@@ -58,33 +60,25 @@ BOOST_AUTO_TEST_CASE( Detection_blackbox_1 )
        << " " << objName << " " << len << " " << angle;
 
     std::string MITIString(ss.str());
-    BOOST_CHECK(myDet.isInitialized() == false);
     myDet.fromMITIString(MITIString);
-    BOOST_CHECK(myDet.isInitialized() == true);
 
     BOOST_CHECK (ID == myDet.getID() );    
 
     BOOST_CHECK (Eq(MJD, myDet.getEpochMJD())) ;
     BOOST_CHECK (Eq(RA,myDet.getRA()));
     BOOST_CHECK (Eq(dec,myDet.getDec())) ; 
-    BOOST_CHECK (obscode == myDet.getObscode());
-    BOOST_CHECK (objName == myDet.getObjName()); 
-    BOOST_CHECK (Eq(mag,myDet.getMag()) ); 
-    BOOST_CHECK (Eq(len,myDet.getLength())); 
-    BOOST_CHECK (Eq(angle,myDet.getAngle()));
-    BOOST_CHECK (myDet.hasExposureTime() == false);
 }
 
 
-BOOST_AUTO_TEST_CASE( Detection_blackbox_2 )
+BOOST_AUTO_TEST_CASE( MopsDetection_blackbox_2 )
 {
     //same as above, but with trailing whitespace
-    Detection myDet;
+    MopsDetection myDet;
     long int ID = 10001;
     double MJD = 1234.5678;
     double RA = 2.02;
     double dec = 3.03;
-    std::string obscode = "1337";
+    double obscode = 1337;
     std::string objName = "TestingObject1";
     double mag = 4.04;
     double len = 5.05;
@@ -94,32 +88,25 @@ BOOST_AUTO_TEST_CASE( Detection_blackbox_2 )
        << " " << objName << " " << len << " " << angle << "  ";
 
     std::string MITIString(ss.str());
-    BOOST_CHECK(myDet.isInitialized() == false);
     myDet.fromMITIString(MITIString);
-    BOOST_CHECK(myDet.isInitialized() == true);
+    
 
     BOOST_CHECK (ID == myDet.getID() );
     BOOST_CHECK (Eq(MJD, myDet.getEpochMJD())) ;
     BOOST_CHECK (Eq(RA,myDet.getRA()));
     BOOST_CHECK (Eq(dec,myDet.getDec())) ; 
-    BOOST_CHECK (obscode == myDet.getObscode());
-    BOOST_CHECK (objName == myDet.getObjName()); 
-    BOOST_CHECK (Eq(mag,myDet.getMag()) ); 
-    BOOST_CHECK (Eq(len,myDet.getLength())); 
-    BOOST_CHECK (Eq(angle,myDet.getAngle()));
-    BOOST_CHECK (myDet.hasExposureTime() == false);
 }
 
 
-BOOST_AUTO_TEST_CASE( Detection_blackbox_3 )
+BOOST_AUTO_TEST_CASE( MopsDetection_blackbox_3 )
 {
     //same as 1, with whitespace in front
-    Detection myDet;
+    MopsDetection myDet;
     long int ID = 10001;
     double MJD = 1234.5678;
     double RA = 2.02;
     double dec = 3.03;
-    std::string obscode = "1337";
+    double obscode = 1337;
     std::string objName = "TestingObject1";
     double mag = 4.04;
     double len = 5.05;
@@ -129,31 +116,25 @@ BOOST_AUTO_TEST_CASE( Detection_blackbox_3 )
        << " " << objName << " " << len << " " << angle;
 
     std::string MITIString(ss.str());
-    BOOST_CHECK(myDet.isInitialized() == false);
+    
     myDet.fromMITIString(MITIString);
-    BOOST_CHECK(myDet.isInitialized() == true);
+    
 
     BOOST_CHECK (ID == myDet.getID() );
     BOOST_CHECK (Eq(MJD, myDet.getEpochMJD())) ;
     BOOST_CHECK (Eq(RA,myDet.getRA()));
     BOOST_CHECK (Eq(dec,myDet.getDec())) ; 
-    BOOST_CHECK (obscode == myDet.getObscode());
-    BOOST_CHECK (objName == myDet.getObjName()); 
-    BOOST_CHECK (Eq(mag,myDet.getMag()) ); 
-    BOOST_CHECK (Eq(len,myDet.getLength())); 
-    BOOST_CHECK (Eq(angle,myDet.getAngle()));
-    BOOST_CHECK (myDet.hasExposureTime() == false);
 }
 
-BOOST_AUTO_TEST_CASE( Detection_blackbox_4 )
+BOOST_AUTO_TEST_CASE( MopsDetection_blackbox_4 )
 {
     //same as 1, with tabs in the whitespace
-    Detection myDet;
+    MopsDetection myDet;
     long int ID = 10001;
     double MJD = 1234.5678;
     double RA = 2.02;
     double dec = 3.03;
-    std::string obscode = "1337";
+    double obscode = 1337;
     std::string objName = "TestingObject1";
     double mag = 4.04;
     double len = 5.05;
@@ -163,34 +144,28 @@ BOOST_AUTO_TEST_CASE( Detection_blackbox_4 )
        << "\t" << objName << "\t" << len << "\t" << angle;
     std::string MITIString(ss.str());
 
-    BOOST_CHECK(myDet.isInitialized() == false);
+    
     myDet.fromMITIString(MITIString);
-    BOOST_CHECK(myDet.isInitialized() == true);
+    
 
     BOOST_CHECK (ID == myDet.getID() );
     BOOST_CHECK (Eq(MJD, myDet.getEpochMJD())) ;
     BOOST_CHECK (Eq(RA,myDet.getRA()));
     BOOST_CHECK (Eq(dec,myDet.getDec())) ; 
-    BOOST_CHECK (obscode == myDet.getObscode());
-    BOOST_CHECK (objName == myDet.getObjName()); 
-    BOOST_CHECK (Eq(mag,myDet.getMag()) ); 
-    BOOST_CHECK (Eq(len,myDet.getLength())); 
-    BOOST_CHECK (Eq(angle,myDet.getAngle()));
-    BOOST_CHECK (myDet.hasExposureTime() == false);
 }
 
 
 
 
-BOOST_AUTO_TEST_CASE( Detection_blackbox_5 )
+BOOST_AUTO_TEST_CASE( MopsDetection_blackbox_5 )
 {
     //same as above, but with trailing newline
-    Detection myDet;
+    MopsDetection myDet;
     long int ID = 10001;
     double MJD = 1234.5678;
     double RA = 2.02;
     double dec = 3.03;
-    std::string obscode = "1337";
+    double obscode = 1337;
     std::string objName = "TestingObject1";
     double mag = 4.04;
     double len = 5.05;
@@ -201,36 +176,30 @@ BOOST_AUTO_TEST_CASE( Detection_blackbox_5 )
 
     std::string MITIString(ss.str());
 
-    BOOST_CHECK(myDet.isInitialized() == false);
+    
     myDet.fromMITIString(MITIString);
-    BOOST_CHECK(myDet.isInitialized() == true);
+    
 
     BOOST_CHECK (ID == myDet.getID() );
 
     BOOST_CHECK (Eq(MJD, myDet.getEpochMJD())) ;
     BOOST_CHECK (Eq(RA,myDet.getRA()));
     BOOST_CHECK (Eq(dec,myDet.getDec())) ; 
-    BOOST_CHECK (obscode == myDet.getObscode());
-    BOOST_CHECK (objName == myDet.getObjName()); 
-    BOOST_CHECK (Eq(mag,myDet.getMag()) ); 
-    BOOST_CHECK (Eq(len,myDet.getLength())); 
-    BOOST_CHECK (Eq(angle,myDet.getAngle()));
-    BOOST_CHECK (myDet.hasExposureTime() == false);
 }
 
 
 
 
 
-BOOST_AUTO_TEST_CASE( Detection_blackbox_6 )
+BOOST_AUTO_TEST_CASE( MopsDetection_blackbox_6 )
 {
     //straightforward, but with an etime parameter.
-    Detection myDet;
+    MopsDetection myDet;
     long int ID = 10001;
     double MJD = 1234.5678;
     double RA = 2.02;
     double dec = 3.03;
-    std::string obscode = "1337";
+    double obscode = 1337;
     std::string objName = "TestingObject1";
     double mag = 4.04;
     double len = 5.05;
@@ -242,96 +211,22 @@ BOOST_AUTO_TEST_CASE( Detection_blackbox_6 )
 
     std::string MITIString(ss.str());
 
-    BOOST_CHECK(myDet.isInitialized() == false);
+    
     myDet.fromMITIString(MITIString);
-    BOOST_CHECK(myDet.isInitialized() == true);
+    
 
     BOOST_CHECK (ID == myDet.getID() );
 
     BOOST_CHECK (Eq(MJD, myDet.getEpochMJD())) ;
     BOOST_CHECK (Eq(RA,myDet.getRA()));
     BOOST_CHECK (Eq(dec,myDet.getDec())) ; 
-    BOOST_CHECK (obscode == myDet.getObscode());
-    BOOST_CHECK (objName == myDet.getObjName()); 
-    BOOST_CHECK (Eq(mag,myDet.getMag()) ); 
-    BOOST_CHECK (Eq(len,myDet.getLength())); 
-    BOOST_CHECK (Eq(angle,myDet.getAngle()));
-    BOOST_CHECK (myDet.hasExposureTime() == true);
-    BOOST_CHECK (Eq(myDet.getExposureTime(), eTime));
-}
-
-
-
-
-BOOST_AUTO_TEST_CASE( Detection_blackbox_7 )
-{
-    //uses the new constructor which doesn't use MITI string (no etime)
-    long int ID = 10001;
-    double MJD = 1234.5678;
-    double RA = 2.02;
-    double dec = 3.03;
-    std::string obscode = "1337";
-    std::string objName = "TestingObject1";
-    double mag = 4.04;
-    double len = 5.05;
-    double angle = -6.06;
-    //double eTime = 7.07;
-
-    Detection myDet(ID, MJD, RA, dec, obscode, objName, mag, len, angle);
-
-    BOOST_CHECK(myDet.isInitialized() == true);
-
-    BOOST_CHECK (ID == myDet.getID() );
-
-    BOOST_CHECK (Eq(MJD, myDet.getEpochMJD())) ;
-    BOOST_CHECK (Eq(RA,myDet.getRA()));
-    BOOST_CHECK (Eq(dec,myDet.getDec())) ; 
-    BOOST_CHECK (obscode == myDet.getObscode());
-    BOOST_CHECK (objName == myDet.getObjName()); 
-    BOOST_CHECK (Eq(mag,myDet.getMag()) ); 
-    BOOST_CHECK (Eq(len,myDet.getLength())); 
-    BOOST_CHECK (Eq(angle,myDet.getAngle()));
-    BOOST_CHECK (myDet.hasExposureTime() == false);
-}
-
-
-BOOST_AUTO_TEST_CASE( Detection_blackbox_8 )
-{
-    //uses the new constructor which doesn't use MITI string (also, use etime)
-    long int ID = 10001;
-    double MJD = 1234.5678;
-    double RA = 2.02;
-    double dec = 3.03;
-    std::string obscode = "1337";
-    std::string objName = "TestingObject1";
-    double mag = 4.04;
-    double len = 5.05;
-    double angle = -6.06;
-    double eTime = 7.07;
-
-    Detection myDet(ID, MJD, RA, dec, obscode, objName, mag, len, angle, eTime);
-
-    BOOST_CHECK(myDet.isInitialized() == true);
-
-    BOOST_CHECK (ID == myDet.getID() );
-
-    BOOST_CHECK (Eq(MJD, myDet.getEpochMJD())) ;
-    BOOST_CHECK (Eq(RA,myDet.getRA()));
-    BOOST_CHECK (Eq(dec,myDet.getDec())) ; 
-    BOOST_CHECK (obscode == myDet.getObscode());
-    BOOST_CHECK (objName == myDet.getObjName()); 
-    BOOST_CHECK (Eq(mag,myDet.getMag()) ); 
-    BOOST_CHECK (Eq(len,myDet.getLength())); 
-    BOOST_CHECK (Eq(angle,myDet.getAngle()));
-    BOOST_CHECK (myDet.hasExposureTime() == true);
-    BOOST_CHECK (Eq(myDet.getExposureTime(), eTime));
 }
 
 
 
 
 /* 
-   Detection whitebox tests: Actually, aside from error cases, we have 100%
+   MopsDetection whitebox tests: Actually, aside from error cases, we have 100%
    coverage through blackbox tests.
 
    TBD: possibly find a good way to test that we handle bad input sanely?
@@ -377,7 +272,7 @@ BOOST_AUTO_TEST_CASE( PAV_blackbox_1 )
     myPoint.push_back(-3.03);
     myPoint.push_back(4.04);
     int myValue = 12345;
-    KDTree::PointAndValue<int> myPAV;
+    PointAndValue<int> myPAV;
     myPAV.setPoint(myPoint);
     myPAV.setValue(myValue);
 
@@ -411,7 +306,7 @@ BOOST_AUTO_TEST_CASE( Common_fastMedian_blackbox_1 )
     doubles.push_back(4.04);
     doubles.push_back(3.03);
     doubles.push_back(2.02);
-    BOOST_CHECK(Eq(KDTree::Common::fastMedian(doubles),3.03));
+    BOOST_CHECK(Eq(fastMedian(doubles),3.03));
 }
 
 
@@ -419,7 +314,7 @@ BOOST_AUTO_TEST_CASE( Common_fastMedian_blackbox_2 )
 {
     std::vector<double> doubles;
     doubles.push_back(5.05);
-    BOOST_CHECK(Eq(KDTree::Common::fastMedian(doubles),5.05));
+    BOOST_CHECK(Eq(fastMedian(doubles),5.05));
 }
 
 
@@ -432,7 +327,7 @@ BOOST_AUTO_TEST_CASE( Common_fastMedian_blackbox_3 )
         doubles.push_back(i * 1.01);
         doubles.push_back(i * -1.01);
     }
-    BOOST_CHECK(Eq(KDTree::Common::fastMedian(doubles),0.0001));
+    BOOST_CHECK(Eq(fastMedian(doubles),0.0001));
 }
 
 
@@ -443,8 +338,8 @@ BOOST_AUTO_TEST_CASE( Common_fastMedian_blackbox_3 )
 
 BOOST_AUTO_TEST_CASE( Common_areEqual_blackbox_1 )
 {
-    BOOST_CHECK(KDTree::Common::areEqual(1.000000000001, 1.0) == true);
-    BOOST_CHECK(KDTree::Common::areEqual(1.000000001, 1.0) == false);
+    BOOST_CHECK(areEqual(1.000000000001, 1.0) == true);
+    BOOST_CHECK(areEqual(1.000000001, 1.0) == false);
 }
 
 // areEqual has 100% coverage from blackbox
@@ -460,7 +355,7 @@ BOOST_AUTO_TEST_CASE( Common_euclideanDistance_blackbox_1 )
     p2.push_back(0.0);
     p2.push_back(10.0);
 
-    BOOST_CHECK(Eq(KDTree::Common::euclideanDistance(p1,p2,3), 10.0));
+    BOOST_CHECK(Eq(euclideanDistance(p1,p2,3), 10.0));
     
     p1[0] = 0.0;
     p1[0] = 0.0;
@@ -470,7 +365,7 @@ BOOST_AUTO_TEST_CASE( Common_euclideanDistance_blackbox_1 )
     p2[1] = 0.0;
     p2[2] = 0.0;
 
-    BOOST_CHECK(Eq(KDTree::Common::euclideanDistance(p1,p2,3), 10.0));
+    BOOST_CHECK(Eq(euclideanDistance(p1,p2,3), 10.0));
 
     p1[0] = 0.0;
     p1[0] = 0.0;
@@ -481,7 +376,7 @@ BOOST_AUTO_TEST_CASE( Common_euclideanDistance_blackbox_1 )
     p2[2] = 0.0;
 
 
-    BOOST_CHECK(Eq(KDTree::Common::euclideanDistance(p1,p2,3), 10.0));    
+    BOOST_CHECK(Eq(euclideanDistance(p1,p2,3), 10.0));    
 
 }
 
@@ -496,7 +391,7 @@ BOOST_AUTO_TEST_CASE( Common_euclideanDistance_blackbox_2 )
     p2.push_back(3.0);
     p2.push_back(4.0);
 
-    BOOST_CHECK(Eq(KDTree::Common::euclideanDistance(p1,p2,2), 5.0));    
+    BOOST_CHECK(Eq(euclideanDistance(p1,p2,2), 5.0));    
 }
 
 
@@ -509,7 +404,7 @@ BOOST_AUTO_TEST_CASE( Common_euclideanDistance_blackbox_3 )
     p2.push_back(-3.0);
     p2.push_back(-4.0);
 
-    BOOST_CHECK(Eq(KDTree::Common::euclideanDistance(p1,p2,2), 5.0));    
+    BOOST_CHECK(Eq(euclideanDistance(p1,p2,2), 5.0));    
 }
 
 // euclideanDistance has 100% coverage from blackbox
@@ -517,20 +412,20 @@ BOOST_AUTO_TEST_CASE( Common_euclideanDistance_blackbox_3 )
 
 BOOST_AUTO_TEST_CASE( Common_distance1D_blackbox_1 )
 {
-    BOOST_CHECK(Eq(KDTree::Common::distance1D(1.0, -5.0, KDTree::Common::EUCLIDEAN), 6.0));    
+    BOOST_CHECK(Eq(distance1D(1.0, -5.0, EUCLIDEAN), 6.0));    
 
-    BOOST_CHECK(Eq(KDTree::Common::distance1D(1.0, 355.0, KDTree::Common::CIRCULAR_DEGREES), 6.0));    
-    BOOST_CHECK(Eq(KDTree::Common::distance1D(1.0, 181.0, KDTree::Common::CIRCULAR_DEGREES), 180.0));    
-    BOOST_CHECK(Eq(KDTree::Common::distance1D(0.0, 181.0, KDTree::Common::CIRCULAR_DEGREES), 179.0));    
+    BOOST_CHECK(Eq(distance1D(1.0, 355.0, CIRCULAR_DEGREES), 6.0));    
+    BOOST_CHECK(Eq(distance1D(1.0, 181.0, CIRCULAR_DEGREES), 180.0));    
+    BOOST_CHECK(Eq(distance1D(0.0, 181.0, CIRCULAR_DEGREES), 179.0));    
 
-    BOOST_CHECK(Eq(KDTree::Common::distance1D( 355.0, 1.0, KDTree::Common::CIRCULAR_DEGREES), 6.0));    
-    BOOST_CHECK(Eq(KDTree::Common::distance1D(181.0, 1.0, KDTree::Common::CIRCULAR_DEGREES), 180.0));    
-    BOOST_CHECK(Eq(KDTree::Common::distance1D(181.0, 0.0, KDTree::Common::CIRCULAR_DEGREES), 179.0));    
+    BOOST_CHECK(Eq(distance1D( 355.0, 1.0, CIRCULAR_DEGREES), 6.0));    
+    BOOST_CHECK(Eq(distance1D(181.0, 1.0, CIRCULAR_DEGREES), 180.0));    
+    BOOST_CHECK(Eq(distance1D(181.0, 0.0, CIRCULAR_DEGREES), 179.0));    
 
-    BOOST_CHECK(Eq(KDTree::Common::distance1D(1.0, M_PI, KDTree::Common::CIRCULAR_RADIANS), M_PI - 1.0));
-    BOOST_CHECK(Eq(KDTree::Common::distance1D(0.0, M_PI + 1.0, KDTree::Common::CIRCULAR_RADIANS), M_PI - 1.0));
-    BOOST_CHECK(Eq(KDTree::Common::distance1D(M_PI, 1.0, KDTree::Common::CIRCULAR_RADIANS), M_PI - 1.0));
-    BOOST_CHECK(Eq(KDTree::Common::distance1D(M_PI + 1.0, 0.0, KDTree::Common::CIRCULAR_RADIANS), M_PI - 1.0));
+    BOOST_CHECK(Eq(distance1D(1.0, M_PI, CIRCULAR_RADIANS), M_PI - 1.0));
+    BOOST_CHECK(Eq(distance1D(0.0, M_PI + 1.0, CIRCULAR_RADIANS), M_PI - 1.0));
+    BOOST_CHECK(Eq(distance1D(M_PI, 1.0, CIRCULAR_RADIANS), M_PI - 1.0));
+    BOOST_CHECK(Eq(distance1D(M_PI + 1.0, 0.0, CIRCULAR_RADIANS), M_PI - 1.0));
 
 }
 
@@ -543,16 +438,16 @@ BOOST_AUTO_TEST_CASE( Common_distance1D_blackbox_1 )
 BOOST_AUTO_TEST_CASE( Common_regionsOverlap1D_blackbox_1 )
 {
     
-    BOOST_CHECK((KDTree::Common::regionsOverlap1D(1.0, 2.0, 3.0, 4.0, KDTree::Common::EUCLIDEAN) == false));
-    BOOST_CHECK((KDTree::Common::regionsOverlap1D(1.0, 2.0, -1.0, -10, KDTree::Common::EUCLIDEAN) == false));
-    BOOST_CHECK((KDTree::Common::regionsOverlap1D(1.0, 2.0, -10.0, -1.0, KDTree::Common::EUCLIDEAN) == false));
+    BOOST_CHECK((regionsOverlap1D(1.0, 2.0, 3.0, 4.0, EUCLIDEAN) == false));
+    BOOST_CHECK((regionsOverlap1D(1.0, 2.0, -1.0, -10, EUCLIDEAN) == false));
+    BOOST_CHECK((regionsOverlap1D(1.0, 2.0, -10.0, -1.0, EUCLIDEAN) == false));
 
-    BOOST_CHECK((KDTree::Common::regionsOverlap1D(1.0, 2.0, 1.5, 1.75, KDTree::Common::EUCLIDEAN) == true));
-    BOOST_CHECK((KDTree::Common::regionsOverlap1D(1.0, 2.0, -10.0, 1.5, KDTree::Common::EUCLIDEAN) == true));
-    BOOST_CHECK((KDTree::Common::regionsOverlap1D(1.0, 2.0, 1.75, 1.5, KDTree::Common::EUCLIDEAN) == true));
-    BOOST_CHECK((KDTree::Common::regionsOverlap1D(1.0, 2.0, 1.5, -10.0, KDTree::Common::EUCLIDEAN) == true));
-    BOOST_CHECK((KDTree::Common::regionsOverlap1D(1.0, 2.0, -1.0, 10.0, KDTree::Common::EUCLIDEAN) == true));
-    BOOST_CHECK((KDTree::Common::regionsOverlap1D(1.0, 2.0, 10.0, -1.0, KDTree::Common::EUCLIDEAN) == true));
+    BOOST_CHECK((regionsOverlap1D(1.0, 2.0, 1.5, 1.75, EUCLIDEAN) == true));
+    BOOST_CHECK((regionsOverlap1D(1.0, 2.0, -10.0, 1.5, EUCLIDEAN) == true));
+    BOOST_CHECK((regionsOverlap1D(1.0, 2.0, 1.75, 1.5, EUCLIDEAN) == true));
+    BOOST_CHECK((regionsOverlap1D(1.0, 2.0, 1.5, -10.0, EUCLIDEAN) == true));
+    BOOST_CHECK((regionsOverlap1D(1.0, 2.0, -1.0, 10.0, EUCLIDEAN) == true));
+    BOOST_CHECK((regionsOverlap1D(1.0, 2.0, 10.0, -1.0, EUCLIDEAN) == true));
 
     /* recall that this function has bizarre calling conventions (it should
      * probably be rewritten for better readability, but the current version
@@ -566,58 +461,98 @@ BOOST_AUTO_TEST_CASE( Common_regionsOverlap1D_blackbox_1 )
      * but it *CANNOT* be longer than 180 degrees.)
      */
 
-    BOOST_CHECK((KDTree::Common::regionsOverlap1D(10., 20., 15., 30., KDTree::Common::CIRCULAR_DEGREES) == true));
-    BOOST_CHECK((KDTree::Common::regionsOverlap1D(10., 20., 30., 15., KDTree::Common::CIRCULAR_DEGREES) == true));
-    BOOST_CHECK((KDTree::Common::regionsOverlap1D(10., 20., 15., 17., KDTree::Common::CIRCULAR_DEGREES) == true));
-    BOOST_CHECK((KDTree::Common::regionsOverlap1D(10., 20., 17., 15., KDTree::Common::CIRCULAR_DEGREES) == true));
-    BOOST_CHECK((KDTree::Common::regionsOverlap1D(10., 20., 0., 30., KDTree::Common::CIRCULAR_DEGREES) == true));
-    BOOST_CHECK((KDTree::Common::regionsOverlap1D(10., 20., 30., 0., KDTree::Common::CIRCULAR_DEGREES) == true));
+    BOOST_CHECK((regionsOverlap1D(10., 20., 15., 30., CIRCULAR_DEGREES) == true));
+    BOOST_CHECK((regionsOverlap1D(10., 20., 30., 15., CIRCULAR_DEGREES) == true));
+    BOOST_CHECK((regionsOverlap1D(10., 20., 15., 17., CIRCULAR_DEGREES) == true));
+    BOOST_CHECK((regionsOverlap1D(10., 20., 17., 15., CIRCULAR_DEGREES) == true));
+    BOOST_CHECK((regionsOverlap1D(10., 20., 0., 30., CIRCULAR_DEGREES) == true));
+    BOOST_CHECK((regionsOverlap1D(10., 20., 30., 0., CIRCULAR_DEGREES) == true));
 
-    BOOST_CHECK((KDTree::Common::regionsOverlap1D(10., 350., 15., 30., KDTree::Common::CIRCULAR_DEGREES) == true));
-    BOOST_CHECK((KDTree::Common::regionsOverlap1D(10., 350., 5., 20., KDTree::Common::CIRCULAR_DEGREES) == true));
-    BOOST_CHECK((KDTree::Common::regionsOverlap1D(10., 350., 0., 5., KDTree::Common::CIRCULAR_DEGREES) == false));
-    BOOST_CHECK((KDTree::Common::regionsOverlap1D(10., 350., -5., 5., KDTree::Common::CIRCULAR_DEGREES) == false));
-    BOOST_CHECK((KDTree::Common::regionsOverlap1D(10., 350., 355., 5., KDTree::Common::CIRCULAR_DEGREES) == false));
-    BOOST_CHECK((KDTree::Common::regionsOverlap1D(10., 350., 355., 359., KDTree::Common::CIRCULAR_DEGREES) == false));
-    BOOST_CHECK((KDTree::Common::regionsOverlap1D(10., 350., -20., 20., KDTree::Common::CIRCULAR_DEGREES) == true));
+    BOOST_CHECK((regionsOverlap1D(10., 350., 15., 30., CIRCULAR_DEGREES) == true));
+    BOOST_CHECK((regionsOverlap1D(10., 350., 5., 20., CIRCULAR_DEGREES) == true));
+    BOOST_CHECK((regionsOverlap1D(10., 350., 0., 5., CIRCULAR_DEGREES) == false));
+    BOOST_CHECK((regionsOverlap1D(10., 350., -5., 5., CIRCULAR_DEGREES) == false));
+    BOOST_CHECK((regionsOverlap1D(10., 350., 355., 5., CIRCULAR_DEGREES) == false));
+    BOOST_CHECK((regionsOverlap1D(10., 350., 355., 359., CIRCULAR_DEGREES) == false));
+    BOOST_CHECK((regionsOverlap1D(10., 350., -20., 20., CIRCULAR_DEGREES) == true));
 
-    BOOST_CHECK((KDTree::Common::regionsOverlap1D(0., M_PI-.5, 1., 1.5, KDTree::Common::CIRCULAR_RADIANS) == true));
-    BOOST_CHECK((KDTree::Common::regionsOverlap1D(.5, M_PI-.5, 0., .45, KDTree::Common::CIRCULAR_RADIANS) == false));
-    BOOST_CHECK((KDTree::Common::regionsOverlap1D(0., M_PI, 0., .45, KDTree::Common::CIRCULAR_RADIANS) == true));
-    BOOST_CHECK((KDTree::Common::regionsOverlap1D(0., M_PI, 0., .45, KDTree::Common::CIRCULAR_RADIANS) == true));
-    BOOST_CHECK((KDTree::Common::regionsOverlap1D(M_PI, M_PI + 1, M_PI+.5, .1, KDTree::Common::CIRCULAR_RADIANS) == true));
+    BOOST_CHECK((regionsOverlap1D(0., M_PI-.5, 1., 1.5, CIRCULAR_RADIANS) == true));
+    BOOST_CHECK((regionsOverlap1D(.5, M_PI-.5, 0., .45, CIRCULAR_RADIANS) == false));
+    BOOST_CHECK((regionsOverlap1D(0., M_PI, 0., .45, CIRCULAR_RADIANS) == true));
+    BOOST_CHECK((regionsOverlap1D(0., M_PI, 0., .45, CIRCULAR_RADIANS) == true));
+    BOOST_CHECK((regionsOverlap1D(M_PI, M_PI + 1, M_PI+.5, .1, CIRCULAR_RADIANS) == true));
 }
+
+
+
+BOOST_AUTO_TEST_CASE( Common_angularRegionsOvelapSafe_blackbox_1 )
+{
+     
+    BOOST_CHECK((angularRegionsOverlapSafe(10., 20., 15., 30.) == true));
+    BOOST_CHECK((angularRegionsOverlapSafe(10., 20., 30., 15.) == true));
+    BOOST_CHECK((angularRegionsOverlapSafe(10., 20., 15., 17.) == true));
+    BOOST_CHECK((angularRegionsOverlapSafe(10., 20., 17., 15.) == true));
+    BOOST_CHECK((angularRegionsOverlapSafe(10., 20., 0., 30.) == true));
+    BOOST_CHECK((angularRegionsOverlapSafe(10., 20., 30., 0.) == true));
+
+    BOOST_CHECK((angularRegionsOverlapSafe(20., 10., 15., 30.) == true));
+    BOOST_CHECK((angularRegionsOverlapSafe(20., 10., 30., 15.) == true));
+    BOOST_CHECK((angularRegionsOverlapSafe(20., 10., 15., 17.) == true));
+    BOOST_CHECK((angularRegionsOverlapSafe(20., 10., 17., 15.) == true));
+    BOOST_CHECK((angularRegionsOverlapSafe(20., 10., 0., 30.) == true));
+    BOOST_CHECK((angularRegionsOverlapSafe(20., 10., 30., 0.) == true));
+
+    BOOST_CHECK((angularRegionsOverlapSafe(10., 350., 15., 30.) == false));
+    BOOST_CHECK((angularRegionsOverlapSafe(10., 350., 5., 20.) == true));
+    BOOST_CHECK((angularRegionsOverlapSafe(10., 350., 0., 5.) == true));
+    BOOST_CHECK((angularRegionsOverlapSafe(10., 350., -5., 5.) == true));
+    BOOST_CHECK((angularRegionsOverlapSafe(10., 350., 355., 5.) == true));
+    BOOST_CHECK((angularRegionsOverlapSafe(10., 350., 355., 359.) == true));
+    BOOST_CHECK((angularRegionsOverlapSafe(10., 350., -20., 20.) == true));
+
+    BOOST_CHECK((angularRegionsOverlapSafe(350., 10., 15., 30.) == false));
+    BOOST_CHECK((angularRegionsOverlapSafe(350., 10., 5., 20.) == true));
+    BOOST_CHECK((angularRegionsOverlapSafe(350., 10., 0., 5.) == true));
+    BOOST_CHECK((angularRegionsOverlapSafe(350., 10., -5., 5.) == true));
+    BOOST_CHECK((angularRegionsOverlapSafe(350., 10., 355., 5.) == true));
+    BOOST_CHECK((angularRegionsOverlapSafe(350., 10., 355., 359.) == true));
+    BOOST_CHECK((angularRegionsOverlapSafe(350., 10., -20., 20.) == true));
+
+}
+
+
+
 
 // blackbox coverage here should be 100% except for the error cases, TBD
 
 BOOST_AUTO_TEST_CASE( convertToStandardDegrees_blackbox_1 )
 {
-    BOOST_CHECK(Eq(KDTree::Common::convertToStandardDegrees(100.), 100.));
-    BOOST_CHECK(Eq(KDTree::Common::convertToStandardDegrees(-10.), 350.));
-    BOOST_CHECK(Eq(KDTree::Common::convertToStandardDegrees(360.), 0.));
-    BOOST_CHECK(Eq(KDTree::Common::convertToStandardDegrees(730.), 10.));
-    BOOST_CHECK(Eq(KDTree::Common::convertToStandardDegrees(-360.), 0.));
-    BOOST_CHECK(Eq(KDTree::Common::convertToStandardDegrees(-370.), 350.));    
+    BOOST_CHECK(Eq(convertToStandardDegrees(100.), 100.));
+    BOOST_CHECK(Eq(convertToStandardDegrees(-10.), 350.));
+    BOOST_CHECK(Eq(convertToStandardDegrees(360.), 0.));
+    BOOST_CHECK(Eq(convertToStandardDegrees(730.), 10.));
+    BOOST_CHECK(Eq(convertToStandardDegrees(-360.), 0.));
+    BOOST_CHECK(Eq(convertToStandardDegrees(-370.), 350.));    
 }
 
 //blackbox coverage should be 100% for convertToStandardDegrees
 
 BOOST_AUTO_TEST_CASE( minOfTwo_blackbox_1 )
 {
-    BOOST_CHECK(Eq(KDTree::Common::minOfTwo(-370., -360), -370.));    
-    BOOST_CHECK(Eq(KDTree::Common::minOfTwo(100., -360), -360.));    
-    BOOST_CHECK(Eq(KDTree::Common::minOfTwo(100., 100.), 100.));    
-    BOOST_CHECK(Eq(KDTree::Common::minOfTwo(0., 0.), 0.));    
+    BOOST_CHECK(Eq(minOfTwo(-370., -360), -370.));    
+    BOOST_CHECK(Eq(minOfTwo(100., -360), -360.));    
+    BOOST_CHECK(Eq(minOfTwo(100., 100.), 100.));    
+    BOOST_CHECK(Eq(minOfTwo(0., 0.), 0.));    
 }
 
 //blackbox coverage should be 100% for minOfTwo
 
 BOOST_AUTO_TEST_CASE( maxOfTwo_blackbox_1 )
 {
-    BOOST_CHECK(Eq(KDTree::Common::maxOfTwo(-370., -360), -360.));    
-    BOOST_CHECK(Eq(KDTree::Common::maxOfTwo(100., -360), 100.));    
-    BOOST_CHECK(Eq(KDTree::Common::maxOfTwo(100., 100.), 100.));    
-    BOOST_CHECK(Eq(KDTree::Common::maxOfTwo(0., 0.), 0.));    
+    BOOST_CHECK(Eq(maxOfTwo(-370., -360), -360.));    
+    BOOST_CHECK(Eq(maxOfTwo(100., -360), 100.));    
+    BOOST_CHECK(Eq(maxOfTwo(100., 100.), 100.));    
+    BOOST_CHECK(Eq(maxOfTwo(0., 0.), 0.));    
 }
 
 //blackbox coverage should be 100% for maxOfTwo
@@ -628,7 +563,7 @@ BOOST_AUTO_TEST_CASE( maxOfTwo_blackbox_1 )
 BOOST_AUTO_TEST_CASE (arcToRA_1 )
 {
      for (double i = 0; i < 90; i+= 10) {
-	  double RADist = KDTree::Common::arcToRA(0,i);
+	  double RADist = arcToRA(0,i);
 	  BOOST_CHECK(Eq(RADist, i));
      }
 
@@ -638,8 +573,8 @@ BOOST_AUTO_TEST_CASE (arcToRA_1 )
 BOOST_AUTO_TEST_CASE( angularDistance_1 )
 {
      for (double i = 0; i < 90; i+= 10) {
-	  double maxRADist = KDTree::Common::arcToRA(i, 1);
-	  double maxAngularDist = KDTree::Common::angularDistanceRADec_deg(0,i,maxRADist,i); 
+	  double maxRADist = arcToRA(i, 1);
+	  double maxAngularDist = angularDistanceRADec_deg(0,i,maxRADist,i); 
 	  BOOST_CHECK(Eq(maxAngularDist,1.0));
      }
 }
@@ -650,7 +585,7 @@ BOOST_AUTO_TEST_CASE( angularDistance_2 )
 {
      double prior = 190;
      for (double i = 0; i < 90; i+= 10) {
-	  double cur = KDTree::Common::angularDistanceRADec_deg(0,i,10,i);
+	  double cur = angularDistanceRADec_deg(0,i,10,i);
 	  BOOST_CHECK(cur < prior);
 	  prior = cur;
      }
@@ -659,7 +594,7 @@ BOOST_AUTO_TEST_CASE( angularDistance_2 )
 BOOST_AUTO_TEST_CASE( angularDistance_3 )
 {
      for (double i = -90; i < 80; i+= 10) {
-	  BOOST_CHECK(Eq(10, KDTree::Common::angularDistanceRADec_deg(0,i,0,i+10)));
+	  BOOST_CHECK(Eq(10, angularDistanceRADec_deg(0,i,0,i+10)));
      }
 }
 
@@ -676,10 +611,10 @@ BOOST_AUTO_TEST_CASE( angularDistance_3 )
  * some queries are from the 'other side' of zero.)
  */
 
-void populateTree_Dataset1(KDTree::KDTree<int> &kdt)
+void populateTree_Dataset1(KDTree<int> &kdt)
 {
-    std::vector<KDTree::PointAndValue<int> > myPts;
-    KDTree::PointAndValue<int> tmpPAV;
+    std::vector<PointAndValue<int> > myPts;
+    PointAndValue<int> tmpPAV;
 
     std::vector<double>tmpPt;
     tmpPt.push_back(10.0);
@@ -694,7 +629,7 @@ void populateTree_Dataset1(KDTree::KDTree<int> &kdt)
 
 
 
-void queryTree_Dataset1(KDTree::KDTree<int> &kdt)
+void queryTree_Dataset1(KDTree<int> &kdt)
 {
     // querypt1, tolerances1, geos1: should reach the point.
     
@@ -704,11 +639,11 @@ void queryTree_Dataset1(KDTree::KDTree<int> &kdt)
     std::vector<double>tolerances1;
     tolerances1.push_back(5.1);
     tolerances1.push_back(5.1);
-    std::vector<KDTree::Common::GeometryType> myGeos1;
-    myGeos1.push_back(KDTree::Common::EUCLIDEAN);
-    myGeos1.push_back(KDTree::Common::EUCLIDEAN);
+    std::vector<GeometryType> myGeos1;
+    myGeos1.push_back(EUCLIDEAN);
+    myGeos1.push_back(EUCLIDEAN);
 
-    std::vector<KDTree::PointAndValue<int> > queryResults;
+    std::vector<PointAndValue<int> > queryResults;
 
     queryResults = kdt.hyperRectangleSearch(queryPt1, tolerances1, myGeos1);
     BOOST_REQUIRE(queryResults.size() == 1);    
@@ -716,9 +651,9 @@ void queryTree_Dataset1(KDTree::KDTree<int> &kdt)
 
     // queryPt1, tolerances1, geos2 should *also* reach the point.
 
-    std::vector<KDTree::Common::GeometryType> myGeos2;
-    myGeos2.push_back(KDTree::Common::CIRCULAR_DEGREES);
-    myGeos2.push_back(KDTree::Common::CIRCULAR_DEGREES);
+    std::vector<GeometryType> myGeos2;
+    myGeos2.push_back(CIRCULAR_DEGREES);
+    myGeos2.push_back(CIRCULAR_DEGREES);
 
     queryResults = kdt.hyperRectangleSearch(queryPt1, tolerances1, myGeos2);
     BOOST_REQUIRE(queryResults.size() == 1);    
@@ -773,8 +708,8 @@ void queryTree_Dataset1(KDTree::KDTree<int> &kdt)
 
 BOOST_AUTO_TEST_CASE( KDTree_blackbox_1 )
 {
-    KDTree::KDTree<int> myKDT;
-    KDTree::KDTree<int> myKDT2;
+    KDTree<int> myKDT;
+    KDTree<int> myKDT2;
 
     populateTree_Dataset1(myKDT);
     queryTree_Dataset1(myKDT);
@@ -784,7 +719,7 @@ BOOST_AUTO_TEST_CASE( KDTree_blackbox_1 )
     queryTree_Dataset1(myKDT2);
 
     //test copy constructor, make sure it works as expected
-    KDTree::KDTree<int> myKDT3(myKDT);
+    KDTree<int> myKDT3(myKDT);
 
     queryTree_Dataset1(myKDT3);
 }
@@ -797,9 +732,9 @@ BOOST_AUTO_TEST_CASE( KDTree_blackbox_1 )
    (i,j) where i,j are integers and 0 <= i,j < 10.  each should have a unique ID from 0 to 99.
  */
 
-void populateTree_Dataset2(KDTree::KDTree<int> &kdt)
+void populateTree_Dataset2(KDTree<int> &kdt)
 {
-    std::vector<KDTree::PointAndValue<int> > myPts;
+    std::vector<PointAndValue<int> > myPts;
 
     for (int i = 0; i < 10; i++)
     {
@@ -808,7 +743,7 @@ void populateTree_Dataset2(KDTree::KDTree<int> &kdt)
             std::vector<double>tmpPt;
             tmpPt.push_back(i);
             tmpPt.push_back(j);            
-            KDTree::PointAndValue<int> tmpPAV;
+            PointAndValue<int> tmpPAV;
             tmpPAV.setPoint(tmpPt);
             tmpPAV.setValue(i*10+j);
             myPts.push_back(tmpPAV);
@@ -820,7 +755,7 @@ void populateTree_Dataset2(KDTree::KDTree<int> &kdt)
 
 
 
-void queryTree_Dataset2(KDTree::KDTree<int> &kdt)
+void queryTree_Dataset2(KDTree<int> &kdt)
 {
     // query 1: should get all the points.
     std::vector<double>queryPt1;
@@ -829,11 +764,11 @@ void queryTree_Dataset2(KDTree::KDTree<int> &kdt)
     std::vector<double>tolerances1;
     tolerances1.push_back(5.1);
     tolerances1.push_back(5.1);
-    std::vector<KDTree::Common::GeometryType> myGeos1;
-    myGeos1.push_back(KDTree::Common::EUCLIDEAN);
-    myGeos1.push_back(KDTree::Common::EUCLIDEAN);
+    std::vector<GeometryType> myGeos1;
+    myGeos1.push_back(EUCLIDEAN);
+    myGeos1.push_back(EUCLIDEAN);
 
-    std::vector<KDTree::PointAndValue<int> > queryResults;
+    std::vector<PointAndValue<int> > queryResults;
     queryResults = kdt.hyperRectangleSearch(queryPt1, tolerances1, myGeos1);
 
     //check that we got IDs from from 0 thru 99 inclusive
@@ -859,9 +794,9 @@ void queryTree_Dataset2(KDTree::KDTree<int> &kdt)
     std::vector<double>tolerances2;
     tolerances2.push_back(1.1);
     tolerances2.push_back(1.1);
-    std::vector<KDTree::Common::GeometryType> myGeos2;
-    myGeos2.push_back(KDTree::Common::EUCLIDEAN);
-    myGeos2.push_back(KDTree::Common::EUCLIDEAN);
+    std::vector<GeometryType> myGeos2;
+    myGeos2.push_back(EUCLIDEAN);
+    myGeos2.push_back(EUCLIDEAN);
 
     queryResults = kdt.hyperRectangleSearch(queryPt2, tolerances2, myGeos2);
 
@@ -895,8 +830,8 @@ void queryTree_Dataset2(KDTree::KDTree<int> &kdt)
     tolerances2.push_back(20.);
     tolerances2.push_back(20.);
     myGeos2.clear();
-    myGeos2.push_back(KDTree::Common::CIRCULAR_DEGREES);
-    myGeos2.push_back(KDTree::Common::CIRCULAR_DEGREES);
+    myGeos2.push_back(CIRCULAR_DEGREES);
+    myGeos2.push_back(CIRCULAR_DEGREES);
 
     queryResults = kdt.hyperRectangleSearch(queryPt2, tolerances2, myGeos2);
 
@@ -922,8 +857,8 @@ void queryTree_Dataset2(KDTree::KDTree<int> &kdt)
 
 BOOST_AUTO_TEST_CASE( KDTree_blackbox_2 )
 {
-    KDTree::KDTree<int> myKDT;
-    KDTree::KDTree<int> myKDT2;
+    KDTree<int> myKDT;
+    KDTree<int> myKDT2;
 
     populateTree_Dataset2(myKDT);
     queryTree_Dataset2(myKDT);
@@ -933,7 +868,7 @@ BOOST_AUTO_TEST_CASE( KDTree_blackbox_2 )
     queryTree_Dataset2(myKDT2);
 
     //test copy constructor, make sure it works as expected
-    KDTree::KDTree<int> myKDT3(myKDT);
+    KDTree<int> myKDT3(myKDT);
 
     queryTree_Dataset2(myKDT3);
 }
@@ -945,9 +880,9 @@ BOOST_AUTO_TEST_CASE( KDTree_blackbox_2 )
 
 
 
-KDTree::KDTree<int>* makeAndPopulateTree_Dataset3()
+KDTree<int>* makeAndPopulateTree_Dataset3()
 {
-    std::vector<KDTree::PointAndValue<int> > myPts;
+    std::vector<PointAndValue<int> > myPts;
 
     // 100 copies of the point 10,10
 
@@ -956,20 +891,20 @@ KDTree::KDTree<int>* makeAndPopulateTree_Dataset3()
             std::vector<double>tmpPt;
             tmpPt.push_back(10);
             tmpPt.push_back(10);            
-            KDTree::PointAndValue<int> tmpPAV;
+            PointAndValue<int> tmpPAV;
             tmpPAV.setPoint(tmpPt);
             tmpPAV.setValue(i);
             myPts.push_back(tmpPAV);
     }
 
-    KDTree::KDTree<int>* kdt2 = new KDTree::KDTree<int>(myPts, 2, 1);
+    KDTree<int>* kdt2 = new KDTree<int>(myPts, 2, 1);
     return kdt2;
 }
 
 
 
 
-void queryTree_Dataset3(KDTree::KDTree<int> *kdt)
+void queryTree_Dataset3(KDTree<int> *kdt)
 {
     // query 1: should get all the points.
     std::vector<double>queryPt1;
@@ -978,11 +913,11 @@ void queryTree_Dataset3(KDTree::KDTree<int> *kdt)
     std::vector<double>tolerances1;
     tolerances1.push_back(5.1);
     tolerances1.push_back(5.1);
-    std::vector<KDTree::Common::GeometryType> myGeos1;
-    myGeos1.push_back(KDTree::Common::EUCLIDEAN);
-    myGeos1.push_back(KDTree::Common::EUCLIDEAN);
+    std::vector<GeometryType> myGeos1;
+    myGeos1.push_back(EUCLIDEAN);
+    myGeos1.push_back(EUCLIDEAN);
 
-    std::vector<KDTree::PointAndValue<int> > queryResults;
+    std::vector<PointAndValue<int> > queryResults;
     queryResults = kdt->hyperRectangleSearch(queryPt1, tolerances1, myGeos1);
 
     //check that we got IDs from from 0 thru 99 inclusive
@@ -1020,7 +955,7 @@ void queryTree_Dataset3(KDTree::KDTree<int> *kdt)
 
 BOOST_AUTO_TEST_CASE( KDTree_blackbox_3 )
 {
-    KDTree::KDTree<int> *myKDT;
+    KDTree<int> *myKDT;
 
     // just to be a bit different (and get more coverage), test a different way
     // of instantiating a KDTree...
@@ -1035,9 +970,9 @@ BOOST_AUTO_TEST_CASE( KDTree_blackbox_3 )
 
 
 
-void insertPoint(std::vector<double> point, int &count, std::vector<KDTree::PointAndValue<int> > &pav) 
+void insertPoint(std::vector<double> point, int &count, std::vector<PointAndValue<int> > &pav) 
 {
-     KDTree::PointAndValue<int>tmpPav;
+     PointAndValue<int>tmpPav;
      tmpPav.setPoint(point);
      tmpPav.setValue(count);
      count++;
@@ -1063,7 +998,7 @@ BOOST_AUTO_TEST_CASE ( KDTree_john_dailey_bug_unit_test  )
    >> V  =4,1,2,4,4,4
    >> A  =8,8,8,8,4,3  */
      
-     std::vector<KDTree::PointAndValue <int> > pav;
+     std::vector<PointAndValue <int> > pav;
      int count = 0;
      std::vector<double> tmpPt;
      tmpPt.push_back(1);
@@ -1101,7 +1036,7 @@ BOOST_AUTO_TEST_CASE ( KDTree_john_dailey_bug_unit_test  )
      insertPoint(tmpPt, count, pav); 
      tmpPt.clear();
 
-     KDTree::KDTree<int> myTree(pav, 4, 1);
+     KDTree<int> myTree(pav, 4, 1);
 	  
 }
 
@@ -1111,7 +1046,7 @@ BOOST_AUTO_TEST_CASE ( KDTree_RADecRangeSearch_1 )
 {
      // test our ability to deal with pole crossers in RADec searches.
 
-     std::vector<KDTree::PointAndValue <int> > pav;
+     std::vector<PointAndValue <int> > pav;
      int count = 0;
      std::vector<double> tmpPt;
      // (0, 89.5)
@@ -1125,16 +1060,16 @@ BOOST_AUTO_TEST_CASE ( KDTree_RADecRangeSearch_1 )
      insertPoint(tmpPt, count, pav); 
      tmpPt.clear();
 
-     KDTree::KDTree<int> myTree(pav, 2, 1);
+     KDTree<int> myTree(pav, 2, 1);
      std::vector<double> queryPt;
      queryPt.push_back(0);
      queryPt.push_back(89.5);
      std::vector<double>otherDimsPt;
      std::vector<double>otherDimsTolerances;
-     std::vector<KDTree::Common::GeometryType> spaceTypes;
-     spaceTypes.push_back(KDTree::Common::RA_DEGREES);
-     spaceTypes.push_back(KDTree::Common::DEC_DEGREES);
-     std::vector<KDTree::PointAndValue<int> > matches;     
+     std::vector<GeometryType> spaceTypes;
+     spaceTypes.push_back(RA_DEGREES);
+     spaceTypes.push_back(DEC_DEGREES);
+     std::vector<PointAndValue<int> > matches;     
      matches = myTree.RADecRangeSearch(queryPt, 2.0 /* range of 2 deg should return everything */,
 				       otherDimsPt, otherDimsTolerances, spaceTypes);
      BOOST_CHECK(matches.size() == 2); 			      
@@ -1148,7 +1083,7 @@ BOOST_AUTO_TEST_CASE ( KDTree_RADecRangeSearch_2 )
 {
      // test that we're pruning our results correctly using angular great-circle distance, not euclidean
 
-     std::vector<KDTree::PointAndValue <int> > pav;
+     std::vector<PointAndValue <int> > pav;
      int count = 0;
      std::vector<double> tmpPt;
      // (0, 89.5)
@@ -1162,16 +1097,16 @@ BOOST_AUTO_TEST_CASE ( KDTree_RADecRangeSearch_2 )
      insertPoint(tmpPt, count, pav); 
      tmpPt.clear();
 
-     KDTree::KDTree<int> myTree(pav, 2, 1);
+     KDTree<int> myTree(pav, 2, 1);
      std::vector<double> queryPt;
      queryPt.push_back(0);
      queryPt.push_back(89.5);
      std::vector<double>otherDimsPt;
      std::vector<double>otherDimsTolerances;
-     std::vector<KDTree::Common::GeometryType> spaceTypes;
-     spaceTypes.push_back(KDTree::Common::RA_DEGREES);
-     spaceTypes.push_back(KDTree::Common::DEC_DEGREES);
-     std::vector<KDTree::PointAndValue<int> > matches;     
+     std::vector<GeometryType> spaceTypes;
+     spaceTypes.push_back(RA_DEGREES);
+     spaceTypes.push_back(DEC_DEGREES);
+     std::vector<PointAndValue<int> > matches;     
      matches = myTree.RADecRangeSearch(queryPt, 2.0 /* range of 2 deg should return everything */,
 				       otherDimsPt, otherDimsTolerances, spaceTypes);
      BOOST_CHECK(matches.size() == 2); 			      
@@ -1183,7 +1118,7 @@ BOOST_AUTO_TEST_CASE ( KDTree_RADecRangeSearch_3 )
 {
      // put something right on the north pole, see if things explode
 
-     std::vector<KDTree::PointAndValue <int> > pav;
+     std::vector<PointAndValue <int> > pav;
      int count = 0;
      std::vector<double> tmpPt;
      // (0, 89.5)
@@ -1197,16 +1132,16 @@ BOOST_AUTO_TEST_CASE ( KDTree_RADecRangeSearch_3 )
      insertPoint(tmpPt, count, pav); 
      tmpPt.clear();
 
-     KDTree::KDTree<int> myTree(pav, 2, 1);
+     KDTree<int> myTree(pav, 2, 1);
      std::vector<double> queryPt;
      queryPt.push_back(0);
      queryPt.push_back(89.5);
      std::vector<double>otherDimsPt;
      std::vector<double>otherDimsTolerances;
-     std::vector<KDTree::Common::GeometryType> spaceTypes;
-     spaceTypes.push_back(KDTree::Common::RA_DEGREES);
-     spaceTypes.push_back(KDTree::Common::DEC_DEGREES);
-     std::vector<KDTree::PointAndValue<int> > matches;     
+     std::vector<GeometryType> spaceTypes;
+     spaceTypes.push_back(RA_DEGREES);
+     spaceTypes.push_back(DEC_DEGREES);
+     std::vector<PointAndValue<int> > matches;     
      matches = myTree.RADecRangeSearch(queryPt, 2.0 /* range of 2 deg should return everything */,
 				       otherDimsPt, otherDimsTolerances, spaceTypes);
      BOOST_CHECK(matches.size() == 2); 			      
@@ -1219,30 +1154,30 @@ BOOST_AUTO_TEST_CASE ( KDTree_RADecRangeSearch_4 )
 {
      // cross the south pole!
 
-     std::vector<KDTree::PointAndValue <int> > pav;
+     std::vector<PointAndValue <int> > pav;
      int count = 0;
      std::vector<double> tmpPt;
      // (0, -89.5)
      tmpPt.push_back(0);
-     tmpPt.push_back(KDTree::Common::convertToStandardDegrees(-89.5));
+     tmpPt.push_back(convertToStandardDegrees(-89.5));
      insertPoint(tmpPt, count, pav); 
      tmpPt.clear();
      //  pole: (180, -89.5)
      tmpPt.push_back(180);
-     tmpPt.push_back(KDTree::Common::convertToStandardDegrees(-89.5));
+     tmpPt.push_back(convertToStandardDegrees(-89.5));
      insertPoint(tmpPt, count, pav); 
      tmpPt.clear();
 
-     KDTree::KDTree<int> myTree(pav, 2, 1);
+     KDTree<int> myTree(pav, 2, 1);
      std::vector<double> queryPt;
      queryPt.push_back(0);
      queryPt.push_back(-89.5);
      std::vector<double>otherDimsPt;
      std::vector<double>otherDimsTolerances;
-     std::vector<KDTree::Common::GeometryType> spaceTypes;
-     spaceTypes.push_back(KDTree::Common::RA_DEGREES);
-     spaceTypes.push_back(KDTree::Common::DEC_DEGREES);
-     std::vector<KDTree::PointAndValue<int> > matches;     
+     std::vector<GeometryType> spaceTypes;
+     spaceTypes.push_back(RA_DEGREES);
+     spaceTypes.push_back(DEC_DEGREES);
+     std::vector<PointAndValue<int> > matches;     
      matches = myTree.RADecRangeSearch(queryPt, 2.0 /* range of 2 deg should return everything */,
 				       otherDimsPt, otherDimsTolerances, spaceTypes);
      BOOST_CHECK(matches.size() == 2); 			      
@@ -1256,7 +1191,7 @@ BOOST_AUTO_TEST_CASE ( KDTree_RADecRangeSearch_5 )
 {
      // check that searching is a circle, not a rectangle
 
-     std::vector<KDTree::PointAndValue <int> > pav;
+     std::vector<PointAndValue <int> > pav;
      int count = 0;
      std::vector<double> tmpPt;
      // (40,35) - some random point
@@ -1271,16 +1206,16 @@ BOOST_AUTO_TEST_CASE ( KDTree_RADecRangeSearch_5 )
      insertPoint(tmpPt, count, pav); 
      tmpPt.clear();
 
-     KDTree::KDTree<int> myTree(pav, 2, 1);
+     KDTree<int> myTree(pav, 2, 1);
      std::vector<double> queryPt;
      queryPt.push_back(0);
      queryPt.push_back(0);
      std::vector<double>otherDimsPt;
      std::vector<double>otherDimsTolerances;
-     std::vector<KDTree::Common::GeometryType> spaceTypes;
-     spaceTypes.push_back(KDTree::Common::RA_DEGREES);
-     spaceTypes.push_back(KDTree::Common::DEC_DEGREES);
-     std::vector<KDTree::PointAndValue<int> > matches;     
+     std::vector<GeometryType> spaceTypes;
+     spaceTypes.push_back(RA_DEGREES);
+     spaceTypes.push_back(DEC_DEGREES);
+     std::vector<PointAndValue<int> > matches;     
      matches = myTree.RADecRangeSearch(queryPt, 2.0 /* range of 2 deg should return everything */,
 				       otherDimsPt, otherDimsTolerances, spaceTypes);
      BOOST_CHECK(matches.size() == 0); 			      
@@ -1295,7 +1230,7 @@ BOOST_AUTO_TEST_CASE ( KDTree_RADecRangeSearch_5_1 )
 {
      // search in RA, Dec as well as other dimensions - say, RA, Dec, time
 
-     std::vector<KDTree::PointAndValue <int> > pav;
+     std::vector<PointAndValue <int> > pav;
      int count = 0;
      std::vector<double> tmpPt;
      // (0,70) time 100 - some random point
@@ -1318,7 +1253,7 @@ BOOST_AUTO_TEST_CASE ( KDTree_RADecRangeSearch_5_1 )
      insertPoint(tmpPt, count, pav); 
      tmpPt.clear();
 
-     KDTree::KDTree<int> myTree(pav, 3, 1);
+     KDTree<int> myTree(pav, 3, 1);
      std::vector<double> queryPt;
      queryPt.push_back(0);
      queryPt.push_back(70);
@@ -1327,11 +1262,11 @@ BOOST_AUTO_TEST_CASE ( KDTree_RADecRangeSearch_5_1 )
      std::vector<double>otherDimsTolerances;
      otherDimsTolerances.push_back(2);
      // the last point should be excluded for being too 'late' in time
-     std::vector<KDTree::Common::GeometryType> spaceTypes;
-     spaceTypes.push_back(KDTree::Common::RA_DEGREES);
-     spaceTypes.push_back(KDTree::Common::DEC_DEGREES);
-     spaceTypes.push_back(KDTree::Common::EUCLIDEAN);
-     std::vector<KDTree::PointAndValue<int> > matches;     
+     std::vector<GeometryType> spaceTypes;
+     spaceTypes.push_back(RA_DEGREES);
+     spaceTypes.push_back(DEC_DEGREES);
+     spaceTypes.push_back(EUCLIDEAN);
+     std::vector<PointAndValue<int> > matches;     
      matches = myTree.RADecRangeSearch(queryPt, 1.5,
 				       otherDimsPt, otherDimsTolerances, spaceTypes);
      BOOST_CHECK(matches.size() == 2); 			      
@@ -1342,7 +1277,7 @@ BOOST_AUTO_TEST_CASE ( KDTree_RADecRangeSearch_6 )
 {
      // search in RA, Dec as well as other dimensions - say, RA, Dec, time
 
-     std::vector<KDTree::PointAndValue <int> > pav;
+     std::vector<PointAndValue <int> > pav;
      int count = 0;
      std::vector<double> tmpPt;
      // (0,70) time 100 - some random point
@@ -1365,7 +1300,7 @@ BOOST_AUTO_TEST_CASE ( KDTree_RADecRangeSearch_6 )
      insertPoint(tmpPt, count, pav); 
      tmpPt.clear();
 
-     KDTree::KDTree<int> myTree(pav, 3, 1);
+     KDTree<int> myTree(pav, 3, 1);
      std::vector<double> queryPt;
      queryPt.push_back(0);
      queryPt.push_back(70);
@@ -1374,11 +1309,11 @@ BOOST_AUTO_TEST_CASE ( KDTree_RADecRangeSearch_6 )
      std::vector<double>otherDimsTolerances;
      otherDimsTolerances.push_back(2);
      // the last point should be excluded for being too 'late' in time
-     std::vector<KDTree::Common::GeometryType> spaceTypes;
-     spaceTypes.push_back(KDTree::Common::RA_DEGREES);
-     spaceTypes.push_back(KDTree::Common::DEC_DEGREES);
-     spaceTypes.push_back(KDTree::Common::EUCLIDEAN);
-     std::vector<KDTree::PointAndValue<int> > matches;     
+     std::vector<GeometryType> spaceTypes;
+     spaceTypes.push_back(RA_DEGREES);
+     spaceTypes.push_back(DEC_DEGREES);
+     spaceTypes.push_back(EUCLIDEAN);
+     std::vector<PointAndValue<int> > matches;     
      matches = myTree.RADecRangeSearch(queryPt, 1.5,
 				       otherDimsPt, otherDimsTolerances, spaceTypes);
      BOOST_CHECK(matches.size() == 2); 			      
@@ -1406,9 +1341,9 @@ BOOST_AUTO_TEST_CASE( rmsForTracklet_blackbox_1 )
 
     // try four points which have a perfect linear fit; 
 
-    std::vector<Detection> dets;
+    std::vector<MopsDetection> dets;
 
-    Detection tmpDet;
+    MopsDetection tmpDet;
     tmpDet.fromMITIString("0 5330.0 10.0 10.0 20.0 1337 dummy 0.0 0.0"); 
     dets.push_back(tmpDet);
     tmpDet.fromMITIString("0 5330.1 11.0 11.0 20.0 1337 dummy 0.0 0.0"); 
@@ -1424,7 +1359,7 @@ BOOST_AUTO_TEST_CASE( rmsForTracklet_blackbox_1 )
     t.indices.insert(2);
     t.indices.insert(3);
 
-    BOOST_CHECK(Eq(rmsLineFit::rmsForTracklet(t, &dets), 0.0));
+    BOOST_CHECK(Eq(rmsForTracklet(t, &dets), 0.0));
 
 }
 
@@ -1435,9 +1370,9 @@ BOOST_AUTO_TEST_CASE( rmsForTracklet_blackbox_2 )
     // try four points which deviate very regularly from perfect linear fit - exactly
     // .1 in deg deviation at each point
 
-    std::vector<Detection> dets;
+    std::vector<MopsDetection> dets;
 
-    Detection tmpDet;
+    MopsDetection tmpDet;
     tmpDet.fromMITIString("0 5330.0 10.0 9.9 20.0 1337 dummy 0.0 0.0"); 
     dets.push_back(tmpDet);
     tmpDet.fromMITIString("0 5330.1 11.0 11.1 20.0 1337 dummy 0.0 0.0"); 
@@ -1453,7 +1388,7 @@ BOOST_AUTO_TEST_CASE( rmsForTracklet_blackbox_2 )
     t.indices.insert(2);
     t.indices.insert(3);
 
-    double mSqDev = rmsLineFit::rmsForTracklet(t, &dets);
+    double mSqDev = rmsForTracklet(t, &dets);
     // each one deviates by .1, so local dist sq is .1*.1.  4 total observations.
     double expected = sqrt((.1*.1)*4) / 4;
 
@@ -1478,9 +1413,9 @@ BOOST_AUTO_TEST_CASE( rmsForTracklet_blackbox_3 )
 {
 
     // no deviation, but RA, Dec both cross the 0 line
-    std::vector<Detection> dets;
+    std::vector<MopsDetection> dets;
 
-    Detection tmpDet;
+    MopsDetection tmpDet;
     tmpDet.fromMITIString("0 5330.0 358.0 358.0 20.0 1337 dummy 0.0 0.0"); 
     dets.push_back(tmpDet);
     tmpDet.fromMITIString("0 5330.1 359.0 359.0 20.0 1337 dummy 0.0 0.0"); 
@@ -1496,7 +1431,7 @@ BOOST_AUTO_TEST_CASE( rmsForTracklet_blackbox_3 )
     t.indices.insert(2);
     t.indices.insert(3);
 
-    double mSqDev = rmsLineFit::rmsForTracklet(t, &dets);
+    double mSqDev = rmsForTracklet(t, &dets);
 
     BOOST_CHECK(Eq(mSqDev, 0));
 }
@@ -1506,9 +1441,9 @@ BOOST_AUTO_TEST_CASE( rmsForTracklet_blackbox_4 )
 {
 
     //same as 3, but going the opposite direction
-    std::vector<Detection> dets;
+    std::vector<MopsDetection> dets;
 
-    Detection tmpDet;
+    MopsDetection tmpDet;
     tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
     dets.push_back(tmpDet);
     tmpDet.fromMITIString("0 5330.1 0.0 0.0 20.0 1337 dummy 0.0 0.0"); 
@@ -1524,7 +1459,7 @@ BOOST_AUTO_TEST_CASE( rmsForTracklet_blackbox_4 )
     t.indices.insert(2);
     t.indices.insert(3);
 
-    double mSqDev = rmsLineFit::rmsForTracklet(t, &dets);
+    double mSqDev = rmsForTracklet(t, &dets);
 
     BOOST_CHECK(Eq(mSqDev, 0));
 }
@@ -1532,64 +1467,15 @@ BOOST_AUTO_TEST_CASE( rmsForTracklet_blackbox_4 )
 
 
 
-BOOST_AUTO_TEST_CASE( getAverageMagnitude_blackbox_1 )
-{
-
-    std::vector<Detection> dets;
-
-    Detection tmpDet;
-    tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.1 0.0 0.0 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.2 359. 359. 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.3 358. 358. 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-
-    Tracklet t;
-    t.indices.insert(0);
-    t.indices.insert(1);
-    t.indices.insert(2);
-    t.indices.insert(3);
-    
-    BOOST_CHECK(Eq(rmsLineFit::getAverageMagnitude(t, &dets), 20.0));
-}
-
-
-BOOST_AUTO_TEST_CASE( getAverageMagnitude_blackbox_2 )
-{
-
-    std::vector<Detection> dets;
-
-    Detection tmpDet;
-    tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.1 0.0 0.0 22.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.2 359. 359. 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.3 358. 358. 22.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-
-    Tracklet t;
-    t.indices.insert(0);
-    t.indices.insert(1);
-    t.indices.insert(2);
-    t.indices.insert(3);
-    
-    BOOST_CHECK(Eq(rmsLineFit::getAverageMagnitude(t, &dets), 21.0));
-}
-
 
 // TBD: uncomment this and use real exceptions. (It's commented out because it causes an exit()
 // BOOST_AUTO_TEST_CASE( getAverageMagnitude_blackbox_3 )
 // {
 //     //try to cause trouble with empty tracklet
 
-//     std::vector<Detection> dets;
+//     std::vector<MopsDetection> dets;
 
-//     Detection tmpDet;
+//     MopsDetection tmpDet;
 //     tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
 //     dets.push_back(tmpDet);
 //     tmpDet.fromMITIString("0 5330.1 0.0 0.0 20.0 1337 dummy 0.0 0.0"); 
@@ -1601,7 +1487,7 @@ BOOST_AUTO_TEST_CASE( getAverageMagnitude_blackbox_2 )
 
 //     Tracklet t;
     
-//     BOOST_CHECK(Eq(rmsLineFit::getAverageMagnitude(t, &dets), 20.0));
+//     BOOST_CHECK(Eq(getAverageMagnitude(t, &dets), 20.0));
 // }
 
 
@@ -1610,9 +1496,9 @@ BOOST_AUTO_TEST_CASE( getAverageMagnitude_blackbox_2 )
 BOOST_AUTO_TEST_CASE( filterByLineFitAddToOutputVector_blackbox_1 )
 {
 
-    std::vector<Detection> dets;
+    std::vector<MopsDetection> dets;
 
-    Detection tmpDet;
+    MopsDetection tmpDet;
     // 4 matching detections
     tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
     dets.push_back(tmpDet);
@@ -1650,7 +1536,7 @@ BOOST_AUTO_TEST_CASE( filterByLineFitAddToOutputVector_blackbox_1 )
     
     std::vector<Tracklet> results;
 
-    rmsLineFit::filterByLineFitAddToOutputVector(&allTracklets, &dets, 0., .1, results);
+    filterByLineFitAddToOutputVector(&allTracklets, &dets, .1, results);
     
     BOOST_REQUIRE(results.size() == 1);
     
@@ -1664,9 +1550,9 @@ BOOST_AUTO_TEST_CASE( filterByLineFitAddToOutputVector_blackbox_2 )
 {
     //try to cause an error by sending in no tracklets
 
-    std::vector<Detection> dets;
+    std::vector<MopsDetection> dets;
 
-    Detection tmpDet;
+    MopsDetection tmpDet;
     // 4 matching detections
     tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
     dets.push_back(tmpDet);
@@ -1692,7 +1578,7 @@ BOOST_AUTO_TEST_CASE( filterByLineFitAddToOutputVector_blackbox_2 )
     std::vector<Tracklet> results;
     std::vector<Tracklet> allTracklets;
 
-    rmsLineFit::filterByLineFitAddToOutputVector(&allTracklets, &dets, 0., .1, results);
+    filterByLineFitAddToOutputVector(&allTracklets, &dets, .1, results);
     
     BOOST_REQUIRE(results.size() == 0);
     
@@ -1704,9 +1590,9 @@ BOOST_AUTO_TEST_CASE( filterByLineFitAddToOutputVector_blackbox_2 )
 // {
 //     //try to cause an error by sending in *empty* tracklets...
 
-//     std::vector<Detection> dets;
+//     std::vector<MopsDetection> dets;
 
-//     Detection tmpDet;
+//     MopsDetection tmpDet;
 //     // 4 matching detections
 //     tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
 //     dets.push_back(tmpDet);
@@ -1734,7 +1620,7 @@ BOOST_AUTO_TEST_CASE( filterByLineFitAddToOutputVector_blackbox_2 )
 //     allTracklets.push_back(t1);
 //     allTracklets.push_back(t2);
 
-//     rmsLineFit::filterByLineFitAddToOutputVector(&allTracklets, &dets, 0., .1, results);
+//     filterByLineFitAddToOutputVector(&allTracklets, &dets, 0., .1, results);
     
 //     // not even sure what expected behavior is here... BOOST_REQUIRE(results.size() == 2);
     
@@ -1745,9 +1631,9 @@ BOOST_AUTO_TEST_CASE( filterByLineFitAddToOutputVector_blackbox_2 )
 BOOST_AUTO_TEST_CASE( filterByLineFitAddToOutputVector_blackbox_4 )
 {
     // test with one 'perfect' tracklet, one with a way-off detection.
-    std::vector<Detection> dets;
+    std::vector<MopsDetection> dets;
 
-    Detection tmpDet;
+    MopsDetection tmpDet;
     // 4 matching detections
     tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
     dets.push_back(tmpDet);
@@ -1786,7 +1672,7 @@ BOOST_AUTO_TEST_CASE( filterByLineFitAddToOutputVector_blackbox_4 )
     allTracklets.push_back(t2);
 
     std::vector<Tracklet> resultTracklets;
-    rmsLineFit::filterByLineFitAddToOutputVector(&allTracklets, &dets, 0.0, .1, resultTracklets);
+    filterByLineFitAddToOutputVector(&allTracklets, &dets, .1, resultTracklets);
     
     BOOST_REQUIRE(resultTracklets.size() == 1);
     BOOST_CHECK(resultTracklets[0].indices == t1.indices);
@@ -1797,9 +1683,9 @@ BOOST_AUTO_TEST_CASE( filterByLineFitAddToOutputVector_blackbox_4 )
 BOOST_AUTO_TEST_CASE( filterByLineFitAddToOutputVector_blackbox_5 )
 {
     // test with one 'perfect' tracklet, one with all detections all a little off.
-    std::vector<Detection> dets;
+    std::vector<MopsDetection> dets;
 
-    Detection tmpDet;
+    MopsDetection tmpDet;
     // 4 matching detections
     tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
     dets.push_back(tmpDet);
@@ -1837,7 +1723,7 @@ BOOST_AUTO_TEST_CASE( filterByLineFitAddToOutputVector_blackbox_5 )
     allTracklets.push_back(t2);
 
     std::vector<Tracklet> resultTracklets;
-    rmsLineFit::filterByLineFitAddToOutputVector(&allTracklets, &dets, 0.0, .05, resultTracklets);
+    filterByLineFitAddToOutputVector(&allTracklets, &dets, .05, resultTracklets);
     
     BOOST_REQUIRE(resultTracklets.size() == 1);
     BOOST_CHECK(resultTracklets[0].indices == t1.indices);
@@ -1850,9 +1736,9 @@ BOOST_AUTO_TEST_CASE( filterByLineFitAddToOutputVector_blackbox_5 )
 BOOST_AUTO_TEST_CASE( purifyTracklet_blackbox_1 )
 {
     // test with one 'perfect' tracklet, one with a barely-off detection.
-    std::vector<Detection> dets;
+    std::vector<MopsDetection> dets;
 
-    Detection tmpDet;
+    MopsDetection tmpDet;
     // 4 matching detections
     tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
     dets.push_back(tmpDet);
@@ -1892,9 +1778,9 @@ BOOST_AUTO_TEST_CASE( purifyTracklet_blackbox_1 )
     allTracklets.push_back(t2);
 
     std::vector<Tracklet> resultTracklets;
-    rmsLineFit::TrackletPurifier myPure;
-    t1Pure = myPure.purifyTracklet(&t1, &dets, 0.0, .1);
-    t2Pure = myPure.purifyTracklet(&t2, &dets, 0.0, .1);
+    TrackletPurifier myPure;
+    t1Pure = myPure.purifyTracklet(&t1, &dets, .1);
+    t2Pure = myPure.purifyTracklet(&t2, &dets, .1);
     
     BOOST_CHECK(t1Pure.indices == t1.indices);
     std::set<unsigned int> t2Expected;
@@ -1921,12 +1807,12 @@ BOOST_AUTO_TEST_CASE( purifyTracklet_blackbox_1 )
 BOOST_AUTO_TEST_CASE( guessBoolFromStringOrGiveErr_blackbox_1 )
 {
 
-    BOOST_CHECK(KDTree::Common::guessBoolFromStringOrGiveErr("true", "some error string") == true);
-    BOOST_CHECK(KDTree::Common::guessBoolFromStringOrGiveErr("false", "some error string") == false);
-    BOOST_CHECK(KDTree::Common::guessBoolFromStringOrGiveErr("TRUE", "some error string") == true);
-    BOOST_CHECK(KDTree::Common::guessBoolFromStringOrGiveErr("FALSE", "some error string") == false);
-    BOOST_CHECK(KDTree::Common::guessBoolFromStringOrGiveErr("True", "some error string") == true);
-    BOOST_CHECK(KDTree::Common::guessBoolFromStringOrGiveErr("False", "some error string") == false);
+    BOOST_CHECK(guessBoolFromStringOrGiveErr("true", "some error string") == true);
+    BOOST_CHECK(guessBoolFromStringOrGiveErr("false", "some error string") == false);
+    BOOST_CHECK(guessBoolFromStringOrGiveErr("TRUE", "some error string") == true);
+    BOOST_CHECK(guessBoolFromStringOrGiveErr("FALSE", "some error string") == false);
+    BOOST_CHECK(guessBoolFromStringOrGiveErr("True", "some error string") == true);
+    BOOST_CHECK(guessBoolFromStringOrGiveErr("False", "some error string") == false);
 }
 
 
@@ -1947,7 +1833,7 @@ BOOST_AUTO_TEST_CASE( removeSubsetsPopulateOutputVector_blackbox_1 )
         }
     }
     std::vector<Tracklet> results;
-    removeSubsets::SubsetRemover mySR;
+    SubsetRemover mySR;
     mySR.removeSubsetsPopulateOutputVector(&pairsVec, results);
     BOOST_REQUIRE(results.size() == 1);
     BOOST_CHECK(results[0].indices == lastOne.indices);
@@ -1976,7 +1862,7 @@ BOOST_AUTO_TEST_CASE( removeSubsetsPopulateOutputVector_blackbox_2 )
     t2.indices.insert(505);
     pairsVec.push_back(t2);
     std::vector<Tracklet> results;
-    removeSubsets::SubsetRemover mySR;
+    SubsetRemover mySR;
     mySR.removeSubsetsPopulateOutputVector(&pairsVec, results);
     BOOST_REQUIRE(results.size() == 2);
     BOOST_CHECK((((results[0].indices == lastOne.indices) && (results[1].indices == t2.indices)))
@@ -2008,7 +1894,7 @@ BOOST_AUTO_TEST_CASE( putLongestOnlyInOutputVector_blackbox_1 )
     pairsVec.push_back(tmp);
     
     std::vector<Tracklet> out;
-    removeSubsets::putLongestPerDetInOutputVector(&pairsVec, out);
+    putLongestPerDetInOutputVector(&pairsVec, out);
     BOOST_CHECK(out.size() == 2);
 }
 
@@ -2042,7 +1928,7 @@ BOOST_AUTO_TEST_CASE( putLongestOnlyInOutputVector_blackbox_2 )
     pairsVec.push_back(tmp);
     
     std::vector<Tracklet> out;
-    removeSubsets::putLongestPerDetInOutputVector(&pairsVec, out);
+    putLongestPerDetInOutputVector(&pairsVec, out);
     BOOST_CHECK(out.size() == 2);
         
 }

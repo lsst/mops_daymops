@@ -4,12 +4,15 @@
 #include <unistd.h>
 #include <getopt.h>
 
-#include "fileUtils.h"
-#include "removeSubsets.h"
+#include "lsst/mops/fileUtils.h"
+#include "lsst/mops/removeSubsets.h"
 
 
-namespace ctExcept = collapseTracklets::exceptions;
-namespace removeSubsets {
+
+namespace lsst {
+namespace mops {
+
+
 
     int removeSubsetsMain(int argc, char** argv) {
 
@@ -48,11 +51,11 @@ namespace removeSubsets {
                 break;
                 
             case 'r':
-                removeSubsets = KDTree::Common::guessBoolFromStringOrGiveErr(optarg, USAGE);
+                removeSubsets = guessBoolFromStringOrGiveErr(optarg, USAGE);
                 break;
                 
             case 'k':
-                keepOnlyLongestPerDet = KDTree::Common::guessBoolFromStringOrGiveErr(optarg, USAGE);
+                keepOnlyLongestPerDet = guessBoolFromStringOrGiveErr(optarg, USAGE);
                 break;
                 
             case 'h':   /* fall-through is intentional */
@@ -61,14 +64,14 @@ namespace removeSubsets {
                 return 0;
                 break;
             default:
-                throw LSST_EXCEPT(ctExcept::ProgrammerErrorException, "Programmer error in parsing of command-line options\n");
+                throw LSST_EXCEPT(ProgrammerErrorException, "Programmer error in parsing of command-line options\n");
                 break;
             }        
             opt = getopt_long( argc, argv, optString, longOpts, &longIndex );
         }
 
         if ((inFileName == NULL) || (outFileName == NULL)) {
-            throw LSST_EXCEPT(ctExcept::CommandlineParseErrorException, 
+            throw LSST_EXCEPT(CommandlineParseErrorException, 
                               "Please specify input and output filenames.\n\n" +
                               USAGE + "\n");
         }
@@ -78,10 +81,10 @@ namespace removeSubsets {
         std::cout << "---------------" << std::endl;
         std::cout << "Input file:                                  " << inFileName << std::endl;
         std::cout << "Output file:                                 " << outFileName << std::endl;
-        std::cout << "RemoveSubsets:                               "<< KDTree::Common::boolToString(removeSubsets)
+        std::cout << "RemoveSubsets:                               "<< boolToString(removeSubsets)
                   << std::endl;
         std::cout << "Keep only longest tracklet(s) per detection: "<< 
-            KDTree::Common::boolToString(keepOnlyLongestPerDet) << std::endl;
+            boolToString(keepOnlyLongestPerDet) << std::endl;
 
         inFile.open(inFileName);
         outFile.open(outFileName);
@@ -115,8 +118,10 @@ namespace removeSubsets {
         return 0;
     }
 
-}
+
+
+}} // close lsst::mops
 
 int main(int argc, char** argv) {
-    CALL_AND_CATCH_EXCEPTIONS(return removeSubsets::removeSubsetsMain(argc, argv));
+    return lsst::mops::removeSubsetsMain(argc, argv);
 }

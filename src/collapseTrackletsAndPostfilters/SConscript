@@ -9,14 +9,14 @@ Import("ext_libs")
 
 
 
-env.Program('collapseTracklets-unittests', ['unitTests.cc', 'collapseTracklets'] + common_libs, LIBS=ext_libs)
+env.Program('../../tests/collapseTracklets-unittests', ['unitTests.cc', 'collapseTracklets'] + common_libs, LIBS=ext_libs)
 
-ct = env.Library('collapseTracklets', ['collapseTracklets.cc'] + common_libs, LIBS=ext_libs)
+ct = env.Library('../../lib/collapseTracklets', ['collapseTracklets.cc'] + common_libs, LIBS=ext_libs)
 
-env.Program('collapseTracklets', ['collapseTrackletsMain.cc', ct] + common_libs, 
+env.Program('../../bin/collapseTracklets', ['collapseTrackletsMain.cc', ct] + common_libs, 
             LIBS=ext_libs)
 
-env.Program('purifyTracklets', ['purifyTracklets.cc'] + common_libs, LIBS=ext_libs)
+env.Program('../../bin/purifyTracklets', ['purifyTracklets.cc'] + common_libs, LIBS=ext_libs)
 
 
 

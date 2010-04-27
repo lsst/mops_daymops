@@ -4,38 +4,39 @@
  * Purpose: 
  */
 
-#include "detectionProximity.h"
+#include "lsst/mops/daymops/detectionProximity/detectionProximity.h"
 
 
+namespace lsst {
+    namespace mops {
 
 // prototypes not to be seen outside this file
 
-void buildKDTree(const std::vector<Detection>, KDTree::KDTree<unsigned int>&);
+void buildKDTree(const std::vector<MopsDetection>, KDTree<unsigned int>&);
 
-std::vector<std::pair<unsigned int, unsigned int> > 
-getProximity(const std::vector<Detection>& queryPoints,
-	     const KDTree::KDTree<unsigned int>& searchTree, double,
-	     double, double);
+std::vector<std::pair <unsigned int, unsigned int> > getProximity(const std::vector<MopsDetection>& queryPoints,
+								  const KDTree<unsigned int>& searchTree,
+								  double maxDist,
+								  double maxTime);
 
 
-
-std::vector<std::pair <unsigned int, unsigned int> > detectionProximity(const std::vector<Detection>& queryPoints,
-								   const std::vector<Detection>& dataPoints,
-								   double distanceThreshold,
-								   double brightnessThreshold,
-								   double timeThreshold)
+std::vector<std::pair <unsigned int, unsigned int> > detectionProximity(
+    const std::vector<MopsDetection>& queryPoints,
+    const std::vector<MopsDetection>& dataPoints,
+    double distanceThreshold,
+    double timeThreshold)
 {
     std::vector<std::pair <unsigned int, unsigned int> > results;
     
     if(queryPoints.size() > 0 && dataPoints.size() > 0){
         
         //build KDTrees from detection vectors
-        KDTree::KDTree<unsigned int> dataTree;
+        KDTree<unsigned int> dataTree;
         buildKDTree(dataPoints, dataTree);
         
         //get results
         results = getProximity(queryPoints, dataTree, distanceThreshold,
-                               brightnessThreshold, timeThreshold);
+                               timeThreshold);
     }
 
     return results;
@@ -46,21 +47,20 @@ std::vector<std::pair <unsigned int, unsigned int> > detectionProximity(const st
 /**********************************************************************
  * Populate a KDTree 'tree' from the Detections in vector 'points'
  ***********************************************************************/
-void buildKDTree(const std::vector<Detection> points, KDTree::KDTree<unsigned int> &tree)
+void buildKDTree(const std::vector<MopsDetection> points, KDTree<unsigned int> &tree)
 {
 
   if(points.size() > 0){
 
-    std::vector<KDTree::PointAndValue<unsigned int> > vecPV;
+    std::vector<PointAndValue<unsigned int> > vecPV;
 
     for(unsigned int i=0; i < points.size(); i++){
     
-	KDTree::PointAndValue<unsigned int> tempPV;
+	PointAndValue<unsigned int> tempPV;
 	std::vector<double> pairRADec;
 	
-	pairRADec.push_back(KDTree::Common::convertToStandardDegrees(points.at(i).getRA()));                    
-	pairRADec.push_back(KDTree::Common::convertToStandardDegrees(points.at(i).getDec()));
-        pairRADec.push_back(points.at(i).getMag());
+	pairRADec.push_back(convertToStandardDegrees(points.at(i).getRA()));                    
+	pairRADec.push_back(convertToStandardDegrees(points.at(i).getDec()));
         pairRADec.push_back(points.at(i).getEpochMJD());
 	
 	tempPV.setPoint(pairRADec);
@@ -77,18 +77,17 @@ void buildKDTree(const std::vector<Detection> points, KDTree::KDTree<unsigned in
 /*
  *
  */
-std::vector<std::pair <unsigned int, unsigned int> > getProximity(const std::vector<Detection>& queryPoints,
-								  const KDTree::KDTree<unsigned int>& searchTree,
-								  double maxDist, double maxBrightness,
+std::vector<std::pair <unsigned int, unsigned int> > getProximity(const std::vector<MopsDetection>& queryPoints,
+								  const KDTree<unsigned int>& searchTree,
+								  double maxDist,
 								  double maxTime)
 {
   std::vector<std::pair <unsigned int, unsigned int> > pairs;
 
-  std::vector<KDTree::Common::GeometryType> myGeos;
-  myGeos.push_back(KDTree::Common::RA_DEGREES); //RA
-  myGeos.push_back(KDTree::Common::DEC_DEGREES); //Dec
-  myGeos.push_back(KDTree::Common::EUCLIDEAN); //magnitude
-  myGeos.push_back(KDTree::Common::EUCLIDEAN); //time
+  std::vector<GeometryType> myGeos;
+  myGeos.push_back(RA_DEGREES); //RA
+  myGeos.push_back(DEC_DEGREES); //Dec
+  myGeos.push_back(EUCLIDEAN); //time
 
   
   for(unsigned int i=0; i<queryPoints.size(); i++){
@@ -96,15 +95,13 @@ std::vector<std::pair <unsigned int, unsigned int> > getProximity(const std::vec
       std::vector<double> RADecQueryPt;
       std::vector<double> otherDimsPt;
       std::vector<double> otherDimsTolerances;
-      std::vector<KDTree::PointAndValue<unsigned int> > queryResults;
+      std::vector<PointAndValue<unsigned int> > queryResults;
 
-      RADecQueryPt.push_back(KDTree::Common::convertToStandardDegrees(queryPoints.at(i).getRA()));
-      RADecQueryPt.push_back(KDTree::Common::convertToStandardDegrees(queryPoints.at(i).getDec()));
+      RADecQueryPt.push_back(convertToStandardDegrees(queryPoints.at(i).getRA()));
+      RADecQueryPt.push_back(convertToStandardDegrees(queryPoints.at(i).getDec()));
     
-      otherDimsPt.push_back(queryPoints.at(i).getMag());
       otherDimsPt.push_back(queryPoints.at(i).getEpochMJD());
       
-      otherDimsTolerances.push_back(maxBrightness);
       otherDimsTolerances.push_back(maxTime);
       
       queryResults = searchTree.RADecRangeSearch(RADecQueryPt, maxDist, 
@@ -119,3 +116,6 @@ std::vector<std::pair <unsigned int, unsigned int> > getProximity(const std::vec
   
   return pairs;
 }
+
+
+    }} // close lsst::mops

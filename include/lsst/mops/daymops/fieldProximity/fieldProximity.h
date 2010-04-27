@@ -15,9 +15,12 @@
 #include <fstream>
 
 
-#include "../KDTree.h"
-#include "Field.h"
-#include "TrackForFieldProximity.h"
+#include "lsst/mops/KDTree.h"
+#include "lsst/mops/daymops/fieldProximity/Field.h"
+#include "lsst/mops/daymops/fieldProximity/TrackForFieldProximity.h"
+
+namespace lsst {
+    namespace mops {
 
 /* returns a vector of pairs. for each pair: 
 
@@ -32,5 +35,6 @@ fieldProximity(std::vector<FieldProximityTrack> allTracks,
                double distThresh);
 
 
+    }} // close lsst::mops
 
 #endif

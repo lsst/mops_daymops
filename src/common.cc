@@ -3,14 +3,13 @@
 #include <algorithm> //for nth_element
 #include <iostream>
 
-#include "common.h"
-#include "Exceptions.h"
+#include "lsst/mops/common.h"
+#include "lsst/mops/Exceptions.h"
 
 
-namespace ctExcept = collapseTracklets::exceptions;
 
-namespace KDTree {
-    namespace Common {
+namespace lsst {
+namespace mops {
 
 
 
@@ -93,7 +92,7 @@ namespace KDTree {
                 return circularShortestPathLen_Rad(a, b);
             }
             else {
-                throw LSST_EXCEPT(ctExcept::BadParameterException, "EE: distance1D: got unexpected geometry type.\n");
+                throw LSST_EXCEPT(BadParameterException, "EE: distance1D: got unexpected geometry type.\n");
             }
         }
 
@@ -262,11 +261,21 @@ namespace KDTree {
         }
 
 
+        /*
+         * when dealing with circles, this version ASSUMES that aLo < aHi and
+         * fabs(aLo - aHi) < 180 - that is, that we are looking at a normal
+         * range of angles, not something which crosses 0/360.
+         * 
+         * it is used by the tree classes, which can make this assumption safely
+         * (because they are careful to maintain this property).
+         */
+
+
         bool regionsOverlap1D(double aLo, double aHi, double b1, double b2, 
                               GeometryType type)
         {
             if (aLo > aHi) {
-                throw LSST_EXCEPT(ctExcept::BadParameterException, "EE: common.cc:regionsOverlap1D:  we DEMAND that aLo < aHi.\n");
+                throw LSST_EXCEPT(BadParameterException, "EE: common.cc:regionsOverlap1D:  we DEMAND that aLo < aHi.\n");
             }
             
             if (type == EUCLIDEAN)
@@ -291,7 +300,7 @@ namespace KDTree {
             else if (type == CIRCULAR_DEGREES) {
                 if ((aLo > 360.) || (aLo < 0.) || (aHi > 360) || (aHi < 0))
                 {
-                    throw LSST_EXCEPT(ctExcept::BadParameterException, "EE: unexpected condition in common.cc:regionsOverlap1D.  aLo or aHi are outside normal degree bounds (0-360).\n");
+                    throw LSST_EXCEPT(BadParameterException, "EE: unexpected condition in common.cc:regionsOverlap1D.  aLo or aHi are outside normal degree bounds (0-360).\n");
                 }
                 b1 = convertToStandardDegrees(b1);
                 b2 = convertToStandardDegrees(b2);
@@ -323,12 +332,68 @@ namespace KDTree {
 
             }
             else {
-                throw LSST_EXCEPT(ctExcept::BadParameterException, 
+                throw LSST_EXCEPT(BadParameterException, 
                                   "EE: regionsOverlap1D: got unexpected value for geometry type, must be one of EUCLIDEAN, CIRCULAR_DEGREES or CIRCULAR_RADIANS\n");
             }
             // we should never reach this point.
             return false;
             
+        }
+        
+
+
+
+        /*
+         * this is a safe, general-purpose check for whether two ranges of
+         * angles overlap.
+         *
+         * a region spanning 180 degrees is understood to overlap with ALL other
+         * ranges.
+         *
+         */
+
+
+        bool angularRegionsOverlapSafe(double a1, double a2, double b1, double b2)
+        {
+
+            double aLo = minOfTwo(a1, a2);
+            double aHi = maxOfTwo(a1, a2);
+
+            double bLo = minOfTwo(b1, b2);
+            double bHi = maxOfTwo(b1, b2);
+
+            if ((areEqual(fabs(aLo - aHi), 180.)) ||
+                (areEqual(fabs(bLo - bHi), 180.))) {
+                // take care of this weird degenerate case.                
+                return true;
+            }
+
+            // make a and b each into ranges which are
+            // can be treated as euclidean (do not cross the 0/360 line)
+            while ( bHi - bLo > 180.) {
+                bLo += 360.;
+            }
+            while ( aHi - aLo > 180.) {
+                aLo += 360.;
+            }
+
+            double aLo2 = minOfTwo(aHi, aLo);
+            double aHi2 = maxOfTwo(aHi, aLo);
+            double bLo2 = minOfTwo(bHi, bLo);
+            double bHi2 = maxOfTwo(bHi, bLo);
+
+            // now get a and b on some contiguous 360-degree region.
+            while ( bHi2 - aLo2 > 180) {
+                aHi2 += 360;
+                aLo2 += 360;
+            }
+            while (aHi2 - bLo2 > 180) {
+                bHi2 += 360;
+                bLo2 += 360;
+            }
+
+            //now we can treat them as euclidean.
+            return  regionsOverlap1D_unsafe(aLo2, aHi2, bLo2, bHi2);
         }
         
 
@@ -369,7 +434,7 @@ namespace KDTree {
                 return false;
             }
             else {
-                throw LSST_EXCEPT(ctExcept::CommandlineParseErrorException, errStr);
+                throw LSST_EXCEPT(CommandlineParseErrorException, errStr);
             }
             
         }
@@ -377,5 +442,4 @@ namespace KDTree {
         
         
 
-    }
-}
+}} // close namespace lsst::mops

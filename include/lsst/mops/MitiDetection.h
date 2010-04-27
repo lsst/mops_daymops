@@ -1,39 +1,51 @@
 // -*- LSST-C++ -*-
 
 /*
- * jmyers 7/29/08
+ * jmyers 4/23/10
+ *
+ * This was formerly the "overweight" version of what is now called MopsDetection.
  * 
+ * It uses more information than is strictly needed for the DayMops apps - but
+ * it corresponds nicely to PanSTARRS MITI format.  It inherits from MopsDetection
+ * and adds lots of new fields.
+ * 
+ * If memory is an issue - and it probably is - use MopsDetection.  If it's not
+ * an issue, consider LSST DiaSource.  If you're not LSST and don't want to use
+ * LSST software, use this.
  */
 
-#ifndef LSST_MOPS_DETECTION_H
-#define LSST_MOPS_DETECTION_H
+#ifndef LSST_MITI_DETECTION_H
+#define LSST_MITI_DETECTION_H
 
 
 #include <fstream>
 #include <iostream>
 #include <string>
 
+#include "lsst/mops/MopsDetection.h"
 
+namespace lsst {
+namespace mops {
 
-class Detection {
+    class MitiDetection : public MopsDetection {
 public:
 
     //create an empty detection
-    Detection();
+    MitiDetection();
 
 
     // these two added 6/19/09 (jmyers)
     // create a detection with initialized data, but no exposure time
-    Detection(long int ID, double epochMJD, double RA, double Dec, 
-              std::string obsCode, std::string objName, double mag,
+    MitiDetection(long int ID, double epochMJD, double RA, double Dec, 
+              int obsCode, std::string objName, double mag,
               double elongationLength, double elongationAngle);
 
     //create a detection with initialized data, including exposure time data
-    Detection(long int ID, double epochMJD, double RA, double Dec, 
-              std::string obsCode, std::string objName, double mag, 
+    MitiDetection(long int ID, double epochMJD, double RA, double Dec, 
+              int obsCode, std::string objName, double mag, 
               double elongationLength, double elongationAngle, 
               double exposureTime);
-
+    
     // a detection is only initialized after we have assigned
     // it values from a string.  If you try to use a getter
     // function before data is initialized, you will get an
@@ -47,7 +59,7 @@ public:
     double getEpochMJD() const ;
     double getRA() const ;
     double getDec() const ;
-    std::string  getObscode() const ;
+    int  getObscode() const ;
     std::string getObjName() const ;
     double getMag() const ;
     double getLength() const ;
@@ -68,7 +80,7 @@ private:
     double MJD;
     double RA;
     double dec;
-    std::string obscode;
+    int obscode;
     double mag;
     std::string objName;
     double length;
@@ -78,6 +90,6 @@ private:
     bool initialized;
 };
 
-
+}} // close namespace lsst::mops
 
 #endif

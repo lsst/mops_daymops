@@ -13,9 +13,12 @@
 #include <sstream>
 #include <math.h>
 
-#include "../KDTree.h"
-#include "fieldProximity.h"
+#include "lsst/mops/KDTree.h"
+#include "lsst/mops/daymops/fieldProximity/fieldProximity.h"
 
+
+namespace lsst {
+    namespace mops {
 
 // private declarations
 
@@ -28,10 +31,10 @@ void generateMJDVecs(const std::vector<FieldProximityTrack>,
                      std::vector<std::vector<FieldProximityTrack> >*);
 
 void generateTreeMap(std::vector< std::vector<FieldProximityTrack> >*, 
-		     std::map<double, KDTree::KDTree<int> >*);
+		     std::map<double, KDTree<int> >*);
 
 void getProximity(std::vector<int>*,
-                  std::map<double, KDTree::KDTree<int> >*,
+                  std::map<double, KDTree<int> >*,
                   const std::vector<Field>);
 
 int vecPosition(const std::vector<std::string>*, std::string);
@@ -64,7 +67,7 @@ fieldProximity(std::vector<FieldProximityTrack> allTracks,
         std::vector<std::vector<FieldProximityTrack> > tracksByTime;
         
         //link MJD to KDTree of unique MJD detections
-        std::map<double, KDTree::KDTree<int> > myTreeMap; 
+        std::map<double, KDTree<int> > myTreeMap; 
         
         std::vector<double> fieldTimes = getFieldTimes(queryFields, &fieldIDs);
         
@@ -179,8 +182,8 @@ std::vector<FieldProximityTrack> buildEphemeridesVec(const std::vector<FieldProx
             std::vector<FieldProximityPoint> addPoints;
             FieldProximityPoint pt;
             
-            pt.setRA(KDTree::Common::convertToStandardDegrees(ephRA));
-            pt.setDec(KDTree::Common::convertToStandardDegrees(ephDec));
+            pt.setRA(convertToStandardDegrees(ephRA));
+            pt.setDec(convertToStandardDegrees(ephDec));
             pt.setEpochMJD(fieldTimes.at(j)); //i ???
             
             addPoints.push_back(pt);
@@ -235,7 +238,7 @@ void generateMJDVecs(const std::vector<FieldProximityTrack> allTracks,
  * each MJD vector to its MJD double value.
  ******************************************************************/
 void generateTreeMap(std::vector< std::vector<FieldProximityTrack> > *trackSets, 
-		     std::map<double, KDTree::KDTree<int> > *myTreeMap)
+		     std::map<double, KDTree<int> > *myTreeMap)
 {
     // for each vector representing a single EpochMJD, created
     // a KDTree containing its line number in the input file 
@@ -257,25 +260,25 @@ void generateTreeMap(std::vector< std::vector<FieldProximityTrack> > *trackSets,
 
                 double thisEpoch = pts.at(0).getEpochMJD();
       
-                std::vector<KDTree::PointAndValue<int> > vecPV;
+                std::vector<PointAndValue<int> > vecPV;
 	
                 for(int j=0; j < thisTreeSize; j++){
 
-                    KDTree::PointAndValue<int> tempPV;
+                    PointAndValue<int> tempPV;
                     std::vector<double> pairRADec;
 
                     t = thisTrackVec.at(j);
                     pts = t.getPoints();
 
-                    pairRADec.push_back(KDTree::Common::convertToStandardDegrees(pts.at(0).getRA()));
-                    pairRADec.push_back(KDTree::Common::convertToStandardDegrees(pts.at(0).getDec()));
+                    pairRADec.push_back(convertToStandardDegrees(pts.at(0).getRA()));
+                    pairRADec.push_back(convertToStandardDegrees(pts.at(0).getDec()));
                     
                     tempPV.setPoint(pairRADec);
                     tempPV.setValue(atoi(t.getID().c_str()));
                     vecPV.push_back(tempPV);
 
                 }
-                KDTree::KDTree<int> tempKDTree;
+                KDTree<int> tempKDTree;
 
                 tempKDTree.buildFromData(vecPV, 2, 100);
                 myTreeMap->insert(std::make_pair(thisEpoch, tempKDTree) );
@@ -292,25 +295,25 @@ void generateTreeMap(std::vector< std::vector<FieldProximityTrack> > *trackSets,
  * query point within a distance determined by maxVelocity.
  ******************************************************************/
 void getProximity(std::vector<int> *resultsVec,  
-		  std::map<double, KDTree::KDTree<int> > *myTreeMap,
+		  std::map<double, KDTree<int> > *myTreeMap,
 		  const std::vector<Field> queryPoints)
 {
     // vectors of hyperRectangleSearch parameters
     std::vector<double> tolerances;
   
-    std::vector<KDTree::Common::GeometryType> myGeos;
-    myGeos.push_back(KDTree::Common::CIRCULAR_DEGREES);
-    myGeos.push_back(KDTree::Common::CIRCULAR_DEGREES);
+    std::vector<GeometryType> myGeos;
+    myGeos.push_back(CIRCULAR_DEGREES);
+    myGeos.push_back(CIRCULAR_DEGREES);
 
     // hyperRectangleSearch result container
-    std::vector<KDTree::PointAndValue<int> > queryResults;
-    std::map<double, KDTree::KDTree<int> >::iterator iter;
+    std::vector<PointAndValue<int> > queryResults;
+    std::map<double, KDTree<int> >::iterator iter;
 
     //temps for querying
     Field tempField;
     double tempRA, tempDec, tempMJD, tempRadius, treeMJD;
     int tempFileIndex, leftIndex, rightIndex;
-    KDTree::KDTree<int> tempKDTree;
+    KDTree<int> tempKDTree;
     std::vector<double> queryPt;
 
     //iterate through all fields collected, querying them against
@@ -323,8 +326,8 @@ void getProximity(std::vector<int> *resultsVec,
 
             tempField = queryPoints.at(i);
 
-            tempRA = KDTree::Common::convertToStandardDegrees(tempField.getRA());
-            tempDec = KDTree::Common::convertToStandardDegrees(tempField.getDec());
+            tempRA = convertToStandardDegrees(tempField.getRA());
+            tempDec = convertToStandardDegrees(tempField.getDec());
             tempMJD = tempField.getEpochMJD();
             tempFileIndex = tempField.getFileIndex();
             tempRadius = tempField.getRadius();
@@ -424,3 +427,6 @@ std::vector<std::pair <unsigned int, unsigned int> > makePair(std::vector<int> r
 
     return returnVal;
 }
+
+
+}} // close lsst::mops 

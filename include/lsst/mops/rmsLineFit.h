@@ -17,12 +17,13 @@
 #include <vector>
 #include <map>
 
-#include "Tracklet.h"
-#include "Detection.h"
-#include "Exceptions.h"
+#include "lsst/mops/Tracklet.h"
+#include "lsst/mops/MopsDetection.h"
+#include "lsst/mops/Exceptions.h"
 
+namespace lsst {
+namespace mops {
 
-namespace rmsLineFit {
 
     /*
      * return the root mean squared distance of the tracklet from the line.
@@ -33,10 +34,9 @@ namespace rmsLineFit {
      * perDetSqDist is a pointer to an allocated vector, and we will populate it
      * s.t. mean Sq. distance (trackletDets[i],line) = perDetSqDist[i] 
      */
-    double rmsForTracklet(Tracklet t, const std::vector<Detection> *detections, 
+    double rmsForTracklet(Tracklet t, const std::vector<MopsDetection> *detections, 
                           std::vector<double>*perDetSqDist=NULL);
     
-    double getAverageMagnitude(const Tracklet t, const::std::vector<Detection>* detections);
 
 
     
@@ -52,35 +52,35 @@ namespace rmsLineFit {
       if timeOffset is specified as non-zero, this value will be substracted from the 
       MJDs of each detection.
     */
-    void leastSquaresSolveForRADecLinear(const std::vector <Detection> *trackletDets,
+    void leastSquaresSolveForRADecLinear(const std::vector <MopsDetection> *trackletDets,
                                          std::vector<double> &RASlopeAndOffsetOut,
                                          std::vector<double> &DecSlopeAndOffsetOut, 
                                          double timeOffset=0.0);
     
 /*
- * given a vector of Tracklets and the corresponding vector of Detections,
+ * given a vector of Tracklets and the corresponding vector of MopsDetections,
  * add to output only those tracklets for which rms < maxRMSm * av. magnitude + maxRMSm
  */
     
     void filterByLineFitAddToOutputVector(const std::vector<Tracklet> *tracklets, 
-                                          const std::vector<Detection> * allDets,
-                                          double maxRMSm, double maxRMSb,
+                                          const std::vector<MopsDetection> * allDets,
+                                          double maxRMS,
                                           std::vector<Tracklet> &output);
     
     
 
     class TrackletPurifier {
     public:
-        Tracklet purifyTracklet(const Tracklet *t, const std::vector<Detection> *allDets, 
-                                double maxRMSm, double maxRMSb);
+        Tracklet purifyTracklet(const Tracklet *t, const std::vector<MopsDetection> *allDets, 
+                                double maxRMS);
 
         void purifyTracklets(const std::vector<Tracklet> *trackletsVector,
-                             const std::vector<Detection> *detsVector,
-                             double maxRMSm, double maxRMSb, unsigned int minObs,
+                             const std::vector<MopsDetection> *detsVector,
+                             double maxRMS, unsigned int minObs,
                              std::vector<Tracklet> &output);
     };
 
 
-}
+}} // close lsst::mops
 
 #endif

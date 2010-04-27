@@ -20,13 +20,14 @@
 #include <string>
 #include <vector>
 
-#include "../KDTree.h"
-#include "../Detection.h" 
-#include "../Exceptions.h"
-#include "../Tracklet.h"
+#include "lsst/mops/KDTree.h"
+#include "lsst/mops/MopsDetection.h" 
+#include "lsst/mops/Exceptions.h"
+#include "lsst/mops/Tracklet.h"
 
+namespace lsst {
+    namespace mops {
 
-namespace collapseTracklets {
 
     class TrackletCollapser {
     public:
@@ -42,26 +43,26 @@ namespace collapseTracklets {
          * actual output data.  I.e. if pairs contains similar tracklets [1,2]  and [2,3]  they will be
          * marked as collapsed, and [1,2,3] will be added to the collapsedPairs vector.*/
         void doCollapsingPopulateOutputVector(
-            const std::vector<Detection> * detections, 
+            const std::vector<MopsDetection> * detections, 
             std::vector<Tracklet> &pairs,
             std::vector<double> tolerances, 
             std::vector<Tracklet> &collapsedPairs,
             bool useMinimumRMS, bool useBestFit, 
-            bool useRMSFilt, double maxRMSm, double maxRMSb, bool beVerbose);
+            bool useRMSFilt, double maxRMS, bool beVerbose);
       
-        void setPhysicalParamsVector(const std::vector<Detection> *trackletDets,
+        void setPhysicalParamsVector(const std::vector<MopsDetection> *trackletDets,
                                      std::vector<double> &physicalParams,
                                      double normalTime);
             
 
-        void populateTrackletsForTreeVector(const std::vector<Detection> *detections,
+        void populateTrackletsForTreeVector(const std::vector<MopsDetection> *detections,
                                             const std::vector<Tracklet> * tracklets,
-                                            std::vector<KDTree::PointAndValue <unsigned int> >
+                                            std::vector<PointAndValue <unsigned int> >
                                             &trackletsForTree);
 
             
     };
     
-}
+    }} // close lsst::mops
 
 #endif

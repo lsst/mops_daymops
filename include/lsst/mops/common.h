@@ -15,8 +15,8 @@
 
 #include <string>
 
-namespace KDTree {
-    namespace Common {
+namespace lsst {
+namespace mops {
         
         enum GeometryType {
             EUCLIDEAN,
@@ -57,6 +57,11 @@ namespace KDTree {
         
         double circularShortestPathLen_Rad(double a, double b);
 
+        /* units in DEGREES.  use this if you have no prior knowledge about your
+         * two regions of angular space. Any region which is 180 degrees will be assumed to 
+         * encompass the whole circle and returns TRUE no matter what.*/
+        bool angularRegionsOverlapSafe(double a1, double a2, double b1, double b2);
+
        /*
          * returns true iff the line segments aLo aHi and b1b2 overlap on the 1D
          * space of type GeometryType. 
@@ -77,6 +82,7 @@ namespace KDTree {
          */
         bool regionsOverlap1D(double aLo, double aHi, double b1, double b2, 
                               GeometryType type);
+
 
         // euclidean only, and aLo MUST be < aHi, bLo MUST be < bHi
         bool regionsOverlap1D_unsafe(double aLo, double aHi, double bLo, double bHi) ;
@@ -116,9 +122,7 @@ namespace KDTree {
 
         std::string stringToLower(std::string strToConvert);
         
-    }
-}
 
-
+}} // close namespace lsst::mops
 
 #endif

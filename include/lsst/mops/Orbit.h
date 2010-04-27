@@ -18,6 +18,9 @@
 //#include <stdio.h>
 
 
+namespace lsst{
+namespace mops{
+
 class Orbit{
 
  public:
@@ -63,5 +66,6 @@ class Orbit{
   double orbitID;
 };
 
+}} // close lsst::mops namespace
 
 #endif

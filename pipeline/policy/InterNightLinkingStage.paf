@@ -3,7 +3,6 @@
 # All angles in degrees. All times are in days.
 databasePolicy: @policy/DataBase.paf
 locationPolicy: @policy/Location.paf
-verbosityLevel: "DEBUG"
 
 minNights: 3                # minimum number of nights to attempt OD
 timeSpan: 30                # max number of days worth of data to consider.
@@ -12,16 +11,11 @@ slowMinV: 0.0               # minv for "slow movers"
 slowMaxV: 0.5               # maxv for "slow movers"
 slowVtreeThresh: 0.0003
 slowPredThresh: 0.0005
-slowMaxAccRa: 0.025
-slowMaxAccDec: 0.025
-
 
 fastMinV: 0.4               # minv for "fast movers"
 fastMaxV: 7.0               # maxv for "fast movers"
 fastVtreeThresh: 0.0025
 fastPredThresh: 0.0025
-fastMaxAccRa : 0.04
-fastMaxAccDec : 0.04
 
 plateWidth: .0001
 #

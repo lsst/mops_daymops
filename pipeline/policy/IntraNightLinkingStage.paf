@@ -3,7 +3,6 @@
 # All angles in degrees,times in days.
 databasePolicy: @policy/DataBase.paf
 locationPolicy: @policy/Location.paf
-verbosityLevel: "DEBUG"
 
 maxV: 2.0               # max DIASource velocity (deg/day)
 minObs: 2               # min DIASource per Tracklet

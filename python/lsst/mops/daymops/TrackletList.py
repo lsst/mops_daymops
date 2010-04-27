@@ -16,20 +16,20 @@ def newTrackletsFromTonight(dbLocStr, shallow=True,
     Fetch unattributed Tracklets with at least one DiaSource form tonight.
     
     Use  sliceId and numSlices to implement some form of parallelism.
-    If shallow=False, then fetch the DiaSources also.
+    If shallow=False, then fetch the DIASources also.
     
     @param dbLocStr: database connection string.
-    @param shallow: if True, do not bother retrieving DiaSources per Tracklet.
+    @param shallow: if True, do not bother retrieving DIASources per Tracklet.
     @param sliceId: Id of the current Slice.
     @param numSlices: number of available slices (i.e. MPI universe size - 1)
     
     Return 
     Interator to the list of Tracklet instances.
     """
-    where='mops_TrackletToDiaSource.diaSourceId=DiaSourceIDTonight.DiaSourceId'
+    where='mops_TrackletsToDIASource.diaSourceId=DIASourceIDTonight.DIASourceId'
     return(_fetchTracklets(dbLocStr, 
                            where,
-                           ('DiaSourceIDTonight', ),
+                           ('DIASourceIDTonight', ),
                            shallow, 
                            sliceId, 
                            numSlices))
@@ -40,18 +40,18 @@ def newTracklets(dbLocStr, fromMjd=None, toMjd=None, shallow=True,
     """
     Fetch non attrinuted/linked/precovered (i.e. status='U') Tracklets.
     If fromMjd != None, then only consider tracklets which have at least one 
-    DiaSource with exposureStartTime >= fromMjd.
+    DiaSource with taiMidPoint >= fromMjd.
     
     If toMjd != None, then only consider tracklets which have at least one 
-    DiaSource with exposureStartTime <= toMjd.
+    DiaSource with taiMidPoint <= toMjd.
     
     Use  sliceId and numSlices to implement some form of parallelism.
-    If shallow=False, then fetch the DiaSources also.
+    If shallow=False, then fetch the DIASources also.
     
     @param dbLocStr: database connection string.
-    @param shallow: if True, do not bother retrieving DiaSources per Tracklet.
-    @param fromMjd: min DiaSource MJD to consider for Tracklet retrieval.
-    @param toMjd: max DiaSource MJD to consider for Tracklet retrieval.
+    @param shallow: if True, do not bother retrieving DIASources per Tracklet.
+    @param fromMjd: min DIASource MJD to consider for Tracklet retrieval.
+    @param toMjd: max DIASource MJD to consider for Tracklet retrieval.
     @param sliceId: Id of the current Slice.
     @param numSlices: number of available slices (i.e. MPI universe size - 1)
     
@@ -60,12 +60,12 @@ def newTracklets(dbLocStr, fromMjd=None, toMjd=None, shallow=True,
     """
     where = ''
     if(fromMjd != None):
-        where += 'DiaSource.exposureStartTime >= %f' %(fromMjd)
+        where += 'DIASource.taiMidPoint >= %f' %(fromMjd)
     if(toMjd != None):
         if(where):
-            where += 'and DiaSource.exposureStartTime <= %f' %(toMjd)
+            where += 'and DIASource.taiMidPoint <= %f' %(toMjd)
         else:
-            where = 'DiaSource.exposureStartTime <= %f' %(toMjd)
+            where = 'DIASource.taiMidPoint <= %f' %(toMjd)
     return(_fetchTracklets(dbLocStr, 
                            where,
                            [],
@@ -81,10 +81,10 @@ def allTrackletsForMovingObject(dbLocStr, movingObjectId, shallow=True,
     movingObjectId).
     
     Use  sliceId and numSlices to implement some form of parallelism.
-    If shallow=False, then fetch the DiaSources also.
+    If shallow=False, then fetch the DIASources also.
     
     @param dbLocStr: database connection string.
-    @param shallow: if True, do not bother retrieving DiaSources per Tracklet.
+    @param shallow: if True, do not bother retrieving DIASources per Tracklet.
     @param movingObjectId: ID of the MovingObject associated to the Tracklets.
     @param sliceId: Id of the current Slice.
     @param numSlices: number of available slices (i.e. MPI universe size - 1)
@@ -105,13 +105,13 @@ def _fetchTracklets(dbLocStr, where, extraTables=[], shallow=True,
     Tracklets.
     
     The teables from which we select (in ddition to mops_Tracklet and 
-    mops_TrackletToDiaSource) have to be specified in the extraTables list.
+    mops_TrackletsToDIASource) have to be specified in the extraTables list.
     
     The SQL where clause has to be specified. In it, specify the full 
     table names (e.g. mops_Tracklet.status instead of just status).
     
     Use  sliceId and numSlices to implement some form of parallelism.
-    If shallow=False, then fetch the DiaSources also.
+    If shallow=False, then fetch the DIASources also.
     
     Return interator.
     """
@@ -132,7 +132,7 @@ def _fetchShallowTracklets(dbLocStr, where, extraTables=[], sliceId=None,
     Tracklets.
     
     The teables from which we select (in ddition to mops_Tracklet and 
-    mops_TrackletToDiaSource) have to be specified in the extraTables list.
+    mops_TrackletsToDIASource) have to be specified in the extraTables list.
     
     The SQL where clause has to be specified. In it, specify the full 
     table names (e.g. mops_Tracklet.status instead of just status).
@@ -148,7 +148,7 @@ def _fetchShallowTracklets(dbLocStr, where, extraTables=[], sliceId=None,
     # Send the query.
     db = SafeDbStorage()
     db.setPersistLocation(persistence.LogicalLocation(dbLocStr))
-    tables = ['mops_Tracklet', 'mops_TrackletToDiaSource'] + list(extraTables)
+    tables = ['mops_Tracklet', 'mops_TrackletsToDIASource'] + list(extraTables)
     db.setTableListForQuery(tables)
     db.outColumn('distinct(mops_Tracklet.trackletId)', True)
     db.outColumn('mops_Tracklet.velRa')
@@ -157,7 +157,7 @@ def _fetchShallowTracklets(dbLocStr, where, extraTables=[], sliceId=None,
     db.outColumn('mops_Tracklet.status')
     
     w2 = 'mops_Tracklet.status="%s"' %(STATUS['UNATTRIBUTED'])
-    w2 += ' and mops_Tracklet.trackletId=mops_TrackletToDiaSource.trackletId'
+    w2 += ' and mops_Tracklet.trackletId=mops_TrackletsToDIASource.trackletId'
     
     w = ''
     if(where):
@@ -191,7 +191,7 @@ def _fetchDeepTracklets(dbLocStr, where, extraTables=[], sliceId=None,
     Tracklets.
     
     The teables from which we select (in ddition to mops_Tracklet and 
-    mops_TrackletToDiaSource) have to be specified in the extraTables list.
+    mops_TrackletsToDIASource) have to be specified in the extraTables list.
     
     The SQL where clause has to be specified. In it, specify the full 
     table names (e.g. mops_Tracklet.status instead of just status).
@@ -207,26 +207,27 @@ def _fetchDeepTracklets(dbLocStr, where, extraTables=[], sliceId=None,
     # Send the query.
     db = SafeDbStorage()
     db.setPersistLocation(persistence.LogicalLocation(dbLocStr))
-    tables = ['mops_Tracklet', 'mops_TrackletToDiaSource', 'DiaSource'] + \
+    tables = ['mops_Tracklet', 'mops_TrackletsToDIASource', 'DIASource'] + \
              list(extraTables)
     db.setTableListForQuery(tables)
-    db.outColumn('mops_Tracklet.trackletId')     # 0
-    db.outColumn('mops_Tracklet.velRa')          # 1
-    db.outColumn('mops_Tracklet.velDecl')        # 2
-    db.outColumn('mops_Tracklet.velTot')         # 3
-    db.outColumn('mops_Tracklet.status')         # 4
-    db.outColumn('DiaSource.diaSourceId')        # 5
-    db.outColumn('DiaSource.ra')                 # 6
-    db.outColumn('DiaSource.decl')               # 7
-    db.outColumn('DiaSource.filterId')           # 8
-    db.outColumn('DiaSource.exposureStartTime')  # 9
-    db.outColumn('DiaSource.apFlux')             # 10
-    db.outColumn('DiaSource.apFluxSigma')        # 11
-    db.outColumn('DiaSource.psfFlux')            # 12
+    db.outColumn('mops_Tracklet.trackletId')
+    db.outColumn('mops_Tracklet.velRa')
+    db.outColumn('mops_Tracklet.velDecl')
+    db.outColumn('mops_Tracklet.velTot')
+    db.outColumn('mops_Tracklet.status')
+    db.outColumn('DIASource.diaSourceId')
+    db.outColumn('DIASource.ra')
+    db.outColumn('DIASource.decl')
+    db.outColumn('DIASource.filterId')
+    db.outColumn('DIASource.taiMidPoint')
+    db.outColumn('DIASource.obsCode')
+    db.outColumn('DIASource.apFlux')
+    db.outColumn('DIASource.apFluxErr')
+    db.outColumn('DIASource.refMag')
     
     w2 = 'mops_Tracklet.status="%s"' %(STATUS['UNATTRIBUTED'])
-    w2 += ' and mops_Tracklet.trackletId=mops_TrackletToDiaSource.trackletId'
-    w2 += ' and DiaSource.diaSourceId=mops_TrackletToDiaSource.diaSourceId'
+    w2 += ' and mops_Tracklet.trackletId=mops_TrackletsToDIASource.trackletId'
+    w2 += ' and DIASource.diaSourceId=mops_TrackletsToDIASource.diaSourceId'
     
     w = ''
     if(where):
@@ -251,9 +252,10 @@ def _fetchDeepTracklets(dbLocStr, where, extraTables=[], sliceId=None,
         d.setDec(db.getColumnByPosDouble(7))
         d.setFilterId(db.getColumnByPosInt(8))
         d.setTaiMidPoint(db.getColumnByPosDouble(9))
-        d.setApFlux(db.getColumnByPosDouble(10))
-        d.setApFluxErr(db.getColumnByPosDouble(11))
-        d.setRefFlux(db.getColumnByPosDouble(12))
+        d.setObsCode(db.getColumnByPosString(10))
+        d.setApFlux(db.getColumnByPosDouble(11))
+        d.setApFluxErr(db.getColumnByPosDouble(12))
+        d.setRefMag(db.getColumnByPosDouble(13))
         
         trackletId = db.getColumnByPosLong(0)
         if(refId == None):
@@ -309,7 +311,7 @@ def getArcLength(tracklets):
     @param tracklets: a list of Tracklet instances.
     
     Return
-    Total arc length in days for all the DiaSources part of the unition of input
+    Total arc length in days for all the DIASources part of the unition of input
     Tracklet instances.
     """
     # TODO: is this the most efficient way of computing the arc length?
@@ -340,7 +342,7 @@ def save(dbLocStr, tracklets):
     
     # Prepare for insert.
     dbTrk.setTableForInsert('mops_Tracklet')
-    dbSrc.setTableForInsert('mops_TrackletToDiaSource')
+    dbSrc.setTableForInsert('mops_TrackletsToDIASource')
     
     # dbTrk.startTransaction()
     # dbSrc.startTransaction()
@@ -402,7 +404,7 @@ def update(dbLocStr, tracklets):
     trSql = 'update mops_Tracklet set status="%s", velRa=%s, velDecl=%s, '
     trSql += 'velTot=%s where trackletId=%d'
     
-    tdSql = 'update mops_TrackletToDiaSource set diaSourceId=%d '
+    tdSql = 'update mops_TrackletsToDIASource set diaSourceId=%d '
     tdSql += 'where trackletId=%d'
     
     db.startTransaction()

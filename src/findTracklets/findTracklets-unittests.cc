@@ -33,7 +33,9 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_1 )
   // call with empty dets
   std::vector<MopsDetection> myDets;
   std::vector<Tracklet> pairs;
-  pairs = findTracklets(myDets, 1);
+  findTrackletsConfig config;
+  config.maxV = 1.0;
+  pairs = findTracklets(myDets, config);
   BOOST_CHECK(pairs.size() == 0);
 }
 
@@ -69,7 +71,10 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_2 )
 
   //std::cerr << "boost test 2" << std::endl;
 
-  std::vector<Tracklet> pairs = findTracklets(myDets, 1);
+  findTrackletsConfig config;
+  config.maxV = 1.0;
+
+  std::vector<Tracklet> pairs = findTracklets(myDets, config);
   BOOST_CHECK(pairs.size() == 1);
 }
 
@@ -84,7 +89,9 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_3 )
   addDetectionAt(53736.0, 100.0, 10.0, myDets); // id 0
   addDetectionAt(53737.0, 100.1, 10.1, myDets); // id 1
   addDetectionAt(53738.0, 100.2, 10.2, myDets); // id 2
-  std::vector<Tracklet> pairs = findTracklets(myDets, 1);
+  findTrackletsConfig config;
+  config.maxV = 1.0;
+  std::vector<Tracklet> pairs = findTracklets(myDets, config);
   BOOST_CHECK(pairs.size() == 3);
   BOOST_CHECK(containsPair(0, 1, pairs));
   BOOST_CHECK(containsPair(0, 2, pairs));
@@ -103,7 +110,9 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_4 )
   // second "object"
   addDetectionAt(53736.0, 150.0, -10.0, myDets); // id 2
   addDetectionAt(53737.0, 150.1, -10.1, myDets); // id 3
-  std::vector<Tracklet> pairs = findTracklets(myDets, 1);
+  findTrackletsConfig config;
+  config.maxV = 1.0;
+  std::vector<Tracklet> pairs = findTracklets(myDets, config);
   BOOST_CHECK(pairs.size() == 2);
   BOOST_CHECK(containsPair(0, 1, pairs));
   BOOST_CHECK(containsPair(2, 3, pairs));
@@ -123,7 +132,9 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_5 )
   // second "object" - too fast! (1.104 deg/day)
   addDetectionAt(53736.0, 150.0, 0.0, myDets); // id 2
   addDetectionAt(53737.0, 151.1, 0.1, myDets); // id 3
-  std::vector<Tracklet> pairs = findTracklets(myDets, 1);
+  findTrackletsConfig config;
+  config.maxV = 1.0;
+  std::vector<Tracklet> pairs = findTracklets(myDets, config);
   BOOST_CHECK(pairs.size() == 1);
   BOOST_CHECK(containsPair(0, 1, pairs));
 }
@@ -139,7 +150,9 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_5_1 )
   // second "object" - too fast! (1.104 deg/day)
   addDetectionAt(53736.0, 150.0, -0.0, myDets); // id 3
   addDetectionAt(53736.5, 150.55, -0.1, myDets); // id 4
-  std::vector<Tracklet> pairs = findTracklets(myDets, 1);
+  findTrackletsConfig config;
+  config.maxV = 1.0;
+  std::vector<Tracklet> pairs = findTracklets(myDets, config);
   BOOST_CHECK(pairs.size() == 1);
   BOOST_CHECK(containsPair(0, 1, pairs));
 }
@@ -154,7 +167,9 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_5_2 )
   // second "object" - too fast! (1.1 deg/day)
   addDetectionAt(53736.0, 150.0, -0.0, myDets); // id 3
   addDetectionAt(53736.5, 150.0, -0.55, myDets); // id 4
-  std::vector<Tracklet> pairs = findTracklets(myDets, 1);
+  findTrackletsConfig config;
+  config.maxV = 1.0;
+  std::vector<Tracklet> pairs = findTracklets(myDets, config);
   BOOST_CHECK(pairs.size() == 1);
   BOOST_CHECK(containsPair(0, 1, pairs));
 }
@@ -169,7 +184,9 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_5_3 )
   // second "object" - too fast! (~1.0418 deg/day)
   addDetectionAt(53736.0, 150.0, -80.0, myDets); // id 3
   addDetectionAt(53736.5, 153.0, -80.0, myDets); // id 4
-  std::vector<Tracklet> pairs = findTracklets(myDets, 1);
+  findTrackletsConfig config;
+  config.maxV = 1.0;
+  std::vector<Tracklet> pairs = findTracklets(myDets, config);
   BOOST_CHECK(pairs.size() == 1);
   BOOST_CHECK(containsPair(0, 1, pairs));
 }
@@ -190,7 +207,9 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_6 )
 
   //  std::cerr << "boost test 6" << std::endl;
 
-  std::vector<Tracklet> pairs = findTracklets(myDets, 1);
+  findTrackletsConfig config;
+  config.maxV = 1.0;
+  std::vector<Tracklet> pairs = findTracklets(myDets, config);
   BOOST_CHECK(pairs.size() == 1);
   BOOST_CHECK(containsPair(0, 1, pairs));
 }
@@ -210,7 +229,9 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_6_1 )
 
   //  std::cerr << "boost test 6" << std::endl;
 
-  std::vector<Tracklet> pairs = findTracklets(myDets, 1);
+  findTrackletsConfig config;
+  config.maxV = 1.0;
+  std::vector<Tracklet> pairs = findTracklets(myDets, config);
   BOOST_CHECK(pairs.size() == 1);
   BOOST_CHECK(containsPair(0, 1, pairs));
 }
@@ -226,7 +247,9 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_7 )
   addDetectionAt(53736.0, 359.9, 60.0, myDets); // id 0
   addDetectionAt(53737.0, 000.1, 60.1, myDets); // id 1
   //  std::cerr << "boost test 7" << std::endl;
-  std::vector<Tracklet> pairs = findTracklets(myDets, 1);
+  findTrackletsConfig config;
+  config.maxV = 1.0;
+  std::vector<Tracklet> pairs = findTracklets(myDets, config);
   BOOST_CHECK(pairs.size() == 1);
   BOOST_CHECK(containsPair(0, 1, pairs));
 }
@@ -242,7 +265,9 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_8 )
 
   //  std::cerr << "boost test 8" << std::endl;
 
-  std::vector<Tracklet> pairs = findTracklets(myDets, 1);
+  findTrackletsConfig config;
+  config.maxV = 1.0;
+  std::vector<Tracklet> pairs = findTracklets(myDets, config);
   BOOST_CHECK(pairs.size() == 1);
   BOOST_CHECK(containsPair(0, 1, pairs));
 }
@@ -259,7 +284,9 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_9 )
 
   //  std::cerr << "boost test 9" << std::endl;
 
-  std::vector<Tracklet> pairs = findTracklets(myDets, 1);
+  findTrackletsConfig config;
+  config.maxV = 1.0;
+  std::vector<Tracklet> pairs = findTracklets(myDets, config);
   BOOST_CHECK(pairs.size() == 1);
   BOOST_CHECK(containsPair(0, 1, pairs));
 }
@@ -275,7 +302,9 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_10 )
 
   //std:cerr << "boost test 10" << std::endl;
 
-  std::vector<Tracklet> pairs = findTracklets(myDets, 1);
+  findTrackletsConfig config;
+  config.maxV = 1.0;
+  std::vector<Tracklet> pairs = findTracklets(myDets, config);
   BOOST_CHECK(pairs.size() == 1);
   BOOST_CHECK(containsPair(0, 1, pairs));
 }
@@ -289,8 +318,11 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_11 )
   addDetectionAt(53737.0, 280.0, -89.9, myDets); // id 1
 
   //std:cerr << "boost test 10" << std::endl;
+ 
+  findTrackletsConfig config;
+  config.maxV = 1.0;
 
-  std::vector<Tracklet> pairs = findTracklets(myDets, 1);
+  std::vector<Tracklet> pairs = findTracklets(myDets, config);
   BOOST_CHECK(pairs.size() == 1);
   BOOST_CHECK(containsPair(0, 1, pairs));
 }
@@ -306,7 +338,10 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_112)
 
   //std:cerr << "boost test 10" << std::endl;
 
-  std::vector<Tracklet> pairs = findTracklets(myDets, 1);
+  findTrackletsConfig config;
+  config.maxV = 1.0;
+
+  std::vector<Tracklet> pairs = findTracklets(myDets, config);
   BOOST_CHECK(pairs.size() == 1);
   BOOST_CHECK(containsPair(0, 1, pairs));
 }
@@ -326,7 +361,10 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_13 )
 
   //std:cerr << "boost test 13" << std::endl;
 
-  std::vector<Tracklet> pairs = findTracklets(myDets, 1);
+  findTrackletsConfig config;
+  config.maxV = 1.0;
+
+  std::vector<Tracklet> pairs = findTracklets(myDets, config);
   BOOST_CHECK(pairs.size() == 0);
 }
 
@@ -346,7 +384,10 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_14 )
 
   //std:cerr << "boost test 14" << std::endl;
 
-  std::vector<Tracklet> pairs = findTracklets(myDets, 1);
+  findTrackletsConfig config;
+  config.maxV = 1.0;
+
+  std::vector<Tracklet> pairs = findTracklets(myDets, config);
   BOOST_CHECK(pairs.size() == 1);
   BOOST_CHECK(containsPair(0, 1, pairs));
 }
@@ -400,7 +441,10 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_15 )
 
   //std:cerr << "boost test 15" << std::endl;
 
-  std::vector<Tracklet> pairs = findTracklets(myDets, 1);
+  findTrackletsConfig config;
+  config.maxV = 1.0;
+
+  std::vector<Tracklet> pairs = findTracklets(myDets, config);
   BOOST_CHECK(pairs.size() == 4);
   BOOST_CHECK(containsPair(0,  1, pairs));
   BOOST_CHECK(containsPair(5,  6, pairs));
@@ -419,8 +463,10 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_16 )
   addDetectionAt(53736.0, 100.1, 100.0, myDets); // id 1
 
   //std:cerr << "boost test 16" << std::endl;
+  findTrackletsConfig config;
+  config.maxV = 1.0;
 
-  std::vector<Tracklet> pairs = findTracklets(myDets, 1);
+  std::vector<Tracklet> pairs = findTracklets(myDets, config);
   BOOST_CHECK(pairs.size() == 0);
 }
 
@@ -437,7 +483,10 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_17 )
 
   //std:cerr << "boost test 17" << std::endl;
 
-  std::vector<Tracklet> pairs = findTracklets(myDets, 1);
+  findTrackletsConfig config;
+  config.maxV = 1.0;
+
+  std::vector<Tracklet> pairs = findTracklets(myDets, config);
   BOOST_CHECK(pairs.size() == 1);
   BOOST_CHECK(containsPair(0, 1, pairs));
 }
@@ -454,8 +503,10 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_18 )
   addDetectionAt(53736.0, 000.1, -02.0, myDets); //id 2
 
   //std:cerr << "boost test 18" << std::endl;
+  findTrackletsConfig config;
+  config.maxV = 1.0;
 
-  std::vector<Tracklet> pairs = findTracklets(myDets, 1);
+  std::vector<Tracklet> pairs = findTracklets(myDets, config);
   BOOST_CHECK(pairs.size() == 1);
   BOOST_CHECK(containsPair(0, 1, pairs));
 }
@@ -472,7 +523,9 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_19 )
 
   //std:cerr << "boost test 19" << std::endl;
 
-  std::vector<Tracklet> pairs = findTracklets(myDets, 1);
+  findTrackletsConfig config;
+  config.maxV = 1.0;
+  std::vector<Tracklet> pairs = findTracklets(myDets, config);
   BOOST_CHECK(pairs.size() == 0);
 }
 
@@ -486,183 +539,211 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_19 )
 // /*********************************************************************/
 
 
-// // test that minv does something in RA
-// BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_1 )
-// {
-//   std::vector<MopsDetection> myDets;
-//   // first "object" -- too slow
-//   addDetectionAt(53736.0, 100.0, 100.0, myDets); // id 0
-//   addDetectionAt(53737.0, 100.1, 100.0, myDets); // id 1
+// test that minv does something in RA
+BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_1 )
+{
+  std::vector<MopsDetection> myDets;
+  // first "object" -- too slow
+  addDetectionAt(53736.0, 100.0, 100.0, myDets); // id 0
+  addDetectionAt(53737.0, 100.1, 100.0, myDets); // id 1
   
-//   // second "object", .689 deg/day
-//   addDetectionAt(53736.0, 300.0, 10.0, myDets); // id 2
-//   addDetectionAt(53737.0, 300.7, 10.0, myDets); // id 3
+  // second "object", .689 deg/day
+  addDetectionAt(53736.0, 300.0, 10.0, myDets); // id 2
+  addDetectionAt(53737.0, 300.7, 10.0, myDets); // id 3
 
-//   //std:cerr << "boost min test 1" << std::endl;
+  //std:cerr << "boost min test 1" << std::endl;
 
-//   std::vector<Tracklet> pairs = findTracklets(myDets, 1., .5);
-//   BOOST_CHECK(pairs.size() == 1);
-//   BOOST_CHECK(containsPair(2, 3, pairs));
+  findTrackletsConfig config;
+  config.maxV = 1.0;
+  config.minV = .5;
+  std::vector<Tracklet> pairs = findTracklets(myDets, config);
+  BOOST_CHECK(pairs.size() == 1);
+  BOOST_CHECK(containsPair(2, 3, pairs));
   
-// }
+}
 
 
-// // test that minv does something in RA
-// // (again, with time separation != exactly 1 day)
-// BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_1_1 )
-// {
-//   std::vector<MopsDetection> myDets;
-//   // first "object" -- too slow (.017 deg/day)
-//   addDetectionAt(53736.0, 100.0, 80.0, myDets); // id 0
-//   addDetectionAt(53736.5, 100.05, 80.0, myDets); // id 1
+// test that minv does something in RA
+// (again, with time separation != exactly 1 day)
+BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_1_1 )
+{
+  std::vector<MopsDetection> myDets;
+  // first "object" -- too slow (.017 deg/day)
+  addDetectionAt(53736.0, 100.0, 80.0, myDets); // id 0
+  addDetectionAt(53736.5, 100.05, 80.0, myDets); // id 1
   
-//   // second "object" (.59 deg/day)
-//   addDetectionAt(53736.0, 300.0, -10.0, myDets); // id 2
-//   addDetectionAt(53736.5, 300.3, -10.0, myDets); // id 3
+  // second "object" (.59 deg/day)
+  addDetectionAt(53736.0, 300.0, -10.0, myDets); // id 2
+  addDetectionAt(53736.5, 300.3, -10.0, myDets); // id 3
 
-//   //std:cerr << "boost min test 1" << std::endl;
+  //std:cerr << "boost min test 1" << std::endl;
 
-//   std::vector<Tracklet> pairs = findTracklets(myDets, 1., .5);
-//   BOOST_CHECK(pairs.size() == 1);
-//   BOOST_CHECK(containsPair(2, 3, pairs));
+  findTrackletsConfig config;
+  config.maxV = 1.0;
+  config.minV = .5;
+  std::vector<Tracklet> pairs = findTracklets(myDets, config);
+  BOOST_CHECK(pairs.size() == 1);
+  BOOST_CHECK(containsPair(2, 3, pairs));
   
-// }
+}
 
 
 
-// // test that minv does something in dec
-// BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_2 )
-// {
-//   std::vector<MopsDetection> myDets;
-//   // first "object" -- too slow
-//   addDetectionAt(53736.0, 100.0, -10.0, myDets); // id 0
-//   addDetectionAt(53737.0, 100.0, -10.1, myDets); // id 1
+// test that minv does something in dec
+BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_2 )
+{
+  std::vector<MopsDetection> myDets;
+  // first "object" -- too slow
+  addDetectionAt(53736.0, 100.0, -10.0, myDets); // id 0
+  addDetectionAt(53737.0, 100.0, -10.1, myDets); // id 1
   
-//   // second "object" 
-//   addDetectionAt(53736.0, 300.0, 80.0, myDets); // id 2
-//   addDetectionAt(53737.0, 300.0, 80.6, myDets); // id 3
+  // second "object" 
+  addDetectionAt(53736.0, 300.0, 80.0, myDets); // id 2
+  addDetectionAt(53737.0, 300.0, 80.6, myDets); // id 3
 
-//   //std:cerr << "boost min test 2" << std::endl;
+  //std:cerr << "boost min test 2" << std::endl;
 
-//   std::vector<Tracklet> pairs = findTracklets(myDets, 1., .5);
-//   BOOST_CHECK(pairs.size() == 1);
-//   BOOST_CHECK(containsPair(2, 3, pairs));
+  findTrackletsConfig config;
+  config.maxV = 1.0;
+  config.minV = .5;
+  std::vector<Tracklet> pairs = findTracklets(myDets, config);
+  BOOST_CHECK(pairs.size() == 1);
+  BOOST_CHECK(containsPair(2, 3, pairs));
   
-// }
+}
 
 
-// // test that minv does something in dec
-// // again, with time separation != exactly one day
-// BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_2_1 )
-// {
-//   std::vector<MopsDetection> myDets;
-//   // first "object" -- too slow
-//   addDetectionAt(53736.0, 100.0, 100.0, myDets); // id 0
-//   addDetectionAt(53736.5, 100.0, 100.05, myDets); // id 1
+// test that minv does something in dec
+// again, with time separation != exactly one day
+BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_2_1 )
+{
+  std::vector<MopsDetection> myDets;
+  // first "object" -- too slow
+  addDetectionAt(53736.0, 100.0, 100.0, myDets); // id 0
+  addDetectionAt(53736.5, 100.0, 100.05, myDets); // id 1
   
-//   // second "object" 
-//   addDetectionAt(53736.0, 300.0, 300.0, myDets); // id 2
-//   addDetectionAt(53736.5, 300.0, 300.3, myDets); // id 3
+  // second "object" 
+  addDetectionAt(53736.0, 300.0, 300.0, myDets); // id 2
+  addDetectionAt(53736.5, 300.0, 300.3, myDets); // id 3
 
-//   //std:cerr << "boost min test 2" << std::endl;
+  //std:cerr << "boost min test 2" << std::endl;
 
-//   std::vector<Tracklet> pairs = findTracklets(myDets, 1., .5);
-//   BOOST_CHECK(pairs.size() == 1);
-//   BOOST_CHECK(containsPair(2, 3, pairs));
+  findTrackletsConfig config;
+  config.maxV = 1.0;
+  config.minV = .5;
+
+  std::vector<Tracklet> pairs = findTracklets(myDets, config);
+  BOOST_CHECK(pairs.size() == 1);
+  BOOST_CHECK(containsPair(2, 3, pairs));
   
-// }
+}
 
 
-// // test that minv does something in RA.dec
-// BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_3 )
-// {
-//   std::vector<MopsDetection> myDets;
-//   // first "object" -- too slow (distance of ~.14)
-//   addDetectionAt(53736.0, 100.0, 10.0, myDets); // id 0
-//   addDetectionAt(53737.0, 100.1, 10.1, myDets); // id 1
+// test that minv does something in RA.dec
+BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_3 )
+{
+  std::vector<MopsDetection> myDets;
+  // first "object" -- too slow (distance of ~.14)
+  addDetectionAt(53736.0, 100.0, 10.0, myDets); // id 0
+  addDetectionAt(53737.0, 100.1, 10.1, myDets); // id 1
   
-//   // second "object" -- just fast enough (distance of ~.66)
-//   addDetectionAt(53736.0, 300.0, 30.0, myDets); // id 2
-//   addDetectionAt(53737.0, 300.5, 30.5, myDets); // id 3
+  // second "object" -- just fast enough (distance of ~.66)
+  addDetectionAt(53736.0, 300.0, 30.0, myDets); // id 2
+  addDetectionAt(53737.0, 300.5, 30.5, myDets); // id 3
 
-//   //std:cerr << "boost min test 3" << std::endl;
+  //std:cerr << "boost min test 3" << std::endl;
 
-//   std::vector<Tracklet> pairs = findTracklets(myDets, 1., .5);
-//   BOOST_CHECK(pairs.size() == 1);
-//   BOOST_CHECK(containsPair(2, 3, pairs));
+  findTrackletsConfig config;
+  config.maxV = 1.0;
+  config.minV = .5;
+
+  std::vector<Tracklet> pairs = findTracklets(myDets, config);
+  BOOST_CHECK(pairs.size() == 1);
+  BOOST_CHECK(containsPair(2, 3, pairs));
   
-// }
+}
 
 
 
 
-// // test that minv works with crossing RA 0 line
-// BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_4 )
-// {
-//   std::vector<MopsDetection> myDets;
-//   // first "object" -- too slow
-//   addDetectionAt(53736.0, 000.05, 000.05, myDets); // id 0
-//   addDetectionAt(53737.0, 359.95, 000.05, myDets); // id 1
+// test that minv works with crossing RA 0 line
+BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_4 )
+{
+  std::vector<MopsDetection> myDets;
+  // first "object" -- too slow
+  addDetectionAt(53736.0, 000.05, 000.05, myDets); // id 0
+  addDetectionAt(53737.0, 359.95, 000.05, myDets); // id 1
   
-//   // second "object" -- just fast enough
-//   addDetectionAt(53736.0, 000.1, 020.5, myDets); // id 2
-//   addDetectionAt(53737.0, 359.5, 020.5, myDets); // id 3
+  // second "object" -- just fast enough
+  addDetectionAt(53736.0, 000.1, 020.5, myDets); // id 2
+  addDetectionAt(53737.0, 359.5, 020.5, myDets); // id 3
 
-//   //std:cerr << "boost min test 4" << std::endl;
+  //std:cerr << "boost min test 4" << std::endl;
+  findTrackletsConfig config;
+  config.maxV = 1.0;
+  config.minV = .5;
 
-//   std::vector<Tracklet> pairs = findTracklets(myDets, 1., .5);
-//   BOOST_CHECK(pairs.size() == 1);
-//   BOOST_CHECK(containsPair(2, 3, pairs));
+  std::vector<Tracklet> pairs = findTracklets(myDets, config);
+  BOOST_CHECK(pairs.size() == 1);
+  BOOST_CHECK(containsPair(2, 3, pairs));
   
-// }
+}
 
 
 
 
 
-// // test that minv works with crossing north pole
-// BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_5 )
-// {
-//   std::vector<MopsDetection> myDets;
-//   // first "object" -- too slow (distance of .1)
-//   addDetectionAt(53736.0, 000.05, 89.95, myDets); // id 0
-//   addDetectionAt(53737.0, 180.05, 89.95, myDets); // id 1
+// test that minv works with crossing north pole
+BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_5 )
+{
+  std::vector<MopsDetection> myDets;
+  // first "object" -- too slow (distance of .1)
+  addDetectionAt(53736.0, 000.05, 89.95, myDets); // id 0
+  addDetectionAt(53737.0, 180.05, 89.95, myDets); // id 1
   
-//   // second "object" -- just fast enough (distance of .6)
-//   addDetectionAt(53736.0, 010.5, 89.7, myDets); // id 2
-//   addDetectionAt(53737.0, 190.5, 89.7, myDets); // id 3
+  // second "object" -- just fast enough (distance of .6)
+  addDetectionAt(53736.0, 010.5, 89.7, myDets); // id 2
+  addDetectionAt(53737.0, 190.5, 89.7, myDets); // id 3
 
-//   //std:cerr << "boost min test 5" << std::endl;
+  //std:cerr << "boost min test 5" << std::endl;
 
-//   std::vector<Tracklet> pairs = findTracklets(myDets, 1., .5);
-//   BOOST_CHECK(pairs.size() == 1);
-//   BOOST_CHECK(containsPair(2, 3, pairs));
+  findTrackletsConfig config;
+  config.maxV = 1.0;
+  config.minV = .5;
+
+  std::vector<Tracklet> pairs = findTracklets(myDets, config);
+  BOOST_CHECK(pairs.size() == 1);
+  BOOST_CHECK(containsPair(2, 3, pairs));
   
-// }
+}
 
 
 
 
 
-// // test that minv works with crossing RA *and* dec 0 lines
-// BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_6 )
-// {
-//   std::vector<MopsDetection> myDets;
-//   // first "object" -- too slow (distance of ~.14)
-//   addDetectionAt(53736.0, 000.05, 000.05, myDets); // id 0
-//   addDetectionAt(53737.0, 359.95, -00.05, myDets); // id 1
+// test that minv works with crossing RA *and* dec 0 lines
+BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_6 )
+{
+  std::vector<MopsDetection> myDets;
+  // first "object" -- too slow (distance of ~.14)
+  addDetectionAt(53736.0, 000.05, 000.05, myDets); // id 0
+  addDetectionAt(53737.0, 359.95, -00.05, myDets); // id 1
   
-//   // second "object" -- just fast enough (distance of ~.707)
-//   addDetectionAt(53736.0, 000.25, 000.25, myDets); // id 2
-//   addDetectionAt(53737.0, 359.75, -00.25, myDets); // id 3
+  // second "object" -- just fast enough (distance of ~.707)
+  addDetectionAt(53736.0, 000.25, 000.25, myDets); // id 2
+  addDetectionAt(53737.0, 359.75, -00.25, myDets); // id 3
 
-//   //std:cerr << "boost min test 6" << std::endl;
+  //std:cerr << "boost min test 6" << std::endl;
 
-//   std::vector<Tracklet> pairs = findTracklets(myDets, 1., .5);
-//   BOOST_CHECK(pairs.size() == 1);
-//   BOOST_CHECK(containsPair(2, 3, pairs));
+  findTrackletsConfig config;
+  config.maxV = 1.0;
+  config.minV = .5;
+
+  std::vector<Tracklet> pairs = findTracklets(myDets, config);
+  BOOST_CHECK(pairs.size() == 1);
+  BOOST_CHECK(containsPair(2, 3, pairs));
   
-// }
+}
 
 
 
@@ -670,78 +751,84 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_19 )
 
 
 
-// // test that behavior is sane when no tracklets are returned
-// BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_7 )
-// {
-//   std::vector<MopsDetection> myDets;
-//   // first "object" -- too slow (distance of ~.14)
-//   addDetectionAt(53736.0, 000.05, 000.05, myDets); // id 0
-//   addDetectionAt(53737.0, 359.05, 359.05, myDets); // id 1
+// test that behavior is sane when no tracklets are returned
+BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_7 )
+{
+  std::vector<MopsDetection> myDets;
+  // first "object" -- too slow (distance of ~.14)
+  addDetectionAt(53736.0, 000.05, 000.05, myDets); // id 0
+  addDetectionAt(53737.0, 359.05, 359.05, myDets); // id 1
   
-//   // second "object" -- also too slow(distance of ~.707)
-//   addDetectionAt(53736.0, 000.25, 000.25, myDets); // id 2
-//   addDetectionAt(53737.0, 359.75, 359.75, myDets); // id 3
+  // second "object" -- also too slow(distance of ~.707)
+  addDetectionAt(53736.0, 000.25, 000.25, myDets); // id 2
+  addDetectionAt(53737.0, 359.75, 359.75, myDets); // id 3
 
-//   //std:cerr << "boost min test 7" << std::endl;
+  //std:cerr << "boost min test 7" << std::endl;
+  findTrackletsConfig config;
+  config.maxV = 1.0;
+  config.minV = .8;
 
-//   std::vector<Tracklet> pairs = findTracklets(myDets, 1., .8);
-//   BOOST_CHECK(pairs.size() == 0);
-// }
-
-
-
-
-
+  std::vector<Tracklet> pairs = findTracklets(myDets, config);
+  BOOST_CHECK(pairs.size() == 0);
+}
 
 
-// // one more really brain-dead test: just do lots and lots of objects
-// // lots and lots of noise
-// BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_8 )
-// {
-//   std::vector<MopsDetection> myDets;
-//   // first "object"
-//   addDetectionAt(53736.0, 100.0, 10.0, myDets); // id 0
-//   addDetectionAt(53737.0, 100.5, 10.0, myDets); // id 1
 
-//   // three noise points in first image
-//   addDetectionAt(53736.0, 10.0, 20.0, myDets); // id 2
-//   addDetectionAt(53736.0, 180.0, 100.0, myDets); // id 3
-//   addDetectionAt(53736.0, 200.0, 20.0, myDets); // id 4
 
-//   // second "object" -- too slow!
-//   addDetectionAt(53736.0, 5.0,  10.0, myDets); // id 5
-//   addDetectionAt(53737.0, 5.01,  9.99, myDets); // id 6
 
-//   // three noise points in second image
-//   addDetectionAt(53737.0, 12.0, 20.0, myDets); // id 7
-//   addDetectionAt(53737.0, 108.0, -20.0, myDets); // id 8
-//   addDetectionAt(53737.0, 50.0, 350.0, myDets); // id 9
 
-//   // third "object" - too slow, only ~.14 apart
-//   addDetectionAt(53736.0, 355.0,  5.0, myDets); // id 10
-//   addDetectionAt(53737.0, 354.9, 5.1, myDets); // id 11
 
-//   // three more noise points in first image
-//   addDetectionAt(53736.0, 250.0, 80.0, myDets); // id 12
-//   addDetectionAt(53736.0, 280.0, -80.0, myDets); // id 13
-//   addDetectionAt(53736.0, 001.0, 20.0, myDets); // id 14
+// one more really brain-dead test: just do lots and lots of objects
+// lots and lots of noise
+BOOST_AUTO_TEST_CASE( findTracklets_blackbox_using_minv_8 )
+{
+  std::vector<MopsDetection> myDets;
+  // first "object"
+  addDetectionAt(53736.0, 100.0, 10.0, myDets); // id 0
+  addDetectionAt(53737.0, 100.5, 10.0, myDets); // id 1
 
-//   // fourth "object"
-//   addDetectionAt(53736.0, 210.0,  15.0, myDets); // id 15
-//   addDetectionAt(53737.0, 210.0, 15.5, myDets); // id 16
+  // three noise points in first image
+  addDetectionAt(53736.0, 10.0, 20.0, myDets); // id 2
+  addDetectionAt(53736.0, 180.0, 100.0, myDets); // id 3
+  addDetectionAt(53736.0, 200.0, 20.0, myDets); // id 4
 
-//   // three more noise points in first image
-//   addDetectionAt(53737.0, 005.0, 005.0, myDets); // id 17
-//   addDetectionAt(53737.0, 010.0, 005.0, myDets); // id 18
-//   addDetectionAt(53737.0, 290.0, 20.0, myDets); // id 19
+  // second "object" -- too slow!
+  addDetectionAt(53736.0, 5.0,  10.0, myDets); // id 5
+  addDetectionAt(53737.0, 5.01,  9.99, myDets); // id 6
 
-//   //std:cerr << "boost min test 8" << std::endl;
+  // three noise points in second image
+  addDetectionAt(53737.0, 12.0, 20.0, myDets); // id 7
+  addDetectionAt(53737.0, 108.0, -20.0, myDets); // id 8
+  addDetectionAt(53737.0, 50.0, 350.0, myDets); // id 9
 
-//   std::vector<Tracklet> pairs = findTracklets(myDets, 1, .2);
-//   BOOST_CHECK(pairs.size() == 2);
-//   BOOST_CHECK(containsPair(0,  1, pairs));
-//   //BOOST_CHECK(containsPair(5,  6, pairs));
-//   //BOOST_CHECK(containsPair(10, 11, pairs));
-//   BOOST_CHECK(containsPair(15, 16, pairs));
+  // third "object" - too slow, only ~.14 apart
+  addDetectionAt(53736.0, 355.0,  5.0, myDets); // id 10
+  addDetectionAt(53737.0, 354.9, 5.1, myDets); // id 11
 
-// }
+  // three more noise points in first image
+  addDetectionAt(53736.0, 250.0, 80.0, myDets); // id 12
+  addDetectionAt(53736.0, 280.0, -80.0, myDets); // id 13
+  addDetectionAt(53736.0, 001.0, 20.0, myDets); // id 14
+
+  // fourth "object"
+  addDetectionAt(53736.0, 210.0,  15.0, myDets); // id 15
+  addDetectionAt(53737.0, 210.0, 15.5, myDets); // id 16
+
+  // three more noise points in first image
+  addDetectionAt(53737.0, 005.0, 005.0, myDets); // id 17
+  addDetectionAt(53737.0, 010.0, 005.0, myDets); // id 18
+  addDetectionAt(53737.0, 290.0, 20.0, myDets); // id 19
+
+  //std:cerr << "boost min test 8" << std::endl;
+  findTrackletsConfig config;
+  config.maxV = 1.0;
+  config.minV = .2;
+
+  std::vector<Tracklet> pairs = findTracklets(myDets, config);
+  BOOST_CHECK(pairs.size() == 2);
+  BOOST_CHECK(containsPair(0,  1, pairs));
+  //BOOST_CHECK(containsPair(5,  6, pairs));
+  //BOOST_CHECK(containsPair(10, 11, pairs));
+  BOOST_CHECK(containsPair(15, 16, pairs));
+
+}

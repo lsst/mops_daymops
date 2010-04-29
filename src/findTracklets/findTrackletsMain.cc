@@ -34,10 +34,10 @@ int main(int argc, char* argv[])
 
 
     double maxVelocity = 2.0;
-
+    double minVelocity = 0.0;
 
     if(argc < 2){
-        std::cout << "Usage: findTracklets -i <input file> -o <output file> -v <max velocity> -m <min velocity>" << std::endl;
+        std::cout << "Usage: findTracklets -i <input file> -o <output file> [-v <max velocity>] [-m <min velocity>]" << std::endl;
         exit(1);
     }
 
@@ -45,12 +45,14 @@ int main(int argc, char* argv[])
         { "inFile", required_argument, NULL, 'i' },
         { "outFile", required_argument, NULL, 'o' },
         { "maxVeloctiy", required_argument, NULL, 'v' },
+        { "minVeloctiy", optional_argument, NULL, 'm' },
         { "help", no_argument, NULL, 'h' },
         { NULL, no_argument, NULL, 0 }
     };
 
+
     int longIndex = -1;
-    const char *optString = "i:o:v:h";
+    const char *optString = "i:o:v:m:h";
     int opt = getopt_long( argc, argv, optString, longOpts, &longIndex );
     while( opt != -1 ) {
         switch( opt ) {
@@ -63,8 +65,11 @@ int main(int argc, char* argv[])
         case 'v':
             maxVelocity = atof(optarg);
             break;
+        case 'm':
+            minVelocity = atof(optarg);
+            break;
         case 'h':
-            std::cout << "Usage: findTracklets -i <input file> -o <output file> -v <max velocity> -m <min velocity>" << std::endl;
+            std::cout << "Usage: findTracklets -i <input file> -o <output file> [-v <max velocity>] [-m <min velocity>]" << std::endl;
             exit(0);
         default:
             break;
@@ -78,7 +83,11 @@ int main(int argc, char* argv[])
     
     std::vector<lsst::mops::Tracklet> results;
     
-    results = lsst::mops::findTracklets(myDets, maxVelocity);
+    lsst::mops::findTrackletsConfig config;
+    config.maxV = maxVelocity;
+    config.minV = minVelocity;
+    
+    results = lsst::mops::findTracklets(myDets, config);
     
     
     //print results

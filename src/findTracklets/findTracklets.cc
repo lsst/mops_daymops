@@ -49,7 +49,7 @@ void generatePerImageTrees(const std::map<double, std::vector<MopsDetection> >&,
  * query point within a distance determined by maxVelocity.
  ******************************************************************/
 void getTracklets(std::vector<Tracklet>&, const std::map<double, KDTree<long int> >&, 
-		  const std::vector<MopsDetection>&, double);
+		  const std::vector<MopsDetection>&, findTrackletsConfig);
 
 
 
@@ -61,7 +61,7 @@ void getTracklets(std::vector<Tracklet>&, const std::map<double, KDTree<long int
  *The main function of this file.
  *****************************************************************/
 std::vector<Tracklet> findTracklets(const std::vector<MopsDetection> &myDets, 
-                                    double maxVelocity)
+                                    findTrackletsConfig config)
 {
     //detection vectors, each vector of unique MJD
     std::map<double,  std::vector<MopsDetection> > detectionSets; 
@@ -81,7 +81,7 @@ std::vector<Tracklet> findTracklets(const std::vector<MopsDetection> &myDets,
     std::vector<Tracklet> results;
     results.resize(0);
     getTracklets(results, myTreeMap, 
-                 myDets, maxVelocity);
+                 myDets, config);
 
     return results;
 }
@@ -157,7 +157,7 @@ void generatePerImageTrees(const std::map<double, std::vector<MopsDetection> > &
 void getTracklets(std::vector<Tracklet> &resultsVec,  
 		  const std::map<double, KDTree<long int> > &myTreeMap,
 		  const std::vector<MopsDetection> &queryPoints,
-		  double maxVelocity)
+		  findTrackletsConfig config)
 {
     // vectors of RADecRangeSearch parameters we search exclusively in RA, Dec;
     // the "otherDims" parameters sent to KDTree range search are empty.
@@ -191,8 +191,11 @@ void getTracklets(std::vector<Tracklet> &resultsVec,
             //only consider this tree if it contains detections
             //that occurred after the current one
             if(curMJD > queryMJD){      
+                double maxVelocity = config.maxV;
+                double minVelocity = config.minV;
 	  
                 double maxDistance = (curMJD - queryMJD) * maxVelocity;
+                double minDistance = (curMJD - queryMJD) * minVelocity;
                 std::vector<double> queryPt;
                 queryPt.push_back(queryRA);
                 queryPt.push_back(queryDec);
@@ -216,7 +219,7 @@ void getTracklets(std::vector<Tracklet> &resultsVec,
                                                                       queryDec, 
                                                                       curResult->getPoint().at(0),
                                                                       curResult->getPoint().at(1));
-                    if (properDistance <= maxDistance) {
+                    if ((properDistance <= maxDistance) && (properDistance >= minDistance)) {
                         closeEnoughResults.push_back(curResult->getValue());
                     }
                 }

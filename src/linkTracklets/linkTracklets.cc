@@ -76,6 +76,7 @@ double timeSince(clock_t priorEvent)
      return ( std::clock() - priorEvent ) / (double)CLOCKS_PER_SEC;
 }
 
+void debugPrintTimingInfo(const TrackSet &results);
 
 
 
@@ -1370,7 +1371,20 @@ void doLinkingRecurse2(const std::vector<MopsDetection> &allDetections,
     firstEndpoint.myTree->addVisit();
     //std::cout << "entering doLinkingRecurse2." << std::endl;
     // debugPrint(firstEndpoint, secondEndpoint, supportNodes, allDetections, allTracklets);
-    
+
+    // debugPrintTimingInfo(results);
+    // std::cout << "doLinkingRecurse called with endpoint IDs " << firstEndpoint.myTree->getId() << ",  " <<
+    //     secondEndpoint.myTree->getId() << std::endl;
+    // std::cout << " first endpoint " << (firstEndpoint.myTree->isLeaf() ? std::string("IS") : std::string("IS NOT")) << " a leaf; second endpoint " << 
+    //     (secondEndpoint.myTree->isLeaf() ? std::string("IS") : std::string("IS NOT")) << " a leaf." << std::endl;
+    // std::cout << "   also we have " << supportNodes.size() << " support nodes." << std:: endl;
+    // if ((firstEndpoint.myTree->getId() == 300) && ((secondEndpoint.myTree->getId() == 369) || 
+    //                                                (secondEndpoint.myTree->getId() == 423) ||
+    //                                                (secondEndpoint.myTree->getId() == 1446)))
+    //     {
+    //         std::cout << " hitting a slow one. attach a debugger! " << std::endl;
+    //     }
+
     if (areCompatible(firstEndpoint, secondEndpoint, searchConfig, rangeCache) == false)
     {
         // poor choice of model nodes (endpoint nodes)! give up.
@@ -1666,7 +1680,7 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
     bool DEBUG = true;
 
     bool limitedRun = false;
-    double limitedRunFirstEndpoint = 49616.249649999998 ;
+    double limitedRunFirstEndpoint = 49616.266244999999 ;
     double limitedRunSecondEndpoint = 49623.023787999999 ;
 
     initDebugTimingInfo();

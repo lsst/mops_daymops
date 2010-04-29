@@ -248,9 +248,8 @@ void KDTree<T>::clearPrivateData()
             delete myRoot;
         }
         if (refCount < 0) {
-            std::cerr << "EE: IMPOSSIBLE CASE: KDTreeNode has negative refcount = " <<
-                myRoot->getRefCount() << "!\n";
-        exit(10);
+            throw LSST_EXCEPT(ProgrammerErrorException,
+                              "EE: IMPOSSIBLE CASE: KDTreeNode has negative refcount");
         }
         hasData = false;
         myRoot = NULL;
@@ -375,14 +374,12 @@ void KDTree<T>::buildFromData(std::vector<PointAndValue <T> > pointsAndValues,
 
         /* sanity check */
         if (k < 1) {
-            //TBD: real LSST exceptions.
-            std::cerr << "EE: KDTree:  k (number of dimensions in data) must be at least 1!\n";
-            exit(1);
+            throw LSST_EXCEPT(BadParameterException,
+                              "EE: KDTree:  k (number of dimensions in data) must be at least 1!\n");
         }
         if (maxLeafSize < 1) {
-            //TBD: real LSST exceptions.
-            std::cerr << "EE: KDTree: max leaf size must be stricly positive!\n";
-            exit(1);
+            throw LSST_EXCEPT(BadParameterException, 
+                              "EE: KDTree: max leaf size must be stricly positive!\n");
         }
         /* make sure all points from of pointsAndValues are of valid length */
         for (myIter = pointsAndValues.begin(); 
@@ -390,10 +387,7 @@ void KDTree<T>::buildFromData(std::vector<PointAndValue <T> > pointsAndValues,
              myIter++) {
             unsigned int pointSize = myIter->getPoint().size();
             if (pointSize < k) {
-                /* TBD: use LSST exceptions! */
-                std::cerr << "Got point has size " << pointSize << " and k= " << k << std::endl;
-                std::cerr << "EE: KDTree: points have lower dimensionality than tree.";
-                exit(1);
+                throw LSST_EXCEPT(BadParameterException, "Got point has size <  k");
             }
         }
 
@@ -480,23 +474,20 @@ std::vector<PointAndValue <T> >
 KDTree<T>::rangeSearch(std::vector<double> queryPt,
 		       double queryRange) const
 {
-  /* sanity check */
-  if (queryPt.size() != myK)
+    /* sanity check */
+    if (queryPt.size() != myK)
     {
-      std::cerr << "KDTree::rangeSearch:  got myK " << myK
-		<< " queryPt has size " << queryPt.size();
-      std::cerr << "EE: KDTree range search: QueryPt must have dimensions at least equal to dimensions of tree.";
-      exit(1);
+        throw LSST_EXCEPT(BadParameterException, "KDTree::rangeSearch:  got myK != queryPoint size");
     }
-  /* just punt to the KDTreeNode. */
-  return myRoot->rangeSearch(queryPt, queryRange);
+    /* just punt to the KDTreeNode. */
+    return myRoot->rangeSearch(queryPt, queryRange);
 }
-
-
-
-
-
-
+    
+    
+    
+    
+    
+    
 
 template <class T>
 std::vector<PointAndValue <T> > 
@@ -642,13 +633,8 @@ KDTree<T>::hyperRectangleSearch(const std::vector<double> &queryPt,
   /* sanity check */
   if ((queryPt.size() != myK) || (tolerances.size() != myK) || 
       (spaceTypesByDimensions.size() != myK)) {
-      // TBD: real LSST exceptions
-      std::cerr << "KDTree::hyperRectangeSearch:  got myK " << myK
-		<< " queryPt has size " << queryPt.size()
-		<< " tolerances has size " << tolerances.size() 
-		<< " spaceTypesByDimensions size " << spaceTypesByDimensions.size();
-      std::cerr << "EE: QueryPt must have dimensions at least equal to dimensions of tree.\n";
-      exit(1);
+      throw LSST_EXCEPT(BadParameterException, 
+                        "EE: QueryPt must have dimensions at least equal to dimensions of tree.\n");
   }
   if (hasData != true) {
       // if we are queried, but do not have any data, return nothing.
@@ -663,9 +649,8 @@ KDTree<T>::hyperRectangleSearch(const std::vector<double> &queryPt,
                && (tolerances[i] > 180.)) ||
               (((spaceTypesByDimensions[i] == CIRCULAR_RADIANS) 
                 && (tolerances[i] > M_PI)))) {
-              // TBD: again, real LSST exceptions
-              std::cerr<<  "EE: KDTree.hyperRectangleSearch: searching a radius greater than 180 degrees (pi radians) is meaningless.\n";
-              exit(1);
+              throw LSST_EXCEPT(BadParameterException,
+                                "EE: KDTree.hyperRectangleSearch: searching a radius greater than 180 degrees (pi radians) is meaningless.\n");
           }
       }
       

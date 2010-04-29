@@ -261,15 +261,13 @@ namespace mops {
         unsigned int nextAxis;
 
         if (myAxisToSplit >= myK){
-            // TBD: real exceptions...
-            std::cerr <<  "EE: KDTreeNode: failed sanity check: asked to split data along dimension greater than dimensions of data\n";
-            exit(1);
+            throw LSST_EXCEPT(BadParameterException, 
+                              "KDTreeNode: failed sanity check: asked to split data along dimension greater than dimensions of data\n");
         }
 
         if (myUBounds.size() != myLBounds.size()){
-            // TBD: real exceptions...
-            std::cerr <<  "EE: KDTreeNode: failed sanity check: UBounds/LBounds vectors have different size\n";
-            exit(1);
+            throw LSST_EXCEPT(ProgrammerErrorException, 
+                              "KDTreeNode: failed sanity check: UBounds/LBounds vectors have different size\n");
         }
 
 
@@ -527,14 +525,8 @@ KDTreeNode<T>::hyperRectangleSearch(const std::vector<double> &queryPt,
                 (myLBounds[i] != convertToStandardDegrees(myLBounds[i]))
                 ||
                 (queryPt[i] != convertToStandardDegrees(queryPt[i]))) {
-                // TBD: use LSST-standard exceptions...
-                std::cerr <<  "KDTreeNode: Data error: got that dimension " << i << 
-                    " is of type CIRCULAR_DEGREES but data and/or query do not lie along [0,360)." << std::endl;
-                std::cerr << "Ubounds: " << myUBounds[i] << std::endl;
-                std::cerr << "Lbounds: " << myLBounds[i] << std::endl;
-                std::cerr << "queryPt: " << queryPt[i] << std::endl;
-                std::cerr <<  "EE: Data exception in KDTreeNode\n";
-                exit(1);
+                throw LSST_EXCEPT(BadParameterException,  
+                                  "KDTreeNode: Data error: got that dimension is of type CIRCULAR_DEGREES but data and/or query do not lie along [0,360).");
             }
         }
     }

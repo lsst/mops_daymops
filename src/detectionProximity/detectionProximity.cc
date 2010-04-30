@@ -68,7 +68,7 @@ void buildKDTree(const std::vector<MopsDetection> points, KDTree<unsigned int> &
 	vecPV.push_back(tempPV);
     }
     
-    tree.buildFromData(vecPV, 4, 100);
+    tree.buildFromData(vecPV, 3, 100);
   }
 }
     

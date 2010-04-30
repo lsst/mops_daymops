@@ -9,7 +9,7 @@ Import("ext_libs")
 
 
 
-env.Program('../../tests/collapseTracklets-unittests', ['unitTests.cc', 'collapseTracklets'] + common_libs, LIBS=ext_libs)
+env.Program('../../tests/collapseTracklets-unitTests', ['unitTests.cc', 'collapseTracklets'] + common_libs, LIBS=ext_libs)
 
 ct = env.Library('../../lib/collapseTracklets', ['collapseTracklets.cc'] + common_libs, LIBS=ext_libs)
 

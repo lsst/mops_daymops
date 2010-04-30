@@ -39,8 +39,8 @@ void groupByImageTime(const std::vector<MopsDetection>&,
  * Take 2D vector of detections and create a map linking
  * each MJD vector to its MJD double value.
  ******************************************************************/
-void generatePerImageTrees(const std::map<double, std::vector<MopsDetection> >&, 
-                           std::map<double, KDTree<long int> >&);
+void generatePerImageTrees(const std::map<double, std::vector<MopsDetection> > &detectionSets, 
+                           std::map<double, KDTree<long int> > &myTreeMap);
 
 
 /******************************************************************
@@ -48,10 +48,11 @@ void generatePerImageTrees(const std::map<double, std::vector<MopsDetection> >&,
  * index by file line number index, generate tracklets for each 
  * query point within a distance determined by maxVelocity.
  ******************************************************************/
-void getTracklets(std::vector<Tracklet>&, const std::map<double, KDTree<long int> >&, 
-		  const std::vector<MopsDetection>&, findTrackletsConfig);
 
-
+void getTracklets(TrackletVector &resultsVec,  
+		  const std::map<double, KDTree<long int> > &myTreeMap,
+		  const std::vector<MopsDetection> &queryPoints,
+		  findTrackletsConfig config);
 
 
 
@@ -60,8 +61,8 @@ void getTracklets(std::vector<Tracklet>&, const std::map<double, KDTree<long int
 /*****************************************************************
  *The main function of this file.
  *****************************************************************/
-std::vector<Tracklet> findTracklets(const std::vector<MopsDetection> &myDets, 
-                                    findTrackletsConfig config)
+TrackletVector findTracklets(const std::vector<MopsDetection> &myDets, 
+                          findTrackletsConfig config)
 {
     //detection vectors, each vector of unique MJD
     std::map<double,  std::vector<MopsDetection> > detectionSets; 
@@ -78,8 +79,8 @@ std::vector<Tracklet> findTracklets(const std::vector<MopsDetection> &myDets,
     generatePerImageTrees(detectionSets, myTreeMap);
 
     //get results
-    std::vector<Tracklet> results;
-    results.resize(0);
+    TrackletVector results;
+
     getTracklets(results, myTreeMap, 
                  myDets, config);
 
@@ -154,7 +155,7 @@ void generatePerImageTrees(const std::map<double, std::vector<MopsDetection> > &
  * index by file line number index, generate tracklets for each 
  * query point within a distance determined by maxVelocity.
  ******************************************************************/
-void getTracklets(std::vector<Tracklet> &resultsVec,  
+void getTracklets(TrackletVector &results,  
 		  const std::map<double, KDTree<long int> > &myTreeMap,
 		  const std::vector<MopsDetection> &queryPoints,
 		  findTrackletsConfig config)
@@ -233,7 +234,7 @@ void getTracklets(std::vector<Tracklet> &resultsVec,
                 }
 
                 if (newTracklet.indices.size() >= 2) {
-                    resultsVec.push_back(newTracklet);
+                    results.push_back(newTracklet);
                 }
                 queryResults.clear();
                 queryPt.clear();

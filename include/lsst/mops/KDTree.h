@@ -363,7 +363,6 @@ void KDTree<T>::buildFromData(std::vector<PointAndValue <T> > pointsAndValues,
     if (pointsAndValues.size() > 0) 
     {
     
-        hasData = true;
         typename std::vector<PointAndValue<T>,std::allocator<PointAndValue<T> > >::iterator myIter;
         
         std::vector <std::vector<double> > pointsByDimension;
@@ -433,6 +432,8 @@ void KDTree<T>::buildFromData(std::vector<PointAndValue <T> > pointsAndValues,
         unsigned int idCounter = 0;
         myRoot = new KDTreeNode<T>(pointsAndValuesCopy, k, maxLeafSize, 0, \
                                    pointsUBounds, pointsLBounds, idCounter);
+        // don't set hasData until now, when the tree is actually built.
+        hasData = true;
     }
 }
 

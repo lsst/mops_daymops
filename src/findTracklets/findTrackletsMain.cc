@@ -81,7 +81,7 @@ int main(int argc, char* argv[])
     
     populateDetVectorFromFile(detsFile, myDets);
     
-    std::vector<lsst::mops::Tracklet> results;
+    lsst::mops::TrackletVector results;
     
     lsst::mops::findTrackletsConfig config;
     config.maxV = maxVelocity;
@@ -94,10 +94,14 @@ int main(int argc, char* argv[])
     std::ofstream outStream;
     outStream.open(outFileName.c_str());
 
-    for(unsigned int i=0; i<results.size(); i++){
+    // TBD: Replace me with a proper configuration of results then a call to results.write()
+    std::vector<lsst::mops::Tracklet>::const_iterator trackletIter;
+    for(trackletIter = results.componentTracklets.begin(); 
+        trackletIter != results.componentTracklets.end(); 
+        trackletIter++){
         std::set<unsigned int>::const_iterator detIter;
-        for (detIter = results.at(i).indices.begin();
-             detIter != results.at(i).indices.end();
+        for (detIter = trackletIter->indices.begin();
+             detIter != trackletIter->indices.end();
              detIter++) {
 	    outStream << *detIter << " " ;
         }

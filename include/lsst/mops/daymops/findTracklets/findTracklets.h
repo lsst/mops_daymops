@@ -13,7 +13,7 @@
 
 #include <vector>
 
-#include "lsst/mops/Tracklet.h"
+#include "lsst/mops/TrackletVector.h"
 #include "lsst/mops/MopsDetection.h"
 
 
@@ -75,7 +75,7 @@ public:
 /*****************************************************************
  * Main function
  *****************************************************************/
-std::vector <Tracklet> 
+TrackletVector
 findTracklets(const std::vector<MopsDetection> &allDetections, 
 	      findTrackletsConfig config);
 

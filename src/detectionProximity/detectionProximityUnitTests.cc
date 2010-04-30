@@ -374,30 +374,6 @@ BOOST_AUTO_TEST_CASE( detectionProximity11 )
 
 
 
-BOOST_AUTO_TEST_CASE( detectionProximity12 ) 
-{
-  // check that mag separation is honored
-  std::vector<std::pair <unsigned int, unsigned int> > queryResult;
-  std::vector<MopsDetection> dataDets;
-  std::vector<MopsDetection> queryDets;
-  
-  /*MopsDetection(long int ID, double epochMJD, double RA, double Dec, 
-	    int obsCode, std::string objName, double mag,
-	    double elongationLength, double elongationAngle); */
-
-  //           ID    MJD      RA      DEC     obs  NAME      MAG 
-  MopsDetection dd1(0, 53736,    010.00,   -10.00);
-  MopsDetection qd1(1, 53736,    010.00,   -10.00);
-  MopsDetection qd2(1, 53736,    010.00,   -10.00);
-  dataDets.push_back(dd1);
-  queryDets.push_back(qd1);
-  queryDets.push_back(qd2);
-
-  queryResult = detectionProximity(queryDets, dataDets, .999, 0.1);
-  BOOST_CHECK(queryResult.size() == 1);
-  BOOST_CHECK(containsPair(0,0,queryResult));
-  
-}
 
 
 

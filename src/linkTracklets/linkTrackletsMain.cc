@@ -136,7 +136,7 @@ int main(int argc, char* argv[])
 
      std::vector<lsst::mops::MopsDetection> allDets;
      std::vector<lsst::mops::Tracklet> allTracklets;
-     TrackSet resultTracks;
+     lsst::mops::TrackSet resultTracks;
 
      clock_t last;
      double dif;

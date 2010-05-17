@@ -169,6 +169,7 @@ int main(int argc, char* argv[])
 	  last = std::clock();
      }
 
+     std::cout << "Got results. Writing them to disk." << std::endl;
      lsst::mops::writeResults(outputFileName, allDets, allTracklets, resultTracks);
 
      if(PRINT_TIMING_INFO) {     	  
@@ -176,6 +177,9 @@ int main(int argc, char* argv[])
 	  std::cout << "Writing output took " << std::fixed << std::setprecision(10) 
 		    <<  dif  << " seconds." <<std::endl;     
      }
+
+     std::cout << "Done. Exiting successfully." << std::endl;
+
 
      return 0;
 

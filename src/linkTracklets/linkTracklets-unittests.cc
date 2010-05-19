@@ -177,6 +177,375 @@ Track generateTrack(double ra0, double dec0, double raV, double decV,
 
 
 
+
+
+
+
+BOOST_AUTO_TEST_CASE( linkTracklets_5_1 )
+{
+
+    // " << expectedTracks.size() << " tracks, following a coherent pattern but randomly perturbed.
+    TrackSet expectedTracks;
+    std::vector<MopsDetection> allDets;
+    std::vector<Tracklet> allTracklets;
+    unsigned int firstDetId = -1;
+    unsigned int firstTrackletId = -1;
+
+  
+    linkTrackletsConfig myConfig;
+
+    std::vector<std::vector<double> > imgTimes(3);
+
+    imgTimes.at(0).push_back(5300);
+    imgTimes.at(0).push_back(5300.03);
+
+    imgTimes.at(1).push_back(5305);
+    imgTimes.at(1).push_back(5305.03);
+
+    imgTimes.at(2).push_back(5312);
+    imgTimes.at(2).push_back(5312.03);
+
+    // seed the random number generator with a known value;
+    // this way the test will be identical on each run.
+    srand(2);
+
+    for (unsigned int i = 0; i < 200; i++) {
+
+        // get 6 floating point numbers between 0 and 1.
+        std::vector<double> someRands;         
+        for (unsigned int j = 0; j < 6; j++) {
+            someRands.push_back( (double) rand() / RAND_MAX );
+        }
+        //generate a random permutation on this track.
+        expectedTracks.insert(generateTrack(20. + someRands[0] * 10., //location 
+                                            20. + someRands[1] * 10., //location
+                                            (someRands[2] - .1) * 2., //1 in 10 chance of retrograde, maxv 2
+                                            (someRands[3] - .5) * .5, // maxv .5 in dec 
+                                            (someRands[4]) * .0019, //max acc of .0019, always positive
+                                            (someRands[5]) * .0019, //same
+                                            imgTimes, 
+                                            allDets, allTracklets, 
+                                            firstDetId, firstTrackletId));
+
+    }
+
+    struct tm * timeinfo;
+    time_t rawtime;
+    
+    time ( &rawtime );
+    timeinfo = localtime ( &rawtime );                    
+    
+    std::cout << "Generated " << expectedTracks.size() << " tracks. Calling linkTracklets ";
+    std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
+
+    TrackSet foundTracks = linkTracklets(allDets, allTracklets, myConfig);
+
+    time ( &rawtime );
+    timeinfo = localtime ( &rawtime );                    
+    
+    std::cout << "got " << foundTracks.size() << " results, checking if they contain the true tracks ";
+    std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
+
+    BOOST_CHECK(expectedTracks.isSubsetOf(foundTracks));
+
+}
+
+
+
+
+BOOST_AUTO_TEST_CASE( linkTracklets_5_2 )
+{
+
+    // " << expectedTracks.size() << " tracks, following a coherent pattern but randomly perturbed.
+    TrackSet expectedTracks;
+    std::vector<MopsDetection> allDets;
+    std::vector<Tracklet> allTracklets;
+    unsigned int firstDetId = -1;
+    unsigned int firstTrackletId = -1;
+
+  
+    linkTrackletsConfig myConfig;
+
+    std::vector<std::vector<double> > imgTimes(3);
+
+    imgTimes.at(0).push_back(5300);
+    imgTimes.at(0).push_back(5300.03);
+
+    imgTimes.at(1).push_back(5305);
+    imgTimes.at(1).push_back(5305.03);
+
+    imgTimes.at(2).push_back(5312);
+    imgTimes.at(2).push_back(5312.03);
+
+    // seed the random number generator with a known value;
+    // this way the test will be identical on each run.
+    srand(3);
+
+    for (unsigned int i = 0; i < 300; i++) {
+
+        // get 6 floating point numbers between 0 and 1.
+        std::vector<double> someRands;         
+        for (unsigned int j = 0; j < 6; j++) {
+            someRands.push_back( (double) rand() / RAND_MAX );
+        }
+        //generate a random permutation on this track.
+        expectedTracks.insert(generateTrack(20. + someRands[0] * 10., //location 
+                                            20. + someRands[1] * 10., //location
+                                            (someRands[2] - .1) * 2., //1 in 10 chance of retrograde, maxv 2
+                                            (someRands[3] - .5) * .5, // maxv .5 in dec 
+                                            (someRands[4]) * .0019, //max acc of .0019, always positive
+                                            (someRands[5]) * .0019, //same
+                                            imgTimes, 
+                                            allDets, allTracklets, 
+                                            firstDetId, firstTrackletId));
+
+    }
+
+    struct tm * timeinfo;
+    time_t rawtime;
+    
+    time ( &rawtime );
+    timeinfo = localtime ( &rawtime );                    
+    
+    std::cout << "Generated " << expectedTracks.size() << " tracks. Calling linkTracklets ";
+    std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
+
+    TrackSet foundTracks = linkTracklets(allDets, allTracklets, myConfig);
+
+    time ( &rawtime );
+    timeinfo = localtime ( &rawtime );                    
+    
+    std::cout << "got " << foundTracks.size() << " results, checking if they contain the true tracks ";
+    std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
+
+    BOOST_CHECK(expectedTracks.isSubsetOf(foundTracks));
+
+}
+
+
+
+
+
+BOOST_AUTO_TEST_CASE( linkTracklets_5_3 )
+{
+
+    // " << expectedTracks.size() << " tracks, following a coherent pattern but randomly perturbed.
+    TrackSet expectedTracks;
+    std::vector<MopsDetection> allDets;
+    std::vector<Tracklet> allTracklets;
+    unsigned int firstDetId = -1;
+    unsigned int firstTrackletId = -1;
+
+  
+    linkTrackletsConfig myConfig;
+
+    std::vector<std::vector<double> > imgTimes(3);
+
+    imgTimes.at(0).push_back(5300);
+    imgTimes.at(0).push_back(5300.03);
+
+    imgTimes.at(1).push_back(5305);
+    imgTimes.at(1).push_back(5305.03);
+
+    imgTimes.at(2).push_back(5312);
+    imgTimes.at(2).push_back(5312.03);
+
+    // seed the random number generator with a known value;
+    // this way the test will be identical on each run.
+    srand(4);
+
+    for (unsigned int i = 0; i < 400; i++) {
+
+        // get 6 floating point numbers between 0 and 1.
+        std::vector<double> someRands;         
+        for (unsigned int j = 0; j < 6; j++) {
+            someRands.push_back( (double) rand() / RAND_MAX );
+        }
+        //generate a random permutation on this track.
+        expectedTracks.insert(generateTrack(20. + someRands[0] * 10., //location 
+                                            20. + someRands[1] * 10., //location
+                                            (someRands[2] - .1) * 2., //1 in 10 chance of retrograde, maxv 2
+                                            (someRands[3] - .5) * .5, // maxv .5 in dec 
+                                            (someRands[4]) * .0019, //max acc of .0019, always positive
+                                            (someRands[5]) * .0019, //same
+                                            imgTimes, 
+                                            allDets, allTracklets, 
+                                            firstDetId, firstTrackletId));
+
+    }
+
+    struct tm * timeinfo;
+    time_t rawtime;
+    
+    time ( &rawtime );
+    timeinfo = localtime ( &rawtime );                    
+    
+    std::cout << "Generated " << expectedTracks.size() << " tracks. Calling linkTracklets ";
+    std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
+
+    TrackSet foundTracks = linkTracklets(allDets, allTracklets, myConfig);
+
+    time ( &rawtime );
+    timeinfo = localtime ( &rawtime );                    
+    
+    std::cout << "got " << foundTracks.size() << " results, checking if they contain the true tracks ";
+    std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
+
+    BOOST_CHECK(expectedTracks.isSubsetOf(foundTracks));
+
+}
+
+BOOST_AUTO_TEST_CASE( linkTracklets_5_4 )
+{
+
+    // " << expectedTracks.size() << " tracks, following a coherent pattern but randomly perturbed.
+    TrackSet expectedTracks;
+    std::vector<MopsDetection> allDets;
+    std::vector<Tracklet> allTracklets;
+    unsigned int firstDetId = -1;
+    unsigned int firstTrackletId = -1;
+
+  
+    linkTrackletsConfig myConfig;
+
+    std::vector<std::vector<double> > imgTimes(3);
+
+    imgTimes.at(0).push_back(5300);
+    imgTimes.at(0).push_back(5300.03);
+
+    imgTimes.at(1).push_back(5305);
+    imgTimes.at(1).push_back(5305.03);
+
+    imgTimes.at(2).push_back(5312);
+    imgTimes.at(2).push_back(5312.03);
+
+    // seed the random number generator with a known value;
+    // this way the test will be identical on each run.
+    srand(5);
+
+    for (unsigned int i = 0; i < 500; i++) {
+
+        // get 6 floating point numbers between 0 and 1.
+        std::vector<double> someRands;         
+        for (unsigned int j = 0; j < 6; j++) {
+            someRands.push_back( (double) rand() / RAND_MAX );
+        }
+        //generate a random permutation on this track.
+        expectedTracks.insert(generateTrack(20. + someRands[0] * 10., //location 
+                                            20. + someRands[1] * 10., //location
+                                            (someRands[2] - .1) * 2., //1 in 10 chance of retrograde, maxv 2
+                                            (someRands[3] - .5) * .5, // maxv .5 in dec 
+                                            (someRands[4]) * .0019, //max acc of .0019, always positive
+                                            (someRands[5]) * .0019, //same
+                                            imgTimes, 
+                                            allDets, allTracklets, 
+                                            firstDetId, firstTrackletId));
+
+    }
+
+    struct tm * timeinfo;
+    time_t rawtime;
+    
+    time ( &rawtime );
+    timeinfo = localtime ( &rawtime );                    
+    
+    std::cout << "Generated " << expectedTracks.size() << " tracks. Calling linkTracklets ";
+    std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
+
+    TrackSet foundTracks = linkTracklets(allDets, allTracklets, myConfig);
+
+    time ( &rawtime );
+    timeinfo = localtime ( &rawtime );                    
+    
+    std::cout << "got " << foundTracks.size() << " results, checking if they contain the true tracks ";
+    std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
+
+    BOOST_CHECK(expectedTracks.isSubsetOf(foundTracks));
+
+}
+
+
+
+
+
+
+BOOST_AUTO_TEST_CASE( linkTracklets_5_5 )
+{
+
+    // " << expectedTracks.size() << " tracks, following a coherent pattern but randomly perturbed.
+    TrackSet expectedTracks;
+    std::vector<MopsDetection> allDets;
+    std::vector<Tracklet> allTracklets;
+    unsigned int firstDetId = -1;
+    unsigned int firstTrackletId = -1;
+
+  
+    linkTrackletsConfig myConfig;
+
+    std::vector<std::vector<double> > imgTimes(3);
+
+    imgTimes.at(0).push_back(5300);
+    imgTimes.at(0).push_back(5300.03);
+
+    imgTimes.at(1).push_back(5305);
+    imgTimes.at(1).push_back(5305.03);
+
+    imgTimes.at(2).push_back(5312);
+    imgTimes.at(2).push_back(5312.03);
+
+    // seed the random number generator with a known value;
+    // this way the test will be identical on each run.
+    srand(6);
+
+    for (unsigned int i = 0; i < 600; i++) {
+
+        // get 6 floating point numbers between 0 and 1.
+        std::vector<double> someRands;         
+        for (unsigned int j = 0; j < 6; j++) {
+            someRands.push_back( (double) rand() / RAND_MAX );
+        }
+        //generate a random permutation on this track.
+        expectedTracks.insert(generateTrack(20. + someRands[0] * 10., //location 
+                                            20. + someRands[1] * 10., //location
+                                            (someRands[2] - .1) * 2., //1 in 10 chance of retrograde, maxv 2
+                                            (someRands[3] - .5) * .5, // maxv .5 in dec 
+                                            (someRands[4]) * .0019, //max acc of .0019, always positive
+                                            (someRands[5]) * .0019, //same
+                                            imgTimes, 
+                                            allDets, allTracklets, 
+                                            firstDetId, firstTrackletId));
+
+    }
+
+    struct tm * timeinfo;
+    time_t rawtime;
+    
+    time ( &rawtime );
+    timeinfo = localtime ( &rawtime );                    
+    
+    std::cout << "Generated " << expectedTracks.size() << " tracks. Calling linkTracklets ";
+    std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
+
+    TrackSet foundTracks = linkTracklets(allDets, allTracklets, myConfig);
+
+    time ( &rawtime );
+    timeinfo = localtime ( &rawtime );                    
+    
+    std::cout << "got " << foundTracks.size() << " results, checking if they contain the true tracks ";
+    std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
+
+    BOOST_CHECK(expectedTracks.isSubsetOf(foundTracks));
+
+}
+
+
+
+// TBD: check that tracks with too-high acceleration are correctly rejected, etc.
+
+
+
+
+
 BOOST_AUTO_TEST_CASE( track_1) {
     Track t1;
     Track t2;
@@ -1017,367 +1386,6 @@ BOOST_AUTO_TEST_CASE( linkTracklets_5 )
     BOOST_CHECK(expectedTracks.isSubsetOf(foundTracks));
 
 }
-
-BOOST_AUTO_TEST_CASE( linkTracklets_5_1 )
-{
-
-    // " << expectedTracks.size() << " tracks, following a coherent pattern but randomly perturbed.
-    TrackSet expectedTracks;
-    std::vector<MopsDetection> allDets;
-    std::vector<Tracklet> allTracklets;
-    unsigned int firstDetId = -1;
-    unsigned int firstTrackletId = -1;
-
-  
-    linkTrackletsConfig myConfig;
-
-    std::vector<std::vector<double> > imgTimes(3);
-
-    imgTimes.at(0).push_back(5300);
-    imgTimes.at(0).push_back(5300.03);
-
-    imgTimes.at(1).push_back(5305);
-    imgTimes.at(1).push_back(5305.03);
-
-    imgTimes.at(2).push_back(5312);
-    imgTimes.at(2).push_back(5312.03);
-
-    // seed the random number generator with a known value;
-    // this way the test will be identical on each run.
-    srand(2);
-
-    for (unsigned int i = 0; i < 200; i++) {
-
-        // get 6 floating point numbers between 0 and 1.
-        std::vector<double> someRands;         
-        for (unsigned int j = 0; j < 6; j++) {
-            someRands.push_back( (double) rand() / RAND_MAX );
-        }
-        //generate a random permutation on this track.
-        expectedTracks.insert(generateTrack(20. + someRands[0] * 10., //location 
-                                            20. + someRands[1] * 10., //location
-                                            (someRands[2] - .1) * 2., //1 in 10 chance of retrograde, maxv 2
-                                            (someRands[3] - .5) * .5, // maxv .5 in dec 
-                                            (someRands[4]) * .0019, //max acc of .0019, always positive
-                                            (someRands[5]) * .0019, //same
-                                            imgTimes, 
-                                            allDets, allTracklets, 
-                                            firstDetId, firstTrackletId));
-
-    }
-
-    struct tm * timeinfo;
-    time_t rawtime;
-    
-    time ( &rawtime );
-    timeinfo = localtime ( &rawtime );                    
-    
-    std::cout << "Generated " << expectedTracks.size() << " tracks. Calling linkTracklets ";
-    std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
-
-    TrackSet foundTracks = linkTracklets(allDets, allTracklets, myConfig);
-
-    time ( &rawtime );
-    timeinfo = localtime ( &rawtime );                    
-    
-    std::cout << "got " << foundTracks.size() << " results, checking if they contain the true tracks ";
-    std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
-
-    BOOST_CHECK(expectedTracks.isSubsetOf(foundTracks));
-
-}
-
-
-
-
-BOOST_AUTO_TEST_CASE( linkTracklets_5_2 )
-{
-
-    // " << expectedTracks.size() << " tracks, following a coherent pattern but randomly perturbed.
-    TrackSet expectedTracks;
-    std::vector<MopsDetection> allDets;
-    std::vector<Tracklet> allTracklets;
-    unsigned int firstDetId = -1;
-    unsigned int firstTrackletId = -1;
-
-  
-    linkTrackletsConfig myConfig;
-
-    std::vector<std::vector<double> > imgTimes(3);
-
-    imgTimes.at(0).push_back(5300);
-    imgTimes.at(0).push_back(5300.03);
-
-    imgTimes.at(1).push_back(5305);
-    imgTimes.at(1).push_back(5305.03);
-
-    imgTimes.at(2).push_back(5312);
-    imgTimes.at(2).push_back(5312.03);
-
-    // seed the random number generator with a known value;
-    // this way the test will be identical on each run.
-    srand(3);
-
-    for (unsigned int i = 0; i < 300; i++) {
-
-        // get 6 floating point numbers between 0 and 1.
-        std::vector<double> someRands;         
-        for (unsigned int j = 0; j < 6; j++) {
-            someRands.push_back( (double) rand() / RAND_MAX );
-        }
-        //generate a random permutation on this track.
-        expectedTracks.insert(generateTrack(20. + someRands[0] * 10., //location 
-                                            20. + someRands[1] * 10., //location
-                                            (someRands[2] - .1) * 2., //1 in 10 chance of retrograde, maxv 2
-                                            (someRands[3] - .5) * .5, // maxv .5 in dec 
-                                            (someRands[4]) * .0019, //max acc of .0019, always positive
-                                            (someRands[5]) * .0019, //same
-                                            imgTimes, 
-                                            allDets, allTracklets, 
-                                            firstDetId, firstTrackletId));
-
-    }
-
-    struct tm * timeinfo;
-    time_t rawtime;
-    
-    time ( &rawtime );
-    timeinfo = localtime ( &rawtime );                    
-    
-    std::cout << "Generated " << expectedTracks.size() << " tracks. Calling linkTracklets ";
-    std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
-
-    TrackSet foundTracks = linkTracklets(allDets, allTracklets, myConfig);
-
-    time ( &rawtime );
-    timeinfo = localtime ( &rawtime );                    
-    
-    std::cout << "got " << foundTracks.size() << " results, checking if they contain the true tracks ";
-    std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
-
-    BOOST_CHECK(expectedTracks.isSubsetOf(foundTracks));
-
-}
-
-
-
-
-
-BOOST_AUTO_TEST_CASE( linkTracklets_5_3 )
-{
-
-    // " << expectedTracks.size() << " tracks, following a coherent pattern but randomly perturbed.
-    TrackSet expectedTracks;
-    std::vector<MopsDetection> allDets;
-    std::vector<Tracklet> allTracklets;
-    unsigned int firstDetId = -1;
-    unsigned int firstTrackletId = -1;
-
-  
-    linkTrackletsConfig myConfig;
-
-    std::vector<std::vector<double> > imgTimes(3);
-
-    imgTimes.at(0).push_back(5300);
-    imgTimes.at(0).push_back(5300.03);
-
-    imgTimes.at(1).push_back(5305);
-    imgTimes.at(1).push_back(5305.03);
-
-    imgTimes.at(2).push_back(5312);
-    imgTimes.at(2).push_back(5312.03);
-
-    // seed the random number generator with a known value;
-    // this way the test will be identical on each run.
-    srand(4);
-
-    for (unsigned int i = 0; i < 400; i++) {
-
-        // get 6 floating point numbers between 0 and 1.
-        std::vector<double> someRands;         
-        for (unsigned int j = 0; j < 6; j++) {
-            someRands.push_back( (double) rand() / RAND_MAX );
-        }
-        //generate a random permutation on this track.
-        expectedTracks.insert(generateTrack(20. + someRands[0] * 10., //location 
-                                            20. + someRands[1] * 10., //location
-                                            (someRands[2] - .1) * 2., //1 in 10 chance of retrograde, maxv 2
-                                            (someRands[3] - .5) * .5, // maxv .5 in dec 
-                                            (someRands[4]) * .0019, //max acc of .0019, always positive
-                                            (someRands[5]) * .0019, //same
-                                            imgTimes, 
-                                            allDets, allTracklets, 
-                                            firstDetId, firstTrackletId));
-
-    }
-
-    struct tm * timeinfo;
-    time_t rawtime;
-    
-    time ( &rawtime );
-    timeinfo = localtime ( &rawtime );                    
-    
-    std::cout << "Generated " << expectedTracks.size() << " tracks. Calling linkTracklets ";
-    std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
-
-    TrackSet foundTracks = linkTracklets(allDets, allTracklets, myConfig);
-
-    time ( &rawtime );
-    timeinfo = localtime ( &rawtime );                    
-    
-    std::cout << "got " << foundTracks.size() << " results, checking if they contain the true tracks ";
-    std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
-
-    BOOST_CHECK(expectedTracks.isSubsetOf(foundTracks));
-
-}
-
-BOOST_AUTO_TEST_CASE( linkTracklets_5_4 )
-{
-
-    // " << expectedTracks.size() << " tracks, following a coherent pattern but randomly perturbed.
-    TrackSet expectedTracks;
-    std::vector<MopsDetection> allDets;
-    std::vector<Tracklet> allTracklets;
-    unsigned int firstDetId = -1;
-    unsigned int firstTrackletId = -1;
-
-  
-    linkTrackletsConfig myConfig;
-
-    std::vector<std::vector<double> > imgTimes(3);
-
-    imgTimes.at(0).push_back(5300);
-    imgTimes.at(0).push_back(5300.03);
-
-    imgTimes.at(1).push_back(5305);
-    imgTimes.at(1).push_back(5305.03);
-
-    imgTimes.at(2).push_back(5312);
-    imgTimes.at(2).push_back(5312.03);
-
-    // seed the random number generator with a known value;
-    // this way the test will be identical on each run.
-    srand(5);
-
-    for (unsigned int i = 0; i < 500; i++) {
-
-        // get 6 floating point numbers between 0 and 1.
-        std::vector<double> someRands;         
-        for (unsigned int j = 0; j < 6; j++) {
-            someRands.push_back( (double) rand() / RAND_MAX );
-        }
-        //generate a random permutation on this track.
-        expectedTracks.insert(generateTrack(20. + someRands[0] * 10., //location 
-                                            20. + someRands[1] * 10., //location
-                                            (someRands[2] - .1) * 2., //1 in 10 chance of retrograde, maxv 2
-                                            (someRands[3] - .5) * .5, // maxv .5 in dec 
-                                            (someRands[4]) * .0019, //max acc of .0019, always positive
-                                            (someRands[5]) * .0019, //same
-                                            imgTimes, 
-                                            allDets, allTracklets, 
-                                            firstDetId, firstTrackletId));
-
-    }
-
-    struct tm * timeinfo;
-    time_t rawtime;
-    
-    time ( &rawtime );
-    timeinfo = localtime ( &rawtime );                    
-    
-    std::cout << "Generated " << expectedTracks.size() << " tracks. Calling linkTracklets ";
-    std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
-
-    TrackSet foundTracks = linkTracklets(allDets, allTracklets, myConfig);
-
-    time ( &rawtime );
-    timeinfo = localtime ( &rawtime );                    
-    
-    std::cout << "got " << foundTracks.size() << " results, checking if they contain the true tracks ";
-    std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
-
-    BOOST_CHECK(expectedTracks.isSubsetOf(foundTracks));
-
-}
-
-
-
-
-
-
-BOOST_AUTO_TEST_CASE( linkTracklets_5_5 )
-{
-
-    // " << expectedTracks.size() << " tracks, following a coherent pattern but randomly perturbed.
-    TrackSet expectedTracks;
-    std::vector<MopsDetection> allDets;
-    std::vector<Tracklet> allTracklets;
-    unsigned int firstDetId = -1;
-    unsigned int firstTrackletId = -1;
-
-  
-    linkTrackletsConfig myConfig;
-
-    std::vector<std::vector<double> > imgTimes(3);
-
-    imgTimes.at(0).push_back(5300);
-    imgTimes.at(0).push_back(5300.03);
-
-    imgTimes.at(1).push_back(5305);
-    imgTimes.at(1).push_back(5305.03);
-
-    imgTimes.at(2).push_back(5312);
-    imgTimes.at(2).push_back(5312.03);
-
-    // seed the random number generator with a known value;
-    // this way the test will be identical on each run.
-    srand(6);
-
-    for (unsigned int i = 0; i < 600; i++) {
-
-        // get 6 floating point numbers between 0 and 1.
-        std::vector<double> someRands;         
-        for (unsigned int j = 0; j < 6; j++) {
-            someRands.push_back( (double) rand() / RAND_MAX );
-        }
-        //generate a random permutation on this track.
-        expectedTracks.insert(generateTrack(20. + someRands[0] * 10., //location 
-                                            20. + someRands[1] * 10., //location
-                                            (someRands[2] - .1) * 2., //1 in 10 chance of retrograde, maxv 2
-                                            (someRands[3] - .5) * .5, // maxv .5 in dec 
-                                            (someRands[4]) * .0019, //max acc of .0019, always positive
-                                            (someRands[5]) * .0019, //same
-                                            imgTimes, 
-                                            allDets, allTracklets, 
-                                            firstDetId, firstTrackletId));
-
-    }
-
-    struct tm * timeinfo;
-    time_t rawtime;
-    
-    time ( &rawtime );
-    timeinfo = localtime ( &rawtime );                    
-    
-    std::cout << "Generated " << expectedTracks.size() << " tracks. Calling linkTracklets ";
-    std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
-
-    TrackSet foundTracks = linkTracklets(allDets, allTracklets, myConfig);
-
-    time ( &rawtime );
-    timeinfo = localtime ( &rawtime );                    
-    
-    std::cout << "got " << foundTracks.size() << " results, checking if they contain the true tracks ";
-    std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
-
-    BOOST_CHECK(expectedTracks.isSubsetOf(foundTracks));
-
-}
-
-
-
-// TBD: check that tracks with too-high acceleration are correctly rejected, etc.
 
 
 }} // close lsst::mops

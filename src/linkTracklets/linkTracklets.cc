@@ -18,11 +18,12 @@
 
 //#define LEAF_SIZE 1024
 //#define LEAF_SIZE 256
-//#define LEAF_SIZE 16  //based on unit tests, this seemed to be the fastest.
-#define LEAF_SIZE 32
+#define LEAF_SIZE 16  //based on unit tests, this seemed to be the fastest.
+//#define LEAF_SIZE 32
 //#define LEAF_SIZE 2
 
-
+#define CACHE_SIZE 100000
+#define USE_CACHE true
 
 /* taking a queue from Kubica, it's only once per ITERATIONS_PER_SPLIT calls to
  * doLinkingRecurse that we actually split the (non-leaf) support nodes. The
@@ -43,7 +44,7 @@ INSANELY slow.
 #define CHEAT_AND_DO_TOP_LEVEL_CHECK false
 
 #define RACE_TO_MAX_COMPATIBLE false
-#define MAX_COMPATIBLE_TO_FIND 10000
+#define MAX_COMPATIBLE_TO_FIND 50000
 
 
 #define POINT_RA           0
@@ -66,7 +67,7 @@ double getAllDetectionsForTrackletTime, getFirstDetectionForTrackletTime,
     areAllLeavesTime, nodeWidthTime, addAllDetectedObjectsToSetTime, doLinkingRecurseTime;
 
 int doLinkingRecurseVisits, buildTracksAddToResultsVisits, compatibleEndpointsFound;
-int rejectedOnVelocity, rejectedOnPosition, wereCompatible;
+int rejectedOnVelocity, rejectedOnPosition, wereCompatible, rejectedOnLackOfSupport;
 int cacheHits, cacheMisses;
 
 
@@ -611,7 +612,9 @@ void extendBoundsToTime(const KDTreeNode<unsigned int> * treeNode,
 {
     std::vector<std::vector<double> > cachedBounds;
 
-    if (rangeCache.find(lookupKey, cachedBounds)) {
+    //std::cout << "do we use cache?" << USE_CACHE << " cache has size " << rangeCache.size() << std::endl;
+    if ((USE_CACHE) && (rangeCache.find(lookupKey, cachedBounds))) {
+        //std::cout << " cache hit!\n";
         // we don't have to recompute it -it's there already!
         cacheHits++;
         std::vector<double> uBounds = cachedBounds.at(0);
@@ -640,6 +643,7 @@ void extendBoundsToTime(const KDTreeNode<unsigned int> * treeNode,
     }
     else {
         
+        //std::cout << " cache miss...\n";
         // we have not yet projected this bounding box to the given image time. 
         // do so, adding in error, and save the results.
         
@@ -696,28 +700,57 @@ void extendBoundsToTime(const KDTreeNode<unsigned int> * treeNode,
             
         }
 
-        // save these newly-computed values to cache!
-        std::vector<std::vector <double> > boundsForStorage(2);
-        std::vector<double> uBounds(4);
-        std::vector<double> lBounds(4);
-
-        uBounds.at(POINT_RA) =  raPositionMax;
-        uBounds.at(POINT_DEC) = decPositionMax;
-        uBounds.at(POINT_RA_VELOCITY) = raVelocityMax;
-        uBounds.at(POINT_DEC_VELOCITY)= decVelocityMax;
-
-        lBounds.at(POINT_RA) = raPositionMin;
-        lBounds.at(POINT_DEC)= decPositionMin;
-        lBounds.at(POINT_RA_VELOCITY) = raVelocityMin;
-        lBounds.at(POINT_DEC_VELOCITY) = decVelocityMin;
-
-        boundsForStorage.at(0) = uBounds;
-        boundsForStorage.at(1) = lBounds;
-        
-        rangeCache.insert(lookupKey, boundsForStorage);
+        if (USE_CACHE) {
+            // save these newly-computed values to cache!        
+            std::vector<std::vector <double> > boundsForStorage(2);
+            std::vector<double> uBounds(4);
+            std::vector<double> lBounds(4);
+            
+            uBounds.at(POINT_RA) =  raPositionMax;
+            uBounds.at(POINT_DEC) = decPositionMax;
+            uBounds.at(POINT_RA_VELOCITY) = raVelocityMax;
+            uBounds.at(POINT_DEC_VELOCITY)= decVelocityMax;
+            
+            lBounds.at(POINT_RA) = raPositionMin;
+            lBounds.at(POINT_DEC)= decPositionMin;
+            lBounds.at(POINT_RA_VELOCITY) = raVelocityMin;
+            lBounds.at(POINT_DEC_VELOCITY) = decVelocityMin;
+            
+            boundsForStorage.at(0) = uBounds;
+            boundsForStorage.at(1) = lBounds;
+            
+            rangeCache.insert(lookupKey, boundsForStorage);
+        }
     }
     
 }
+
+
+/*
+ * a fairly mindless rewrite of the testing code in Kubica's
+ * test_and_add_support_final from linker.c.
+ * 
+ * I don't fully understand the math I don't think that should matter!
+ * 
+ * we require that first, second, and third are in increasing chronological
+ * order.
+ */
+bool areMutuallyCompatible(const TreeNodeAndTime &firstNode,
+                           const TreeNodeAndTime &secondNode,
+                           const TreeNodeAndTime &thirdNode,
+                           linkTrackletsConfig searchConfig)
+{
+    bool valid = true;
+    
+    
+    // TBD
+
+    return valid;
+}
+
+
+
+
 
 
 
@@ -741,8 +774,8 @@ void extendBoundsToTime(const KDTreeNode<unsigned int> * treeNode,
 
 
 //TBD: searches should really be extended with quadraticErrorThresh
-bool areCompatible(TreeNodeAndTime  &nodeA,
-                   TreeNodeAndTime  &nodeB,
+bool areCompatible(const TreeNodeAndTime  &nodeA,
+                   const TreeNodeAndTime  &nodeB,
                    linkTrackletsConfig searchConfig,
                    LTCache &rangeCache)
 {
@@ -1386,6 +1419,129 @@ bool areAllLeaves(const std::vector<TreeNodeAndTime> &nodeArray) {
 
 
 
+bool supportTooWide(const TreeNodeAndTime& firstEndpoint, const TreeNodeAndTime& secondEndpoint,
+                    const TreeNodeAndTime& supportNode) 
+{
+    /* odd-looking stuff with alpha based on test_and_add_support in
+     * Kubica's linker.c.  the idea is to weight the expected size of a
+     * node according to its proximity to either the first or last
+     * endpoint . */
+    double alpha = (supportNode.myTime.getMJD() - firstEndpoint.myTime.getMJD()) /
+        (secondEndpoint.myTime.getMJD() - firstEndpoint.myTime.getMJD());
+    
+    // check the width of the support node in all 4 axes; compare with width of 
+    for (unsigned int i = 0; i < 4; i++) {
+        double nodeWidth = supportNode.myTree->getUBounds()->at(i) - supportNode.myTree->getLBounds()->at(i);
+        double maxWidth = (1.0 - alpha) * 
+            (firstEndpoint.myTree->getUBounds()->at(i) - firstEndpoint.myTree->getLBounds()->at(i)) + 
+            alpha * (secondEndpoint.myTree->getUBounds()->at(i) - secondEndpoint.myTree->getLBounds()->at(i));
+        
+        // this constant 4 is taken from Kubica's linker.c test_and_add_support. 
+        // Ask him to justify it, not me!
+        if (4.0 * nodeWidth > maxWidth) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+
+
+
+
+
+
+void splitSupportRecursively(const TreeNodeAndTime& firstEndpoint, const TreeNodeAndTime& secondEndpoint, 
+                             bool requireLeaves,
+                             const TreeNodeAndTime &supportNode, linkTrackletsConfig searchConfig, 
+                             LTCache &rangeCache,
+                             std::vector<TreeNodeAndTime> &newSupportNodes)
+{
+
+    if ((firstEndpoint.myTime.getMJD() >= supportNode.myTime.getMJD()) || 
+        (supportNode.myTime.getMJD() > secondEndpoint.myTime.getMJD())) {
+        throw LSST_EXCEPT(BadParameterException, "splitSupportRecursively got impossibly-ordered endpoints/support");
+    }
+
+    if ((areCompatible(firstEndpoint, supportNode, searchConfig, rangeCache) && 
+         areCompatible(secondEndpoint, supportNode, searchConfig, rangeCache))) {
+
+        if (supportNode.myTree->isLeaf()) {
+            newSupportNodes.push_back(supportNode);
+        }
+
+        else if (requireLeaves) {
+            if (supportNode.myTree->hasLeftChild()) {
+                TreeNodeAndTime leftTat(supportNode.myTree->getLeftChild(), supportNode.myTime); 
+                splitSupportRecursively(firstEndpoint, secondEndpoint, requireLeaves, 
+                                        leftTat,
+                                        searchConfig, rangeCache, newSupportNodes);
+            }
+            if (supportNode.myTree->hasRightChild()) {
+                TreeNodeAndTime rightTat(supportNode.myTree->getRightChild(), supportNode.myTime);
+                splitSupportRecursively(firstEndpoint, secondEndpoint, requireLeaves, 
+                                        rightTat,
+                                        searchConfig, rangeCache, newSupportNodes);
+            }
+        }
+        
+        else {
+            // we don't require leaves in output, but check to see if we *should* split this node.
+            // if not, add it to output. Otherwise, recurse on its children.
+
+            bool tooWide = supportTooWide(firstEndpoint, secondEndpoint, supportNode);
+            
+            if (tooWide) {
+                if (supportNode.myTree->hasLeftChild()) {
+                    TreeNodeAndTime leftTat(supportNode.myTree->getLeftChild(), supportNode.myTime); 
+                    splitSupportRecursively(firstEndpoint, secondEndpoint, requireLeaves, 
+                                            leftTat,
+                                            searchConfig, rangeCache, newSupportNodes);
+                }
+                if (supportNode.myTree->hasRightChild()) {
+                    TreeNodeAndTime rightTat(supportNode.myTree->getRightChild(), supportNode.myTime);
+                    splitSupportRecursively(firstEndpoint, secondEndpoint, requireLeaves, 
+                                            rightTat,
+                                            searchConfig, rangeCache, newSupportNodes);
+                }
+            }
+            else {
+                newSupportNodes.push_back(supportNode);
+            }
+        }
+    }
+}
+
+
+
+
+
+void filterAndSplitSupport(const TreeNodeAndTime& firstEndpoint, const TreeNodeAndTime& secondEndpoint, 
+                           const std::vector<TreeNodeAndTime> &supportNodes, linkTrackletsConfig searchConfig, 
+                           LTCache &rangeCache,
+                           std::vector<TreeNodeAndTime> &newSupportNodes) 
+{
+
+    // if the endpoints are leaves, require that we get all leaves in the support nodes.
+    bool endpointsAreLeaves = firstEndpoint.myTree->isLeaf() && secondEndpoint.myTree->isLeaf();
+    
+    for (unsigned int i = 0; i < supportNodes.size(); i++) {
+        splitSupportRecursively(firstEndpoint, secondEndpoint, 
+                                endpointsAreLeaves, // 'true' here means we require leaves in output
+                                supportNodes[i],
+                                searchConfig, rangeCache, newSupportNodes);
+    }
+    
+    
+}
+
+
+
+
+
+
+
 double nodeWidth(KDTreeNode<unsigned int> *node)
 {
     double start = std::clock();
@@ -1396,6 +1552,7 @@ double nodeWidth(KDTreeNode<unsigned int> *node)
     nodeWidthTime += timeSince(start);
     return width;    
 }
+
 
 
 
@@ -1434,18 +1591,11 @@ void doLinkingRecurse2(const std::vector<MopsDetection> &allDetections,
 
     //debugPrintTimingInfo(results);
     std::cout << "\ndoLinkingRecurse called with endpoint IDs " << firstEndpoint.myTree->getId() << ",  " <<
-       secondEndpoint.myTree->getId() << std::endl;
+        secondEndpoint.myTree->getId() << std::endl;
     std::cout << " first endpoint " << (firstEndpoint.myTree->isLeaf() ? std::string("IS") : std::string("IS NOT")) << " a leaf; second endpoint " << 
-       (secondEndpoint.myTree->isLeaf() ? std::string("IS") : std::string("IS NOT")) << " a leaf." << "\n";
+        (secondEndpoint.myTree->isLeaf() ? std::string("IS") : std::string("IS NOT")) << " a leaf." << "\n";
     std::cout << "   also we have " << supportNodes.size() << " support nodes." << std:: endl;
     
-    // if ((firstEndpoint.myTree->getId() == 300) && ((secondEndpoint.myTree->getId() == 369) || 
-    //                                               (secondEndpoint.myTree->getId() == 423) ||
-    //                                                (secondEndpoint.myTree->getId() == 1446)))
-    //     {
-    //         std::cout << " hitting a slow one. attach a debugger! " << std::endl;
-    //     }
-
     if (areCompatible(firstEndpoint, secondEndpoint, searchConfig, rangeCache) == false)
     {
         // poor choice of model nodes (endpoint nodes)! give up.
@@ -1462,43 +1612,17 @@ void doLinkingRecurse2(const std::vector<MopsDetection> &allDetections,
         /* look through untested support nodes, find the ones that are compatible
          * with the model nodes, add their children to newSupportNodes */
 
-        for (supportNodeIter  = supportNodes.begin();
-             supportNodeIter != supportNodes.end();
-             supportNodeIter++) {
-
-            if (iterationsTillSplit <= 0) {
-                bool firstEndpointCompatible;
-                bool secondEndpointCompatible;
-
-                firstEndpointCompatible =  areCompatible(firstEndpoint, *supportNodeIter, searchConfig, rangeCache);
-                secondEndpointCompatible = areCompatible(secondEndpoint, *supportNodeIter, searchConfig, rangeCache);
-                
-                if (firstEndpointCompatible && secondEndpointCompatible)
-                {   
-                    if (supportNodeIter->myTree->isLeaf()) {
-                        newSupportNodes.push_back(*supportNodeIter);
-                        uniqueSupportMJDs.insert(supportNodeIter->myTime.getMJD());
-                    }
-                    else {
-                        if (supportNodeIter->myTree->hasLeftChild()) {
-                            newSupportNodes.push_back(TreeNodeAndTime(supportNodeIter->myTree->getLeftChild(), supportNodeIter->myTime));
-                            uniqueSupportMJDs.insert(supportNodeIter->myTime.getMJD());
-                        }
-                        if (supportNodeIter->myTree->hasRightChild()) {
-                            newSupportNodes.push_back(TreeNodeAndTime(supportNodeIter->myTree->getRightChild(), supportNodeIter->myTime));
-                            uniqueSupportMJDs.insert(supportNodeIter->myTime.getMJD());
-                        }
-                    }
-                }
-            }
-            else {
-                // iterationsTillSplit is non-zero; 
-                // don't do any real work; just copy the previous support nodes. we'll do this
-                // momentarily; but go ahead and add their support MJDs now.
-                uniqueSupportMJDs.insert(supportNodeIter->myTime.getMJD());                
-            }
-        }
-        
+        if ((iterationsTillSplit <= 0) || 
+            (firstEndpoint.myTree->isLeaf() && secondEndpoint.myTree->isLeaf())) {
+            
+            double filterStartTime = std::clock();
+            std::cout << "calling filterAndSplitSupport with " << supportNodes.size() << " support nodes.\n";
+            filterAndSplitSupport(firstEndpoint, secondEndpoint, 
+                                  supportNodes, searchConfig, rangeCache,
+                                  newSupportNodes);
+            std::cout << " returned after " << timeSince(filterStartTime) << " and we now have " << 
+                newSupportNodes.size() << " support nodes.\n";
+        }        
 
         if (iterationsTillSplit <= 0) {
             iterationsTillSplit = ITERATIONS_PER_SPLIT;
@@ -1511,9 +1635,14 @@ void doLinkingRecurse2(const std::vector<MopsDetection> &allDetections,
         std::cout << "After filtering support nodes, we now have " << newSupportNodes.size() 
         <<  " support nodes." << std::endl;*/
         
+            std::vector<TreeNodeAndTime>::const_iterator supportIter;
+        for (supportIter = newSupportNodes.begin(); supportIter != newSupportNodes.end(); supportIter++) {
+            uniqueSupportMJDs.insert(supportIter->myTime.getMJD());
+        }
 
         if (uniqueSupportMJDs.size() < searchConfig.minSupportTracklets) {
             // we can't possibly have enough distinct support tracklets between endpoints
+            rejectedOnLackOfSupport++;
             doLinkingRecurseTime += timeSince(start);
             // std::cout << "Exiting doLinkingRecurse2 due to lack of support.\n";
             return; 
@@ -1683,7 +1812,8 @@ void debugPrintTimingInfo(const TrackSet &results)
     std::cout << "   - rejected " << rejectedOnPosition 
               << " based on position, after finding the compatible in velocity.\n";
 
-
+    std::cout << "In recursion, terminated " << rejectedOnLackOfSupport 
+              << " times due to insufficient support points.\n";
 
 }
 
@@ -1692,6 +1822,7 @@ void debugPrintTimingInfo(const TrackSet &results)
 void initDebugTimingInfo()
 {
 
+    rejectedOnLackOfSupport = 0;
     rejectedOnVelocity = 0;
     rejectedOnPosition = 0;
     wereCompatible = 0;
@@ -1860,8 +1991,8 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
                         // isCompatible projects the location of the endpoint regions
                         // forward/backwards in time, so there will be 0 reuse between
                         // pairs of endpoint trees.
-                        //LTCache rangeCache(100000000);
-                        LTCache rangeCache(0);
+                        LTCache rangeCache(CACHE_SIZE);
+                        //LTCache rangeCache(0);
 
                         doLinkingRecurse2(allDetections, allTracklets, searchConfig,
                                           firstEndpoint, secondEndpoint,

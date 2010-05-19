@@ -61,8 +61,8 @@ void getTracklets(TrackletVector &resultsVec,
 /*****************************************************************
  *The main function of this file.
  *****************************************************************/
-TrackletVector findTracklets(const std::vector<MopsDetection> &myDets, 
-                          findTrackletsConfig config)
+TrackletVector * findTracklets(const std::vector<MopsDetection> &myDets, 
+                               findTrackletsConfig config)
 {
     //detection vectors, each vector of unique MJD
     std::map<double,  std::vector<MopsDetection> > detectionSets; 
@@ -79,12 +79,35 @@ TrackletVector findTracklets(const std::vector<MopsDetection> &myDets,
     generatePerImageTrees(detectionSets, myTreeMap);
 
     //get results
-    TrackletVector results;
+    TrackletVector * resultsVec;
 
-    getTracklets(results, myTreeMap, 
+    if (config.outputMethod == RETURN_TRACKLETS) {
+        resultsVec = new TrackletVector();
+    }
+    else if (config.outputMethod == IDS_FILE) {
+        resultsVec = new TrackletVector(config.outputFile, false, 0);
+    }
+    else if (config.outputMethod == IDS_FILE_WITH_CACHE) {
+        resultsVec = new TrackletVector(config.outputFile, true, config.outputBufferSize);
+    }
+    else {
+        throw LSST_EXCEPT(BadParameterException, 
+                          "findTracklets: got unknown or unimplemented output method.");
+    }
+
+    getTracklets(*resultsVec, myTreeMap, 
                  myDets, config);
 
-    return results;
+    if ((config.outputMethod == IDS_FILE) || 
+        (config.outputMethod == IDS_FILE_WITH_CACHE)) {
+
+        resultsVec->purgeToFile();
+        delete resultsVec;
+        resultsVec = NULL;
+    }
+    
+
+    return resultsVec;
 }
 
 
@@ -107,11 +130,11 @@ void groupByImageTime(const std::vector<MopsDetection> &myDets,
 }
 
 
-  
+
 
 /******************************************************************
  * Take 2D vector of detections and create a map linking
- * each MJD vector to its MJD double value.
+ * each per-MJD Detection vector to its MJD double value.
  ******************************************************************/
 void generatePerImageTrees(const std::map<double, std::vector<MopsDetection> > &detectionSets, 
                            std::map<double, KDTree<long int> > &myTreeMap)
@@ -191,7 +214,10 @@ void getTracklets(TrackletVector &results,
 
             //only consider this tree if it contains detections
             //that occurred after the current one
-            if(curMJD > queryMJD){      
+            if ((curMJD > queryMJD) && 
+                (curMJD - queryMJD >= config.minDt) && 
+                (curMJD - queryMJD <= config.maxDt)) {
+ 
                 double maxVelocity = config.maxV;
                 double minVelocity = config.minV;
 	  
@@ -216,26 +242,25 @@ void getTracklets(TrackletVector &results,
                     
                 for (unsigned int ii = 0; ii < queryResults.size(); ii++) {
                     PointAndValue<long int> * curResult = &(queryResults.at(ii));
+                    double resultRa = curResult->getPoint().at(0);
+                    double resultDec = curResult->getPoint().at(1);
                     double properDistance =  angularDistanceRADec_deg(queryRA, 
                                                                       queryDec, 
-                                                                      curResult->getPoint().at(0),
-                                                                      curResult->getPoint().at(1));
+                                                                      resultRa,
+                                                                      resultDec);
                     if ((properDistance <= maxDistance) && (properDistance >= minDistance)) {
                         closeEnoughResults.push_back(curResult->getValue());
                     }
                 }
                 
-                // collect results for each query point's results for each MJD
-                Tracklet newTracklet;
-                newTracklet.indices.insert(curQuery->getID());               
-                
-                for(unsigned int j=0; j < closeEnoughResults.size(); j++){
-                    newTracklet.indices.insert(closeEnoughResults.at(j));
-                }
-
-                if (newTracklet.indices.size() >= 2) {
+                for (unsigned int ii = 0; ii < closeEnoughResults.size(); ii++) {
+                    // collect results for each query point's results for each MJD
+                    Tracklet newTracklet;
+                    newTracklet.indices.insert(curQuery->getID());               
+                    newTracklet.indices.insert(closeEnoughResults.at(ii));
                     results.push_back(newTracklet);
                 }
+                
                 queryResults.clear();
                 queryPt.clear();
             }

@@ -208,6 +208,8 @@ namespace mops {
 
         void debugPrint() const;
 
+        unsigned int size() const;
+
         // linkTracklets needs to see individual nodes. this returns a const pointer to that node.
         KDTreeNode<T> * getRootNode() const;
       
@@ -226,6 +228,7 @@ namespace mops {
         std::vector <double> myUBounds;
         std:: vector <double> myLBounds;
 
+        unsigned int mySize;
     };
 
 
@@ -378,7 +381,7 @@ void KDTree<T>::buildFromData(std::vector<PointAndValue <T> > pointsAndValues,
         }
         if (maxLeafSize < 1) {
             throw LSST_EXCEPT(BadParameterException, 
-                              "EE: KDTree: max leaf size must be stricly positive!\n");
+                              "EE: KDTree: max leaf size must be strictly positive!\n");
         }
         /* make sure all points from of pointsAndValues are of valid length */
         for (myIter = pointsAndValues.begin(); 
@@ -433,12 +436,21 @@ void KDTree<T>::buildFromData(std::vector<PointAndValue <T> > pointsAndValues,
         myRoot = new KDTreeNode<T>(pointsAndValuesCopy, k, maxLeafSize, 0, \
                                    pointsUBounds, pointsLBounds, idCounter);
         // don't set hasData until now, when the tree is actually built.
+        mySize = idCounter;
         hasData = true;
     }
 }
 
 
 
+
+
+
+template <class T>
+unsigned int KDTree<T>::size() const
+{
+    return mySize;
+}
 
 
 template <class T>

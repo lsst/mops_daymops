@@ -29,20 +29,30 @@ namespace lsst {
 *******************************************************************************/
 
 enum trackletOutputMethod { RETURN_TRACKLETS = 0, 
-                            TO_IDS_FILE, 
-                            TO_DB_TSV_STORAGE };
+                            IDS_FILE,
+                            IDS_FILE_WITH_CACHE};
         
 class findTrackletsConfig {
 public:
     
     findTrackletsConfig() 
         {   
+            maxDt = .0625; // 90 minutes
+            minDt = .0;
             maxV = 2.0;
             minV = 0.0;
             outputMethod = RETURN_TRACKLETS;
             outputFile = "";
             outputBufferSize = 0;
         }
+
+    // units for these two are in days.
+    // max time between two detections for any attempt to build a tracklet between them
+    double maxDt;
+    // min time between two detections for any attempt to build a tracklet between them
+    double minDt;
+
+    // units for these two are in deg/day.
     // maxV: maximum velocity of tracklet for which we search and return.
     double maxV;
     // minV: minimum velocity of tracklet for which we search and return.
@@ -55,14 +65,14 @@ public:
     // if outputMethod is RETURN_TRACKLETS then actually buffer all results in
     // memory, return them in-memory.
 
-    // if outputMethod is TO_IDS_FILE, then write a plain-text file, with one
+    // if outputMethod is IDS_FILE or IDS_FILE_WITH_CACHE, then write a plain-text file, with one
     // tracklet per line, written as a series of space-delimited Detection IDs
-    // which comprise the tracklet.  Write to a file named by outputFile,
-    // buffering outputBufferSize results between writes.
+    // which comprise the tracklet.  
 
-    // if outputMethod is TO_DB_TSV_STORAGE, then write output using the LSST
-    // daf DbTsvStorage tool, to a file named outputFile, and buffer
-    // outputBufferSize tracklets in memory between writes.
+    // if IDS_FILE, write to outputBufferSize all at once, when finished.
+
+    // if IDS_FILE_WITH_CACHE, Write to a file named by outputFile, buffering
+    // outputBufferSize results between writes.
 
     trackletOutputMethod outputMethod;
     std::string outputFile;
@@ -74,8 +84,15 @@ public:
 
 /*****************************************************************
  * Main function
+ * 
+ * if config specifies output method of RETURN_TRACKLETS, then a pointer to a
+ * TrackletVector will be returned. If other methods are specified, we simply
+ * return NULL, as output is written to file.
  *****************************************************************/
-TrackletVector
+
+
+
+TrackletVector *
 findTracklets(const std::vector<MopsDetection> &allDetections, 
 	      findTrackletsConfig config);
 

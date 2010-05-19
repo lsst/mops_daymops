@@ -4,16 +4,17 @@
 
 Import("env")
 Import("common_libs")
-Import("ext_libs")
+#Import("ext_libs")
 
-env.Library('../../lib/orbitProximity', common_libs + ['orbitProximity.cc'])
+env.Library('../../lib/orbitProximity', common_libs + ['orbitProximity.cc'], 
+            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
 
 env.Program('../../bin/orbitProximity', ['orbitProximityMain.cc', 
-                                         'orbitProximity.o'] + common_libs, 
-            LIBS=ext_libs)
+                                         'orbitProximity.o'] + common_libs,
+            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
 
 env.Program('../../tests/orbitProximity-unitTests', ['orbitProximityUnitTests.cc', 
-					 'orbitProximity.o'] + common_libs, 
-            LIBS=ext_libs)
+					 'orbitProximity.o'] + common_libs,
+            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
 
 

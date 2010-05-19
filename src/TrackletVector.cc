@@ -3,9 +3,11 @@
    4/08/10
 */
 
+#include <ios>
 #include <set>
 
-
+#include "lsst/mops/Exceptions.h"
+#include "lsst/mops/fileUtils.h"
 #include "lsst/mops/TrackletVector.h"
 
 
@@ -15,25 +17,119 @@ namespace mops {
 
 
 
+TrackletVector::TrackletVector(std::string outFileName, bool useCache, unsigned int cacheSize) 
+{
+    if (useCache) {
+        this->useCache = true;
+        this->cacheSize = cacheSize;
+    }
+    else {
+        this->useCache = false;
+        this->cacheSize = 0;        
+    }
 
-void TrackletVector::push_back(const Tracklet &newTracklet) {
-     componentTracklets.push_back(newTracklet);
+    useOutFile = true;
+    outFile.open(outFileName.c_str(), std::ios_base::out | std::ios_base::app);
+
 }
 
 
+
+
+
+void TrackletVector::purgeToFile() 
+{
+    if (useOutFile) {
+        if (componentTracklets.size() != 0) {
+            writeToFile();
+        }        
+    }
+    else {
+        throw LSST_EXCEPT(BadParameterException,
+                          "TrackletVector: Cannot purge to file in a trackletVector created without a file.");
+    }
+
+    if (useCache) {
+        componentTracklets.clear();
+    }
+}
+
+
+
+
+
+
+TrackletVector::~TrackletVector() 
+{
+    if (useOutFile) {
+        purgeToFile();
+        outFile.close();
+    }
+}
+
+
+
+
+
+void TrackletVector::writeToFile()
+{
+    // TBD: eventually, get rid of fileUtils entirely and put its code here.
+    writeTrackletsToOutFile(&componentTracklets, outFile);
+}
+
+
+
+
+
+void TrackletVector::push_back(const Tracklet &newTracklet) {
+
+
+    if ((useOutFile) && (useCache) && (componentTracklets.size() >= cacheSize)) {
+        purgeToFile();
+    }
+
+    componentTracklets.push_back(newTracklet);
+}
+
+
+
+
+
+
 Tracklet TrackletVector::at(unsigned int i) const {
+
+    if (useCache) {
+        throw LSST_EXCEPT(lsst::pex::exceptions::Exception, 
+                          "trackletVector: Cannot call do random access via at() when using output cacheing.");
+    }
+
     return componentTracklets.at(i);
 }
 
 
 
+
+
 unsigned int TrackletVector::size() const {
-     return componentTracklets.size();
+
+    if (useCache) {
+        throw LSST_EXCEPT(lsst::pex::exceptions::Exception, 
+                          "trackletVector: Cannot request 'size' when using cacheing.");
+    }
+
+    return componentTracklets.size();
 }
+
 
 
     
 bool TrackletVector::isSubsetOf(const TrackletVector &other) const {
+
+    if (useCache) {
+        throw LSST_EXCEPT(lsst::pex::exceptions::Exception, 
+                          "trackletVector: Cannot call isSubsetOf when using cacheing.");
+    }
+
      if (other.size() < this->size()) {
 	  return false;
      }
@@ -63,7 +159,12 @@ bool TrackletVector::isSubsetOf(const TrackletVector &other) const {
 
 
 
-bool TrackletVector::operator==(const TrackletVector other) const {
+bool TrackletVector::operator==(const TrackletVector &other) const {
+
+    if (useCache) {
+        throw LSST_EXCEPT(lsst::pex::exceptions::Exception, 
+                          "trackletVector: Cannot call == when using cacheing.");
+    }
 
     // if two sets are subsets of each other, they are equal.
 
@@ -72,7 +173,13 @@ bool TrackletVector::operator==(const TrackletVector other) const {
 }
 
 bool TrackletVector::operator!=(const TrackletVector &other) const {
-     return ! (*this == other);
+
+    if (useCache) {
+        throw LSST_EXCEPT(lsst::pex::exceptions::Exception, 
+                          "trackletVector: Cannot call != when using cacheing.");
+    }
+
+    return ! (*this == other);
 }
 
 

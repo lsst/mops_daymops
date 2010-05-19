@@ -4,19 +4,22 @@
 
 Import("env")
 Import("common_libs")
-Import("ext_libs")
+#Import("ext_libs")
 
 
 
 
-env.Program('../../tests/collapseTracklets-unitTests', ['unitTests.cc', 'collapseTracklets'] + common_libs, LIBS=ext_libs)
+env.Program('../../tests/collapseTracklets-unitTests', ['unitTests.cc', 'collapseTracklets'] + common_libs,
+            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
 
-ct = env.Library('../../lib/collapseTracklets', ['collapseTracklets.cc'] + common_libs, LIBS=ext_libs)
-
-env.Program('../../bin/collapseTracklets', ['collapseTrackletsMain.cc', ct] + common_libs, 
-            LIBS=ext_libs)
-
-env.Program('../../bin/purifyTracklets', ['purifyTracklets.cc'] + common_libs, LIBS=ext_libs)
+ct = env.Library('../../lib/collapseTracklets', ['collapseTracklets.cc'] + common_libs,
+                 LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
+                 
+env.Program('../../bin/collapseTracklets', ['collapseTrackletsMain.cc', ct] + common_libs,
+            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
+                             
+env.Program('../../bin/purifyTracklets', ['purifyTracklets.cc'] + common_libs,
+            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
 
 
 

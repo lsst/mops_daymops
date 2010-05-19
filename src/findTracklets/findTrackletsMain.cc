@@ -81,33 +81,15 @@ int main(int argc, char* argv[])
     
     populateDetVectorFromFile(detsFile, myDets);
     
-    lsst::mops::TrackletVector results;
-    
     lsst::mops::findTrackletsConfig config;
     config.maxV = maxVelocity;
     config.minV = minVelocity;
+    config.outputMethod = lsst::mops::IDS_FILE_WITH_CACHE;
+    config.outputFile = outFileName;
+    config.outputBufferSize = 10000;
     
-    results = lsst::mops::findTracklets(myDets, config);
+    // since we set up IDS_FILE_WITH_CACHE, output will be written automatically
+    lsst::mops::findTracklets(myDets, config);
     
-    
-    //print results
-    std::ofstream outStream;
-    outStream.open(outFileName.c_str());
-
-    // TBD: Replace me with a proper configuration of results then a call to results.write()
-    std::vector<lsst::mops::Tracklet>::const_iterator trackletIter;
-    for(trackletIter = results.componentTracklets.begin(); 
-        trackletIter != results.componentTracklets.end(); 
-        trackletIter++){
-        std::set<unsigned int>::const_iterator detIter;
-        for (detIter = trackletIter->indices.begin();
-             detIter != trackletIter->indices.end();
-             detIter++) {
-	    outStream << *detIter << " " ;
-        }
-        outStream << std::endl;
-    }
-  
-    outStream.close();
-}
+ }
 

@@ -774,7 +774,7 @@ bool areMutuallyCompatible(const TreeNodeAndTime &firstNode,
             A = secondNode.myTree;
             aTime = secondNode.myTime.getMJD();
             B = thirdNode.myTree;
-            bTime = secondNode.myTime.getMJD();
+            bTime = thirdNode.myTime.getMJD();
         }
     
         //   dt  = tbt_lo_time(B) - tbt_hi_time(A);
@@ -785,45 +785,49 @@ bool areMutuallyCompatible(const TreeNodeAndTime &firstNode,
         double dt2 = 2.0 / (dt * dt);
         double dti = 1.0/dt;
         double acc;
-    
+
+        double pe = searchConfig.detectionLocationErrorThresh;
+        double ve = searchConfig.velocityErrorThresh;
+
+
         //   /* Do the velocity+position/position tests. */
         //   if(valid) {
-        //acc  = dt2*((tbt_hi_RA(B)-tbt_lo_RA(A))-tbt_lo_vRA(A)*dt);
-        acc = dt2 * ((B->getUBounds()->at(POINT_RA) - A->getLBounds()->at(POINT_RA)) - A->getLBounds()->at(POINT_RA_VELOCITY) * dt);
-        //if(maxR > acc) { maxR = acc; }
+    //  acc = dt2*  ((tbt_hi_RA(B)                         -  tbt_lo_RA(A)                       ) - tbt_lo_vRA(A)                                 * dt);
+        acc = dt2 * (((B->getUBounds()->at(POINT_RA) + pe) - (A->getLBounds()->at(POINT_RA) - pe)) - (A->getLBounds()->at(POINT_RA_VELOCITY) - ve) * dt);
+    //  if(maxR > acc) { maxR = acc; }
         if (maxR > acc) {maxR = acc; }
-        //acc  = dt2*((tbt_lo_RA(B)-tbt_hi_RA(A))-tbt_hi_vRA(A)*dt);
-        acc = dt2*((B->getLBounds()->at(POINT_RA) - A->getUBounds()->at(POINT_RA)) - A->getUBounds()->at(POINT_RA_VELOCITY) * dt);
+    //  acc = dt2*((tbt_lo_RA(B)                         -  tbt_hi_RA(A))                        -  tbt_hi_vRA(A)                                * dt);
+        acc = dt2*(((B->getLBounds()->at(POINT_RA) - pe) - (A->getUBounds()->at(POINT_RA) + pe)) - (A->getUBounds()->at(POINT_RA_VELOCITY) + ve) * dt);
         //if(minR < acc) { minR = acc; }
         if (minR < acc)  {minR = acc; }
-        //acc  = dt2*((tbt_hi_DEC(B)-tbt_lo_DEC(A))-tbt_lo_vDEC(A)*dt);
-        acc = dt2 *((B->getUBounds()->at(POINT_DEC) - A->getLBounds()->at(POINT_DEC)) - A->getLBounds()->at(POINT_DEC_VELOCITY) * dt);
-        //if(maxD > acc) { maxD = acc; }
+    //  acc  = dt2*(( tbt_hi_DEC(B)                        -  tbt_lo_DEC(A))                        -  tbt_lo_vDEC(A)                                * dt)
+        acc = dt2 *(((B->getUBounds()->at(POINT_DEC) + pe) - (A->getLBounds()->at(POINT_DEC) - pe)) - (A->getLBounds()->at(POINT_DEC_VELOCITY) - ve) * dt);
+    //  if(maxD > acc) { maxD = acc; }
         if (maxD > acc) { maxD = acc; }
-        //acc  = dt2*((tbt_lo_DEC(B)-tbt_hi_DEC(A))-tbt_hi_vDEC(A)*dt);
-        acc = dt2*((B->getLBounds()->at(POINT_DEC) - A->getUBounds()->at(POINT_DEC)) - A->getUBounds()->at(POINT_DEC_VELOCITY) * dt);
-        //if(minD < acc) { minD = acc; }
+    //  acc = dt2*(( tbt_lo_DEC(B)                       -  tbt_hi_DEC(A))                        -   tbt_hi_vDEC(A)                               * dt);
+        acc = dt2*(((B->getLBounds()->at(POINT_DEC) -pe) - (A->getUBounds()->at(POINT_DEC) + pe)) - (A->getUBounds()->at(POINT_DEC_VELOCITY) + ve) * dt);
+    //  if (minD < acc) { minD = acc; }
         if (minD < acc) {  minD = acc; }
-        //     valid = (minD <= maxD)&&(minR <= maxR);
+    //  valid = (minD <= maxD)&&(minR <= maxR);
         valid = (minD <= maxD) && (minR <= maxR);
     
         ///* Do the velocity+position/position tests. */
         //     if(valid) {
         if (valid) {
-        //  acc = dt2*(tbt_hi_RA(A)                  - tbt_lo_RA(B)                  + tbt_hi_vRA(B)                         *dt);
-            acc = dt2*(A->getUBounds()->at(POINT_RA) - B->getLBounds()->at(POINT_RA) + B->getUBounds()->at(POINT_RA_VELOCITY)*dt);
+        //  acc = dt2*(tbt_hi_RA(A)                         - tbt_lo_RA(B)                         + tbt_hi_vRA(B)                                *dt);
+            acc = dt2*((A->getUBounds()->at(POINT_RA) + pe) - (B->getLBounds()->at(POINT_RA) - pe) + (B->getUBounds()->at(POINT_RA_VELOCITY) + ve)*dt);
         //  if(maxR > acc) { maxR = acc; }
             if(maxR > acc) { maxR = acc; }
-        //  acc = dt2*(tbt_lo_RA(A)                  - tbt_hi_RA(B)                  + tbt_lo_vRA(B)                          * dt);
-            acc = dt2*(A->getLBounds()->at(POINT_RA) - B->getUBounds()->at(POINT_RA) + B->getLBounds()->at(POINT_RA_VELOCITY) * dt);
+        //  acc = dt2*( tbt_lo_RA(A)                        -   tbt_hi_RA(B)                       +  tbt_lo_vRA(B)                                * dt);
+            acc = dt2*((A->getLBounds()->at(POINT_RA) - pe) - (B->getUBounds()->at(POINT_RA) + pe) + (B->getLBounds()->at(POINT_RA_VELOCITY) - ve) * dt);
         //  if(minR < acc) { minR = acc; }
             if(minR < acc) { minR = acc; }
-        //  acc = dt2*(tbt_hi_DEC(A)                  - tbt_lo_DEC(B)                  + tbt_hi_vDEC(B)                          * dt);
-            acc = dt2*(A->getUBounds()->at(POINT_DEC) - B->getLBounds()->at(POINT_DEC) + B->getUBounds()->at(POINT_DEC_VELOCITY) * dt);
+        //  acc = dt2*( tbt_hi_DEC(A)                        -  tbt_lo_DEC(B)                        + tbt_hi_vDEC(B)                                 * dt);
+            acc = dt2*((A->getUBounds()->at(POINT_DEC) + pe) - (B->getLBounds()->at(POINT_DEC) - pe) + (B->getUBounds()->at(POINT_DEC_VELOCITY) + ve) * dt);
         //  if(maxD > acc) { maxD = acc; }
             if(maxD > acc) { maxD = acc; }
-        //  acc = dt2*(tbt_lo_DEC(A)                  - tbt_hi_DEC(B)                  + tbt_lo_vDEC(B)                          * dt);
-            acc = dt2*(A->getLBounds()->at(POINT_DEC) - B->getUBounds()->at(POINT_DEC) + B->getLBounds()->at(POINT_DEC_VELOCITY) * dt);
+        //  acc = dt2*( tbt_lo_DEC(A)                  -        tbt_hi_DEC(B)                        +  tbt_lo_vDEC(B)                               * dt);
+            acc = dt2*((A->getLBounds()->at(POINT_DEC) - pe) - (B->getUBounds()->at(POINT_DEC) + pe) + (B->getLBounds()->at(POINT_DEC_VELOCITY) - ve) * dt);
         //  if(minD < acc) { minD = acc; }
             if(minD < acc) { minD = acc; }
         //  valid = (minD <= maxD)&&(minR <= maxR);
@@ -831,20 +835,20 @@ bool areMutuallyCompatible(const TreeNodeAndTime &firstNode,
             //       /* Determine the accel bounds with both velocity bounds. */
             //       if(valid) {
             if (valid) {
-                //      acc = (tbt_hi_vRA(B)                    - tbt_lo_vRA(A))                    * dti;
-                acc = (B->getUBounds()->at(POINT_RA_VELOCITY) - A->getLBounds()->at(POINT_RA_VELOCITY)) * dti;
+                //      acc = (tbt_hi_vRA(B)                         -  tbt_lo_vRA(A))                    * dti;
+                acc = ((B->getUBounds()->at(POINT_RA_VELOCITY) + ve) - (A->getLBounds()->at(POINT_RA_VELOCITY) - ve)) * dti;
                 //      if(maxR > acc) { maxR = acc; }
                 if(maxR > acc) { maxR = acc; }
                 //      acc = (tbt_lo_vRA(B)                    - tbt_hi_vRA(A)                   )*dti;
-                acc = (B->getLBounds()->at(POINT_RA_VELOCITY) - A->getUBounds()->at(POINT_RA_VELOCITY))*dti;
+                acc = ((B->getLBounds()->at(POINT_RA_VELOCITY) - ve) - (A->getUBounds()->at(POINT_RA_VELOCITY) + ve))*dti;
                 //      if(minR < acc) { minR = acc; }
                 if(minR < acc) { minR = acc; }
-                //      acc = (tbt_hi_vDEC(B)                    - tbt_lo_vDEC(A))                    *dti;
-                acc = (B->getUBounds()->at(POINT_DEC_VELOCITY) - A->getLBounds()->at(POINT_DEC_VELOCITY)) *dti;
+                //      acc = (tbt_hi_vDEC(B)                          - tbt_lo_vDEC(A))                    *dti;
+                acc = ((B->getUBounds()->at(POINT_DEC_VELOCITY) + ve) - (A->getLBounds()->at(POINT_DEC_VELOCITY) - ve)) *dti;
                 //      if(maxD > acc) { maxD = acc; }
                 if(maxD > acc) { maxD = acc; }
                 //      acc = (tbt_lo_vDEC(B)                    - tbt_hi_vDEC(A))                    *dti;
-                acc = (B->getLBounds()->at(POINT_DEC_VELOCITY) - A->getUBounds()->at(POINT_DEC_VELOCITY)) *dti;
+                acc = ((B->getLBounds()->at(POINT_DEC_VELOCITY) - ve) - (A->getUBounds()->at(POINT_DEC_VELOCITY) + ve)) *dti;
                 //      if(minD < acc) { minD = acc; }
                 if(minD < acc) { minD = acc; }
                 //      valid = (minR <= maxR)&&(minD <= maxD);

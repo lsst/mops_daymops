@@ -34,7 +34,7 @@ public:
             quadraticFitErrorThresh = 0.;
             minDetectionsPerTrack = 6;
 
-            velocityErrorThresh = .5;
+            velocityErrorThresh = .00025;
         }
 
     /* acceleration terms are in degrees/(day^2)
@@ -46,6 +46,7 @@ public:
     double maxDecAccel;
 
 
+
     /* detection error thresh is the upper bound on observational error for
        Detections; this has repercussions for what Detections are included in a
        returned track as well as the behavior of the searching itself (we will
@@ -54,6 +55,13 @@ public:
      */
     double detectionLocationErrorThresh;
 
+    
+    /* trackletVelocityErrorThresh: 
+     *
+     * used in tree calculations to determine the maximum feasible error of a tracklet's velocity.
+     * should be >= detectionLocationErrorThresh * 2.0  / max time between any two images.
+     */
+    double trackletVelocityErrorThresh;
 
     /* quadratic fit error thresh: 
 

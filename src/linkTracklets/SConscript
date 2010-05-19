@@ -20,10 +20,10 @@ Import("common_libs")
 env.Library('../../lib/linkTracklets', ['linkTracklets.cc'] + common_libs, 
             LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
 
-env.Program('../../tests/linkTracklets-unitTests-new', ['linkTracklets-unittests.cc', 'linkTracklets.o'] + common_libs,
+env.Program('../../tests/linkTracklets-unitTests', ['linkTracklets-unittests.cc', 'linkTracklets.o'] + common_libs,
             LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
 
-env.Program('../../bin/linkTracklets-dbg', ['linkTrackletsMain.cc', 'linkTracklets.o'] + common_libs,
+env.Program('../../bin/linkTracklets', ['linkTrackletsMain.cc', 'linkTracklets.o'] + common_libs,
             LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
 
 

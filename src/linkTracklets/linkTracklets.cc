@@ -19,8 +19,7 @@
 //#define LEAF_SIZE 1024
 //#define LEAF_SIZE 256
 #define LEAF_SIZE 16  //based on unit tests, this seemed to be the fastest.
-//#define LEAF_SIZE 32
-//#define LEAF_SIZE 2
+
 
 #define CACHE_SIZE 100000
 #define USE_CACHE true
@@ -44,7 +43,7 @@ INSANELY slow.
 #define CHEAT_AND_DO_TOP_LEVEL_CHECK false
 
 #define RACE_TO_MAX_COMPATIBLE false
-#define MAX_COMPATIBLE_TO_FIND 50000
+#define MAX_COMPATIBLE_TO_FIND 500000
 
 
 #define POINT_RA           0
@@ -1576,9 +1575,9 @@ void splitSupportRecursively(const TreeNodeAndTime& firstEndpoint, const TreeNod
         throw LSST_EXCEPT(BadParameterException, "splitSupportRecursively got impossibly-ordered endpoints/support");
     }
 
-    //if ((areCompatible(firstEndpoint, supportNode, searchConfig, rangeCache) && 
-    //   areCompatible(secondEndpoint, supportNode, searchConfig, rangeCache))) {
-    if (areMutuallyCompatible(firstEndpoint, supportNode, secondEndpoint, searchConfig)) {
+    if ((areCompatible(firstEndpoint, supportNode, searchConfig, rangeCache) && 
+       areCompatible(secondEndpoint, supportNode, searchConfig, rangeCache))) {
+        //if (areMutuallyCompatible(firstEndpoint, supportNode, secondEndpoint, searchConfig)) {
 
         if (supportNode.myTree->isLeaf()) {
             newSupportNodes.push_back(supportNode);
@@ -1773,14 +1772,14 @@ void doLinkingRecurse2(const std::vector<MopsDetection> &allDetections,
                 // we checked for compatibility, then split off the children. of course, buildTracksAddToResults won't 
                 // be affected with regards to correctness, just performance. So it may not even be wise to add a
                 // mostly-needless check.
-                //std::cout << "Calling buildTracksAddToResults\n";
-                //double buildTracksStart = std::clock();
+                std::cout << "Calling buildTracksAddToResults\n";
+                double buildTracksStart = std::clock();
                 unsigned int numResults = results.size();
                 buildTracksAddToResults(allDetections, allTracklets, searchConfig,
                                         firstEndpoint, secondEndpoint, newSupportNodes,
                                         results);
-                //std::cout << "Brute-force track building took " << timeSince(buildTracksStart) << " sec.";
-                //std::cout << "Found " << results.size() - numResults << " new tracks. Exiting." << std::endl;
+                std::cout << "Brute-force track building took " << timeSince(buildTracksStart) << " sec.";
+                std::cout << "Found " << results.size() - numResults << " new tracks. Exiting." << std::endl;
             }
             else  {
                
@@ -1986,7 +1985,7 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
      * doLinking, we start the searching with the head (i.e. root) node of each
      * tree.
      */
-    bool DEBUG = false;
+    bool DEBUG = true;
 
     bool limitedRun = false;
     double limitedRunFirstEndpoint =  49616.273436000003 ;

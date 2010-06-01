@@ -317,14 +317,14 @@ BOOST_AUTO_TEST_CASE( linkTracklets_whitebox_getBestFitVelocityAndAcceleration_t
     std::vector<double> positions;
     std::vector<double> times;
     positions.push_back(0);
-    positions.push_back(2);
-    positions.push_back(6);
+    positions.push_back(1.5);
+    positions.push_back(4);
     times.push_back(0);
     times.push_back(1);
     times.push_back(2);
     double velocity, acceleration, position0;
     getBestFitVelocityAndAcceleration(positions, times, velocity, acceleration, position0);
-    //std::cout << "position = " << position0 << " + " << velocity << "*t + " << acceleration << "*t^2" << std::endl;
+    //std::cout << "position = " << position0 << " + " << velocity << "*t + .5*" << acceleration << "*t^2" << std::endl;
     BOOST_CHECK(Eq(position0,    0));
     BOOST_CHECK(Eq(velocity,     1));
     BOOST_CHECK(Eq(acceleration, 1));    
@@ -338,15 +338,15 @@ BOOST_AUTO_TEST_CASE( linkTracklets_whitebox_getBestFitVelocityAndAcceleration_t
 {
     std::vector<double> positions;
     std::vector<double> times;
-    positions.push_back(2);
-    positions.push_back(6);
-    positions.push_back(12);
+    positions.push_back(1.5);
+    positions.push_back(4);
+    positions.push_back(7.5);
     times.push_back(1);
     times.push_back(2);
     times.push_back(3);
     double velocity, acceleration, position0;
     getBestFitVelocityAndAcceleration(positions, times, velocity, acceleration, position0);
-    //std::cout << "position = " << position0 << " + " << velocity << "*t + " << acceleration << "*t^2" << std::endl;
+    //std::cout << "position = " << position0 << " + " << velocity << "*t + .5*" << acceleration << "*t^2" << std::endl;
     BOOST_CHECK(Eq(position0,    0));
     BOOST_CHECK(Eq(velocity,     1));
     BOOST_CHECK(Eq(acceleration, 1));    
@@ -1018,6 +1018,218 @@ BOOST_AUTO_TEST_CASE( linkTracklets_5 )
     BOOST_CHECK(expectedTracks.isSubsetOf(foundTracks));
 
 }
+
+
+
+
+
+BOOST_AUTO_TEST_CASE( linkTracklets_5_high_acc )
+{
+
+    // " << expectedTracks.size() << " tracks, following a coherent pattern but randomly perturbed.
+    TrackSet expectedTracks;
+    TrackSet implausibleTracks;
+    std::vector<MopsDetection> allDets;
+    std::vector<Tracklet> allTracklets;
+    unsigned int firstDetId = -1;
+    unsigned int firstTrackletId = -1;
+
+  
+    linkTrackletsConfig myConfig;
+    myConfig.leafSize=16;
+
+    myConfig.maxRAAccel = .02;
+    myConfig.maxDecAccel = .02;
+    
+    std::vector<std::vector<double> > imgTimes(3);
+
+    imgTimes.at(0).push_back(5300);
+    imgTimes.at(0).push_back(5300.01);
+
+    imgTimes.at(1).push_back(5315);
+    imgTimes.at(1).push_back(5315.01);
+
+    imgTimes.at(2).push_back(5330);
+    imgTimes.at(2).push_back(5330.01);
+
+
+    expectedTracks.insert(generateTrack(20., //location ra 
+                                        20., //location dec
+                                        .05, // v0 ra
+                                        .05, // v0 dec 
+                                        .0199, //ra acc
+                                        .0199, //dec acc
+                                        imgTimes, 
+                                        allDets, allTracklets, 
+                                        firstDetId, firstTrackletId));
+    
+    implausibleTracks.insert(generateTrack(10.,
+                                           10.,
+                                           .05,
+                                           .05,
+                                           .021,
+                                           .021,
+                                           imgTimes,
+                                           allDets, allTracklets,
+                                           firstDetId, firstTrackletId));
+
+    
+    TrackSet foundTracks = linkTracklets(allDets, allTracklets, myConfig);
+
+    BOOST_CHECK(expectedTracks.isSubsetOf(foundTracks));
+
+    BOOST_CHECK(!implausibleTracks.isSubsetOf(foundTracks));
+
+}
+
+
+
+
+
+BOOST_AUTO_TEST_CASE( linkTracklets_too_high_acc )
+{
+
+    // " << expectedTracks.size() << " tracks, following a coherent pattern but randomly perturbed.
+    TrackSet implausibleTracks;
+    std::vector<MopsDetection> allDets;
+    std::vector<Tracklet> allTracklets;
+    unsigned int firstDetId = -1;
+    unsigned int firstTrackletId = -1;
+
+  
+    linkTrackletsConfig myConfig;
+
+    myConfig.maxRAAccel = .02;
+    myConfig.maxDecAccel = .02;
+    
+    std::vector<std::vector<double> > imgTimes(3);
+
+    imgTimes.at(0).push_back(5300);
+    imgTimes.at(0).push_back(5300.01);
+
+    imgTimes.at(1).push_back(5315);
+    imgTimes.at(1).push_back(5315.01);
+
+    imgTimes.at(2).push_back(5330);
+    imgTimes.at(2).push_back(5330.01);
+
+
+    
+    implausibleTracks.insert(generateTrack(10.,
+                                           10.,
+                                           .05,
+                                           .05,
+                                           .021,
+                                           .021,
+                                           imgTimes,
+                                           allDets, allTracklets,
+                                           firstDetId, firstTrackletId));
+
+    
+    TrackSet foundTracks = linkTracklets(allDets, allTracklets, myConfig);
+
+
+    BOOST_CHECK(!implausibleTracks.isSubsetOf(foundTracks));
+
+}
+
+
+
+
+
+BOOST_AUTO_TEST_CASE( linkTracklets_5_1_plus_high_acc )
+{
+
+    // " << expectedTracks.size() << " tracks, following a coherent pattern but randomly perturbed.
+    TrackSet expectedTracks;
+    std::vector<MopsDetection> allDets;
+    std::vector<Tracklet> allTracklets;
+    unsigned int firstDetId = -1;
+    unsigned int firstTrackletId = -1;
+
+  
+    linkTrackletsConfig myConfig;
+
+    std::vector<std::vector<double> > imgTimes(3);
+
+    imgTimes.at(0).push_back(5300);
+    imgTimes.at(0).push_back(5300.03);
+
+    imgTimes.at(1).push_back(5305);
+    imgTimes.at(1).push_back(5305.03);
+
+    imgTimes.at(2).push_back(5312);
+    imgTimes.at(2).push_back(5312.03);
+
+    myConfig.leafSize = 1;
+
+    // seed the random number generator with a known value;
+    // this way the test will be identical on each run.
+    srand(2);
+
+    for (unsigned int i = 0; i < 200; i++) {
+
+        // get 6 floating point numbers between 0 and 1.
+        std::vector<double> someRands;         
+        for (unsigned int j = 0; j < 6; j++) {
+            someRands.push_back( (double) rand() / RAND_MAX );
+        }
+        //generate a random permutation on this track.
+        expectedTracks.insert(generateTrack(20. + someRands[0] * 10., //location 
+                                            20. + someRands[1] * 10., //location
+                                            (someRands[2] - .1) * 2., //1 in 10 chance of retrograde, maxv 2
+                                            (someRands[3] - .5) * .5, // maxv .5 in dec 
+                                            (someRands[4]) * .0019, //max acc of .0019, always positive
+                                            (someRands[5]) * .0019, //same
+                                            imgTimes, 
+                                            allDets, allTracklets, 
+                                            firstDetId, firstTrackletId));
+
+    }
+
+    // add a fast mover, too
+    expectedTracks.insert(generateTrack(20., //location ra 
+                                        20., //location dec
+                                        .05, // v0 ra
+                                        .05, // v0 dec 
+                                        .0199, //ra acc
+                                        .0199, //dec acc
+                                        imgTimes, 
+                                        allDets, allTracklets, 
+                                        firstDetId, firstTrackletId));
+
+    // add a fast mover, too
+    expectedTracks.insert(generateTrack(20., //location ra 
+                                        20., //location dec
+                                        .05, // v0 ra
+                                        .05, // v0 dec 
+                                        -.0199, //ra acc
+                                        -.0199, //dec acc
+                                        imgTimes, 
+                                        allDets, allTracklets, 
+                                        firstDetId, firstTrackletId));
+
+    struct tm * timeinfo;
+    time_t rawtime;
+    
+    time ( &rawtime );
+    timeinfo = localtime ( &rawtime );                    
+    
+    std::cout << "Generated " << expectedTracks.size() << " tracks. Calling linkTracklets ";
+    std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
+
+    TrackSet foundTracks = linkTracklets(allDets, allTracklets, myConfig);
+
+    time ( &rawtime );
+    timeinfo = localtime ( &rawtime );                    
+    
+    std::cout << "got " << foundTracks.size() << " results, checking if they contain the true tracks ";
+    std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
+
+    BOOST_CHECK(expectedTracks.isSubsetOf(foundTracks));
+
+}
+
 
 
 

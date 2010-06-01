@@ -35,6 +35,8 @@ public:
             minDetectionsPerTrack = 6;
 
             velocityErrorThresh = .00025;
+
+            leafSize=8;
         }
 
     /* acceleration terms are in degrees/(day^2)
@@ -102,6 +104,12 @@ public:
       between *actual* velocity and best-fit velocity, measured in deg/day.
      */
     double velocityErrorThresh;
+
+    /* 
+       max # tracklets per each leaf node of the tree. Affects performance but
+       should not affect correctness.
+     */
+    unsigned int leafSize;
 
 };
 

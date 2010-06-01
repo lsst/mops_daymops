@@ -16,9 +16,6 @@
 
 #include "lsst/mops/daymops/linkTracklets/lruCache.h"
 
-//#define LEAF_SIZE 1024
-//#define LEAF_SIZE 256
-#define LEAF_SIZE 16  //based on unit tests, this seemed to be the fastest.
 
 
 #define CACHE_SIZE 100000
@@ -433,9 +430,10 @@ MopsDetection getFirstDetectionForTracklet(const std::vector<MopsDetection> &all
 
 void makeTrackletTimeToTreeMap(const std::vector<MopsDetection> &allDetections,
                                const std::vector<Tracklet> &queryTracklets,
-                               std::map<ImageTime, KDTree <unsigned int> > &newMap)
+                               std::map<ImageTime, KDTree <unsigned int> > &newMap,
+                               linkTrackletsConfig myConf)
 {
-    bool printDebug = true;
+    bool printDebug = false;
     if (printDebug) {
         std::cout << "Sorting tracklets by \"root\" time. We have  " << allDetections.size() 
                   << " detections and " << queryTracklets.size() << " trakclets.\n";
@@ -481,14 +479,14 @@ void makeTrackletTimeToTreeMap(const std::vector<MopsDetection> &allDetections,
     for (PAVIter = allTrackletPAVsMap.begin(); PAVIter != allTrackletPAVsMap.end(); PAVIter++) {
 
 
-        KDTree<unsigned int> curTree(PAVIter->second, 4, LEAF_SIZE);
+        KDTree<unsigned int> curTree(PAVIter->second, 4, myConf.leafSize);
         newMap[ImageTime(PAVIter->first, curImageID)] = curTree;
 
         if (printDebug) {
             std::cout << " image time " << PAVIter->first << " (with ID = " << curImageID << ") had " 
                       << PAVIter->second.size() << " tracklets, generating a tree of size " 
                       << curTree.size() << std::endl;
-            std::cout << "    with leaf node size = " << LEAF_SIZE << ", and an average leaf size of about " 
+            std::cout << "    with leaf node size = " << myConf.leafSize << ", and an average leaf size of about " 
                       << PAVIter->second.size() * 2. / curTree.size() << std::endl;
         }
 
@@ -1059,7 +1057,7 @@ void getBestFitVelocityAndAcceleration(std::vector<double> positions, const std:
     gsl_multifit_linear(X, y, c, covariance, &chiSquared, work);
     position0    = gsl_vector_get(c,0);
     velocity     = gsl_vector_get(c,1);
-    acceleration = gsl_vector_get(c,2);
+    acceleration = 2 * gsl_vector_get(c,2); // we need to multiply by 2 due to the 1/2 part of 1/2 at^2 
 
     gsl_vector_free(y);
     gsl_matrix_free(X);
@@ -1180,8 +1178,8 @@ void addBestCompatibleTrackletsAndDetectionsToTrack(const std::vector<MopsDetect
             double detRA  = allDetections.at(*detectionIDIter).getRA();
             double detDec = allDetections.at(*detectionIDIter).getDec();
             double timeOffset = detMJD - time0;
-            double predRA  = RAPosition0 + RAVelocity*timeOffset + RAAcceleration*timeOffset*timeOffset;
-            double predDec = DecPosition0 + DecVelocity*timeOffset + DecAcceleration*timeOffset*timeOffset;
+            double predRA  = RAPosition0 + RAVelocity*timeOffset + .5 * RAAcceleration*timeOffset*timeOffset;
+            double predDec = DecPosition0 + DecVelocity*timeOffset + .5 * DecAcceleration*timeOffset*timeOffset;
 
             double decDistance = fabs(detDec - predDec);
             // filter on dec distance, which is easy to compute, before trying the angular distance.
@@ -1261,6 +1259,10 @@ bool trackMeetsRequirements(const std::vector<MopsDetection> & allDetections,
         meetsReqs = false;
     }
 
+    if ((RAAcceleration > searchConfig.maxRAAccel) || (DecAcceleration > searchConfig.maxDecAccel)) {
+        meetsReqs = false;
+    }
+
     trackMeetsRequirementsTime += timeSince(start);
     return meetsReqs;
     
@@ -1323,8 +1325,8 @@ bool endpointTrackletsAreCompatible(const std::vector<MopsDetection> & allDetect
              detIter++) {
             double detMJD = allDetections.at(*detIter).getEpochMJD();
             double timeOffset = detMJD - time0;
-            double RAPred = RAPosition0 + RAVelocity*timeOffset + RAAcceleration*timeOffset*timeOffset;
-            double DecPred = DecPosition0 + DecVelocity*timeOffset + DecAcceleration*timeOffset*timeOffset;
+            double RAPred = RAPosition0 + RAVelocity*timeOffset + .5 * RAAcceleration*timeOffset*timeOffset;
+            double DecPred = DecPosition0 + DecVelocity*timeOffset + .5 * DecAcceleration*timeOffset*timeOffset;
             double observedRA = allDetections.at(*detIter).getRA();
             double observedDec = allDetections.at(*detIter).getDec();
             double distanceError = 
@@ -1486,6 +1488,12 @@ void buildTracksAddToResults(const std::vector<MopsDetection> &allDetections,
                                            time0,searchConfig)) {
                     results.insert(newTrack);
                 }
+
+                if ((RACE_TO_MAX_COMPATIBLE == true) && (compatibleEndpointsFound >= MAX_COMPATIBLE_TO_FIND)) {
+                    debugPrintTimingInfo(results);
+                    exit(0);
+                }
+
             }
         }    
     }
@@ -1496,10 +1504,6 @@ void buildTracksAddToResults(const std::vector<MopsDetection> &allDetections,
     << " spent on choosing support detections." << std::endl;*/
     buildTracksAddToResultsTime += timeSince(start);
 
-    if ((RACE_TO_MAX_COMPATIBLE == true) && (compatibleEndpointsFound >= MAX_COMPATIBLE_TO_FIND)) {
-        debugPrintTimingInfo(results);
-        exit(0);
-    }
 }
 
 
@@ -1747,7 +1751,7 @@ void doLinkingRecurse2(const std::vector<MopsDetection> &allDetections,
         std::cout << "After filtering support nodes, we now have " << newSupportNodes.size() 
         <<  " support nodes." << std::endl;*/
         
-            std::vector<TreeNodeAndTime>::const_iterator supportIter;
+        std::vector<TreeNodeAndTime>::const_iterator supportIter;
         for (supportIter = newSupportNodes.begin(); supportIter != newSupportNodes.end(); supportIter++) {
             uniqueSupportMJDs.insert(supportIter->myTime.getMJD());
         }
@@ -1772,14 +1776,14 @@ void doLinkingRecurse2(const std::vector<MopsDetection> &allDetections,
                 // we checked for compatibility, then split off the children. of course, buildTracksAddToResults won't 
                 // be affected with regards to correctness, just performance. So it may not even be wise to add a
                 // mostly-needless check.
-                std::cout << "Calling buildTracksAddToResults\n";
-                double buildTracksStart = std::clock();
-                unsigned int numResults = results.size();
+                //std::cout << "Calling buildTracksAddToResults\n";
+                //double buildTracksStart = std::clock();
+                //unsigned int numResults = results.size();
                 buildTracksAddToResults(allDetections, allTracklets, searchConfig,
                                         firstEndpoint, secondEndpoint, newSupportNodes,
                                         results);
-                std::cout << "Brute-force track building took " << timeSince(buildTracksStart) << " sec.";
-                std::cout << "Found " << results.size() - numResults << " new tracks. Exiting." << std::endl;
+                //std::cout << "Brute-force track building took " << timeSince(buildTracksStart) << " sec.";
+                //std::cout << "Found " << results.size() - numResults << " new tracks. Exiting." << std::endl;
             }
             else  {
                
@@ -1985,7 +1989,7 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
      * doLinking, we start the searching with the head (i.e. root) node of each
      * tree.
      */
-    bool DEBUG = true;
+    bool DEBUG = false;
 
     bool limitedRun = false;
     double limitedRunFirstEndpoint =  49616.273436000003 ;
@@ -2143,7 +2147,7 @@ TrackSet linkTracklets(const std::vector<MopsDetection> &allDetections,
     setTrackletVelocities(allDetections, queryTracklets);
     //std::cout << "Building trees on tracklets.\n";
     std::map<ImageTime, KDTree <unsigned int> > trackletTimeToTreeMap;    
-    makeTrackletTimeToTreeMap(allDetections, queryTracklets, trackletTimeToTreeMap);
+    makeTrackletTimeToTreeMap(allDetections, queryTracklets, trackletTimeToTreeMap, searchConfig);
     //std::cout << "Beginning the linking process.\n";
     doLinking(allDetections, queryTracklets, searchConfig, trackletTimeToTreeMap, toRet);
     

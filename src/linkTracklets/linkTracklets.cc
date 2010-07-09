@@ -1368,6 +1368,7 @@ bool endpointTrackletsAreCompatible(const std::vector<MopsDetection> & allDetect
 
 
 
+
 /*
  * this is called when all endpoint nodes (i.e. model nodes) and support nodes
  * are leaves.  model nodes and support nodes are expected to be mutually compatible.
@@ -1413,7 +1414,19 @@ void buildTracksAddToResults(const std::vector<MopsDetection> &allDetections,
         for (secondEndpointIter = secondEndpoint.myTree->getMyData()->begin();
              secondEndpointIter != secondEndpoint.myTree->getMyData()->end();
              secondEndpointIter++) {
+            
+            std::set<unsigned int>::const_iterator notFound = 
+                allTracklets.at(firstEndpointIter->getValue()).indices.end();
+            std::set<unsigned int>::const_iterator notFound2 = 
+                allTracklets.at(secondEndpointIter->getValue()).indices.end();
 
+            if ((allTracklets.at(firstEndpointIter->getValue()).indices.find(2) != notFound) &&
+                (allTracklets.at(firstEndpointIter->getValue()).indices.find(74408) != notFound) &&
+                (allTracklets.at(secondEndpointIter->getValue()).indices.find(130073) != notFound2) &&
+                (allTracklets.at(secondEndpointIter->getValue()).indices.find(132286) != notFound2))
+                {
+                    std::cout << "Might want to attach a debugger, things are gonna get weird\n";
+                }
 
             /* figure out the rough quadratic track fitting the two endpoints.
              * if error is too large, quit. Otherwise, choose support points

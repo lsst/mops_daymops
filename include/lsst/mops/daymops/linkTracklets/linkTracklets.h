@@ -34,9 +34,10 @@ public:
             quadraticFitErrorThresh = 0.;
             minDetectionsPerTrack = 6;
 
-            velocityErrorThresh = .00025;
+            // .002 * 2 / (30 min in days) = .192 deg/day
+            velocityErrorThresh = .192;
 
-            leafSize=8;
+            leafSize=16;
         }
 
     /* acceleration terms are in degrees/(day^2)
@@ -62,6 +63,8 @@ public:
      *
      * used in tree calculations to determine the maximum feasible error of a tracklet's velocity.
      * should be >= detectionLocationErrorThresh * 2.0  / max time between any two images.
+     *
+     * JMYERS: No, wait, shouldn't it be detectionLocationErrorThresh * 2.0 / __MIN__ time between any two images?
      */
     double trackletVelocityErrorThresh;
 

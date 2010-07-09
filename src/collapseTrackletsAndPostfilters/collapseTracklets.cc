@@ -473,10 +473,16 @@ namespace lsst {
         double RAv = RASlopeAndOffset[0];
         double Decv = DecSlopeAndOffset[0];
         double velocity = sqrt(pow(RAv, 2) + pow(Decv, 2));
-        physicalParams[3] = velocity;
-        double sineOfTheta = Decv/velocity;
-        double theta = asin(sineOfTheta) * (360./(2*M_PI));
-        physicalParams[2] = convertToStandardDegrees(theta);
+        if (velocity != 0) {
+            physicalParams[3] = velocity;
+            double sineOfTheta = Decv/velocity;
+            double theta = asin(sineOfTheta) * (360./(2*M_PI));
+            physicalParams[2] = convertToStandardDegrees(theta);
+        }
+        else {
+            physicalParams[3] = 0;
+            physicalParams[2] = 0;
+        }
     }
 
 

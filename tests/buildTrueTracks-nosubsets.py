@@ -37,10 +37,12 @@ DEBUG=False
 
 
 class Detection(object):
-    def __init__(self, time, ra, dec):
+    def __init__(self, time, ra, dec, detId=None, objId=None):
         self.time = time
         self.ra = ra
         self.dec = dec
+        self.detId = detId
+        self.objId = objId
 
 
 
@@ -84,7 +86,7 @@ def isFindableFromTimes(times, minPerNight=2):
 def writeTracks(objectDets, velocityLimit, trackletTimeLimit,
                 trackletMinTime,
                 raAccelerationLimit, decAccelerationLimit,
-                linkTrackletsTimeWindow, outfile):
+                linkTrackletsTimeWindow, outfile, findableOutfile):
     """
     objectDets: a list of Detections attributable to the SAME, SINGLE
     object.
@@ -143,11 +145,17 @@ def writeTracks(objectDets, velocityLimit, trackletTimeLimit,
             for det in objectDets:
                 print det.time, det.ra, det.dec
 
-    #TBD: write to output...?
+    #write tracks for this object...
+    writeTracksToFile(objectDets, tracks, tracksOutfile)
+
+    if len(tracks) > 0:
+        objName = objectDets[tracks[0][0][0]].objId
+        findableOutfile.write(objName + "\n")
+
     trackletStartTimes = []
     for track in tracks:
         for tracklet in track:
-            trackletStartTimes.append(objectDets[tracklet[0]])
+            trackletStartTimes.append(objectDets[tracklet[0]].time)
     return len(tracks), trackletStartTimes
 
 
@@ -164,6 +172,26 @@ def trackletDecVelocity(objectDets, tracklet):
         (objectDets[tracklet[0]].time - objectDets[tracklet[1]].time)
 
 
+
+
+def writeTracksToFile(objDets, tracks, tracksOutfile):
+    for track in tracks:
+        detIds = []
+        objName = None
+        for tracklet in track:
+            for detIndex in tracklet:
+                detIds.append(objDets[detIndex].detId)
+                newObjName = objDets[detIndex].objId
+                if objName is None:
+                    objName = newObjName
+                if objName != newObjName:
+                    print "ERROR: in writeTracksToFile: found invalid track?!"
+                    print "Cur detection is from ", newObjName, " other detection was from ", objName
+                    print "All dets so far are: ", detIds
+                    sys.exit(1)
+        for detId in detIds:
+            tracksOutfile.write("%s " % detId)
+        tracksOutfile.write(" sourceObject=%s\n" % objName)
 
 
 
@@ -253,9 +281,7 @@ def linkTracklets(objectDets, tracklets, raAccLimit, decAccLimit, timeWindow):
         #for t in tracks:
         #    print t
 
-    #print "Final set of tracks for this object:"
-    #for t in tracks:
-    #    print t
+    
     return tracks
 
             
@@ -295,10 +321,11 @@ if __name__ == "__main__":
     [velocityLimit, trackletTimeLimit, trackletMinTime] = map(float, sys.argv[1:4])
     [raAccelerationLimit, decAccelerationLimit] = map(float, sys.argv[4:6])
     linkTrackletsTimeWindow = float(sys.argv[6])
-    [infile, outfile] = sys.argv[7:]
+    [infile, tracksOutfile, findableObjects] = sys.argv[7:]
 
     infile = open(infile, 'r')
-    outfile = open(outfile, 'w')
+    tracksOutfile = open(tracksOutfile, 'w')
+    findableOutfile = open(findableObjects, 'w')
 
     print "Got tracklet velocity limit:              %f" % velocityLimit
     print "Got tracklet min time lmit:               %f" % trackletMinTime
@@ -306,6 +333,9 @@ if __name__ == "__main__":
     print "Got track Ra Acc. limit:                  %f" % raAccelerationLimit
     print "Got trac Dec Acc. limit:                  %f" % decAccelerationLimit
     print "Got track time window:                    %f" % linkTrackletsTimeWindow
+    
+    print "Writing tracks, as sets of det IDs, to    %s" % tracksOutfile
+    print "Writing findable object IDs to            %s" % findableOutfile
 
     line = infile.readline().split()
 
@@ -318,9 +348,14 @@ if __name__ == "__main__":
 
     while line != []:
 
-        curObject = line[0]
-        [mjd, ra, dec] = map(float, line[1:4])
-        d = Detection(mjd, ra, dec)
+        #modified version uses MITI input
+        curObject = line[6]
+        mjd = line[1]
+        ra = line[2]
+        dec = line[3]
+        detId = line[0]
+
+        d = Detection(float(mjd), float(ra), float(dec), detId=detId, objId=curObject)
         curObjectData.append(d)
 
         nextLine = infile.readline().split()
@@ -329,7 +364,7 @@ if __name__ == "__main__":
         #check whether this was the last line containing this object's data
         if nextLine == []:
             done = True
-        elif nextLine[0] != curObject:
+        elif nextLine[6] != curObject:
             done = True
 
         if done:
@@ -337,10 +372,17 @@ if __name__ == "__main__":
             nObjects += 1
             #if nObjects == 48:
             #    DEBUG=True
+            #print "Found object with ", len(curObjectData), " detections."
+            #for data in curObjectData:
+            #    print "Got object with ID, MJD, ra, dec, detId: "
+            #    print data.objId, data.time, data.ra, data.dec, data.detId
+            #sys.exit(1)
+            
+
             nTracks, trackletStartTimes = writeTracks(curObjectData, velocityLimit, trackletTimeLimit,
                                                       trackletMinTime,
                                                       raAccelerationLimit, decAccelerationLimit,
-                                                      linkTrackletsTimeWindow, outfile)
+                                                      linkTrackletsTimeWindow, tracksOutfile, findableOutfile)
             for trackletStartTime in trackletStartTimes:
                 if imgTimesToTrackCounts.has_key(trackletStartTime):
                     imgTimesToTrackCounts[trackletStartTime] += 1

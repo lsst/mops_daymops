@@ -263,7 +263,7 @@ def orbitDetermination(track,
      G, 
      elTypeId] = list(res[0])
     return(Orbit.Orbit(q=(1. - e) * a,
-                       e=a,
+                       e=e, # changed by jmyers - we were previously setting e=a for some reason. We've tested and are fairly certain this was wrong.
                        i=i,
                        node=node,
                        argPeri=argPeri,

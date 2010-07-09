@@ -525,6 +525,8 @@ KDTreeNode<T>::hyperRectangleSearch(const std::vector<double> &queryPt,
                 (myLBounds[i] != convertToStandardDegrees(myLBounds[i]))
                 ||
                 (queryPt[i] != convertToStandardDegrees(queryPt[i]))) {
+                std::cerr << "Requested values: " << myUBounds[i] << ", " 
+                          << myLBounds[i] << " " << queryPt[i] << " and i == " << i << std::endl;
                 throw LSST_EXCEPT(BadParameterException,  
                                   "KDTreeNode: Data error: got that dimension is of type CIRCULAR_DEGREES but data and/or query do not lie along [0,360).");
             }

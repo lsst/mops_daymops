@@ -31,6 +31,7 @@ one tracklet per detection.
 
 import numpy
 import time
+import os
 
 DEBUG=False
 
@@ -110,7 +111,11 @@ def writeTracks(objectDets, velocityLimit, trackletTimeLimit,
     nights if they are >= .5 days apart).  Write these to outfile.
 
     return the number of tracks generated for this object.
+
+    apr. 27: also, return tracklet start times for all tracklets in
+    some track
     """
+    
     if DEBUG:
         print "Saw another object with detections:"
         for i in objectDets:
@@ -132,7 +137,7 @@ def writeTracks(objectDets, velocityLimit, trackletTimeLimit,
     
     tracks = linkTracklets(objectDets, tracklets, raAccelerationLimit, decAccelerationLimit,
                            linkTrackletsTimeWindow)
-    if DEBUG:
+    if DEBUG: 
         print "got tracks: ", tracks
         if (len(tracks) == 0):
             print "Could not find object with dets: "
@@ -141,7 +146,17 @@ def writeTracks(objectDets, velocityLimit, trackletTimeLimit,
 
     #TBD: write to output...?
 
-    return len(tracks)
+    trackletStartTimes = []
+    for track in tracks:
+        thisTrackStartTimes = []
+        for tracklet in track:
+            thisTrackStartTimes.append(objectDets[tracklet[0]].time)
+        trackletStartTimes.append(thisTrackStartTimes)
+
+    #if len(tracks) > 0 :
+    #    print tracks
+    #    print trackletStartTimes
+    return len(tracks), trackletStartTimes
 
 
 
@@ -171,6 +186,9 @@ def linkTracklets(objectDets, tracklets, raAccLimit, decAccLimit, timeWindow):
     #consider every tracklet as a starting point, just like real linkTracklets
     for i in range(len(tracklets)):
 
+        if DEBUG == True:
+            print "Looking for tracks starting at tracklet #", i, " of ", len(tracklets)
+
         startTracklet = tracklets[i]
         startTime = objectDets[startTracklet[0]].time
 
@@ -192,10 +210,10 @@ def linkTracklets(objectDets, tracklets, raAccLimit, decAccLimit, timeWindow):
                 # >=3 nights; for now only worry about the time window.
                 timeCompatibleTracklets.append(tracklets[j])
 
-        if DEBUG:
-            print "time-compatible tracklets:"
-            for t in timeCompatibleTracklets:
-                print [[objectDets[t[z]].time, objectDets[t[z]].ra, objectDets[t[z]].dec] for z in [0,1]]
+        #if DEBUG:
+        #    print "time-compatible tracklets:"
+        #    for t in timeCompatibleTracklets:
+        #        print [[objectDets[t[z]].time, objectDets[t[z]].ra, objectDets[t[z]].dec] for z in [0,1]]
                 
         accCompatibleTracklets  = [ ]
 
@@ -212,10 +230,10 @@ def linkTracklets(objectDets, tracklets, raAccLimit, decAccLimit, timeWindow):
                     accCompatibleTracklets.append(timeCompatibleTracklets[j])
                 #else:
                 #    print "found object accelerating too quickly: %f deg/day/day" % impliedAcc
-        if DEBUG:
-            print "time + acc compatible tracklets:"
-            for t in accCompatibleTracklets:
-                print [[objectDets[t[z]].time, objectDets[t[z]].ra, objectDets[t[z]].dec] for z in [0,1]]
+        #if DEBUG:
+        #    print "time + acc compatible tracklets:"
+        #    for t in accCompatibleTracklets:
+        #        print [[objectDets[t[z]].time, objectDets[t[z]].ra, objectDets[t[z]].dec] for z in [0,1]]
 
         #new version: 
         # only find maximal tracks. Since we don't bother to account for 
@@ -281,6 +299,16 @@ def findTracklets(objectDets, velocityLimit, trackletTimeLimit, trackletMinTime)
 
 
 
+def increment(d, key):
+    if d.has_key(key):
+        d[key] += 1
+    else:
+        d[key] = 1
+
+
+def inRangeNonInclusive(t, a, b):
+    return t > a and t < b
+
 
 if __name__ == "__main__":
     import sys
@@ -307,6 +335,14 @@ if __name__ == "__main__":
     nObjects = 0
     nTrackGeneratingObjects = 0
 
+    imgTimesToTrackCounts = {}
+    imgTimesToLastEndpointCounts = {}
+    imgTimesToFirstEndpointCounts = {}
+    
+    #timeWindowDicts[x][y] == number of tracks which start on night y and have a valid second endpoint on night x
+    timeWindowDicts = {10:{}, 11:{}, 12:{}, 13:{}, 14:{}, 15:{}, 16:{}, 17:{}, 18:{}, 19:{}, 20:{}}
+
+    statusLog = file('/tmp/buildTrueTracs-nosubsets.py' + str(os.getpid()) + '_progress.log', 'a')
     while line != []:
 
         curObject = line[0]
@@ -326,12 +362,48 @@ if __name__ == "__main__":
         if done:
             #we've finished reading data for one object into curObjectData.
             nObjects += 1
-            #if nObjects == 48:
-            #    DEBUG=True
-            nTracks = writeTracks(curObjectData, velocityLimit, trackletTimeLimit,
-                                  trackletMinTime,
-                                  raAccelerationLimit, decAccelerationLimit,
-                                  linkTrackletsTimeWindow, outfile)
+            statusLog.write("working on object " + str(nObjects) + "\n")
+            statusLog.flush()
+            print "Working on object", nObjects
+            LOCALDEBUG=False
+            if nObjects == 1855:
+                LOCALDEBUG=True
+
+            nTracks, allTrackletStartTimes = writeTracks(curObjectData, velocityLimit, trackletTimeLimit,
+                                                         trackletMinTime,
+                                                         raAccelerationLimit, decAccelerationLimit,
+                                                         linkTrackletsTimeWindow, outfile)
+            if LOCALDEBUG:
+                print "Got ", len(allTrackletStartTimes), " tracks."
+            for trackletStartTimes in allTrackletStartTimes:                
+                if LOCALDEBUG:
+                    print "Working on track with ", len(trackletStartTimes), " tracklets."
+                trackletsSoFar = 0
+                for trackletStartTime in trackletStartTimes:                
+                    trackletsSoFar += 1
+                    increment(imgTimesToTrackCounts, trackletStartTime)
+                    nTracklets = len(trackletStartTimes)
+
+                    if nTracklets < 3:
+                        print "SOMETHING WEIRD: LESS THAN THREE TRACKLETS IN TRACK!"
+                    else:
+                        if trackletsSoFar >= 2:
+                            increment(imgTimesToLastEndpointCounts, trackletStartTime)
+                        if trackletsSoFar <= nTracklets - 2:
+                            increment(imgTimesToFirstEndpointCounts, trackletStartTime)
+                        
+                trackletStartNights = sorted(map(nightNumFromMJD,  trackletStartTimes))
+                for night in trackletStartNights:                                                
+                    for offset in range(10,21):
+                        #print "night + offset = ", night+offset
+                        if night + offset in trackletStartNights:
+                            #print "     found track starting at", night, " ending at ", night + offset
+                            intermediateNights = filter(lambda x: inRangeNonInclusive(x, night, night + offset), trackletStartNights)
+                            #print "      intermediate nights were ", intermediateNights
+                            if (len(intermediateNights)) > 0:
+                                #print "      it DID have an intermediate night"
+                                increment(timeWindowDicts[offset], night)
+                        
             curObjectData = []
             if nTracks > 0:
                 nTrackGeneratingObjects += 1
@@ -349,3 +421,20 @@ if __name__ == "__main__":
     print "of %i objects, %i generated tracks (%f%%)" % \
         (nObjects, nTrackGeneratingObjects, nTrackGeneratingObjects*100./nObjects)
         
+    print "Image times with viable start tracklets for some track: "
+    for imgTime in sorted(imgTimesToTrackCounts.keys()):
+        print imgTime, " : ", imgTimesToTrackCounts[imgTime], " tracks contained a tracklet rooted in this image."
+
+        if imgTimesToFirstEndpointCounts.has_key(imgTime):
+            print "\t", imgTimesToFirstEndpointCounts.has_key(imgTime), " tracks could start with a tracklet rooted in this image."
+
+        if imgTimesToLastEndpointCounts.has_key(imgTime):
+            print "\t", imgTimesToLastEndpointCounts.has_key(imgTime), " tracks could end with a tracklet rooted in this image."
+
+    print ""
+    print ""
+
+    for timeWindow in range(10, 20):
+        for startNight in sorted(timeWindowDicts[timeWindow].keys()):
+            print "There are ", timeWindowDicts[timeWindow][startNight], " plausible tracks starting on night ", startNight, " and ending on night ", startNight + timeWindow
+        print ""

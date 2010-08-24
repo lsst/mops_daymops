@@ -1,7 +1,0 @@
-#<?cfg paf policy ?>
-# Default DB access policy file
-# All angles in degrees!
-database: "mysql://localhost:3306/mops_onelunation"
-#
-
-

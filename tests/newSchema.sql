@@ -16,12 +16,13 @@
 -- By convention, we will always use the same DiaSourceID as the full,
 -- heavyweight DiaSource stored by the rest of LSST.
 
-DROP TABLE IF EXISTS _mops_nightlyDiaSources; 
+DROP TABLE IF EXISTS _mops_nightlyDiaSource; 
 
-CREATE TABLE _mops_nightlyDiaSources
+CREATE TABLE _mops_nightlyDiaSource
 (
 	diaSourceId BIGINT NOT NULL PRIMARY KEY,
 	objectId BIGINT NULL,
+	groundTruthMovingObjectId BIGINT NULL,
 	movingObjectId BIGINT NULL,
 
 	ra DOUBLE NOT NULL,
@@ -48,18 +49,18 @@ CREATE TABLE mops_nightNumToNightlyDiaSourceTableName
 
 -- templates for tables which define tracklets from ONE NIGHT.  Expect
 -- one table per every night of observation.  Look up the correct
--- table name using mops_nightNumToNightlyTrackletToDIASource
+-- table name using mops_nightNumToNightlyTrackletToDiaSource
 
 
-DROP TABLE IF EXISTS _mops_nightlyTrackletToDIASource;
+DROP TABLE IF EXISTS _mops_nightlyTrackletToDiaSource;
 
-CREATE TABLE _mops_nightlyTrackletToDIASource
+CREATE TABLE _mops_nightlyTrackletToDiaSource
 (
 	trackletId BIGINT NOT NULL,
 	diaSourceId BIGINT NOT NULL,
 	PRIMARY KEY (trackletId, diaSourceId),
-	INDEX idx_mopsTrackletToDIASource_diaSourceId (diaSourceId ASC),
-	INDEX idx_mopsTrackletToDIASource_trackletId (trackletId ASC),
+	INDEX idx_mopsTrackletToDiaSource_diaSourceId (diaSourceId ASC),
+	INDEX idx_mopsTrackletToDiaSource_trackletId (trackletId ASC),
 	KEY (trackletId)
 ) ;
 
@@ -78,7 +79,7 @@ CREATE TABLE _mops_nightlyTracklet
 
 
 -- maps night number to name of the correct
--- mops_nightlyTrackletToDIASource table and mops_Tracklet table for
+-- mops_nightlyTrackletToDiaSource table and mops_Tracklet table for
 -- the given night number
 
 DROP TABLE IF EXISTS mops_nightNumToNightlyTrackletTableNames;
@@ -97,17 +98,18 @@ CREATE TABLE mops_nightNumToNightlyTrackletTableNames
 
 -- templates for tables which define tracks from ONE NIGHT.  Expect one
 -- table per every night of observation.  Look up the correct table
--- name using mops_nightNumToNightlyTrackletToDIASource
+-- name using mops_nightNumToNightlyTrackletToDiaSource
 
-DROP TABLE IF EXISTS _mops_nightlyTrackToDIASource;
+DROP TABLE IF EXISTS _mops_nightlyTrackToDiaSource;
 
-CREATE TABLE _mops_nightlyTrackToDIASource
+CREATE TABLE _mops_nightlyTrackToDiaSource
 (
 	trackId BIGINT NOT NULL,
 	diaSourceId BIGINT NOT NULL,
+	diaSourceNightNum INTEGER NOT NULL,
 	PRIMARY KEY (trackId, diaSourceId),
-	INDEX idx_mopsTrackToDIASource_diaSourceId (diaSourceId ASC),
-	INDEX idx_mopsTrackToDIASource_TrackId (diaSourceId ASC)
+	INDEX idx_mopsTrackToDiaSource_diaSourceId (diaSourceId ASC),
+	INDEX idx_mopsTrackToDiaSource_TrackId (diaSourceId ASC)
 ) ;
 
 DROP TABLE IF EXISTS _mops_nightlyTrack;
@@ -124,7 +126,7 @@ CREATE TABLE _mops_nightlyTrack
 ) ;
 
 
--- maps night number to name of the correct mops_nightlyTrackletsToDIASource
+-- maps night number to name of the correct mops_nightlyTrackletsToDiaSource
 
 DROP TABLE IF EXISTS mops_nightNumToNightlyTrackTableNames;
 

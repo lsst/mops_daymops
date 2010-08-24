@@ -1420,14 +1420,6 @@ void buildTracksAddToResults(const std::vector<MopsDetection> &allDetections,
             std::set<unsigned int>::const_iterator notFound2 = 
                 allTracklets.at(secondEndpointIter->getValue()).indices.end();
 
-            if ((allTracklets.at(firstEndpointIter->getValue()).indices.find(2) != notFound) &&
-                (allTracklets.at(firstEndpointIter->getValue()).indices.find(74408) != notFound) &&
-                (allTracklets.at(secondEndpointIter->getValue()).indices.find(130073) != notFound2) &&
-                (allTracklets.at(secondEndpointIter->getValue()).indices.find(132286) != notFound2))
-                {
-                    std::cout << "Might want to attach a debugger, things are gonna get weird\n";
-                }
-
             /* figure out the rough quadratic track fitting the two endpoints.
              * if error is too large, quit. Otherwise, choose support points
              * from the support nodes, using best-fit first, and ignoring those

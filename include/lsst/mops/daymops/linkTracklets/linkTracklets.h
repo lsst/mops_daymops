@@ -25,19 +25,26 @@ class linkTrackletsConfig {
 public:
 
     linkTrackletsConfig() 
-        {   maxRAAccel = .02; 
-            maxDecAccel = .02; 
-            detectionLocationErrorThresh = .002; 
+        {   maxRAAccel = .02; // consistent with 99% of MBOs
+            maxDecAccel = .02;  // consistent with 99% of MBOs
+            detectionLocationErrorThresh = 8.3e-5; // .3 arcseconds = 8.3e-5 degrees
             minEndpointTimeSeparation = 2; 
             minSupportToEndpointTimeSeparation = .5;
             minSupportTracklets = 1;
-            quadraticFitErrorThresh = 0.;
+            quadraticFitErrorThresh = 0.; // be optimistic for now...
             minDetectionsPerTrack = 6;
 
-            // .002 * 2 / (30 min in days) = .192 deg/day
-            velocityErrorThresh = .192;
+            // Kubica sets vtree_thresh to .0002 degrees and it's fast and accurate enough
+            // This corresponds to a velocityErrorThresh of : 
+            // .0002 degrees * 2 / (30 min in days) = .0192 deg/day 
+            velocityErrorThresh = .0192;
 
             leafSize=16;
+
+            restrictTrackStartTimes = false;
+            latestFirstEndpointTime = -1;
+            restrictTrackEndTimes = false;
+            earliestLastEndpointTime = -1;
         }
 
     /* acceleration terms are in degrees/(day^2)
@@ -48,7 +55,23 @@ public:
     double maxRAAccel;
     double maxDecAccel;
 
+    /* 
+       if you will perform repeated runs, it may be wise to look for tracks
+       which start or end on a limited set of nights or times.
 
+       If you'd like to restrict linkTracklets to finding only tracks which
+       start at or before time X, set restrictTrackStarTimes to true and
+       latestFirstEndpointTime to X.
+
+       if you'd like to look only for tracks which *end* after time Y (that is,
+       their final endpoint tracklet begins on time Y or later) then set
+       restrictTrackEndTimes to true and set earliestLastEndpointTime to Y.
+     */
+    bool restrictTrackStartTimes;
+    double latestFirstEndpointTime;
+
+    bool restrictTrackEndTimes;
+    double earliestLastEndpointTime;
 
     /* detection error thresh is the upper bound on observational error for
        Detections; this has repercussions for what Detections are included in a

@@ -17,7 +17,12 @@
 #include "lsst/mops/daymops/linkTracklets/lruCache.h"
 
 
-
+/* since it is expensive to compute the compatible ranges of
+ * position/velocity-space associated with each tree node, use a cache which
+ * takes a tree node ID and an observation time and reports stores the
+ * compatible region.  This seems to give a big performance boost, but you need
+ * to set the cache size to something intelligent for your machine/architecture.
+ */
 #define CACHE_SIZE 100000
 #define USE_CACHE true
 
@@ -55,6 +60,8 @@ namespace lsst {
 
 
 
+// Globals for measuring runtime.  Kill these off eventually!
+
 double getAllDetectionsForTrackletTime, getFirstDetectionForTrackletTime, 
     modifyWithAccelerationTime, positionAndVelocityRangesOverlapAfterAccelerationTime, 
     areCompatibleTime, getBestFitVelocityAndAccelerationTime,
@@ -67,18 +74,26 @@ int rejectedOnVelocity, rejectedOnPosition, wereCompatible, rejectedOnLackOfSupp
 int cacheHits, cacheMisses;
 
 
-// for debugging and calculating timing info
-double getTimeElapsed(clock_t priorEvent)
-{
-     return ( std::clock() - priorEvent ) / (double)CLOCKS_PER_SEC;
-}
-double timeSince(clock_t priorEvent)
-{
-     return ( std::clock() - priorEvent ) / (double)CLOCKS_PER_SEC;
-}
 
-void debugPrintTimingInfo(const TrackSet &results);
 
+
+
+
+
+/* *****************************************************************************
+ * A FEW SIMPLE, LOCAL CLASSES: mostly for readability and to allow the cache  * 
+ * of KDTree Node, Image time, second image Time -> bounding box               *
+ * *************************************************************************** */
+
+
+/*
+ ImageTime is a class for improving readability as well as adding
+ functionality. From now on we will be giving unique IDs to each image time.
+
+ This is important since we now support the use of a cache which takes a tree
+ node ID and a time as a key, and you shouldn't use a floating-point number as a
+ key.
+ */
 
 
 class ImageTime {
@@ -128,7 +143,7 @@ private:
  * bounding box at time T. 
  *
  * note that KDTreeNodes have unique IDs *WITHIN THEIR TREE* but every tree will
- * contain a node with ID 1.
+ * contain a node with ID 1.  Tree node ID + Image Time yields a unique identity.
  *
  */
 class GlobalNodeIdAndProjectionId {
@@ -221,6 +236,30 @@ public:
 
 
 
+
+
+
+
+
+/* *****************************************************************************
+ * These functions are for debugging/ diagnostics only.                        *
+ * *************************************************************************** */
+
+
+// for debugging and calculating timing info
+double getTimeElapsed(clock_t priorEvent)
+{
+     return ( std::clock() - priorEvent ) / (double)CLOCKS_PER_SEC;
+}
+double timeSince(clock_t priorEvent)
+{
+     return ( std::clock() - priorEvent ) / (double)CLOCKS_PER_SEC;
+}
+
+void debugPrintTimingInfo(const TrackSet &results);
+
+
+
 std::set<unsigned int> setUnion(const std::set<unsigned int> &s1, 
                                 const std::set<unsigned int> &s2) 
 {
@@ -234,10 +273,6 @@ std::set<unsigned int> setUnion(const std::set<unsigned int> &s1,
     }
     return toRet;
 }
-
-
-
-
 
 
 std::set<unsigned int> allDetsInTreeNode(KDTreeNode<unsigned int> &t,
@@ -311,7 +346,7 @@ void debugPrint(const TreeNodeAndTime &firstEndpoint, const TreeNodeAndTime &sec
     std::set<unsigned int> rightEndpointDetIds = allDetsInTreeNode(*(secondEndpoint.myTree),
                                                                    allDetections, allTracklets);
 
-    std::cout << "in doLinkingRecurse2,       first endpoint contains     " ;
+    std::cout << "in doLinkingRecurse,       first endpoint contains     " ;
     printSet(leftEndpointDetIds, " ");
     std::cout << '\n';
     std::cout << "                            second endpoint contains    " ;
@@ -387,6 +422,95 @@ void getAllDetectionsForTracklet(const std::vector<MopsDetection> & allDetection
 }
 
 
+
+
+
+
+void debugPrintTimingInfo(const TrackSet &results)
+{
+
+    std::cout << " so far we've found " << results.size() << " tracks.\n";
+    std::cout << "TIMING STATS: \n---------------------\n";
+    std::cout << "getAllDetectionsForTracklet: :\t" << getAllDetectionsForTrackletTime << "sec\n"; 
+    std::cout << "getFirstDetectionForTracklet:\t" << getFirstDetectionForTrackletTime << "sec\n"; 
+    std::cout << "modifyWithAcceleration:\t" << modifyWithAccelerationTime << "sec\n"; 
+    std::cout << "positionAndVelocityRangesOverlapAfterAcceleration:\t" << positionAndVelocityRangesOverlapAfterAccelerationTime << "sec\n"; 
+    std::cout << "areCompatible:\t" << areCompatibleTime << "sec\n"; 
+    std::cout << "getBestFitVelocityAndAcceleration:\t" << getBestFitVelocityAndAccelerationTime << "sec\n";
+    std::cout << "getBestFitVelocityAndAccelerationForTracklets:\t" << getBestFitVelocityAndAccelerationForTrackletsTime << "sec\n"; 
+    std::cout << "addBestCompatibleTrackletsAndDetectionsToTrack:\t" << addBestCompatibleTrackletsAndDetectionsToTrackTime << "sec\n"; 
+    std::cout << "trackMeetsRequirements:\t" << trackMeetsRequirementsTime << "sec\n"; 
+    std::cout << "endpointTrackletsAreCompatible:\t" << endpointTrackletsAreCompatibleTime << "sec\n"; 
+    std::cout << "buildTracksAddToResults:\t" << buildTracksAddToResultsTime << "sec\n"; 
+    std::cout << "areAllLeaves:\t" << areAllLeavesTime << "sec\n"; 
+    std::cout << "nodeWidth:\t" << nodeWidthTime << "sec\n"; 
+    std::cout << "addAllDetectedObjectsToSet:\t" << addAllDetectedObjectsToSetTime << "sec\n"; 
+    std::cout << "doLinkingRecurse:\t" << doLinkingRecurseTime << "sec\n";
+                                
+    std::cout << "\n\nVisited doLinkingRecurse " << doLinkingRecurseVisits  << " times.\n";
+    std::cout << "Visited buildTracksAddToResults " << buildTracksAddToResultsVisits << " times.\n";
+    std::cout << "found " << compatibleEndpointsFound << " compatible endpoint pairs.\n";
+    std::cout << "generated " << results.size() << " Tracks.\n";
+                                
+    std::cout << "cache had " << cacheHits << " hits.\n";
+    std::cout << "cache had " << cacheMisses << " misses.\n";
+                                
+    std::cout << "While examining tracklets, found " << wereCompatible 
+              << " compatibilities, counted separately in RA and Dec.\n";
+    std::cout << "   - rejected " << rejectedOnVelocity << " based on velocity.\n";
+    std::cout << "   - rejected " << rejectedOnPosition 
+              << " based on position, after finding the compatible in velocity.\n";
+
+    std::cout << "In recursion, terminated " << rejectedOnLackOfSupport 
+              << " times due to insufficient support points.\n";
+
+}
+
+
+
+void initDebugTimingInfo()
+{
+
+    rejectedOnLackOfSupport = 0;
+    rejectedOnVelocity = 0;
+    rejectedOnPosition = 0;
+    wereCompatible = 0;
+    cacheHits = 0; 
+    cacheMisses = 0;
+    doLinkingRecurseVisits = 0;
+    buildTracksAddToResultsVisits = 0;
+    compatibleEndpointsFound = 0;
+    getAllDetectionsForTrackletTime = 0; 
+    getFirstDetectionForTrackletTime = 0; 
+    modifyWithAccelerationTime = 0; 
+    positionAndVelocityRangesOverlapAfterAccelerationTime = 0; 
+    areCompatibleTime = 0; 
+    getBestFitVelocityAndAccelerationTime = 0;
+    getBestFitVelocityAndAccelerationForTrackletsTime = 0; 
+    addBestCompatibleTrackletsAndDetectionsToTrackTime = 0; 
+    trackMeetsRequirementsTime = 0; 
+    endpointTrackletsAreCompatibleTime = 0; 
+    buildTracksAddToResultsTime = 0; 
+    areAllLeavesTime = 0; 
+    nodeWidthTime = 0; 
+    addAllDetectedObjectsToSetTime = 0; 
+    doLinkingRecurseTime = 0;    
+}
+
+
+
+
+
+
+
+
+
+
+
+
+/* *****************************************************************************
+ * LINKTRACKLETS: The actual algorithm implementation                          *
+ * *************************************************************************** */
 
 
 
@@ -732,6 +856,9 @@ void extendBoundsToTime(const KDTreeNode<unsigned int> * treeNode,
  * 
  * we require that first, second, and third are in increasing chronological
  * order.
+ * 
+ * This code is not used as it does not seem to yield much of a speedup and
+ * makes cacheing impossible.  Delete me soon!
  */
 bool areMutuallyCompatible(const TreeNodeAndTime &firstNode,
                            const TreeNodeAndTime &secondNode,
@@ -1120,6 +1247,11 @@ void getBestFitVelocityAndAccelerationForTracklets(const std::vector<MopsDetecti
     getBestFitVelocityAndAccelerationForTrackletsTime += timeSince(start);
 }
 
+
+
+
+// this helper class is used just to make
+// addBestCompatibleTrackletsAndDetectionsToTrack a little more readable.
 
 class CandidateDetection {
 public:
@@ -1694,20 +1826,20 @@ double nodeWidth(KDTreeNode<unsigned int> *node)
  * step, we check all support nodes for compatibility, splitting each one. we
  * then split one model node and recurse. 
  */
-void doLinkingRecurse2(const std::vector<MopsDetection> &allDetections,
-                       const std::vector<Tracklet> &allTracklets,
-                       linkTrackletsConfig searchConfig,
-                       TreeNodeAndTime &firstEndpoint,
-                       TreeNodeAndTime &secondEndpoint,
-                       std::vector<TreeNodeAndTime> &supportNodes,
-                       TrackSet & results,
-                       int iterationsTillSplit,
-                       LTCache &rangeCache)
+void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
+                      const std::vector<Tracklet> &allTracklets,
+                      linkTrackletsConfig searchConfig,
+                      TreeNodeAndTime &firstEndpoint,
+                      TreeNodeAndTime &secondEndpoint,
+                      std::vector<TreeNodeAndTime> &supportNodes,
+                      TrackSet & results,
+                      int iterationsTillSplit,
+                      LTCache &rangeCache)
 {
     double start = std::clock();
     doLinkingRecurseVisits++;
     firstEndpoint.myTree->addVisit();
-    //std::cout << "entering doLinkingRecurse2." << std::endl;
+    //std::cout << "entering doLinkingRecurse." << std::endl;
     //debugPrint(firstEndpoint, secondEndpoint, supportNodes, allDetections, allTracklets);
 
     //debugPrintTimingInfo(results);
@@ -1765,7 +1897,7 @@ void doLinkingRecurse2(const std::vector<MopsDetection> &allDetections,
             // we can't possibly have enough distinct support tracklets between endpoints
             rejectedOnLackOfSupport++;
             doLinkingRecurseTime += timeSince(start);
-            // std::cout << "Exiting doLinkingRecurse2 due to lack of support.\n";
+            // std::cout << "Exiting doLinkingRecurse due to lack of support.\n";
             return; 
         }
         else 
@@ -1817,9 +1949,9 @@ void doLinkingRecurse2(const std::vector<MopsDetection> &allDetections,
                     iterationsTillSplit = 0;
                     doLinkingRecurseTime += timeSince(start);
                     //std::cout << "Recursing on self in order to force splitting of endpoints.\n";
-                    doLinkingRecurse2(allDetections, allTracklets, searchConfig,
-                                      firstEndpoint, secondEndpoint,
-                                      newSupportNodes, results, iterationsTillSplit, rangeCache);
+                    doLinkingRecurse(allDetections, allTracklets, searchConfig,
+                                     firstEndpoint, secondEndpoint,
+                                     newSupportNodes, results, iterationsTillSplit, rangeCache);
                 }
                 else if (firstEndpointWidth >= secondEndpointWidth) {
 
@@ -1835,10 +1967,10 @@ void doLinkingRecurse2(const std::vector<MopsDetection> &allDetections,
                         TreeNodeAndTime newTAT(firstEndpoint.myTree->getLeftChild(), firstEndpoint.myTime);
                         //doLinkingRecurseTime += timeSince(start);
                         //std::cout << "Recursing on left child of first endpoint.\n";
-                        doLinkingRecurse2(allDetections, allTracklets, searchConfig,
-                                          newTAT,secondEndpoint,
-                                          newSupportNodes,
-                                          results, iterationsTillSplit, rangeCache); 
+                        doLinkingRecurse(allDetections, allTracklets, searchConfig,
+                                         newTAT,secondEndpoint,
+                                         newSupportNodes,
+                                         results, iterationsTillSplit, rangeCache); 
                         //std::cout << "Returned from recursion on left child of first endpoint.\n";
                     }
                     
@@ -1847,10 +1979,10 @@ void doLinkingRecurse2(const std::vector<MopsDetection> &allDetections,
                         TreeNodeAndTime newTAT(firstEndpoint.myTree->getRightChild(), firstEndpoint.myTime);
                         doLinkingRecurseTime += timeSince(start);
                         //std::cout << "recursing on right child of first endpoint..\n";
-                        doLinkingRecurse2(allDetections, allTracklets, searchConfig,
-                                          newTAT,secondEndpoint,
-                                          newSupportNodes,
-                                          results, iterationsTillSplit, rangeCache);  
+                        doLinkingRecurse(allDetections, allTracklets, searchConfig,
+                                         newTAT,secondEndpoint,
+                                         newSupportNodes,
+                                         results, iterationsTillSplit, rangeCache);  
                         //std::cout << "Returned from recursion on right child of first endpoint.\n";
                     }
                 }
@@ -1867,10 +1999,10 @@ void doLinkingRecurse2(const std::vector<MopsDetection> &allDetections,
                         TreeNodeAndTime newTAT(secondEndpoint.myTree->getLeftChild(), secondEndpoint.myTime);
                         doLinkingRecurseTime += timeSince(start);
                         //std::cout << "Recursing on left child of second endpoint.\n";
-                        doLinkingRecurse2(allDetections, allTracklets, searchConfig,
-                                          firstEndpoint,newTAT,
-                                          newSupportNodes,
-                                          results, iterationsTillSplit, rangeCache);
+                        doLinkingRecurse(allDetections, allTracklets, searchConfig,
+                                         firstEndpoint,newTAT,
+                                         newSupportNodes,
+                                         results, iterationsTillSplit, rangeCache);
                         //std::cout << "Returned from recursion on left child of second endpoint.\n";
                     }
                     
@@ -1879,7 +2011,7 @@ void doLinkingRecurse2(const std::vector<MopsDetection> &allDetections,
                         TreeNodeAndTime newTAT(secondEndpoint.myTree->getRightChild(), secondEndpoint.myTime);
                         doLinkingRecurseTime += timeSince(start);
                         //std::cout << "Recursing on right child of second endpoint.\n";
-                        doLinkingRecurse2(allDetections, allTracklets, searchConfig,
+                        doLinkingRecurse(allDetections, allTracklets, searchConfig,
                                           firstEndpoint,newTAT,
                                           newSupportNodes,
                                           results, iterationsTillSplit, rangeCache);
@@ -1892,82 +2024,6 @@ void doLinkingRecurse2(const std::vector<MopsDetection> &allDetections,
     }
 }
 
-
-
-
-
-
-
-void debugPrintTimingInfo(const TrackSet &results)
-{
-
-    std::cout << " so far we've found " << results.size() << " tracks.\n";
-    std::cout << "TIMING STATS: \n---------------------\n";
-    std::cout << "getAllDetectionsForTracklet: :\t" << getAllDetectionsForTrackletTime << "sec\n"; 
-    std::cout << "getFirstDetectionForTracklet:\t" << getFirstDetectionForTrackletTime << "sec\n"; 
-    std::cout << "modifyWithAcceleration:\t" << modifyWithAccelerationTime << "sec\n"; 
-    std::cout << "positionAndVelocityRangesOverlapAfterAcceleration:\t" << positionAndVelocityRangesOverlapAfterAccelerationTime << "sec\n"; 
-    std::cout << "areCompatible:\t" << areCompatibleTime << "sec\n"; 
-    std::cout << "getBestFitVelocityAndAcceleration:\t" << getBestFitVelocityAndAccelerationTime << "sec\n";
-    std::cout << "getBestFitVelocityAndAccelerationForTracklets:\t" << getBestFitVelocityAndAccelerationForTrackletsTime << "sec\n"; 
-    std::cout << "addBestCompatibleTrackletsAndDetectionsToTrack:\t" << addBestCompatibleTrackletsAndDetectionsToTrackTime << "sec\n"; 
-    std::cout << "trackMeetsRequirements:\t" << trackMeetsRequirementsTime << "sec\n"; 
-    std::cout << "endpointTrackletsAreCompatible:\t" << endpointTrackletsAreCompatibleTime << "sec\n"; 
-    std::cout << "buildTracksAddToResults:\t" << buildTracksAddToResultsTime << "sec\n"; 
-    std::cout << "areAllLeaves:\t" << areAllLeavesTime << "sec\n"; 
-    std::cout << "nodeWidth:\t" << nodeWidthTime << "sec\n"; 
-    std::cout << "addAllDetectedObjectsToSet:\t" << addAllDetectedObjectsToSetTime << "sec\n"; 
-    std::cout << "doLinkingRecurse:\t" << doLinkingRecurseTime << "sec\n";
-                                
-    std::cout << "\n\nVisited doLinkingRecurse " << doLinkingRecurseVisits  << " times.\n";
-    std::cout << "Visited buildTracksAddToResults " << buildTracksAddToResultsVisits << " times.\n";
-    std::cout << "found " << compatibleEndpointsFound << " compatible endpoint pairs.\n";
-    std::cout << "generated " << results.size() << " Tracks.\n";
-                                
-    std::cout << "cache had " << cacheHits << " hits.\n";
-    std::cout << "cache had " << cacheMisses << " misses.\n";
-                                
-    std::cout << "While examining tracklets, found " << wereCompatible 
-              << " compatibilities, counted separately in RA and Dec.\n";
-    std::cout << "   - rejected " << rejectedOnVelocity << " based on velocity.\n";
-    std::cout << "   - rejected " << rejectedOnPosition 
-              << " based on position, after finding the compatible in velocity.\n";
-
-    std::cout << "In recursion, terminated " << rejectedOnLackOfSupport 
-              << " times due to insufficient support points.\n";
-
-}
-
-
-
-void initDebugTimingInfo()
-{
-
-    rejectedOnLackOfSupport = 0;
-    rejectedOnVelocity = 0;
-    rejectedOnPosition = 0;
-    wereCompatible = 0;
-    cacheHits = 0; 
-    cacheMisses = 0;
-    doLinkingRecurseVisits = 0;
-    buildTracksAddToResultsVisits = 0;
-    compatibleEndpointsFound = 0;
-    getAllDetectionsForTrackletTime = 0; 
-    getFirstDetectionForTrackletTime = 0; 
-    modifyWithAccelerationTime = 0; 
-    positionAndVelocityRangesOverlapAfterAccelerationTime = 0; 
-    areCompatibleTime = 0; 
-    getBestFitVelocityAndAccelerationTime = 0;
-    getBestFitVelocityAndAccelerationForTrackletsTime = 0; 
-    addBestCompatibleTrackletsAndDetectionsToTrackTime = 0; 
-    trackMeetsRequirementsTime = 0; 
-    endpointTrackletsAreCompatibleTime = 0; 
-    buildTracksAddToResultsTime = 0; 
-    areAllLeavesTime = 0; 
-    nodeWidthTime = 0; 
-    addAllDetectedObjectsToSetTime = 0; 
-    doLinkingRecurseTime = 0;    
-}
 
 
 
@@ -2115,10 +2171,10 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
                         LTCache rangeCache(CACHE_SIZE);
                         //LTCache rangeCache(0);
 
-                        doLinkingRecurse2(allDetections, allTracklets, searchConfig,
-                                          firstEndpoint, secondEndpoint,
-                                          supportPoints,  
-                                          results, ITERATIONS_PER_SPLIT, rangeCache);
+                        doLinkingRecurse(allDetections, allTracklets, searchConfig,
+                                         firstEndpoint, secondEndpoint,
+                                         supportPoints,  
+                                         results, ITERATIONS_PER_SPLIT, rangeCache);
 
 
                     }

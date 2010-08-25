@@ -1,0 +1,24 @@
+# -*- python -*-
+# jmyers, 9/11/09 
+
+
+Import("env")
+Import("common_libs")
+#Import("ext_libs")
+
+
+
+env.Library('../../lib/findTracklets', ['findTracklets.cc'] + common_libs, 
+            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
+
+env.Program('../../tests/findTracklets-unitTests', 
+            ['findTracklets-unittests.cc', 'findTracklets'] +  common_libs, 
+            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
+
+env.Program('../../bin/findTracklets', 
+            ['findTrackletsMain.cc', 'findTracklets'] + common_libs, 
+            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
+
+
+#env.LoadableModuleIncomplete("_findTracklets", Split("findTracklets.i"), 
+#                             LIBS=env.getlibs(["pex_exceptions"]))

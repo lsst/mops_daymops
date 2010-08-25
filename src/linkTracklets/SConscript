@@ -1,0 +1,33 @@
+# -*- python -*-
+# jmyers, 9/11/09 
+
+
+Import("env")
+Import("common_libs")
+#Import("ext_libs")
+
+doExtras = True
+
+
+Import("env")
+Import("common_libs")
+#Import("ext_libs")
+
+
+
+		      
+
+env.Library('../../lib/linkTracklets', ['linkTracklets.cc'] + common_libs, 
+            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
+
+env.Program('../../tests/linkTracklets-unitTests', ['linkTracklets-unittests.cc', 'linkTracklets.o'] + common_libs,
+            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
+
+env.Program('../../bin/linkTracklets', ['linkTrackletsMain.cc', 'linkTracklets.o'] + common_libs,
+            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
+
+
+
+#if doExtras:
+#    env.Program('findLinkableObjects', ['findLinkableObjects.cc'] + common_libs, 
+#				       LIBS=ext_libs)

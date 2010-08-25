@@ -1,0 +1,24 @@
+# -*- python -*-
+# jmyers, 9/11/09 
+
+import os
+
+Import("env")
+
+pkg = env["eups_product"]
+
+j = os.path.join
+
+env.SharedLibrary(pkg, [j("..","src","rmsLineFit.cc"),
+                        j("..","src","common.cc"),
+                        j("..","src","MopsDetection.cc"),
+                        j("..","src","removeSubsets.cc"),
+                        j("..","src","collapseTrackletsAndPostfilters","collapseTracklets.cc"),
+                        j("..","src","detectionProximity","detectionProximity.cc"),
+                        j("..","src","fieldProximity","Field.cc"),
+                        j("..","src","fieldProximity","fieldProximity.cc"),
+                        j("..","src","findTracklets","findTracklets.cc"),
+                        j("..","src","linkTracklets","linkTracklets.cc"),
+                        j("..","src","Orbit.cc"),
+                        j("..","src","orbitProximity","orbitProximity.cc"),
+                        j("..","src","PointAndValue.cc")], LIBS=env.getlibs("boost gsl pex_exceptions"))

@@ -1,0 +1,5 @@
+This is how I roll:
+
+./cleanall.py mops_onelunation; mpdallexit; rm -f *.log; ./run.sh pipeline_policy.paf pippo
+
+

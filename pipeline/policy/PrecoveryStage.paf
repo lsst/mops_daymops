@@ -1,0 +1,14 @@
+#<?cfg paf policy ?>
+# Default TelescopeSimulatorStage policy file
+# All angles in degrees. All times are in days.
+databasePolicy: @policy/DataBase.paf
+locationPolicy: @policy/Location.paf
+
+residThreshold: 0.20      # attributed orbits must have resid < this
+maxSearchRadius: 0.1      # max search radius, regardless of ephemeris uncertainty.
+minSearchRadius: 0.004    # always use a search radius at least this big
+maxArclengthForIod: 45    # max arc length in days for IOD+DC instead of just DC
+uncertaintySigma: 3       # number of sigma to consider for ephemeris uncertainty
+#
+
+

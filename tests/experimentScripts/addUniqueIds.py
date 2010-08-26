@@ -3,6 +3,8 @@
 
 jmyers may 11 2010
 
+# NOTE - generally not required now.
+
 """
 
 import sys

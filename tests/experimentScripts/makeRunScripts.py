@@ -9,11 +9,13 @@ similar to the script for building linkTracklets PBS scripts, but this
 time we make use of the list of start_t_range, so that we avoid
 redundant processing of endpoint pairs which exist in multiple data sets.
 
+Please be sure to set up auton first.
+
 """
 
 
 
-import sys, os.path
+import sys, os, os.path
 from glob import glob
 
 
@@ -23,7 +25,8 @@ INPUT_TRACKLETS_SUFFIX=".tracklets.miti"
 OUTPUT_SCRIPTS_DIR="/workspace1/jmyers/nightlyDiasNodeep/cppFindTracklets/15DayWindowsMaxv0.5/runScripts/"
 SCRIPT_RESULTS_DIR="/workspace1/jmyers/nightlyDiasNodeep/cppFindTracklets/15DayWindowsMaxv0.5/runScripts/results/"
 
-LINKTRACKLETS="/usr/local/LSST/sandbox/auton_trunk/linkTracklets/linkTracklets"
+AUTON_DIR = os.getenv("AUTON_DIR")
+LINKTRACKLETS=os.path.join(AUTON_DIR, "linkTracklets_modified/linkTracklets")
 MAX_RA_ACC=.02
 MAX_DEC_ACC=.02
 

@@ -17,33 +17,45 @@ lower-case items are ignored.
 
 """
 
+# note that midnight at LSST is MJD+0.125 (or 0.166) days
+#  (MJD = integer at midnight UTC, Chile/LSST local time is 
+#    UTC -4 hours in standard,-3 hours daylight savings. 
+#    which translates to midnight @ LSST = MJD + 0.125/0.166)
+# which means ~NOON to NOON observations cover 
+#   ~'night'-0.35 to ~'night' + 0.65   (where 'night' = int(MJD) at midnight)
+#    a gap would be okay because we're don't observe that close to noon
 
-NIGHT_START_OFFSET=-.7
+night_start = -0.35
+night_end = 0.65
 
 import sys
 
-def getNightNum(MJD):
-
-    for guess in range(int(MJD) - 2, int(MJD) + 3):
-        if MJD > guess + NIGHT_START_OFFSET and MJD < guess + 1 + NIGHT_START_OFFSET:
-            return guess 
-    raise Exception("Couldn't get a good guess of night num for MJD %d" % (MJD))
+def getNightNum(mjd):
+    """Determine night number for any MJD."""
+    night = night = int(mjd+0.5-0.12)    
+    return night
     
 
-
 if __name__=="__main__":
-    inf = file(sys.argv[1], 'r')
 
-    line = inf.readline();
-    while line != "":
+    infile = open(sys.argv[1], 'r')
+
+    prev_night = -99
+
+    # Read diasources from input file.
+    for line in infile:
         diaId, obshistId, ssmId, ra, decl, MJD, mag, snr = line.split()
         diaId, ssmId = map(int, [diaId, ssmId])
         ra, decl, MJD, mag = map(float, [ra, decl, MJD, mag])
-
-        mitiLine = "%i %f %f %f %f 566 %i 0. 0." % (diaId, MJD, ra, decl, mag, ssmId)
-
+        # Create output line in MITI format.
+        mitiLine = "%i %f %f %f %f 807 %i 0. 0." \
+            % (diaId, MJD, ra, decl, mag, ssmId)
+        # Determine the night number of this particular diasource.
         nightNum = getNightNum(MJD)
-        outf = file(str(nightNum) + ".miti", 'aw')
-        print>>outf, mitiLine
 
-        line = inf.readline()
+        # Open new output file if needed.
+        if nightNum != prev_night:
+            outfile = open(str(nightNum) + ".miti", "w")
+            prev_night = nightNum
+        # Write output line.
+        print>>outfile, mitiLine

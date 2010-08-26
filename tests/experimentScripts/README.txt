@@ -1,61 +1,43 @@
 Jmyers Aug 23
 
 The following is a set of instructions for running
-find/collapse/linkTracklets on some diaSources, the hackish non-LSST
-way.
+find/collapse/linkTracklets on some diaSources. 
+
+In the future these scripts (or more likely, better versions of
+all of this) will be modified so that pipelines can run each
+stage of find/collapse/linkTracklets on particular sets of data.
 
 All the scripts should be in the same directory as this readme file.
-
 
 
 
 BUILDING C++ FIND/LINKTRACKLETS (etc.)
 ---------------------------------------
 
-You'll need to first install the LSST build system and at least
-pex_exceptions.  Instructions for installing the LSST build system and
-the full LSST pipeline development tools are available at
-http://dev.lsstcorp.org/trac/wiki/Installing
-
-Then you'll want to declare DayMOPS to EUPS and build it using SCons:
-
-# get the code from SVN if you haven't already
-$ svn co svn+ssh://lsstarchive.ncsa.uiuc.edu/DMS/mops/daymops/trunk/ ~/sandbox/daymops_trunk
-
-# declare mops_daymops (version trunk, -c for current)
-$ eups declare -c -r ~/sandbox/daymops_trunk   mops_daymops trunk
-
-# set up mops_daymops - this will make sure all dependencies are installed 
-$ setup mops_daymops
-
-# now go build with scons
-$ cd ~/sandbox/daymops_trunk
-$ scons   # or scons opt=3 for a faster version.
+Instructions online at http://dev.lsstcorp.org/trac/wiki/MOPS/Installing_MOPS
 
 
 
-
-GETTING SOME DIASOURCE DATA
+GETTING SOME INPUT DATA
 ---------------------
 
-Lynne has data available at UW:
-http://www.astro.washington.edu/users/ljones/ephems/
+See instructions online at http://dev.lsstcorp.org/trac/wiki/MOPS/Data
 
-I am using
+Tests below run using example data :
 http://www.astro.washington.edu/users/ljones/ephems/dias_pt1_nodeep.short.astromErr
 
 which has the format: 
 
-#opsimID   ssmid  ra  dec   expmjd  mag  SNR
+#diasourceID opsimID   ssmid  ra  dec   expmjd  mag  SNR
 
-We want the middle five. We will also need to assign unique IDs to
-each DiaSource so use the addUniqueIds script:
+
+If you end up with diasource data which does not have the diasourceID, you
+can add it using the script : 
 
 $ python $MOPS_HACKS/addUniqueIds.py dias_pt1_nodeep.short.astromErr
     dias_pt1_nodeep.short.astromErr.plusIds
 
-
-
+but this is not necessary using the most recent input data. 
 
 
 
@@ -64,24 +46,29 @@ PREPARING FOR FINDTRACKLETS
 -----------------------------
 
 Next you'll need to split the data up by night.  Use
-splitByNight.py. If your input file has a different format you'll need
-to do some hacking.  The nightly files will be created in your current directory, so make sure that your working directory is set intelligently.
+splitByNight.py - this assumes that your input format
+is as above: 
+#diasourceID opsimID ssmID ra dec expmjd mag SNR
+
+This script will create individual files of diasources in MITI
+format, for each night. As there will be many different output
+files, it's best to run this script in a working directory you
+intend to use for this run of findTracklets/linkTracklets only.
+
 
 $ cd nightlyDiasAstromErr
 
-$ python $MOPS_HACKS/splitByNight.py dias_pt1_nodeep.short.astromErr.plusIds
+$ python $MOPS_HACKS/splitByNight.py dias_pt1_nodeep.short.astromErr
 
-This will take about 5 or 10 minutes, maybe a bit more.
+This will take about 5 or 10 minutes, maybe a bit more. (still?)
 
 Output will be in PanSTARRS MITI format: 
 ID EPOCH_MJD RA_DEG DEC_DEG MAG OBSCODE OBJECT_NAME LENGTH
 ANGLE 
 
-OBSCODE LENGTH and ANGLE are all set to dummy values as they are not
-used by our sky-plane algorithms.  They *will* be relevant when we get
-to IOD though so beware!
-
-
+LENGTH and ANGLE are all set to dummy values as they are not
+used by our sky-plane algorithms. The OBSCODE is necessary for
+doing orbit fitting (and has been set to approximately LSST positions). 
 
 
 
@@ -104,6 +91,9 @@ The script will also measure timing information for you.
 $ bash $MOPS_HACKS/runFindTracklets.maxv0.5.sh
 
 This will take a bit of time - perhaps an hour.
+
+Note that you could restrict this to run ONLY on particular nights of
+data by removing the other night's input from the source directory.
 
 Currently C++ findTracklets writes its output as ASCII text, one
 tracklet per line, with tracklets expressed as the set of Dia IDs of the diaSources in the tracklet, e.g.
@@ -152,7 +142,8 @@ Then run the script:
 
 $ python $MOPS_HACKS/make15DayWindows.py
 
-Go get yourself a coffee, this will take ~20 min.
+Go get yourself a coffee, this will take ~20 min (if you're working with
+a lot of data). 
 
 When you get your outfiles, they will be .dets files (sets of
 diaSources in the window) and .ids files, which are ASCII text,
@@ -207,6 +198,8 @@ PREPARING FOR C LINKTRACKLETS
 
 If you really must...  Then here are instructions.  It's going to get
 awfully ugly, so take a deep breath and try not to get lost. 
+** However, we really would appreciate comparisons of the C and C++
+linnkTracklets runs, so please do go ahead with this!
 
 To use the original Auton C implementation of linkTracklets, you'll
 need to convert input file formats.  For the time being, C
@@ -214,8 +207,7 @@ linkTracklets supports searching for tracks which start or end on a
 subset of the input data.
 
 You'll want to make sure you're using the modified linkTracklets which
-writes its output continuously, otherwise your linkTracklets will
-probably crash.
+writes its output continuously, from auton/linkTracklets_modified.
 
 C linkTracklets takes input as a single MITI file.  Use
 trackletsToMiti to convert one .dets and .ids file (as would be input

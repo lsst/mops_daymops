@@ -35,8 +35,9 @@ public:
             minDetectionsPerTrack = 6;
 
             // Kubica sets vtree_thresh to .0002 degrees and it's fast and accurate enough
-            // This corresponds to a velocityErrorThresh of : 
-            // .0002 degrees * 2 / (30 min in days) = .0192 deg/day 
+            // If we go with a worst-case and guess that our tracklets happen at
+            // most 30 min apart, this corresponds to a velocityErrorThresh of :
+            // .0002 degrees * 2 / (30 min in days) = .0192 deg/day
             velocityErrorThresh = .0192;
 
             leafSize=16;

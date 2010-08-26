@@ -1,5 +1,5 @@
+#include <boost/lexical_cast.hpp>
 #include <stdlib.h>
-
 #include <string>
 #include <iostream>
 #include <sstream>
@@ -57,8 +57,23 @@ void writeResults(std::string outFileName,
 int main(int argc, char* argv[])
 {
 
+     lsst::mops::linkTrackletsConfig searchConfig; 
+
      std::string helpString = 
-	  "Usage: linkTracklets -d <detections file> -t <tracklets file> -o <output (tracks) file>";
+	  std::string("Usage: linkTracklets -d <detections file> -t <tracklets file> -o <output (tracks) file>") + std::string("\n") +
+	  std::string("  optional arguments: ") + std::string("\n") +
+	  std::string("     -e / --detectionErrorThresh (float) : maximum allowed observational error, default = ")
+	  + boost::lexical_cast<std::string>(searchConfig.detectionLocationErrorThresh) + std::string("\n") +
+	  std::string("     -v / --velocityErrorThresh (float) : maximum velocity error for a tracklet, default = ")
+	  + boost::lexical_cast<std::string>(searchConfig.velocityErrorThresh) + std::string("\n") +
+	  std::string("     -D / --maxDecAcceleration (float) : maximum sky-plane acceleration of a track (declination),  default = ")
+	  + boost::lexical_cast<std::string>(searchConfig.maxDecAccel) + std::string("\n") +
+	  std::string("     -R / --maxRAAcceleration (float) : maximum sky-plane acceleration of a track (RA), default = ")
+	  + boost::lexical_cast<std::string>(searchConfig.maxRAAccel) +  std::string("\n") +
+	  std::string("     -F / --latestFirstEndpoint (float) : if specified, only search for tracks with first endpoint before time specified")
+	  + std::string("\n") +
+	  std::string("     -L / --earliestLastEndpoint (float) : if specified, only search for tracks with last endpoint after time specified")
+	  +  std::string("\n");
 
      static const struct option longOpts[] = {
 	  { "detectionsFile", required_argument, NULL, 'd' },
@@ -68,6 +83,8 @@ int main(int argc, char* argv[])
 	  { "velocityErrorThresh", required_argument, NULL, 'v'},
 	  { "maxDecAcceleration", required_argument, NULL, 'D'},
 	  { "maxRAAcceleration", required_argument, NULL, 'R'},
+	  { "latestFirstEndpoint", required_argument, NULL, 'F'},
+	  { "earliestLastEndpointTime", required_argument, NULL, 'L'},
 	  { "help", no_argument, NULL, 'h' },
 	  { NULL, no_argument, NULL, 0 }
      };  
@@ -78,10 +95,9 @@ int main(int argc, char* argv[])
      std::string trackletsFileName = "";
      std::string outputFileName = "";
 
-     lsst::mops::linkTrackletsConfig searchConfig; 
      
      int longIndex = -1;
-     const char *optString = "d:t:o:e:v:D:R:h";
+     const char *optString = "d:t:o:e:v:D:R:F:L:h";
      int opt = getopt_long( argc, argv, optString, longOpts, &longIndex );
      while( opt != -1 ) {
 	  switch( opt ) {
@@ -119,6 +135,15 @@ int main(int argc, char* argv[])
 	       /*ss << optarg;
 		 ss >> outputFileName; */
 	       searchConfig.maxRAAccel = atof(optarg);
+	       break;
+
+	  case 'F':
+	       searchConfig.restrictTrackStartTimes = true;
+	       searchConfig.latestFirstEndpointTime = atof(optarg);
+	       break;
+	  case 'L':
+	       searchConfig.restrictTrackEndTimes = true;
+	       searchConfig.earliestLastEndpointTime = atof(optarg);
 	       break;
 	  case 'h':
 	       std::cout << helpString << std::endl;

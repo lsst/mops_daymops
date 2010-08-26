@@ -2052,9 +2052,6 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
      */
     bool DEBUG = false;
 
-    bool limitedRun = false;
-    double limitedRunFirstEndpoint =  49616.273436000003 ;
-    double limitedRunSecondEndpoint = 49623.023787999999 ;
 
     initDebugTimingInfo();
 
@@ -2081,21 +2078,22 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
         std::map<ImageTime, KDTree<unsigned int> >::const_iterator afterFirstIter = firstEndpointIter;
         afterFirstIter++;
 
-        
-        if ((!limitedRun) || (areEqual(firstEndpointIter->first.getMJD(), limitedRunFirstEndpoint))) {
-            
-            
+        /* check if the user wants us to look for tracks starting at this time */
+        if (( !searchConfig.restrictTrackStartTimes ) || 
+            (firstEndpointIter->first.getMJD() <= searchConfig.latestFirstEndpointTime)) {
+
             for (secondEndpointIter = afterFirstIter; 
                  secondEndpointIter != trackletTimeToTreeMap.end(); 
                  secondEndpointIter++)
             {
-                /* if there is sufficient time between the first and second nodes, then try
-                   doing the recursive linking using intermediate times as support nodes.
-                */
                 
-                if ((!limitedRun) || 
-                    (areEqual(secondEndpointIter->first.getMJD(), limitedRunSecondEndpoint))) {
-                    
+                /* check if the user wants us to look for tracks ending at this time */
+                if ((!searchConfig.restrictTrackEndTimes) || 
+                    (secondEndpointIter->first.getMJD() >= searchConfig.earliestLastEndpointTime)) {
+                
+                    /* if there is sufficient time between the first and second nodes, then try
+                       doing the recursive linking using intermediate times as support nodes.
+                    */
                     
                     if (secondEndpointIter->first.getMJD() - firstEndpointIter->first.getMJD() 
                         >= searchConfig.minEndpointTimeSeparation) {                
@@ -2130,9 +2128,7 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
                 
                         std::vector<TreeNodeAndTime > supportPoints;
                         std::map<ImageTime, KDTree<unsigned int> >::const_iterator supportPointIter;
-                        if (DEBUG) {
-                            //std::cout << "intermediate times: " ;
-                        }
+
                         for (supportPointIter = afterFirstIter;
                              supportPointIter != secondEndpointIter;
                              supportPointIter++) {

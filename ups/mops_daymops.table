@@ -1,5 +1,6 @@
 setupRequired("scons")
 setupRequired("swig")
+setupRequired("gsl")
 
 setupRequired(pex_exceptions)
 

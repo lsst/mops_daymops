@@ -38,7 +38,21 @@ def getNightNum(mjd):
 
 if __name__=="__main__":
 
+
+    if len(sys.argv)<2:
+        print "Usage: splitByNight.py filename [start night] [end night]"
+        print "  where filename = the input diasource file "
+        print "  and start/end night are optional"
+        print "   (but equal to the MJD nightNum of the interval you want to extract)."
+        sys.exit()
+
     infile = open(sys.argv[1], 'r')
+    
+    start_interval = -99
+    stop_interval = 1e10
+    if len(sys.argv) > 2:
+        start_interval = int(sys.argv[2])
+        stop_interval = int(sys.argv[3])
 
     prev_night = -99
 
@@ -52,10 +66,10 @@ if __name__=="__main__":
             % (diaId, MJD, ra, decl, mag, ssmId)
         # Determine the night number of this particular diasource.
         nightNum = getNightNum(MJD)
-
-        # Open new output file if needed.
-        if nightNum != prev_night:
-            outfile = open(str(nightNum) + ".miti", "w")
-            prev_night = nightNum
-        # Write output line.
-        print>>outfile, mitiLine
+        if (nightNum >= start_interval) & (nightNum <= stop_interval):
+            # Open new output file if needed.
+            if nightNum != prev_night:
+                outfile = open(str(nightNum) + ".miti", "aw")
+                prev_night = nightNum
+            # Write output line.
+            print>>outfile, mitiLine

@@ -10,13 +10,8 @@
 #include <string>
 #include <vector>
 
-// these are no longer needed now that this is not a Persistable
-//#include "boost/shared_ptr.hpp"
-//#include "lsst/daf/base/Citizen.h"
-//#include "lsst/daf/base/Persistable.h"
 
 #include "Tracklet.h"
-#include "formatters/TrackletVectorFormatter.h"
 
 namespace lsst {
 namespace mops {

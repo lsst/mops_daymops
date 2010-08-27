@@ -15,14 +15,14 @@ env = scons.makeEnv("mops_daymops",
                     ["boost", "boost/test/included/unit_test.hpp"],
                     ["pex_exceptions", "lsst/pex/exceptions/Exception.h lsst/pex/exceptions/Runtime.h", "pex_exceptions:C++"],
                     ["gsl", "gsl/gsl_fit.h", "gslcblas gsl:C++"],
-                    ["utils", "lsst/tr1/unordered_map.h", "utils:C++"],
-                    ["daf_base", "lsst/daf/base/Citizen.h lsst/daf/base/Persistable.h", "daf_base:C++"],
-                    ["pex_policy", "lsst/pex/policy.h", "pex_policy:C++"],
-                    ["daf_persistence", "lsst/daf/persistence.h", "daf_persistence:C++"],
+                    #["utils", "lsst/tr1/unordered_map.h", "utils:C++"],
+                    #["daf_base", "lsst/daf/base/Citizen.h lsst/daf/base/Persistable.h", "daf_base:C++"],
+                    #["pex_policy", "lsst/pex/policy.h", "pex_policy:C++"],
+                    #["daf_persistence", "lsst/daf/persistence.h", "daf_persistence:C++"],
                     ["python", "Python.h"]
                     ])
 
-env.libs["mops_daymops"] += env.getlibs("boost pex_exceptions gsl utils daf_base pex_policy daf_persistence python")
+env.libs["mops_daymops"] += env.getlibs("boost pex_exceptions gsl python")
 
 env['IgnoreFiles'] = r"(~$|\.pyc$|^\.svn$|\.o$)"
 

@@ -11,7 +11,7 @@ All the scripts should be in the same directory as this readme file.
 
 
 
-BUILDING C++ FIND/LINKTRACKLETS (etc.)
+INSTALLING/BUILDING C++ FIND/LINKTRACKLETS (etc.)
 ---------------------------------------
 
 Instructions online at http://dev.lsstcorp.org/trac/wiki/MOPS/Installing_MOPS
@@ -60,7 +60,12 @@ $ cd nightlyDiasAstromErr
 
 $ python $MOPS_HACKS/splitByNight.py dias_pt1_nodeep.short.astromErr
 
-This will take about 5 or 10 minutes, maybe a bit more. (still?)
+You can also choose to extract only certain nights from the entire range using
+
+$ python $MOPS_HACKS/splitByNight.py dias_pt1_nodeep.short.astromErr 49639 49650 
+(for example). 
+
+Depending on the input data size, this will take a few minutes. 
 
 Output will be in PanSTARRS MITI format: 
 ID EPOCH_MJD RA_DEG DEC_DEG MAG OBSCODE OBJECT_NAME LENGTH
@@ -76,11 +81,18 @@ RUNNING FINDTRACKLETS
 ----------------------------
 
 Make sure you have dayMops set up via Eups.
-$ source /path/to/your/loadLSST.sh
+$ source /path/to/your/loadLSST.sh  (aka setlsst)
 $ setup mops_daymops
 
-Modify the first three variables in runFindTracklets.maxv0.5.sh to
-suit your needs.  This script assumes you're using the C++
+You can now use $MOPS_HACKS/runFindTracklets.maxv.0.5.sh or 
+$MOPS_HACKS/runFindTracklets.maxv.0.5.csh to run FindTracklets on all 
+of the *miti files you just created. 
+
+Modify the first three variables (defining the location of findTracklets 
+and your input/output data) to suit your needs. For most uses of these 
+scripts they'll be fine. 
+
+This script assumes you're using the C++
 findTracklets.  Currently, C++ findTracklets takes a limited set of
 command-line arguments; to adjust the fine-grained functionality
 you'll have to modify findTracklets.h and recompile (there should be
@@ -90,7 +102,7 @@ The script will also measure timing information for you.
 
 $ bash $MOPS_HACKS/runFindTracklets.maxv0.5.sh
 
-This will take a bit of time - perhaps an hour.
+This will take a bit of time - perhaps an hour. 
 
 Note that you could restrict this to run ONLY on particular nights of
 data by removing the other night's input from the source directory.

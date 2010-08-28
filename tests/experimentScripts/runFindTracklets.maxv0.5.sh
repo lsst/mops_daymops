@@ -3,8 +3,10 @@
 
 FINDTRACKLETS=$MOPS_DAYMOPS_DIR/bin/findTracklets
 
-NIGHTLY_DIASOURCES="/workspace1/jmyers/nightlyDiasAstromErr/*.miti"
-OUTPUT_DIR="/workspace1/jmyers/nightlyDiasAstromErr/tracklets/"
+NIGHTLY_DIASOURCES=$PWD/*miti
+OUTPUT_DIR=$PWD/tracklets 
+
+echo "Placing output data in $OUTPUT_DIR"
 
 for NIGHTLY in $NIGHTLY_DIASOURCES
 do

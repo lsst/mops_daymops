@@ -34,7 +34,7 @@ OUTPUT_DIR="/workspace1/jmyers/nightlyDiasAstromErr/15DayWindowsMaxv0.5/"
 
 # use new style 'windows' where 'nightNum' of window is end of data
 # and extends BACKWARDS in time WINDOW_SIZE nights (instead of forward). 
-NEW_WINDOWS = False
+NEW_WINDOWS = True
 
 import glob, sys, os
 

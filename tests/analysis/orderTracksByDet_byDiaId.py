@@ -118,25 +118,11 @@ class TrackQualityBuffer(object):
             print track.dias
             raise Exception("Multiple tracks have same RMS: %1.12f") % rms
         for key in self.items.keys():
-            if self.items[key].track.isSubset(track):
-                self.items[key] = TrackAndRms(track=track, rms=rms)
+            if self.items[key].isSubset(track):
+                self.items[key] = track
                 done = True
-        if not done:
-            # find highest-RMS track
-            highestRms = None
-            highestRmser = None
-            for i in range(len(self.items)):
-                if highestRms == None:
-                    highestRms=self.items[i].rms
-                    highestRmser=i
-                else:
-                    rms = self.items[i].rms
-                    if rms > highestRms:
-                        highestRmser=i
-                        highestRms=rms
-            #consider replacing the highest-RMS track
-            if highestRms > rms:
-                self.items[highestRmser] = TrackAndRms(track=track, rms=rms)
+        # this track is not a superset track - just add it normally
+        self.items[rms] = track
 
     def firstTrueTrackRank(self):
         """ return the number of items which have RMS lower than the first true track"""
@@ -254,8 +240,8 @@ def getRmsForTrack(dets, lineNum):
     decFunc, decRes, rank, svd, rcond = numpy.polyfit(mjds, decls, 2, full=True)
     raFunc = numpy.poly1d(raFunc)
     decFunc = numpy.poly1d(decFunc)
-    preciseRaAccel = raFunc[0]
-    preciseDecAccel = decFunc[0]
+    preciseRaAccel = raFunc[2]
+    preciseDecAccel = decFunc[2]
 
     #now get the euclidean distance between predicted and observed for each point
     netSqDist, dists = getNetSqDist(ras, decls, mjds, raFunc, decFunc)
@@ -285,6 +271,40 @@ def getRmsForTrack(dets, lineNum):
 
     return rms, preciseRaAccel, preciseDecAccel, raRes, decRes, approximatedRms, approximatedRaAccel, approximatedDecAccel, dists, approximatedDists
  
+
+
+
+def analyzeResults(allDias, detToBestTracks):
+    trueTrackRankHistogram = {}
+
+    tracksSaved = set()    
+    findableObjectsAfterFilter = set()
+
+    for dets in detToBestTracks.keys():
+        firstTrueTrack = detToBestTracks[dets].firstTrueTrackRank()
+        if firstTrueTrack != None:
+            if trueTrackRankHistogram.has_key(firstTrueTrack):
+                trueTrackRankHistogram[firstTrueTrack] += 1
+            else:
+                trueTrackRankHistogram[firstTrueTrack] = 1
+
+        tracksAndRmses = detToBestTracks[dets].getContents()        
+        for myTrackAndRms in tracksAndRmses:            
+            myTrack = myTrackAndRms.track
+            tracksSaved.add(myTrack.trackId)
+            if myTrack.isTrue():
+                objId = lookUpDet(allDets, myTrack.dias[0]).objId
+                findableObjectsAfterFilter.add(objId)
+
+    print "Reduced data to %d tracks via subset removal" % len(tracksSaved)
+    print "there were %d findable objects in those tracks" % len(findableObjectsAfterFilter)
+
+    for rank in sorted(trueTrackRankHistogram.keys()):
+        print "%d\t dets had the true track as their #%d best track" % (firstTrueTrackRankHistogram[rank], rank + 1)
+
+
+
+
 
 
 
@@ -366,29 +386,10 @@ if __name__ == "__main__":
     print "doing some analysis."
 
     # do some analysis
-    trueTrackRankHistogram = {}
 
-    tracksSaved = set()    
-    findableObjectsAfterFilter = set()
+    analyzeResults(allDias, detToBestTracks)
 
-    for dets in detToBestTracks.keys():
-        firstTrueTrack = detToBestTracks[dets].getFirstTrueTrackRank()
-        if firstTrueTrack != None:
-            if trueTrackRankHistogram.has_key(firstTrueTrack):
-                trueTrackRankHistogram[firstTrueTrack] += 1
-            else:
-                trueTrackRankHistogram[firstTrueTrack] = 1
 
-        tracksAndRmses = detToBestTracks[dets].getContents()        
-        for myTrackAndRms in tracksAndRmses:            
-            myTrack = myTrackAndRms.track
-            tracksSaved.add(myTrack.trackId)
-            if myTrack.isTrue():
-                objId = lookUpDet(allDets, myTrack.dias[0]).objId
-                findableObjectsAfterFilter.add(objId)
 
-    print "Reduced data to %d tracks via subset removal" % len(tracksSaved)
-    print "there were %d findable objects in those tracks" % len(findableObjectsAfterFilter)
 
-    for rank in sorted(firstTrueTrackRankHistogram.keys()):
-        print "%d\t dets had the true track as their #%d best track" % (firstTrueTrackRankHistogram[rank], rank + 1)
+

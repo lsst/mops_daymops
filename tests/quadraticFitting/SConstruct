@@ -1,0 +1,25 @@
+# -*- python -*-
+#
+# Setup our environment
+#
+import glob, os.path, re, os
+import lsst.SConsUtils as scons
+
+
+env = scons.makeEnv("fitting_benchmark",
+                   r"$HeadURL: svn+ssh://svn.lsstcorp.org/DMS/mops/daymops/trunk/SConstruct $",
+		   [["gsl", "gsl/gsl_fit.h", "gslcblas gsl:C++"]])
+
+env.libs["fitting_benchmark"] += env.getlibs("gsl")
+
+
+
+libs = []
+
+libs.append(env.StaticLibrary('kubicaStyle',
+                              ['kubicaStyle.cc']))
+
+libs.append(env.StaticLibrary('gslStyle',
+                              ['gslStyle.cc']))
+
+env.Program('benchmark', ['benchmark.cc'] + libs, LIBS=env.getlibs("gsl"))

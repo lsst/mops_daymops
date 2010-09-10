@@ -43,10 +43,6 @@ namespace lsst { namespace mops {
 class Track {
 public:
     
-    // these should soon be deprecated - use getters and the unified adder
-    std::set<unsigned int> componentDetectionIndices;
-    std::set<unsigned int> componentDetectionDiaIds;
-
 
     void addDetection(unsigned int detIndex, const std::vector<MopsDetection> & allDets)
         {
@@ -54,11 +50,17 @@ public:
             componentDetectionDiaIds.insert(allDets.at(detIndex).getID());
         };
 
-    const std::set<unsigned int> getComponentDetectionIndices()
-        {return componentDetectionIndices;};
+    const std::set<unsigned int> getComponentDetectionIndices() const
+        {
+            const std::set<unsigned int>copy(componentDetectionIndices);
+            return copy;
+        };
 
-    const std::set<unsigned int> getComponentDetectionDiaIds()
-        {return componentDetectionDiaIds;};
+    const std::set<unsigned int> getComponentDetectionDiaIds() const
+        {
+            const std::set<unsigned int>copy(componentDetectionDiaIds);
+            return copy;
+        };
 
 
     /*
@@ -81,17 +83,6 @@ public:
     }
 
     bool operator!=(const Track &other) const {
-        // std::cout << " called track != track \n This tracks component det ids are: ";
-        // for (std::set<unsigned int>::const_iterator si = componentDetectionDiaIds.begin();
-        //      si != componentDetectionDiaIds.end(); si++) {
-        //     std::cout << " " << *si;
-        // }
-        // std::cout << "\n The other tracks component det ids are: " ;
-        // for (std::set<unsigned int>::const_iterator si = other.componentDetectionDiaIds.begin();
-        //      si != other.componentDetectionDiaIds.end(); si++) {
-        //     std::cout << " " << *si;
-        // }
-        // std::cout << "\n";
         return ! (*this == other);
     }
 
@@ -103,6 +94,11 @@ public:
         return toRet;
         
     }
+
+private:
+    std::set<unsigned int> componentDetectionIndices;
+    std::set<unsigned int> componentDetectionDiaIds;
+
 
 };
 

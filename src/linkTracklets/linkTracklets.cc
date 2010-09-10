@@ -1342,11 +1342,12 @@ void addBestCompatibleTrackletsAndDetectionsToTrack(const std::vector<MopsDetect
     
     /* initialize a list of image times present in the track already. */
     std::set<double> trackMJDs;
-    std::set<uint>::const_iterator trackDetectionIndices;
-    for (trackDetectionIndices =  newTrack.componentDetectionIndices.begin();
-         trackDetectionIndices != newTrack.componentDetectionIndices.end();
-         trackDetectionIndices++) {
-        trackMJDs.insert(allDetections.at(*trackDetectionIndices).getEpochMJD());        
+    std::set<uint>::const_iterator trackDetectionIndicesIter;
+    std::set<uint> trackDetectionIndices = newTrack.getComponentDetectionIndices();
+    for (trackDetectionIndicesIter = trackDetectionIndices.begin();
+         trackDetectionIndicesIter != trackDetectionIndices.end();
+         trackDetectionIndicesIter++) {
+        trackMJDs.insert(allDetections.at(*trackDetectionIndicesIter).getEpochMJD());        
     }
     
     /* add detections (and their parent tracklets) in order of 'score' (distance
@@ -1391,7 +1392,7 @@ bool trackMeetsRequirements(const std::vector<MopsDetection> & allDetections,
         meetsReqs = false;
     }
 
-    if (newTrack.componentDetectionIndices.size() < searchConfig.minDetectionsPerTrack) {
+    if (newTrack.getComponentDetectionIndices().size() < searchConfig.minDetectionsPerTrack) {
         meetsReqs = false;
     }
 

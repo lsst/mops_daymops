@@ -66,8 +66,9 @@ void debugPrintTrackSet(const TrackSet &tracks, const std::vector<MopsDetection>
          trackIter++) {
         std::cout << " track " << trackCount << ":\n";
         std::set<unsigned int>::const_iterator detIdIter;
-        for (detIdIter = trackIter->componentDetectionIndices.begin();
-             detIdIter != trackIter->componentDetectionIndices.end();
+        std::set<unsigned int> componentDetectionIndices = trackIter->getComponentDetectionIndices();
+        for (detIdIter = componentDetectionIndices.begin();
+             detIdIter != componentDetectionIndices.end();
              detIdIter++) {
             std::cout << '\t' << *detIdIter << ": " << allDets.at(*detIdIter).getID() << " "
                       << allDets.at(*detIdIter).getEpochMJD() << 

@@ -70,9 +70,9 @@ void TrackSet::writeToFile()
          curTrack != componentTracks.end();
          curTrack++) {
         std::set<unsigned int>::const_iterator detIter;
-	
-        for (detIter = curTrack->componentDetectionDiaIds.begin();
-             detIter != curTrack->componentDetectionDiaIds.end();
+        std::set<unsigned int> diaIds = curTrack->getComponentDetectionDiaIds();
+        for (detIter = diaIds.begin();
+             detIter != diaIds.end();
              detIter++) {
             outFile << *detIter << " ";
         }

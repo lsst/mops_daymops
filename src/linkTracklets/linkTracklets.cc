@@ -2190,10 +2190,25 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
 
 
 
-TrackSet linkTracklets(const std::vector<MopsDetection> &allDetections,
-                       std::vector<Tracklet> &queryTracklets,
-                       linkTrackletsConfig searchConfig) {
-    TrackSet toRet;
+TrackSet* linkTracklets(const std::vector<MopsDetection> &allDetections,
+                        std::vector<Tracklet> &queryTracklets,
+                        linkTrackletsConfig searchConfig) {
+    TrackSet * toRet;
+    if (searchConfig.outputMethod == RETURN_TRACKS) {
+        toRet = new TrackSet();
+    }
+    else if (searchConfig.outputMethod == IDS_FILE) {
+        toRet = new TrackSet(searchConfig.outputFile, false, 0);
+    }
+    else if (searchConfig.outputMethod == IDS_FILE_WITH_CACHE) {
+        toRet = new TrackSet(searchConfig.outputFile, true, searchConfig.outputBufferSize);
+    }
+    else {
+        throw LSST_EXCEPT(BadParameterException, 
+                          "linkTracklets: got unknown or unimplemented output method.");
+    }
+
+
     /*create a sorted list of KDtrees, each tree holding tracklets
       with unique start times (times of first detection in the tracklet).
       
@@ -2206,7 +2221,7 @@ TrackSet linkTracklets(const std::vector<MopsDetection> &allDetections,
     std::map<ImageTime, KDTree <unsigned int> > trackletTimeToTreeMap;    
     makeTrackletTimeToTreeMap(allDetections, queryTracklets, trackletTimeToTreeMap, searchConfig);
     //std::cout << "Beginning the linking process.\n";
-    doLinking(allDetections, queryTracklets, searchConfig, trackletTimeToTreeMap, toRet);
+    doLinking(allDetections, queryTracklets, searchConfig, trackletTimeToTreeMap, *toRet);
     
     return toRet;
 }

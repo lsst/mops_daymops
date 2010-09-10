@@ -15,6 +15,10 @@
 namespace lsst {
     namespace mops {
 
+enum trackOutputMethod { RETURN_TRACKS = 0, 
+                         IDS_FILE,
+                         IDS_FILE_WITH_CACHE};
+
 /*
  * linkTrackletsConfig is a simple class which holds the many configurable
  * parameters for running linkTracklets.  The default values should be 
@@ -31,7 +35,7 @@ public:
             minEndpointTimeSeparation = 2; 
             minSupportToEndpointTimeSeparation = .5;
             minSupportTracklets = 1;
-            quadraticFitErrorThresh = 0.; // be optimistic for now...
+            quadraticFitErrorThresh = .0001; // be optimistic for now...
             minDetectionsPerTrack = 6;
 
             // Kubica sets vtree_thresh to .0002 degrees and it's fast and accurate enough
@@ -46,6 +50,14 @@ public:
             latestFirstEndpointTime = -1;
             restrictTrackEndTimes = false;
             earliestLastEndpointTime = -1;
+
+
+            // options for how to write output - return tracks, or write them
+            // semi-continuously to disk?
+            outputMethod = RETURN_TRACKS;
+            outputFile = "";
+            outputBufferSize = 0;
+
         }
 
     /* acceleration terms are in degrees/(day^2)
@@ -138,6 +150,25 @@ public:
      */
     unsigned int leafSize;
 
+
+    // outputMethod, outputFile, outputBufferSize:  these 
+    // define how linktracklets writes its results.
+
+    // if outputMethod is RETURN_TRACKLETS then actually buffer all results in
+    // memory, return them in-memory.
+
+    // if outputMethod is IDS_FILE or IDS_FILE_WITH_CACHE, then write a plain-text file, with one
+    // track per line, written as a series of space-delimited Detection IDs
+    // which comprise the track.  
+
+    // if IDS_FILE, write to outputBufferSize all at once, when finished.
+
+    // if IDS_FILE_WITH_CACHE, Write to a file named by outputFile, buffering
+    // outputBufferSize results between writes.
+    trackOutputMethod outputMethod;
+    std::string outputFile;
+    unsigned int outputBufferSize;
+
 };
 
 
@@ -149,9 +180,9 @@ public:
 
 /* queryTracklets are non-const because we set their velocityRA and velocityDec fields. 
    otherwise queryTracklets will not be changed. */
-TrackSet linkTracklets(const std::vector<MopsDetection> &allDetections,
-                       std::vector<Tracklet> &queryTracklets,
-                       linkTrackletsConfig searchConfig);
+TrackSet* linkTracklets(const std::vector<MopsDetection> &allDetections,
+                        std::vector<Tracklet> &queryTracklets,
+                        linkTrackletsConfig searchConfig);
 
 
 

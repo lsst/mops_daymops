@@ -45,8 +45,6 @@ SConscript(os.path.join('findTracklets','SConscript'))
 SConscript(os.path.join('collapseTrackletsAndPostfilters','SConscript'))
 SConscript(os.path.join('linkTracklets','SConscript'))
 
-SConscript(os.path.join('formatters','SConscript'))
-
 SConscript(os.path.join('detectionProximity','SConscript'))
 SConscript(os.path.join('fieldProximity','SConscript'))
 SConscript(os.path.join('orbitProximity','SConscript'))

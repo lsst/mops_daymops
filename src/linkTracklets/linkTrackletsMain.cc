@@ -29,30 +29,7 @@ double timeElapsed(clock_t priorEvent)
 
 
 
-void writeResults(std::string outFileName, 
-		  const std::vector<MopsDetection> &allDets,
-		  const std::vector<Tracklet> &allTracklets,
-		  const TrackSet tracks) 
-{
-     std::ofstream outFile;
-     outFile.open(outFileName.c_str());
-     std::set<Track>::const_iterator curTrack;
-     for (curTrack = tracks.componentTracks.begin(); 
-	  curTrack != tracks.componentTracks.end();
-	  curTrack++) {
-	  std::set<unsigned int>::const_iterator detIter;
-	  
-	  for (detIter = curTrack->componentDetectionIndices.begin();
-	       detIter != curTrack->componentDetectionIndices.end();
-	       detIter++) {
-	       outFile << *detIter << " ";
-	  }
-	  outFile << std::endl;
-     }
-     outFile.close();
-}
-
-     }} // close lsst::mops
+}} // close lsst::mops
 
 int main(int argc, char* argv[])
 {
@@ -93,7 +70,6 @@ int main(int argc, char* argv[])
      std::stringstream ss;
      std::string detectionsFileName = "";
      std::string trackletsFileName = "";
-     std::string outputFileName = "";
 
      
      int longIndex = -1;
@@ -114,7 +90,7 @@ int main(int argc, char* argv[])
 	  case 'o':
 	       /*ss << optarg;
 		 ss >> outputFileName; */
-	       outputFileName = optarg;
+	       searchConfig.outputFile = optarg;
 	       break;
 	  case 'e':
 	       /*ss << optarg;
@@ -154,14 +130,16 @@ int main(int argc, char* argv[])
 	  opt = getopt_long( argc, argv, optString, longOpts, &longIndex );
      }
 
-     if ((detectionsFileName == "") || (trackletsFileName == "") || (outputFileName == "")) {
+     if ((detectionsFileName == "") || (trackletsFileName == "")) {
 	  std::cerr << helpString << std::endl;
 	  return 1;
      }
 
      std::vector<lsst::mops::MopsDetection> allDets;
      std::vector<lsst::mops::Tracklet> allTracklets;
-     lsst::mops::TrackSet resultTracks;
+     lsst::mops::TrackSet * resultTracks;
+     searchConfig.outputMethod = lsst::mops::IDS_FILE_WITH_CACHE;
+     searchConfig.outputBufferSize = 1000;
 
      clock_t last;
      double dif;
@@ -194,8 +172,9 @@ int main(int argc, char* argv[])
 	  last = std::clock();
      }
 
-     std::cout << "Got results. Writing them to disk." << std::endl;
-     lsst::mops::writeResults(outputFileName, allDets, allTracklets, resultTracks);
+     resultTracks->purgeToFile();
+     std::cout << "Results successfully written to disk." << std::endl;
+     
 
      if(PRINT_TIMING_INFO) {     	  
 	  dif = lsst::mops::timeElapsed(last);

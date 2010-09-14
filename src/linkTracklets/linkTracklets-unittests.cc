@@ -244,47 +244,6 @@ BOOST_AUTO_TEST_CASE( linkTracklets_realworld_1) {
 
 
 
-BOOST_AUTO_TEST_CASE( linkTracklets_whitebox_getBestFitVelocityAndAcceleration_test0) 
-{
-    std::vector<double> positions;
-    std::vector<double> times;
-    positions.push_back(0);
-    positions.push_back(1.5);
-    positions.push_back(4);
-    times.push_back(0);
-    times.push_back(1);
-    times.push_back(2);
-    double velocity, acceleration, position0;
-    getBestFitVelocityAndAcceleration(positions, times, velocity, acceleration, position0);
-    //std::cout << "position = " << position0 << " + " << velocity << "*t + .5*" << acceleration << "*t^2" << std::endl;
-    BOOST_CHECK(Eq(position0,    0));
-    BOOST_CHECK(Eq(velocity,     1));
-    BOOST_CHECK(Eq(acceleration, 1));    
-}
-
-
-
-
-
-BOOST_AUTO_TEST_CASE( linkTracklets_whitebox_getBestFitVelocityAndAcceleration_test1) 
-{
-    std::vector<double> positions;
-    std::vector<double> times;
-    positions.push_back(1.5);
-    positions.push_back(4);
-    positions.push_back(7.5);
-    times.push_back(1);
-    times.push_back(2);
-    times.push_back(3);
-    double velocity, acceleration, position0;
-    getBestFitVelocityAndAcceleration(positions, times, velocity, acceleration, position0);
-    //std::cout << "position = " << position0 << " + " << velocity << "*t + .5*" << acceleration << "*t^2" << std::endl;
-    BOOST_CHECK(Eq(position0,    0));
-    BOOST_CHECK(Eq(velocity,     1));
-    BOOST_CHECK(Eq(acceleration, 1));    
-}
-
-
 
 
 

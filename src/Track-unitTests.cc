@@ -10,10 +10,6 @@
 #include <string>
 #include <cmath>
 
-// for rand()
-#include <cstdlib> 
-// for printing timing info
-#include <time.h>
 
 
 
@@ -277,5 +273,132 @@ BOOST_AUTO_TEST_CASE (trackSet_3) {
 
 
 
+// helper function for creating sets of detections
+void addDetectionAt(double MJD, double RA, double dec,  std::vector<MopsDetection> &detVec)
+{
+    MopsDetection tmpDet(detVec.size(), MJD, RA, dec);
+    detVec.push_back(tmpDet);
+}
 
-    }} // close lsst::mops
+
+BOOST_AUTO_TEST_CASE( track_quadraticFitting_test0) 
+{
+    std::vector<MopsDetection> allDets;
+    addDetectionAt(0, 0, 0,     allDets);
+    addDetectionAt(1, 1.5, 1.5, allDets);
+    addDetectionAt(2, 4, 4,     allDets);
+    Track testTrack;
+    testTrack.addDetection(0, allDets);
+    testTrack.addDetection(1, allDets);
+    testTrack.addDetection(2, allDets);
+    double epoch, ra0, raV, raAcc, dec0, decV, decAcc;
+    testTrack.calculateBestFitQuadratic(allDets);
+    testTrack.getBestFitQuadratic(epoch, ra0, raV, raAcc, dec0, decV, decAcc);
+    BOOST_CHECK(Eq(epoch,   0.));
+    BOOST_CHECK(Eq(ra0,     0.));
+    BOOST_CHECK(Eq(raV,     1.));
+    BOOST_CHECK(Eq(raAcc,   1.));    
+    BOOST_CHECK(Eq(dec0,    0.));
+    BOOST_CHECK(Eq(decV,    1.));
+    BOOST_CHECK(Eq(decAcc,  1.));    
+}
+
+
+
+
+
+BOOST_AUTO_TEST_CASE( track_quadraticFit_test1) 
+{
+    std::vector<MopsDetection> allDets;
+    addDetectionAt(1, 1, 1,    allDets);
+    addDetectionAt(2, 2.5, 2.5,allDets);
+    addDetectionAt(3, 5,   5,  allDets);
+    Track testTrack;
+    testTrack.addDetection(0, allDets);
+    testTrack.addDetection(1, allDets);
+    testTrack.addDetection(2, allDets);
+    double epoch, ra0, raV, raAcc, dec0, decV, decAcc;
+    testTrack.calculateBestFitQuadratic(allDets);
+    testTrack.getBestFitQuadratic(epoch, ra0, raV, raAcc, dec0, decV, decAcc);
+
+    BOOST_CHECK(Eq(epoch,        1));
+    BOOST_CHECK(Eq(ra0,          1));
+    BOOST_CHECK(Eq(raV,          1));
+    BOOST_CHECK(Eq(raAcc,        1));    
+    BOOST_CHECK(Eq(dec0,          1));
+    BOOST_CHECK(Eq(decV,          1));
+    BOOST_CHECK(Eq(decAcc,        1));    
+}
+
+
+
+double projectLoc(double time, double p0, double v, double acc)
+{
+     return p0 + v*time + .5 * time* time * acc;
+}
+
+#define NUM_CALLS 100000
+
+BOOST_AUTO_TEST_CASE( big_quadFit_test0) 
+{
+    // basically copied from r. 16930 daymops/trunk/tests/quadraticFitting/benchmark.cc
+    
+    std::vector<double> times;
+    times.push_back(0.);
+    times.push_back(0.05);
+    times.push_back(1.);
+    times.push_back(1.05);
+    times.push_back(5.);
+    times.push_back(5.05);
+    
+    std::vector<MopsDetection> allDets;
+    std::vector<Track> allTracks;
+    unsigned int curIndex = 0;
+    std::vector<std::vector< double > > positions;
+    std::vector<std::vector<double> > answerKey;
+    
+    // build a vector of positions with 
+    for (unsigned int i = 0; i < NUM_CALLS; i++ ) {
+        Track newTrack; 
+        double p0, v, acc;
+        p0 = (i % 100) / 50.;
+        v = (i % 13) / 20. - 7.;
+        acc = (i % 7) / 50. - 3.;
+        if (i % 3 == 0) {
+            v *= -1;
+        }
+        if (i % 2 == 0) {
+            acc *= -1;
+        }
+        std::vector<double> motion;
+        
+        motion.push_back(p0);
+        motion.push_back(v);
+        motion.push_back(acc);
+        answerKey.push_back(motion);
+        
+        
+        for (unsigned int j = 0; j < times.size(); j++) {
+            addDetectionAt(times.at(j), projectLoc(times.at(j), p0, v, acc),
+                           projectLoc(times.at(j), p0, v, acc) + 5,  allDets);
+            newTrack.addDetection(curIndex, allDets);
+            curIndex += 1;
+        }
+    }
+    
+    for (unsigned int i = 0; i < allTracks.size(); i++) {
+        allTracks.at(i).calculateBestFitQuadratic(allDets);
+        double epoch, ra0, raV, raAcc, dec0, decV, decAcc;
+        allTracks.at(i).getBestFitQuadratic(epoch, ra0, raV, raAcc,
+                                            dec0, decV, decAcc);
+        BOOST_CHECK(Eq(epoch, 0));
+        BOOST_CHECK(Eq(ra0,     answerKey.at(i).at(0)));
+        BOOST_CHECK(Eq(raV,     answerKey.at(i).at(1)));
+        BOOST_CHECK(Eq(raAcc,   answerKey.at(i).at(1)));
+        BOOST_CHECK(Eq(dec0,     answerKey.at(i).at(0) + 5));
+        BOOST_CHECK(Eq(decV,     answerKey.at(i).at(1)));
+        BOOST_CHECK(Eq(decAcc,   answerKey.at(i).at(1)));
+    }
+}
+
+}} // close lsst::mops

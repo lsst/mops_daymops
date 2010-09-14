@@ -38,6 +38,9 @@ Track & Track::operator= (const Track &other) {
     componentTrackletIndices = other.componentTrackletIndices;
     componentDetectionIndices = other.componentDetectionIndices;
     componentDetectionDiaIds = other.componentDetectionDiaIds;
+    epoch = other.epoch;
+    raFunc = other.raFunc;
+    decFunc = other.decFunc;
     return *this;
 }
 

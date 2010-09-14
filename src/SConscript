@@ -11,7 +11,7 @@ Import("env")
 #ext_libs = ["gsl", "gslcblas", "pex_exceptions"]
 		      
 commonStuff = ['common', 'MopsDetection',
-               'Orbit', 'TrackletVector', 'TrackSet']
+               'Orbit', 'TrackletVector', 'TrackSet', 'Track']
 
 common_libs = []
 
@@ -37,6 +37,10 @@ Export("common_libs")
 #Export("ext_libs")
 
 env.Program('../tests/utilities-unitTests', ['generalUnitTests.cc'] + common_libs, 
+            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
+
+env.Program('../tests/Track-unitTests', 
+            ['Track-unitTests.cc', 'Track.o', 'TrackSet.o'] + common_libs,
             LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
 
 

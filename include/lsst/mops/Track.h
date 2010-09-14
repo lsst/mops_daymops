@@ -7,7 +7,7 @@
 #define LSST_TRACK_H
 
 #include <set>
-#include <iostream>
+#include <vector>
 
 #include "MopsDetection.h"
 
@@ -42,27 +42,28 @@ namespace lsst { namespace mops {
 
 class Track {
 public:
+
+    void addDetection(unsigned int detIndex, const std::vector<MopsDetection> & allDets);
+
+    Track();
+
+    const std::set<unsigned int> getComponentDetectionIndices() const;
+
+    const std::set<unsigned int> getComponentDetectionDiaIds() const;
+
+    /* until this function is called, initial position, velocity and acceleration
+       for the track are NOT SET.  
+     */
+    void calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets);
     
-
-    void addDetection(unsigned int detIndex, const std::vector<MopsDetection> & allDets)
-        {
-            componentDetectionIndices.insert(detIndex);
-            componentDetectionDiaIds.insert(allDets.at(detIndex).getID());
-        };
-
-    const std::set<unsigned int> getComponentDetectionIndices() const
-        {
-            const std::set<unsigned int>copy(componentDetectionIndices);
-            return copy;
-        };
-
-    const std::set<unsigned int> getComponentDetectionDiaIds() const
-        {
-            const std::set<unsigned int>copy(componentDetectionDiaIds);
-            return copy;
-        };
-
-
+    /* use best-fit quadratic to predict location at time mjd. will return WRONG VALUES
+     if calculateBestFitQuadratic has not been called.*/
+    void predictLocationAtTime(const double mjd, double &ra, double &dec) const;
+    
+    void getBestFitQuadratic(double &epoch,
+                             double &ra0, double &raV, double &raAcc,
+                             double &dec0, double &decV, double &decAcc) const;
+    
     /*
       the tracklets which were used to build this track, if any. Currently this
       information is not used but could be useful for debugging or investigation.
@@ -70,12 +71,7 @@ public:
     std::set<unsigned int> componentTrackletIndices;
     
 
-    Track & operator= (const Track &other) {
-        componentTrackletIndices = other.componentTrackletIndices;
-        componentDetectionIndices = other.componentDetectionIndices;
-        componentDetectionDiaIds = other.componentDetectionDiaIds;
-        return *this;
-    }
+    Track & operator= (const Track &other);
 
     bool operator==(const Track &other) const {
         bool toRet = componentDetectionDiaIds == other.componentDetectionDiaIds;
@@ -98,8 +94,12 @@ public:
 private:
     std::set<unsigned int> componentDetectionIndices;
     std::set<unsigned int> componentDetectionDiaIds;
-
-
+    std::vector<double> raFunc;
+    std::vector<double> decFunc;
+    double epoch;
+    void  bestFit1d(const std::vector<double> &X,
+                    const std::vector<double> &time,
+                    std::vector<double> & res);
 };
 
 }} // close lsst::mops namespace

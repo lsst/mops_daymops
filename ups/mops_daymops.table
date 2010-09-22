@@ -1,8 +1,6 @@
 setupRequired("scons")
 setupRequired("swig")
 setupRequired("gsl")
-#setupRequired("utils")
-
 setupRequired(pex_exceptions)
 
 envPrepend(LD_LIBRARY_PATH, ${PRODUCT_DIR}/lib)

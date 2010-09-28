@@ -23,14 +23,15 @@ prefix.in.request : holds the tracks, and the flag requesting IOD be performed o
 
 """
 
-ASSUMED_OBS_TYPE=0
+ASSUMED_OBS_TYPE='O'
 ASSUMED_FILTER='r'
 ASSUMED_OBSERVATORY=866
-ASSUMED_RMS_RA=0.03
-ASSUMED_RMS_DEC=0.03
-ASSUMED_RMS_MAG=0.06
+ASSUMED_RMS_RA=0.3
+ASSUMED_RMS_DEC=0.3
+ASSUMED_RMS_MAG=0.1
 ASSUMED_S2N=18.0
 
+DEBUG=True
 
 class Detection(object):
     def __init__(self, diaId=None, ra=None, dec=None, mjd=None, mag=None, objId=None):
@@ -62,13 +63,13 @@ def writeTrackletsFile(detsFile, outFile):
     for real (especially if we really need them)
     """
     
-    outFile.write("!!OID TIME OBS_TYPE RA DEC APPMAG FILTER OBSERVATORY RMS_RA RMS_DEC RMS_MAG S2N Secret_name")
+    outFile.write("!!OID TIME OBS_TYPE RA DEC APPMAG FILTER OBSERVATORY RMS_RA RMS_DEC RMS_MAG S2N Secret_name\n")
 
     detsLine = detsFile.readline()
     while detsLine != "":
         det = Detection()
         det.fromMitiString(detsLine)
-        outFile.write("%d %5.10f %d %3.12f %3.12f %3.12f %s %s %3.12f %3.12f %3.12f %3.12f %s\n" \
+        outFile.write("%d %5.10f %s %3.12f %3.12f %3.12f %s %s %3.12f %3.12f %3.12f %3.12f %s\n" \
                           % \
                       (det.diaId, det.mjd, ASSUMED_OBS_TYPE, det.ra, det.dec, det.mag, ASSUMED_FILTER,
                        ASSUMED_OBSERVATORY, ASSUMED_RMS_RA, ASSUMED_RMS_DEC, ASSUMED_RMS_MAG,
@@ -80,7 +81,9 @@ def writeRequest(inTracks, requestFile):
     """ write the .in.request file given a set of DIA IDs which comprise the tracks."""
     requestFile.write("!!ID_OID NID TRACKLET_OIDs OP_CODE N_OBS N_SOLUTIONS N_NIGHTS ARC_TYPE NO_RADAR PARAM(4)\n")
     trackLine = inTracks.readline()
-    while trackLine != "":
+
+    count = 0
+    while trackLine != "":        
         diaIds = map(int, trackLine.split())
         trackName = '='.join(map(str, diaIds)) # this is what PS did so just run with it i guess
         requestFile.write("%s" % trackName)
@@ -89,7 +92,9 @@ def writeRequest(inTracks, requestFile):
             requestFile.write(" %d" % dia)
         requestFile.write(" REQUEST_PRELIM %d 0 0 0 0 0.0 0.0 0.0 0.0\n" % len(diaIds))
         trackLine = inTracks.readline()
-        
+        count += 1
+        if DEBUG and count > 1000:
+            return
 
 
 

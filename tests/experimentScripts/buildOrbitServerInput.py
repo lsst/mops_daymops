@@ -4,119 +4,261 @@
 
 jmyers
 
-Build input for orbit_server.x.  Takes as input a set of detections in
-MITI format and a set of tracks expressed as DiaSourceIds.  outputs a
-variety of files with a given prefix, as orbit_server.x enjoys.
+
+Build input(s) for orbit_server.x.  This script takes as input a set
+of tracks expressed as DiaSourceIds; the DiaSources are looked up from
+a database.  It then outputs a variety of files with a given prefix,
+as orbit_server.x enjoys.  The outputs are sets of files to be used
+for orbit_server.x.  Because orbit_server.x has a hard-coded maximum
+number of items in its input files, it is usually necessary to write
+many sets of files.
+
+
+output files
+
+prefix_num.in.manifest : lists the names of the three files we are writing. Not sure why we need this!
+prefix_num.in.tracklets : holds the tracklets (really, the detections) comprising the tracks.
+prefix_num.in.request : holds the tracks, and the flag requesting IOD be performed on them
+
+orbit_server.x takes a maximum of 500000 items in the .in.tracklets file.
+
+It also appears to take a maximum of about 24000 items in the .in.request file.
+
+We will create as many sets of files as needed.
 
 Unlike the PS version, we do not require that a track be made of
 tracklets but merely of a set of detections.  (Kubica's linkTracklets
 will allow this to happen, as will ours, though it is unlikely except
 in fairly dense observations.)  To allow this, we actually write
 "singleton tracklets" (i.e., single detections) to the ".in.tracklets"
-file handed to orbit_server.  This actually appears to work just fine!
+file handed to orbit_server.  This actually appears to work just fine
+- I tested by taking one of the PS examples and renaming the tracklets
+and changing the contents of the tracks and got the same results out.
 
-output files
-
-prefix.in.manifest : lists the names of the three files we are writing. Not sure why we need this!
-prefix.in.tracklets : holds the tracklets (really, the detections) comprising the tracks.
-prefix.in.request : holds the tracks, and the flag requesting IOD be performed on them
 
 """
 
 ASSUMED_OBS_TYPE='O'
 ASSUMED_FILTER='r'
-ASSUMED_OBSERVATORY=866
-ASSUMED_RMS_RA=0.3
-ASSUMED_RMS_DEC=0.3
-ASSUMED_RMS_MAG=0.1
-ASSUMED_S2N=18.0
+ASSUMED_OBSERVATORY=807
+ASSUMED_RMS_MAG=1.
+OPSIM_DB='opsim_3_61'
+OPSIM_TABLE='output_opsim3_61'
+DIAS_DB='mops_noDeepAstromError'
+DIAS_TABLE='fullerDiaSource'
 
-DEBUG=True
 
-class Detection(object):
-    def __init__(self, diaId=None, ra=None, dec=None, mjd=None, mag=None, objId=None):
-        self.ra = ra
-        self.dec = dec
-        self.mjd = mjd
-        self.mag = mag
-        self.objId = objId
+# set MAX_TRACKS to -1 to allow infinite tracks in output. otherwise
+# set to a fixed number to do a smaller, scaled run.  handy for
+# debugging.
+MAX_TRACKS=-1
+TRUE_TRACKS_ONLY=False
+FALSE_TRACKS_ONLY=False
 
-    def fromMitiString(self, mitiString):
-        items = mitiString.strip().split()
-        self.diaId = int(items[0])
-        self.mjd, self.ra, self.dec, self.mag = map(float, items[1:5])
-        self.objId = items[6]
+import add_astrometric_noise as astrom
+import useful_input as ui
+from lsst.daf.base.baseLib import DateTime
 
 
 
+class Track(object):
+    def __init__(self, trackId, dias, isKnownToBeTrue=None):
+        self.trackId = trackId
+        self.dias = dias
+        self._isTrue = isKnownToBeTrue
 
-def writeTrackletsFile(detsFile, outFile):
-    """ translate from MITI detections to orbit_server.x input format
-    'tracklets.' we don't really write tracklets at all -
+    def isTrue(self, dets=None):        
+        if self._isTrue != None:
+            return self._isTrue
+        else:
+            if dets == None:
+                raise Exception("Can't tell if this is a true track unless it can see the dets, \
+                                       or you specified at __init__-time.")
+            
+            myName = lookUpDet(dets, self.dias[0]).objId
+            if myName == 'NS':
+                self._isTrue = False
+                return False
+
+            for dia in self.dias:
+                if lookUpDet(dets, dia).objId != myName:
+                    # this is inconsistent, we are not a true track
+                    self._isTrue = False
+                    return False
+
+            # we didn't find any inconsistency, we are a true track
+            self._isTrue = True
+            return True
+
+    def isSubset(self, otherTrack):
+        myDiasSet = set(self.dias)
+        otherTrackDiasSet = set(otherTrack.dias)
+        return myDiasSet.issubset(otherTrackDiasSet)
+
+
+
+
+
+def taiToUtc(taiTime):
+    d = DateTime(taiTime, DateTime.TAI)
+    return d.mjd(DateTime.UTC)
+
+
+def lookUpDet(dbCursor, diaId):
+    """ fetches the following from DB, given a DiaID, doing a little calculation as
+    needed: utcMjd, ra, dec, mag, astromErr, snr, groundTruthId
+    """
+        
+    sql = """ SELECT taiMidPoint, ra, decl, mag, opSimId, snr, ssmId
+                  FROM %s.%s WHERE diaSourceId=%d ; """ % \
+        (DIAS_DB, DIAS_TABLE, diaId)
+    res = ui.sqlQuery(dbCursor, sql, verbose=False)
+    #print res
+    [taiTime, ra, dec, mag, opSimId, snr, groundTruthId] = res[0]
+    #print diaId, mag, opSimId
+    sql = "select 5sigma_ps, seeing from %s.%s where obsHistID=%d" %(OPSIM_DB, OPSIM_TABLE, opSimId)
+    [sigma5_ps, seeing] = ui.sqlQuery(cursor, sql, verbose=False)[0]
+    
+    astromErr = astrom.calcAstrometricError(mag, sigma5_ps, seeing)
+
+    utcMjd = taiToUtc(taiTime)
+    return utcMjd, ra, dec, mag, astromErr, snr, groundTruthId
+
+
+
+
+def writeDiasToDesTrackletsFile(diasToWrite, outFile, dbCursor):
+    """ reads a set of dias from the DB and writes them to the
+    "tracklets" file. we don't really write tracklets at all -
     orbit_server.x will actually allow 'singleton' tracklets of size
     one, which are basically just detections.  The 'tracklets' we
     write have the same IDs as the DiaIds on the detections from the
     input file. easy peasy!
-    
-    TBD: right now we use constants for OBS_TYPE, FILTER, OBSERVATORY,
-    RMS_RA, RMS_DEC, RMS_MAG and S2N. In the future, find these values
-    for real (especially if we really need them)
     """
-    
-    outFile.write("!!OID TIME OBS_TYPE RA DEC APPMAG FILTER OBSERVATORY RMS_RA RMS_DEC RMS_MAG S2N Secret_name\n")
+    for diaId in diasToWrite:
+        utcMjd, ra, dec, mag, astromErr, snr, groundTruthId = lookUpDet(dbCursor, diaId)
 
-    detsLine = detsFile.readline()
-    while detsLine != "":
-        det = Detection()
-        det.fromMitiString(detsLine)
+        #TBD: RA astrometric error is not == astromErr, it's something else - cos(radians(dec))* astromErr?
+        #   add this in later. For now on the ecliptic it won't really matter.
         outFile.write("%d %5.10f %s %3.12f %3.12f %3.12f %s %s %3.12f %3.12f %3.12f %3.12f %s\n" \
                           % \
-                      (det.diaId, det.mjd, ASSUMED_OBS_TYPE, det.ra, det.dec, det.mag, ASSUMED_FILTER,
-                       ASSUMED_OBSERVATORY, ASSUMED_RMS_RA, ASSUMED_RMS_DEC, ASSUMED_RMS_MAG,
-                       ASSUMED_S2N, det.objId))
-        detsLine = detsFile.readline()
+                      (diaId, utcMjd, ASSUMED_OBS_TYPE, ra, dec, mag, ASSUMED_FILTER,
+                       ASSUMED_OBSERVATORY, astromErr, astromErr, ASSUMED_RMS_MAG,
+                       snr, groundTruthId))
 
 
-def writeRequest(inTracks, requestFile):
-    """ write the .in.request file given a set of DIA IDs which comprise the tracks."""
+def writeTrackToRequestFile(diaIds, requestFile, trackName):
+    """ take a track ( as a set of diaIds ) and write it to request file."""
+
+    t = Track(trackName, diaIds)
+
+    #if this track has too many dias, then we need to subselect. max
+    #is 18 according to orbit_server.x
+
+    if len(diaIds) > 18:
+        half = len(diaIds)/2
+        newDias = diaIds[:8] + diaIds[half:half+2] + diaIds[-8:]
+        diaIds = newDias
+        if len(diaIds) > 18: 
+            print "whoops! programmer error in writeTracksToRequestFile"
+    #outputTrack = True
+    #if TRUE_TRACKS_ONLY == True:
+    #    outputTrack = t.isTrue(allDets)
+    #if FALSE_TRACKS_ONLY== True:
+    #    outputTrack = not t.isTrue(allDets)
+    #if outputTrack:
+    requestFile.write("%s" % trackName)
+    requestFile.write(" %d" % len(diaIds))
+    for dia in diaIds:
+        requestFile.write(" %d" % dia)
+    requestFile.write(" REQUEST_PRELIM %d 0 0 0 0 0.0 0.0 0.0 0.0\n" % len(diaIds))
+
+
+
+
+def writeManifestFile(manifestName, trackletsName, requestName):
+    manifest = file(manifestName,'w')
+    for name in [manifestName, trackletsName, requestName]:
+        manifest.write(name + '\n')
+
+
+
+
+def createNewFiles(outPrefix, outputNumber):
+    outNumS = str(outputNumber)
+    requestFileName = outPrefix + "_" + outNumS + ".in.request"
+    trackletsFileName = outPrefix + "_" + outNumS + ".in.tracklet"
+    manifestName = outPrefix + "_" + outNumS + ".in.manifest"
+    writeManifestFile(manifestName, trackletsFileName, requestFileName)
+
+    requestFile = file(requestFileName,'w')
+    trackletsFile = file(trackletsFileName,'w')
+    trackletsFile.write("!!OID TIME OBS_TYPE RA DEC APPMAG FILTER OBSERVATORY RMS_RA RMS_DEC RMS_MAG S2N Secret_name\n")
     requestFile.write("!!ID_OID NID TRACKLET_OIDs OP_CODE N_OBS N_SOLUTIONS N_NIGHTS ARC_TYPE NO_RADAR PARAM(4)\n")
-    trackLine = inTracks.readline()
 
-    count = 0
-    while trackLine != "":        
-        diaIds = map(int, trackLine.split())
-        trackName = '='.join(map(str, diaIds)) # this is what PS did so just run with it i guess
-        requestFile.write("%s" % trackName)
-        requestFile.write(" %d" % len(diaIds))
-        for dia in diaIds:
-            requestFile.write(" %d" % dia)
-        requestFile.write(" REQUEST_PRELIM %d 0 0 0 0 0.0 0.0 0.0 0.0\n" % len(diaIds))
-        trackLine = inTracks.readline()
-        count += 1
-        if DEBUG and count > 1000:
-            return
+    return requestFile, trackletsFile
 
+
+
+def writeOrbitServerInputFiles(inTracksFile, outPrefix, cursor, maxTrackletsPerFile, maxTracksPerFile):
+    """writes sets of input files for orbit_server.x. create as many sets of output files as needed"""
+    curFileSetNum = 0
+    totalTracksWritten = 0
+    requestFile, trackletsFile = createNewFiles(outPrefix, curFileSetNum)
+    
+    nextTrack = map(int, inTracksFile.readline().split())
+    diasNeededForThisOutfile = set()
+    numTracksWrittenToThisOutfile = 0
+
+    while nextTrack != "":
+
+        # we need to know the next track in order to see if it will
+        # require us to add too many detections to an outfile.
+        readaheadTrack = inTracksFile.readline()    
+        readaheadTrack = map(int, readaheadTrack.split())
+
+        # check if we're done with this set of files for any reason.
+        # possible reasons:
+        #  - we are out of input (done)
+        #  - we can't fit any more detections in an outfile.
+        #  - we can't fit any more *tracks* in an outfile.
+        if readaheadTrack == "" or \
+                len(diasNeededForThisOutfile) + len(readaheadTrack) > maxTrackletsPerFile or \
+                numTracksWrittenToThisOutfile == maxTracksPerFile or \
+                (MAX_TRACKS > 0 and totalTracksWritten == MAX_TRACKS):
+
+            # if we're done with this set of files, start a new set of files.
+            writeDiasToDesTrackletsFile(diasNeededForThisOutfile, trackletsFile, cursor)
+            requestFile.close()
+            trackletsFile.close()
+            print "Successfully wrote output files for %s" % (outPrefix + "_" + str(curFileSetNum))
+            curFileSetNum += 1
+            requestFile, trackletsFile = createNewFiles(outPrefix, curFileSetNum)
+            diasNeededForThisOutfile = set()
+            numTracksWrittenToThisOutfile = 0
+            
+
+        # write this track to the current outfile; add its dias to the set needed for the associated
+        # "tracklets" file (which is really a set of detections)        
+        for dia in nextTrack: 
+            diasNeededForThisOutfile.add(dia)
+        writeTrackToRequestFile(nextTrack, requestFile, str(totalTracksWritten))
+        totalTracksWritten += 1
+        numTracksWrittenToThisOutfile += 1
+
+        # collect more data for the current file.
+        nextTrack = readaheadTrack
+
+    requestFile.close()
+    trackletsFile.close()
 
 
 if __name__=="__main__":
     import sys
-    inDets = file(sys.argv[1],'r')
-    inTracks= file(sys.argv[2],'r')
-    outPrefix=sys.argv[3]
+    inTracks= file(sys.argv[1],'r')
+    outPrefix=sys.argv[2]
 
+    conn,cursor = ui.sqlConnect(hostname='localhost', username='jmyers', passwdname='jmyers', dbname='opsim_3_61')
     
-    manifestName = outPrefix + '.in.manifest'
-    trackletsName = outPrefix + '.in.tracklet'
-    requestName = outPrefix + '.in.request'
-    manifest = file(manifestName, 'w')
-
-    # write the manifest file. too connected and too simple to really put in its own function.
-    for name in [manifestName, trackletsName, requestName]:
-        manifest.write(name + '\n')
-
-    trackletsOut = file(trackletsName,'w')
-    writeTrackletsFile(inDets, trackletsOut) 
-
-    requestFile = file(requestName,'w')
-    writeRequest(inTracks, requestFile)
-    
+    writeOrbitServerInputFiles(inTracks, outPrefix, cursor, MAX_TRACKLETS_PER_FILE, MAX_TRACKS_PER_FILE)
+    print "done writing output files."

@@ -38,7 +38,7 @@ public:
     findTrackletsConfig() 
         {   
             maxDt = .0625; // 90 minutes
-            minDt = .0;
+            minDt = .01; //14.4 minutes
             maxV = 2.0;
             minV = 0.0;
             outputMethod = RETURN_TRACKLETS;

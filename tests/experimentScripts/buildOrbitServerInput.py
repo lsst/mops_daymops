@@ -46,18 +46,47 @@ OPSIM_DB='opsim_3_61'
 OPSIM_TABLE='output_opsim3_61'
 DIAS_DB='mops_noDeepAstromError'
 DIAS_TABLE='fullerDiaSource'
-
+MAX_TRACKLETS_PER_FILE=50000
+MAX_TRACKS_PER_FILE=24000
 
 # set MAX_TRACKS to -1 to allow infinite tracks in output. otherwise
 # set to a fixed number to do a smaller, scaled run.  handy for
 # debugging.
 MAX_TRACKS=-1
-TRUE_TRACKS_ONLY=False
-FALSE_TRACKS_ONLY=False
 
 import add_astrometric_noise as astrom
 import useful_input as ui
 from lsst.daf.base.baseLib import DateTime
+
+
+
+def writeOptFile(optFileName):
+    s = """! option file for OrbFit Server Suite   
+orbsrv.  
+
+! oss1run1 
+! slow iteration of orbit_server with input tracks from MOPS code 
+     .force_difcor=.T.       ! compute least sq. orbit  
+!     .inpdir='.'            ! input directory (def .)
+!     .outdir='.'            ! output directory (def .)
+     .cooy='COM'             ! output cometary orbital elements (COM)
+! logical controls of prelim_orbit  
+   .smart_ecclim_cont=0.1d0  ! eta max for hyperbolics, deg/d (def. 0)
+   .smart_gaussmap=.T.       ! use elongation to select Gauss map (def F)
+! control parameters for prelim_orbit  
+     .prelim_rms=  1000.d0 ! output prelim if RMS<this (def 100)  
+!
+
+! control parameters for fit_control
+     .rms_control=1.8d0     ! control on astrometric RMS (def 1.8)
+     .rmsh_control=0.4d0    ! control on photometric RMS (def 1.5)
+     .bias_control=4.d0     ! control on bias of the fit (def 2.5)
+     .span_control=4.d0     ! control on linear trends (def 2.5)
+     .curv_control=4.d0     ! control on residual curvature (def 2.5)
+     .zsign_control=4.d0    ! control on residual third deriv. (def 2.5)
+"""
+    out = file(optFileName, 'w')
+    out.write(s)
 
 
 
@@ -191,6 +220,9 @@ def createNewFiles(outPrefix, outputNumber):
     manifestName = outPrefix + "_" + outNumS + ".in.manifest"
     writeManifestFile(manifestName, trackletsFileName, requestFileName)
 
+    optFileName = outPrefix + "_" + outNumS + ".opt"
+    writeOptFile(optFileName)
+
     requestFile = file(requestFileName,'w')
     trackletsFile = file(trackletsFileName,'w')
     trackletsFile.write("!!OID TIME OBS_TYPE RA DEC APPMAG FILTER OBSERVATORY RMS_RA RMS_DEC RMS_MAG S2N Secret_name\n")
@@ -206,23 +238,25 @@ def writeOrbitServerInputFiles(inTracksFile, outPrefix, cursor, maxTrackletsPerF
     totalTracksWritten = 0
     requestFile, trackletsFile = createNewFiles(outPrefix, curFileSetNum)
     
-    nextTrack = map(int, inTracksFile.readline().split())
+    nextTrackLine = inTracksFile.readline()
+
     diasNeededForThisOutfile = set()
     numTracksWrittenToThisOutfile = 0
 
-    while nextTrack != "":
+    while nextTrackLine != "":
 
+        nextTrack = map(int, nextTrackLine.split())
         # we need to know the next track in order to see if it will
         # require us to add too many detections to an outfile.
-        readaheadTrack = inTracksFile.readline()    
-        readaheadTrack = map(int, readaheadTrack.split())
+        readaheadTrackLine = inTracksFile.readline()
+        readaheadTrack = map(int, readaheadTrackLine.split())
 
         # check if we're done with this set of files for any reason.
         # possible reasons:
         #  - we are out of input (done)
         #  - we can't fit any more detections in an outfile.
         #  - we can't fit any more *tracks* in an outfile.
-        if readaheadTrack == "" or \
+        if readaheadTrackLine == "" or \
                 len(diasNeededForThisOutfile) + len(readaheadTrack) > maxTrackletsPerFile or \
                 numTracksWrittenToThisOutfile == maxTracksPerFile or \
                 (MAX_TRACKS > 0 and totalTracksWritten == MAX_TRACKS):
@@ -247,7 +281,7 @@ def writeOrbitServerInputFiles(inTracksFile, outPrefix, cursor, maxTrackletsPerF
         numTracksWrittenToThisOutfile += 1
 
         # collect more data for the current file.
-        nextTrack = readaheadTrack
+        nextTrackLine = readaheadTrackLine
 
     requestFile.close()
     trackletsFile.close()

@@ -1,4 +1,6 @@
-Jmyers Aug 23
+Jmyers Oct 22
+
+Updated thoroughly to describe how I'm currently doing things.
 
 The following is a set of instructions for running
 find/collapse/linkTracklets on some diaSources. 
@@ -30,14 +32,8 @@ which has the format:
 
 #diasourceID opsimID   ssmid  ra  dec   expmjd  mag  SNR
 
-
-If you end up with diasource data which does not have the diasourceID, you
-can add it using the script : 
-
-$ python $MOPS_HACKS/addUniqueIds.py dias_pt1_nodeep.short.astromErr
-    dias_pt1_nodeep.short.astromErr.plusIds
-
-but this is not necessary using the most recent input data. 
+You will also need the opsim database which was used to generate the
+detections; currently this is opsim_3_61.
 
 
 
@@ -134,18 +130,14 @@ TBD.
 PREPARING FOR LINKTRACKLETS
 -----------------------------
 
-LinkTracklets uses bundled up sets of tracklets covering ~15 days of
-observations and looks for tracks which start and end sometime within
-that 15 days.  Depending on which flavor (C Auton / C++ LSST) of
-linkTracklets you use the input formats are different.
+LinkTracklets uses bundled up sets of tracklets covering several days
+of observations and looks for tracks which start and end sometime
+within that window of time.  Depending on which flavor (C Auton / C++
+LSST) of linkTracklets you use the input formats are different;
+fortunately our new method generates both inputs simultaneously.
 
-Use make15DayWindows.py to bundle up your tracklets for C++
-linkTracklets.  There is another script which will convert the C++
-input files to work with C linkTracklets if you want to go that route.
+Use 
 
-Configuration of make15DayWindows is done by setting the constants at
-the top of the file.  Change the constants so they point to your
-diaSource files (.miti) and your tracklets.   Make sure that you create the output directory if needed:
 
 e.g.
 $ mkdir /workspace1/jmyers/nightlyDiasAstromErr/15DayWindowsMaxv0.5/
@@ -180,7 +172,7 @@ of line numbers.
 
 
 
-RUNNING C LINKTRACKLETS (the new way, distributed by images)
+RUNNING LINKTRACKLETS (the new way, distributed by images)
 --------------------------------------
 
 Our last set of runs on Abe demonstrated that a single night of
@@ -189,16 +181,27 @@ distribute the workload differently, we now have the option of making
 infiles with some maximum number of first (or perhaps someday last)
 endpoint images in the files.
 
-First you'll need to break up the tracklets by start image.
-
 You WILL need the Opsim database as well as the a database of Dias
 including the obsHistId of each image producing the diaSources.  
+
+First you'll need to break up the tracklets by start image.  This is
+done with the script binTrackletsByStartImages.py; set the constants
+at the top of the file to suit your needs. Then run it like  this:
+
+Do that for every output file from findTracklets.  
 
 $ mkdir trackletsByStartImage
 $ for TRACKLETSFILE in *.tracklets.byDiaId
 do
    python $MOPS_HACKS/binTrackletsByStartImage.py trackletsByStartImage
 done
+
+
+(NB: I think this only works with the output of C++ linkTracklets.)
+
+There will be one file created for each ObsHistId of every image with
+a tracklet "rooted" in that image.  All tracklets "rooted" in that
+image will be grouped together.
 
 You'll then need to make the new data sets for linkTracklets. They
 will be automatically paired with the correct start_t_range in order
@@ -221,121 +224,9 @@ $ python $MOPS_HACKS/makeLinkTrackletsInput_byImages.py
 
 This will create lots of input files with .start_t_range files.  To run C linkTracklets on data set foo:
 
-$ $AUTON_DIR/linkTracklets_modified/linkTracklets file foo.miti start_t_range `cat foo.start_t_range` indicesfile foo.tracks.byIndices [other params - accel, RMS, etc.]
+$ $AUTON_DIR/linkTracklets_modified/linkTracklets file foo.miti start_t_range `cat foo.start_t_range` indicesfile foo.tracks.byIndices [args for other params - accel, RMS, etc.]
 
 
-
-
-RUNNING C++ LINKTRACKLETS (distributed by night)
------------------------------
-
-
-$ $MOPS_DAYMOPS_DIR/bin/linkTracklets \
-   -d night_49544_through_49557.dets \
-   -t night_49544_through_49557.ids \
-   -o night_49544_through_49557.tracks
-
-For now, more advanced settings can be configured by editing linkTracklets.h and recompiling.
-
-At the moment, C++ linkTracklets will look for ALL tracks which appear
-within the entire window of time.  This can lead to some redundant
-tracks - for example, a track which starts on night 49641 and ends on
-night 49644 will be found while searching on the windows
-night_49640_through_49654 as well as night_49641_through_49654.
-
-Adding the option to limit searching to tracks starting or ending on a
-subset of the nights in the data set is a forthcoming improvement
-which should come Real Soon Now.
-
-
-
-
-
-
-
-PREPARING FOR C LINKTRACKLETS (distributed by night)
-------------------------------
-
-If you really must...  Then here are instructions.  It's going to get
-awfully ugly, so take a deep breath and try not to get lost. 
-** However, we really would appreciate comparisons of the C and C++
-linnkTracklets runs, so please do go ahead with this!
-
-To use the original Auton C implementation of linkTracklets, you'll
-need to convert input file formats.  For the time being, C
-linkTracklets supports searching for tracks which start or end on a
-subset of the input data.
-
-You'll want to make sure you're using the modified linkTracklets which
-writes its output continuously, from auton/linkTracklets_modified.
-
-C linkTracklets takes input as a single MITI file.  Use
-trackletsToMiti to convert one .dets and .ids file (as would be input
-to linkTracklets) to a single giant MITI file, e.g.:
-
-$ python $MOPS_HACKS/trackletsToMiti.py night_49544_through_49557.dets \
-   night_49544_through_49557.ids \
-   night_49544_through_49557.tracklets.miti
-
-You may wish to convert all of your files this way - you might want to
-try using a BASH script like this:
-
-for DETS in *.dets 
-do
-   BN=`basename $DETS .dets`
-   python $MOPS_HACKS/trackletsToMiti.py $DETS $BN.ids $BN.tracklets.miti
-done
-
-Then go for a jog or find some good reading material.  The MITI format
-generates some nasty bloat so there will be a lot of disk activity.
-Which is funny, because C linkTracklets has to go back at runtime and
-convert its in-memory representation of the data *back* to a format
-more like the original one we were using as input to C++
-linkTracklets anyway.
-
-Note that the input file format for C linkTracklets is "lossy": it
-will represent input as one giant MITI file, with the ID column used
-for Tracklet IDs.  Contiguous detections in the MITI file which share
-the same ID are trusted to be in the same tracklet.  The script
-makeCheatSheetForMITI.py can be used to generate a "cheat sheet" file
-such that line X of the "cheat sheet" file contains the DiaSourceId of
-the DiaSource at line X of the .miti.tracklets file.  Confused yet?
-See "interpreting the output of C linktracklets" for more info.
-
-
-
-
-
-
-RUNNING C LINKTRACKLETS (distributed by night)
---------------------------------
-
-Anyway, once you've used trackletsToMiti.py to get your
-.tracklets.miti files, you can run C linkTracklets:
-
-$ AUTON_DIR/linkTracklets/linkTracklets \
-  file night_49557_through_49572.tracklets.miti \
-  indicesfile night_49557_through_49572.c.tracks.byIndices  \
-  acc_r 0.02 acc_d 0.02 
-
-acc_r and acc_d are the maximum accelerations of tracks for which you
-will search, specified in RA and Dec.
-
-
-There is one big upside to C linkTracklets right now: given a window,
-it takes an optional argument to choose the set of track start and/or
-end times for which it will attempt searching.  So if you have a data
-set from nights 49563 through 49572 and another data set from nights
-49564 through 49572, you can set linkTracklets to search *only* for
-tracks starting on night 49563 when looking at the first data set.
-
-Use the script makeRunScripts.py to generate BASH shell scripts which
-will run linkTracklets while avoiding redundant searching.  It will do
-this by peeking at the .tracklets.miti files and finding out when
-their first tracklet time is.  Set the constants at the top of the
-file to point to your .tracklets.miti files and then:
-
-$ python $MOPS_HACKS/makeRunScripts.py
 
 
 

@@ -178,7 +178,55 @@ of line numbers.
 
 
 
-RUNNING C++ LINKTRACKLETS
+
+
+RUNNING C LINKTRACKLETS (the new way, distributed by images)
+--------------------------------------
+
+Our last set of runs on Abe demonstrated that a single night of
+processing can require > 150 hours of CPU time. So to try to
+distribute the workload differently, we now have the option of making
+infiles with some maximum number of first (or perhaps someday last)
+endpoint images in the files.
+
+First you'll need to break up the tracklets by start image.
+
+You WILL need the Opsim database as well as the a database of Dias
+including the obsHistId of each image producing the diaSources.  
+
+$ mkdir trackletsByStartImage
+$ for TRACKLETSFILE in *.tracklets.byDiaId
+do
+   python $MOPS_HACKS/binTrackletsByStartImage.py trackletsByStartImage
+done
+
+You'll then need to make the new data sets for linkTracklets. They
+will be automatically paired with the correct start_t_range in order
+to limit the number of first images per data set.
+
+Open makeLinkTrackletsInput_byImages.py and set all the constants at
+the top to something sane for you; you'll mostly want to edit
+TRACKLETS_BY_OBSHIST_DIR to be the location of trackletsByStartImage/
+(as you just created above) and set up the database references
+correctly.
+
+Then update the MAX_START_IMAGES_PER_RUN settings and and
+TRACKING_WINDOW_DAYS settings to your liking.
+
+
+Then just run:
+
+$ python $MOPS_HACKS/makeLinkTrackletsInput_byImages.py
+
+
+This will create lots of input files with .start_t_range files.  To run C linkTracklets on data set foo:
+
+$ $AUTON_DIR/linkTracklets_modified/linkTracklets file foo.miti start_t_range `cat foo.start_t_range` indicesfile foo.tracks.byIndices [other params - accel, RMS, etc.]
+
+
+
+
+RUNNING C++ LINKTRACKLETS (distributed by night)
 -----------------------------
 
 
@@ -205,7 +253,7 @@ which should come Real Soon Now.
 
 
 
-PREPARING FOR C LINKTRACKLETS
+PREPARING FOR C LINKTRACKLETS (distributed by night)
 ------------------------------
 
 If you really must...  Then here are instructions.  It's going to get
@@ -259,7 +307,7 @@ See "interpreting the output of C linktracklets" for more info.
 
 
 
-RUNNING C LINKTRACKLETS
+RUNNING C LINKTRACKLETS (distributed by night)
 --------------------------------
 
 Anyway, once you've used trackletsToMiti.py to get your

@@ -19,11 +19,11 @@ Then use this script to convert from the output of C linkTracklets
 """
 
 
-DIA_IDS_DIR="/workspace1/jmyers/nightlyDiasNodeep/cppFindTracklets/15DayWindowsMaxv0.5/"
-DIA_IDS_SUFFIX=".tracklets.miti.diaIds"
+DIA_IDS_DIR="/workspace0/jmyers/nightlyDiasAstromErr_linkTrackletsInfiles_maxv0.5_mint_0.01_30dayWindows/"
+DIA_IDS_SUFFIX=".miti.diaIds"
 
 
-TRACKS_DIR="/workspace1/jmyers/nightlyDiasNodeep/cppFindTracklets/15DayWindowsMaxv0.5/runScripts/results/"
+TRACKS_DIR="/workspace0/jmyers/nightlyDiasAstromErr_linkTrackletsInfiles_maxv0.5_mint_0.01_30dayWindows/results/finished/"
 TRACKS_SUFFIX=".c.tracks.byIndices"
 
 import glob
@@ -37,14 +37,14 @@ TRACK_BY_DIA_SUFFIX=".c.tracks.byDiaId"
 def lineNumToIdsAndMjds(detsFile):
     line = detsFile.readline()
     ids = []
-    mjds = []
+    #mjds = []
     while line != "":
         diaId = int(line.split()[0])
-        mjd = float(line.split()[1])
+        #mjd = float(line.split()[1])
         ids.append(diaId)        
-        mjds.append(mjd)
+        #mjds.append(mjd)
         line = detsFile.readline()
-    return ids, mjds
+    return ids #, mjds
 
 
 
@@ -76,7 +76,7 @@ if __name__ == "__main__":
         diaIdsFile = file(diaIdsFileName, 'r')
         outFile = file(outFileName, 'w')
         
-        diaIds, mjds = lineNumToIdsAndMjds(diaIdsFile)
+        diaIds = lineNumToIdsAndMjds(diaIdsFile)
 
         # the track file holds line numbers from the .tracklets.miti
         # file. the diaIds file holds lines s.t. line X of diaIds file
@@ -87,13 +87,14 @@ if __name__ == "__main__":
         while trackLine != "":
             lineNums = map(int, trackLine.split())
             trackDiaIds = []
-            trackMjds = []
+            #trackMjds = []
             for lineNum in lineNums:
                 trackDiaIds.append(diaIds[lineNum])
-                trackMjds.append(mjds[lineNum])
+                #trackMjds.append(mjds[lineNum])
 
             for dia in sorted(trackDiaIds):
                 outFile.write(" %d " % dia)
+
             outFile.write("\n")
 
             trackLine = trackFile.readline()

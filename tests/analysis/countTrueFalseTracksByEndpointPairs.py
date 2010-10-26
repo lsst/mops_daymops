@@ -13,6 +13,7 @@ and false tracks at each unique endpoint image pair.
 
 
 import sys
+import glob
 
 FALSE_DIA_SSM_ID="-1" # the ssmId of a DiaSource which is attributable to non-asteroid sources
 
@@ -135,31 +136,38 @@ if __name__=="__main__":
     import time
     "Starting analysis at ", time.ctime()
 
-    if len(sys.argv) != 4:
-        print "USAGE: ", sys.argv[0], " diaDataDump tracksFile statsOutFile"
+    if len(sys.argv) != 3:
+        print "USAGE: ", sys.argv[0], " diaDataDump tracksGlobPattern"
         sys.exit(1)
         
-    [diaDataDump, tracks, statsOut] = sys.argv[1:]
+    [diaDataDump, tracksGlobPattern] = sys.argv[1:]
+    tracksGlob = glob.glob(tracksGlobPattern)
 
     print "Reading diaSource info from ", diaDataDump
-    print "Reading tracks from ", tracks
-    print "Pringing per-image track stats to ", statsOut
+    print "Reading tracks from ", tracksGlob
 
     diasDataFile = file(diaDataDump,'r')
-    tracksFile = file(tracks,'r')
-    statsOutFile = file(statsOut,'w')
 
     print "Reading dump of all Dias at ", time.ctime()
     diasLookupDict = readDias(diasDataFile)
     print "Done. Starting analysis at ", time.ctime()
     t0 = time.time()
-
-    obsHistCounts = countTracksByEndpointImages(diasLookupDict, tracksFile)
-    print "Done at ", time.ctime()
-    dt = time.time() - t0
-    print "Writing output at ", time.ctime()
-    writeImgPairsFile(obsHistCounts, statsOutFile)
-
-    statsOutFile.close()
     
-    print "Analysis DONE and output written successfully at ", time.ctime()
+    for tracks in tracksGlob:
+
+        tracksFile = file(tracks,'r')
+        obsHistCounts = countTracksByEndpointImages(diasLookupDict, tracksFile)
+        print "Done at ", time.ctime()
+        dt = time.time() - t0
+
+        statsOut = tracks + ".stats_byObsHistPair" 
+        statsOutFile = file(statsOut,'w')
+
+        print "Writing output to ", statsOut, " starting at ", time.ctime()
+        writeImgPairsFile(obsHistCounts, statsOutFile)
+
+        statsOutFile.close()
+    
+        print "Analysis of ", tracks, " DONE and output written successfully at ", time.ctime()
+        
+    print " ALL ANALYSES DONE AT ", time.ctime()

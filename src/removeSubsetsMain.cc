@@ -110,7 +110,13 @@ namespace mops {
             outputVector = pairsVector;
         }
 
+        std::cout << "Writing the output..." << std::endl;
+
         writeTrackletsToOutFile(outputVector, outFile);
+        outFile.close();
+
+        std::cout << "Wrote output and closed file.  Cleaning up and exiting." << std::endl;
+           
         if (outputVector != pairsVector) {
             delete outputVector;
         }

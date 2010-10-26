@@ -193,44 +193,46 @@ def writeFoundObjectsFile(foundObjects, foundObjectsOut):
 
 if __name__=="__main__":
     import time
+    import glob
     "Starting analysis at ", time.ctime()
 
-    if len(sys.argv) != 7:
-        print "USAGE: ", sys.argv[0], " diaDataDump tracksFile statsOutFile per-obsHistCountsOutFile foundObjectsOutFile trueTracks"
+    if len(sys.argv) != 3:
+        print "USAGE: ", sys.argv[0], " diaDataDump tracksGlob"
         sys.exit(1)
         
-    [diaDataDump, tracks, statsOut, obsHistCountsOut, foundObjectsOut, trueTracksOut] = sys.argv[1:]
+    [diaDataDump, tracksGlobPattern] = sys.argv[1:]
+    tracksGlob = glob.glob(tracksGlobPattern)
 
     print "Reading diaSource info from ", diaDataDump
-    print "Reading tracks from ", tracks
-    print "Printing basic track stats to ", statsOut
-    print "Pringing per-image track stats to ", obsHistCountsOut
-    print "Printing names of found objects to ", foundObjectsOut
-    print "Printing true tracks to ", trueTracksOut
+    print "Reading tracks from ", tracksGlob
 
     diasDataFile = file(diaDataDump,'r')
-    tracksFile = file(tracks,'r')
-    statsOutFile = file(statsOut,'w')
-    obsHistOutFile = file(obsHistCountsOut,'w')
-    foundObjectsOutFile = file(foundObjectsOut,'w')
-    trueTracksOutFile = file(trueTracksOut, 'w')
 
     print "Reading dump of all Dias at ", time.ctime()
     diasLookupDict = readDias(diasDataFile)
-    print "Done. Starting analysis at ", time.ctime()
-    t0 = time.time()
 
-    nTrue, nFalse, obsHistCounts, foundObjects = getLotsOfStatsFromTracksFile(diasLookupDict, tracksFile, trueTracksOutFile)
-    print "Done at ", time.ctime()
-    dt = time.time() - t0
-    print "Reading/analyzing ", nTrue + nFalse, " tracks took ", dt, " seconds."
-    print "Writing output at ", time.ctime()
-    writeStatsFile(nTrue, nFalse, foundObjects, statsOutFile)
-    writeObsHistFile(obsHistCounts, obsHistOutFile)
-    writeFoundObjectsFile(foundObjects, foundObjectsOutFile)
+    for tracks in tracksGlob:
+            tracksFile = file(tracks,'r')
+            statsOutFile = file(tracks + ".stats",'w')
+            obsHistOutFile = file(tracks + ".stats_perObsHist",'w')
+            foundObjectsOutFile = file(tracks + ".foundObjects",'w')
+            trueTracksOutFile = file(tracks + ".trueTracks.byDiaId", 'w')
+            
+            print "Done. Starting analysis of ", tracks, " at ", time.ctime()
+            t0 = time.time()
+            nTrue, nFalse, obsHistCounts, foundObjects = getLotsOfStatsFromTracksFile(diasLookupDict, tracksFile, trueTracksOutFile)
+            print "Done at ", time.ctime()
+            dt = time.time() - t0
+            print "Reading/analyzing ", nTrue + nFalse, " tracks took ", dt, " seconds."
+            print "Writing output at ", time.ctime()
+            writeStatsFile(nTrue, nFalse, foundObjects, statsOutFile)
+            writeObsHistFile(obsHistCounts, obsHistOutFile)
+            writeFoundObjectsFile(foundObjects, foundObjectsOutFile)
+            
+            statsOutFile.close()
+            obsHistOutFile.close()
+            foundObjectsOutFile.close()
+            
+            print "Analysis DONE and output written successfully at ", time.ctime()
 
-    statsOutFile.close()
-    obsHistOutFile.close()
-    foundObjectsOutFile.close()
-    
-    print "Analysis DONE and output written successfully at ", time.ctime()
+    print "ALL ANALYSES FINISHED AT ", time.ctime()

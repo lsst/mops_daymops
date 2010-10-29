@@ -38,10 +38,22 @@ EPSILON=1e-5
 
 TRACKING_WINDOW_DAYS=30 # in days; we only look for tracks spanning <= this number of nights.
 
+
+# how to find tracklets (by Dia Id) organized by their "root" obsHistId.
 TRACKLETS_BY_OBSHIST_DIR="/workspace1/jmyers/nightlyDiasAstromErr/tracklets/trackletsByObsHist/"
 TRACKLETS_BY_OBSHIST_SUFFIX=".tracklets.byDiaId"
+#these are not the dias in a given obsHist per se but the set of dias
+#which are referenced by the corresponding tracklets
+#file. buildDiaSourceSetsForTrackletFiles.py can create these files.
+DIAS_BY_OBSHIST_DIR="/workspace1/jmyers/nightlyDiasAstromErr/tracklets/trackletsByObsHist/"
+DIAS_BY_OBSHIST_SUFFIX=".tracklets.dias_lynneFormat"
+
+
 OBSHIST_TO_TRACKLETS_FILE=lambda x: os.path.join(TRACKLETS_BY_OBSHIST_DIR) + str(x) + TRACKLETS_BY_OBSHIST_SUFFIX
 TRACKLETS_FILE_TO_OBSHIST=lambda x: (int(os.path.basename(x)[:-len(TRACKLETS_BY_OBSHIST_SUFFIX)]))
+
+OBSHIST_TO_DIAS_FILE=lambda x: os.path.join(DIAS_BY_OBSHIST_DIR) + str(x) + DIAS_BY_OBSHIST_SUFFIX
+DIAS_FILE_TO_OBSHIST=lambda x: (int(os.path.basename(x)[:-len(DIAS_BY_OBSHIST_SUFFIX)]))
 
 # if true, will put some metadata about each data set into the start t range files directory.
 WRITE_ADDITIONAL_METADATA=True
@@ -59,27 +71,26 @@ MJD_TO_NIGHT_NUM=lambda mjd: int(mjd)
 # from MySQL and the DB stuff must be set below.
 DIAS_FROM_FILE=True
 
-DB_USER="jmyers"
-DB_PASSWD="jmyers"
-DB_HOST="localhost"
+#DB_USER="jmyers"
+#DB_PASSWD="jmyers"
+#DB_HOST="localhost"
 
-OPSIM_DB="opsim_3_61"
-OPSIM_TABLE="output_opsim3_61"
+#OPSIM_DB="opsim_3_61"
+#OPSIM_TABLE="output_opsim3_61"
 
-DIAS_DB="mops_noDeepAstromError"
-DIAS_TABLE="fullerDiaSource"
-
-
+#DIAS_DB="mops_noDeepAstromError"
+#DIAS_TABLE="fullerDiaSource"
 
 
 
-def readDias(diasDataFileName):
+
+
+def readDias(diasDataFile):
 
     """ reads a dump of dias, which include diaId expMjd ssmId
     obsHistId for every diaSource.  Returns a dict mapping diaId to
     data."""
     idToDias = {}
-    diasDataFile = file(diasDataFileName,'r')
     line = diasDataFile.readline()
     while line != "":
         [diaId, obsHistId, ssmId, ra, dec, expMjd, mag, snr] = line.split()
@@ -140,7 +151,7 @@ def lookUpDia(allDias, diaId, cursor=None):
                 %s.%s WHERE diaSourceId=%d; """ % (DIAS_DB, DIAS_TABLE, diaId)
         cursor.execute(s)
         [diaId, ra, dec, mjd, mag, objId] = cursor.fetchone()
-        d = DiaSource(diaId=diaId, ra=ra, dec=dec, mjd=mjd, mag=mag, objId=objId)
+        d = DiaSource(diaId=diaId, ra=ra, dec=dec, obsTime=mjd, mag=mag, objId=objId)
         return d
 
 
@@ -151,7 +162,7 @@ def lookUpDia(allDias, diaId, cursor=None):
 
 #  obsHistToExpMjd, obsHistToFieldId = getExpMjdAndFieldIdForObsHistsFromFile(opSimDumpFile, allObsHists)
 
-def getExpMjdAndFieldIdForObsHistsFromFile(opSimDumpFileName):
+def getExpMjdAndFieldIdForObsHistsFromFile(opSimDumpFileName, allObsHists):
     opSimDumpFile = file(opSimDumpFileName, 'r')
     line = opSimDumpFile.readline()
     obsHistToExpMjd = {}
@@ -161,8 +172,9 @@ def getExpMjdAndFieldIdForObsHistsFromFile(opSimDumpFileName):
         [expMjd, fieldId, obsHistId] = line.split()
         expMjd = float(expMjd)
         [fieldId, obsHistId] = map(int, [fieldId, obsHistId])
-        obsHistToExpMjd[obsHistId] = expMjd
-        obsHistToFieldId[obsHistId] = fieldId
+        if obsHistId in allObsHists:
+            obsHistToExpMjd[obsHistId] = expMjd
+            obsHistToFieldId[obsHistId] = fieldId
         line = opSimDumpFile.readline()
 
     return obsHistToExpMjd, obsHistToFieldId
@@ -212,17 +224,9 @@ def makeLinkTrackletsInFile(startEndpointObsHist, outFileBaseName, cursor=None, 
     # fetch all dias into memory. This will be fasted in the long run than doing lots of    
     # cross-language/client-server calls to the DB when we need them.
 
-    if [cursor, diasInFile] == [None, None]:
-        raise Exception("makeLinkTrackletsInfile: must give either a DB connection for diaSources or name of an input file containing the diaSources.")
     if [cursor, opSimDumpFile] == [None, None]:
         raise Exception("makeLinkTrackletsInfile: must give either a DB connection for opsim or name of an input file containing the opsim records.")
 
-    if DIAS_FROM_FILE:
-        print "Reading Dias from file..."
-        allDias = readDias(diasInFile)
-        print "... Done."
-    else:        
-        allDias = None
 
     # fetch all images which generated tracklets into memory (use a glob of the obshist_to_tracklets directory)
     # get MJDs of each image (use DB)
@@ -235,7 +239,7 @@ def makeLinkTrackletsInFile(startEndpointObsHist, outFileBaseName, cursor=None, 
         print "Done."
     else:
         print "Reading ObsHist info from file..."
-        obsHistToExpMjd, obsHistToFieldId = getExpMjdAndFieldIdForObsHistsFromFile(opSimDumpFile)
+        obsHistToExpMjd, obsHistToFieldId = getExpMjdAndFieldIdForObsHistsFromFile(opSimDumpFile, allObsHists)
         print "...Done."
            
     # bin images by night number
@@ -260,12 +264,12 @@ def makeLinkTrackletsInFile(startEndpointObsHist, outFileBaseName, cursor=None, 
                 if obsHistToExpMjd[obsHist] > obsHistToExpMjd[startEndpointObsHist]:
                     supportObsHists.append(obsHist)
     
-    writeOutputFiles(allDias, outFileBaseName, cursor, [startEndpointObsHist], supportObsHists, obsHistToExpMjd, obsHistToFieldId)
+    writeOutputFiles(outFileBaseName, cursor, [startEndpointObsHist], supportObsHists, obsHistToExpMjd, obsHistToFieldId)
 
 
 
 
-def writeMitiTrackletsToOutFile(mitiOut, mitiCheatSheetFile, allDias, cursor, trackletsFile, firstTrackletId):
+def writeMitiTrackletsToOutFile(mitiOut, mitiCheatSheetFile, cursor, trackletsFile, diasFile, firstTrackletId):
 
     """ expects trackletsFile to be an open file full of tracklets in
     the diaId form (spaces between diaIds, newlines between
@@ -275,6 +279,8 @@ def writeMitiTrackletsToOutFile(mitiOut, mitiCheatSheetFile, allDias, cursor, tr
     written."""
 
     tletsWritten = 0
+
+    allDias = readDias(diasFile)
 
     line = trackletsFile.readline()
     while line != "":
@@ -286,8 +292,8 @@ def writeMitiTrackletsToOutFile(mitiOut, mitiCheatSheetFile, allDias, cursor, tr
             det = lookUpDia(allDias, diaId, cursor=cursor)
             mitiOut.write("%d %2.10f %2.10f %2.10f %2.10f %s %s 0.0 0.0\n" % \
                               (firstTrackletId + tletsWritten,
-                               det.mjd, det.ra, det.dec, det.mag, FORCED_OBSCODE, 
-                               det.objId))
+                               det.getObsTime(), det.getRa(), det.getDec(), det.getMag(), FORCED_OBSCODE, 
+                               det.getSsmId()))
             mitiCheatSheetFile.write("%d\n" % diaId)
 
         line = trackletsFile.readline()
@@ -297,7 +303,7 @@ def writeMitiTrackletsToOutFile(mitiOut, mitiCheatSheetFile, allDias, cursor, tr
     return tletsWritten
 
     
-def writeDetsIdsFiles(detsOutFile, basename, idsOutFile, allTrackletsFileNames, allDias, cursor):
+def writeDetsIdsFiles(detsOutFile, basename, idsOutFile, allTrackletsFileNames, cursor):
     """ detsOut and idsOut are expected to be open files where output is written.
 
     writes the simpler linkTracklets input as would be used for C++
@@ -306,8 +312,15 @@ def writeDetsIdsFiles(detsOutFile, basename, idsOutFile, allTrackletsFileNames, 
     tracklets in the data set."""
 
     allIds = []
+    allDias = []
     for trackletsFileName in allTrackletsFileNames:
         trackletsFile = file(trackletsFileName, 'r')
+        diasFileName = DIAS_FILE_FROM_OBSHIST(TRACKLETS_FILE_TO_OBSHIST(trackletsFileName))
+        diasFile = file(diasFileName,'r')
+        allDiasThisFile = readDias(diasFile)
+        for key in allDiasThisFile.keys():
+            allDias[key] = allDiasThisFile[key]
+
         tletLine = trackletsFile.readline()
         while tletLine != "":
             ids = map(int, tletLine.split())
@@ -326,12 +339,12 @@ def writeDetsIdsFiles(detsOutFile, basename, idsOutFile, allTrackletsFileNames, 
 
 
 
-def writeOutputFiles(allDias, outFileName, cursor, obsHistsThisDataSet, supportObsHists, obsHistToExpMjd, obsHistToFieldId):
+def writeOutputFiles(outFileBaseName, cursor, obsHistsThisDataSet, supportObsHists, obsHistToExpMjd, obsHistToFieldId):
 
     """ write tracklets from the following obsHists into outfiles
     with locations specified by constants in this file."""    
 
-    basename = outFileName
+    basename = outFileBaseName
 
     print "Writing output file for ", basename
 
@@ -345,9 +358,12 @@ def writeOutputFiles(allDias, outFileName, cursor, obsHistsThisDataSet, supportO
     for obsHist in obsHistsThisDataSet + supportObsHists:
         trackletsFileName = OBSHIST_TO_TRACKLETS_FILE(obsHist)
         trackletsFile = file(trackletsFileName, 'r')
-        tletsWritten = writeMitiTrackletsToOutFile(mitiOut, mitiCheatSheetFile, allDias, cursor, trackletsFile, curTrackletId)                
+        diasFileName = OBSHIST_TO_DIAS_FILE(obsHist)
+        diasFile = file(diasFileName,'r')
+        tletsWritten = writeMitiTrackletsToOutFile(mitiOut, mitiCheatSheetFile, cursor, trackletsFile, diasFile, curTrackletId)                
         curTrackletId += tletsWritten
         trackletsFile.close()
+        diasFile.close()
         obsHistToNumTlets[obsHist] = tletsWritten
 
     mitiOut.close()
@@ -356,6 +372,7 @@ def writeOutputFiles(allDias, outFileName, cursor, obsHistsThisDataSet, supportO
     # new: write C++ style outputs as well.
     if WRITE_CPP_STYLE_INPUTS:
         allTrackletsFiles = []
+        allDiasFiles = []
         for obsHist in obsHistsThisDataSet + supportObsHists:
             trackletsFileName = OBSHIST_TO_TRACKLETS_FILE(obsHist)
             allTrackletsFiles.append(trackletsFileName)
@@ -364,12 +381,12 @@ def writeOutputFiles(allDias, outFileName, cursor, obsHistsThisDataSet, supportO
         detsOutFile = file(detsOutName,'w')
         idsOutName = basename + ".ids"
         idsOutFile = file(idsOutName,'w')
-        writeDetsIdsFiles(detsOutFile, basename, idsOutFile, allTrackletsFiles, allDias, cursor)
+        writeDetsIdsFiles(detsOutFile, basename, idsOutFile, allTrackletsFiles, cursor)
         detsOutFile.close()
         idsOutFile.close()
     #end if WRITE_CPP_STYLE_INPUTS
         
-    startTRangeOut = os.path.join(OUTPUT_START_T_RANGE_FILES_DIR, basename + ".start_t_range")
+    startTRangeOut =  basename + ".start_t_range"
     startTRangeOutFile = file(startTRangeOut,'w')
     startTRangeOutFile.write("%f"%(obsHistToExpMjd[obsHistsThisDataSet[-1]] + EPSILON))
     startTRangeOutFile.close()
@@ -416,12 +433,11 @@ if __name__=="__main__":
         makeLinkTrackletsInfile(obsHistId, outFileName, cursor=dbcurs)
 
     else:
-        if len(sys.argv) != 5:
-            raise Exception("USAGE: makeLinkTrackletsInput_perImage.py <obsHistId> <outFileName> <diasDump> <opSimDump>")
+        if len(sys.argv) != 4:
+            raise Exception("USAGE: makeLinkTrackletsInput_perImage.py <obsHistId> <outFileName> <opSimDump>")
         
         obsHistId = int(sys.argv[1])
         outFileName = sys.argv[2]
-        diasFileName = sys.argv[3]
-        opSimFileName = sys.argv[4]
+        opSimFileName = sys.argv[3]
         
-        makeLinkTrackletsInFile(obsHistId, outFileName, diasInFile=diasFileName, opSimDumpFile=opSimFileName)
+        makeLinkTrackletsInFile(obsHistId, outFileName, opSimDumpFile=opSimFileName)

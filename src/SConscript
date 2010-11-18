@@ -11,7 +11,7 @@ Import("env")
 #ext_libs = ["gsl", "gslcblas", "pex_exceptions"]
 		      
 commonStuff = ['common', 'MopsDetection',
-               'Orbit', 'TrackletVector', 'TrackSet']
+               'Orbit', 'TrackletVector', 'TrackSet', 'Track']
 
 common_libs = []
 
@@ -39,13 +39,15 @@ Export("common_libs")
 env.Program('../tests/utilities-unitTests', ['generalUnitTests.cc'] + common_libs, 
             LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
 
+env.Program('../tests/Track-unitTests', 
+            ['Track-unitTests.cc', 'Track.o', 'TrackSet.o'] + common_libs,
+            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
+
 
 
 SConscript(os.path.join('findTracklets','SConscript'))
 SConscript(os.path.join('collapseTrackletsAndPostfilters','SConscript'))
 SConscript(os.path.join('linkTracklets','SConscript'))
-
-SConscript(os.path.join('formatters','SConscript'))
 
 SConscript(os.path.join('detectionProximity','SConscript'))
 SConscript(os.path.join('fieldProximity','SConscript'))

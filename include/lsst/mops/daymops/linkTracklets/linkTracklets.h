@@ -28,20 +28,51 @@ enum trackOutputMethod { RETURN_TRACKS = 0,
 class linkTrackletsConfig {
 public:
 
+
+    // Default values set in this constructor. See each variable's declaration below for
+    // some descriptions of what each parameter means. 
+
     linkTrackletsConfig() 
-        {   maxRAAccel = .02; // consistent with 99% of MBOs
+        {   
+            maxRAAccel = .02; // consistent with 99% of MBOs
             maxDecAccel = .02;  // consistent with 99% of MBOs
-            detectionLocationErrorThresh = 8.3e-5; // .3 arcseconds = 8.3e-5 degrees
+
+
+            /* 
+             * Kubica has vtrees_thresh set to .0002 by default and that's what
+             * we've been using.  detectionLocationErrorThresh is the same but
+             * only applies to the believable error on POSITIONS (ra, dec) of
+             * the KD-Tree nodes.  However we could probably set this lower - 
+             * we expect most of our detections to be within .3 arcesconds of correct.
+             */
+            detectionLocationErrorThresh = 0.00020000; 
             minEndpointTimeSeparation = 2; 
             minSupportToEndpointTimeSeparation = .5;
-            minSupportTracklets = 1;
-            quadraticFitErrorThresh = .0001; // be optimistic for now...
+            minUniqueNights = 3;
             minDetectionsPerTrack = 6;
+           
 
-            // Kubica sets vtree_thresh to .0002 degrees and it's fast and accurate enough
-            // If we go with a worst-case and guess that our tracklets happen at
-            // most 30 min apart, this corresponds to a velocityErrorThresh of :
-            // .0002 degrees * 2 / (30 min in days) = .0192 deg/day
+            /* Kubica's default value times two.  Kubica uses .0005 deg, but
+             *  then only adds the point if dist/2.0 < pred_fit, where dist is
+             *  angular distance from the best-fit predicted location for the
+             *  track. */
+            trackAdditionThreshold = .001; 
+
+
+            /* This is the square root of value we've been
+             * giving Kubica (0.00000025); he takes MEAN SQUARED not ROOT mean squared as we
+             * do. */           
+            trackMaxRms = .0005;
+
+
+            /* Kubica sets vtree_thresh to .0002 degrees and it's fast and accurate enough
+             * If we go with a worst-case and guess that our tracklets happen at
+             * most 30 min apart, this corresponds to a velocityErrorThresh of :
+             * .0002 degrees * 2 / (30 min in days) = .0192 deg/day
+             *
+             * TBD: JMYERS: we may actually want to consider raising this, since
+             * our min time separation is actually more like 15 minutes now. */
+            
             velocityErrorThresh = .0192;
 
             leafSize=16;
@@ -68,6 +99,7 @@ public:
     double maxRAAccel;
     double maxDecAccel;
 
+
     /* 
        if you will perform repeated runs, it may be wise to look for tracks
        which start or end on a limited set of nights or times.
@@ -86,33 +118,42 @@ public:
     bool restrictTrackEndTimes;
     double earliestLastEndpointTime;
 
+
     /* detection error thresh is the upper bound on observational error for
-       Detections; this has repercussions for what Detections are included in a
-       returned track as well as the behavior of the searching itself (we will
-       prune off regions of space based on their location, so error threshold
-       will factor in here.)
+       Detections; this is used to decide whether bounding boxes (KD tree nodes)
+       of Tracklets are compatible (could contain a track).
      */
     double detectionLocationErrorThresh;
 
     
     /* trackletVelocityErrorThresh: 
      *
-     * used in tree calculations to determine the maximum feasible error of a tracklet's velocity.
-     * should be >= detectionLocationErrorThresh * 2.0  / max time between any two images.
-     *
-     * JMYERS: No, wait, shouldn't it be detectionLocationErrorThresh * 2.0 / __MIN__ time between any two images?
+     * used in tree calculations to determine the maximum feasible error of a
+     * tracklet's velocity.  should be >= detectionLocationErrorThresh * 2.0 /
+     * min time between any two images.  This is used in searching to determine
+     * whether bounding boxes (KD Tree nodes) of Tracklets are compatible (could
+     * contain a track)
      */
+
     double trackletVelocityErrorThresh;
 
-    /* quadratic fit error thresh: 
 
-       this is used to determine how much error we will accept from the
-       quadratic fitting process.  If a detection is within
-       detectionLocationErrorThresh + quadraticFitErrorThresh of the predicted
-       location, it will be considered for addition to a track
+    /* trackAdditionThreshold:
+     *
+     * once we have taken a pair of endpoint tracklets and fit an initial
+     * quadratic curve to those tracklets, we add support detections if they are
+     * within trackAdditionThreshold of the quadratic.
      */
-    double quadraticFitErrorThresh;
+    double trackAdditionThreshold; 
 
+    /* trackMaxRms:
+     *
+     * After choosing endpoint tracklets and support detections to build a
+     * track, we will calculate the overall RMS detection location error of the
+     * track.  If the RMS is below trackMaxRms, then the track is added to
+     * output, otherwise it is discarded.
+     */
+    double trackMaxRms;
 
     /*
       minSupportToEndpointTimeSeparation: the minimum time between endpoints and
@@ -121,16 +162,22 @@ public:
       after the actual detection. This also speeds up the search a little.
     */
     double minSupportToEndpointTimeSeparation;
+
+
     /*
       min time between the first and last point of a tracklet in order to be
       considered for a track
      */
     double minEndpointTimeSeparation;
+
+
     /*
-      minimum number of *support* tracklets required for a track.  note that the
-      track will have two "endpoint" tracklets PLUS this many support tracklets.
+     * minUniqueNights: 
+     *
+     * Tracks are not reported unless they contain detections from at least this
+     * many distinct nights.
      */
-    double minSupportTracklets;
+    double minUniqueNights;
     
     /*
       the minimum number of detections per track
@@ -169,6 +216,7 @@ public:
     std::string outputFile;
     unsigned int outputBufferSize;
 
+
 };
 
 
@@ -182,7 +230,7 @@ public:
    otherwise queryTracklets will not be changed. */
 TrackSet* linkTracklets(const std::vector<MopsDetection> &allDetections,
                         std::vector<Tracklet> &queryTracklets,
-                        linkTrackletsConfig searchConfig);
+                        const linkTrackletsConfig &searchConfig);
 
 
 

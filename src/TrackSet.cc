@@ -21,7 +21,7 @@ TrackSet::TrackSet(std::string outFileName, bool useCache, unsigned int cacheSiz
     }
     else {
         this->useCache = false;
-        this->cacheSize = 0;        
+        this->cacheSize = 0;
     }
 
     useOutFile = true;
@@ -70,9 +70,9 @@ void TrackSet::writeToFile()
          curTrack != componentTracks.end();
          curTrack++) {
         std::set<unsigned int>::const_iterator detIter;
-	
-        for (detIter = curTrack->componentDetectionIndices.begin();
-             detIter != curTrack->componentDetectionIndices.end();
+        std::set<unsigned int> diaIds = curTrack->getComponentDetectionDiaIds();
+        for (detIter = diaIds.begin();
+             detIter != diaIds.end();
              detIter++) {
             outFile << *detIter << " ";
         }

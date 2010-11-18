@@ -66,8 +66,9 @@ void debugPrintTrackSet(const TrackSet &tracks, const std::vector<MopsDetection>
          trackIter++) {
         std::cout << " track " << trackCount << ":\n";
         std::set<unsigned int>::const_iterator detIdIter;
-        for (detIdIter = trackIter->componentDetectionIndices.begin();
-             detIdIter != trackIter->componentDetectionIndices.end();
+        std::set<unsigned int> componentDetectionIndices = trackIter->getComponentDetectionIndices();
+        for (detIdIter = componentDetectionIndices.begin();
+             detIdIter != componentDetectionIndices.end();
              detIdIter++) {
             std::cout << '\t' << *detIdIter << ": " << allDets.at(*detIdIter).getID() << " "
                       << allDets.at(*detIdIter).getEpochMJD() << 
@@ -163,7 +164,7 @@ Track generateTrack(double ra0, double dec0, double raV, double decV,
             MopsDetection newDet(lastDetId, *obsTime, resultRa, resultDec);
             allDetections.push_back(newDet);
             newTracklet.indices.insert(lastDetId);
-            newTrack.componentDetectionIndices.insert(lastDetId);           
+            newTrack.addDetection(lastDetId, allDetections);           
         }
         allTracklets.push_back(newTracklet);
         if (allTracklets.size() -1 != lastTrackletId) {
@@ -182,240 +183,8 @@ Track generateTrack(double ra0, double dec0, double raV, double decV,
 
 
 
-BOOST_AUTO_TEST_CASE( linkTracklets_realworld_1) {
 
-    std::vector<MopsDetection> allDetections;
-    std::vector<Tracklet> allTracklets;
-    MopsDetection tmp;
-    Tracklet tmpTracklet;
 
-    /*
-      2 49523.416229 353.624260 0.521654 20.940280 566 10682481 0. 0.
-      74408 49523.422041 353.624302 0.521646 20.352173 566 10682481 0. 0.
-      97273 49534.303363 352.326802 1.872652 20.845180 566 10752581 0. 0.
-      99300 49534.305146 352.326796 1.872652 20.845182 566 10752581 0. 0.
-      130073 49543.427348 350.757850 4.674333 21.576199 566 6206408 0. 0.
-      132286 49543.440873 350.755445 4.679549 20.568481 566 2079498 0. 0.
-      
-      the above track *IS* good enough (though incorrect) but it doesn't get found.
-      let's see why.
-     */
-
-    linkTrackletsConfig myConfig;
-    myConfig.velocityErrorThresh = .192;
-    myConfig.detectionLocationErrorThresh = .002;
-
-    tmp.fromMITIString("2 49523.416229 353.624260 0.521654 20.940280 566 10682481 0. 0.");
-    allDetections.push_back(tmp);
-    tmp.fromMITIString("74408 49523.422041 353.624302 0.521646 20.352173 566 10682481 0. 0.");
-    allDetections.push_back(tmp);
-
-    tmpTracklet.indices.insert(0);
-    tmpTracklet.indices.insert(1);
-    allTracklets.push_back(tmpTracklet);
-    tmpTracklet.indices.clear();
-
-    tmp.fromMITIString("97273 49534.303363 352.326802 1.872652 20.845180 566 10752581 0. 0.");
-    allDetections.push_back(tmp);
-    tmp.fromMITIString("99300 49534.305146 352.326796 1.872652 20.845182 566 10752581 0. 0.");
-    allDetections.push_back(tmp);
-
-    tmpTracklet.indices.insert(2);
-    tmpTracklet.indices.insert(3);
-    allTracklets.push_back(tmpTracklet);
-    tmpTracklet.indices.clear();
-
-    tmp.fromMITIString("130073 49543.427348 350.757850 4.674333 21.576199 566 6206408 0. 0.");
-    allDetections.push_back(tmp);
-    tmp.fromMITIString("132286 49543.440873 350.755445 4.679549 20.568481 566 2079498 0. 0.");
-    allDetections.push_back(tmp);
-
-    tmpTracklet.indices.insert(4);
-    tmpTracklet.indices.insert(5);
-    allTracklets.push_back(tmpTracklet);
-    tmpTracklet.indices.clear();
-
-    TrackSet * results = linkTracklets(allDetections, allTracklets, myConfig);
-    BOOST_CHECK(results->size() == 1);
-   
-}
-
-
-
-
-BOOST_AUTO_TEST_CASE( track_1) {
-    Track t1;
-    Track t2;
-    t1.componentDetectionIndices.insert(1);
-    t2.componentDetectionIndices.insert(1);
-    t1.componentDetectionIndices.insert(2);
-    t2.componentDetectionIndices.insert(2);
-
-    t1.componentTrackletIndices.insert(1);
-    t2.componentTrackletIndices.insert(1);
-
-    BOOST_CHECK( t1 == t2 );
-}
-
-
-BOOST_AUTO_TEST_CASE( track_2) {
-    Track t1;
-    Track t2;
-    t1.componentDetectionIndices.insert(1);
-    t2.componentDetectionIndices.insert(1);
-    t1.componentDetectionIndices.insert(2);
-    t2.componentDetectionIndices.insert(3);
-
-    t1.componentTrackletIndices.insert(1);
-    t2.componentTrackletIndices.insert(2);
-
-    BOOST_CHECK( t1 != t2 );
-}
-
-
-BOOST_AUTO_TEST_CASE( trackSet_1) {
-    Track t1;
-    Track t2;
-    t1.componentDetectionIndices.insert(1);
-    t2.componentDetectionIndices.insert(1);
-    t1.componentDetectionIndices.insert(2);
-    t2.componentDetectionIndices.insert(2);
-
-    t1.componentTrackletIndices.insert(1);
-    t2.componentTrackletIndices.insert(1);
-
-    TrackSet ts1;
-    TrackSet ts2;
-    ts1.insert(t1);
-    ts2.insert(t2);
-
-    BOOST_CHECK( ts1 == ts2);
-}
-
-
-
-
-BOOST_AUTO_TEST_CASE( trackSet_2) {
-    Track t1;
-    Track t2;
-    t1.componentDetectionIndices.insert(1);
-    t2.componentDetectionIndices.insert(1);
-    t1.componentDetectionIndices.insert(2);
-    t2.componentDetectionIndices.insert(3);
-
-    t1.componentTrackletIndices.insert(1);
-    t2.componentTrackletIndices.insert(2);
-
-    TrackSet ts1;
-    TrackSet ts2;
-    ts1.insert(t1);
-    ts2.insert(t2);
-
-    BOOST_CHECK( ts1 != ts2);
-}
-
-
-BOOST_AUTO_TEST_CASE (trackSet_3) {
-
-    Track t1;
-    Track t2;
-    Track t11;
-    Track t22;
-
-    Track t3;
-
-    t1.componentDetectionIndices.insert(1);
-    t1.componentDetectionIndices.insert(2);
-
-    t1.componentTrackletIndices.insert(1);
-
-
-    t2.componentDetectionIndices.insert(3);
-    t2.componentDetectionIndices.insert(4);
-
-    t2.componentTrackletIndices.insert(2);
-
-
-    t11.componentDetectionIndices.insert(10);
-    t11.componentDetectionIndices.insert(20);
-
-    t11.componentTrackletIndices.insert(10);
-
-
-    t22.componentDetectionIndices.insert(30);
-    t22.componentDetectionIndices.insert(40);
-
-    t22.componentTrackletIndices.insert(20);
-
-
-    t3.componentDetectionIndices.insert(4);
-    t3.componentDetectionIndices.insert(5);
-
-    t3.componentTrackletIndices.insert(3);
-
-    TrackSet ts1;
-    TrackSet ts2;
-
-    ts1.insert(t1);
-    ts1.insert(t2);
-    BOOST_CHECK(ts1.size() == 2);
-    ts2.insert(t1);
-    ts2.insert(t2);
-    BOOST_CHECK(ts2.size() == 2);
-    
-    BOOST_CHECK(ts1 == ts2);
-    
-    ts2.insert(t3);
-    BOOST_CHECK(ts2.size() == 3);
-
-    BOOST_CHECK(ts1 != ts2);
-    BOOST_CHECK(ts1.isSubsetOf(ts2));
-
-}
-
-
-
-
-
-BOOST_AUTO_TEST_CASE( linkTracklets_whitebox_getBestFitVelocityAndAcceleration_test0) 
-{
-    std::vector<double> positions;
-    std::vector<double> times;
-    positions.push_back(0);
-    positions.push_back(1.5);
-    positions.push_back(4);
-    times.push_back(0);
-    times.push_back(1);
-    times.push_back(2);
-    double velocity, acceleration, position0;
-    getBestFitVelocityAndAcceleration(positions, times, velocity, acceleration, position0);
-    //std::cout << "position = " << position0 << " + " << velocity << "*t + .5*" << acceleration << "*t^2" << std::endl;
-    BOOST_CHECK(Eq(position0,    0));
-    BOOST_CHECK(Eq(velocity,     1));
-    BOOST_CHECK(Eq(acceleration, 1));    
-}
-
-
-
-
-
-BOOST_AUTO_TEST_CASE( linkTracklets_whitebox_getBestFitVelocityAndAcceleration_test1) 
-{
-    std::vector<double> positions;
-    std::vector<double> times;
-    positions.push_back(1.5);
-    positions.push_back(4);
-    positions.push_back(7.5);
-    times.push_back(1);
-    times.push_back(2);
-    times.push_back(3);
-    double velocity, acceleration, position0;
-    getBestFitVelocityAndAcceleration(positions, times, velocity, acceleration, position0);
-    //std::cout << "position = " << position0 << " + " << velocity << "*t + .5*" << acceleration << "*t^2" << std::endl;
-    BOOST_CHECK(Eq(position0,    0));
-    BOOST_CHECK(Eq(velocity,     1));
-    BOOST_CHECK(Eq(acceleration, 1));    
-}
 
 
 
@@ -609,6 +378,71 @@ BOOST_AUTO_TEST_CASE( linkTracklets_easy_4 )
   BOOST_CHECK(results->size() == 10);
 }
 
+
+
+
+
+
+/* JMYERS: design changes rendered this unit test irrelevant - the RMS of this
+ * track is too high. WISHLIST: Perhaps someday get a new one?
+ */
+// BOOST_AUTO_TEST_CASE( linkTracklets_realworld_1) {
+
+//     std::vector<MopsDetection> allDetections;
+//     std::vector<Tracklet> allTracklets;
+//     MopsDetection tmp;
+//     Tracklet tmpTracklet;
+
+//     /*
+//       2 49523.416229 353.624260 0.521654 20.940280 566 10682481 0. 0.
+//       74408 49523.422041 353.624302 0.521646 20.352173 566 10682481 0. 0.
+//       97273 49534.303363 352.326802 1.872652 20.845180 566 10752581 0. 0.
+//       99300 49534.305146 352.326796 1.872652 20.845182 566 10752581 0. 0.
+//       130073 49543.427348 350.757850 4.674333 21.576199 566 6206408 0. 0.
+//       132286 49543.440873 350.755445 4.679549 20.568481 566 2079498 0. 0.
+      
+//       the above track *IS* good enough (though incorrect) but it doesn't get found.
+//       let's see why.
+//      */
+
+//     linkTrackletsConfig myConfig;
+//     myConfig.velocityErrorThresh = .192;
+//     myConfig.detectionLocationErrorThresh = .002;
+
+//     tmp.fromMITIString("2 49523.416229 353.624260 0.521654 20.940280 566 10682481 0. 0.");
+//     allDetections.push_back(tmp);
+//     tmp.fromMITIString("74408 49523.422041 353.624302 0.521646 20.352173 566 10682481 0. 0.");
+//     allDetections.push_back(tmp);
+
+//     tmpTracklet.indices.insert(0);
+//     tmpTracklet.indices.insert(1);
+//     allTracklets.push_back(tmpTracklet);
+//     tmpTracklet.indices.clear();
+
+//     tmp.fromMITIString("97273 49534.303363 352.326802 1.872652 20.845180 566 10752581 0. 0.");
+//     allDetections.push_back(tmp);
+//     tmp.fromMITIString("99300 49534.305146 352.326796 1.872652 20.845182 566 10752581 0. 0.");
+//     allDetections.push_back(tmp);
+
+//     tmpTracklet.indices.insert(2);
+//     tmpTracklet.indices.insert(3);
+//     allTracklets.push_back(tmpTracklet);
+//     tmpTracklet.indices.clear();
+
+//     tmp.fromMITIString("130073 49543.427348 350.757850 4.674333 21.576199 566 6206408 0. 0.");
+//     allDetections.push_back(tmp);
+//     tmp.fromMITIString("132286 49543.440873 350.755445 4.679549 20.568481 566 2079498 0. 0.");
+//     allDetections.push_back(tmp);
+
+//     tmpTracklet.indices.insert(4);
+//     tmpTracklet.indices.insert(5);
+//     allTracklets.push_back(tmpTracklet);
+//     tmpTracklet.indices.clear();
+
+//     TrackSet * results = linkTracklets(allDetections, allTracklets, myConfig);
+//     BOOST_CHECK(results->size() == 1);
+   
+// }
 
 
 BOOST_AUTO_TEST_CASE( linkTracklets_easy_5 )

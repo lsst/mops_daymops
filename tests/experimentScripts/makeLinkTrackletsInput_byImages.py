@@ -40,16 +40,16 @@ FORCED_OBSCODE="807"
 # this needs to be larger than the min time between images.
 EPSILON=1e-5
 
-TRACKING_WINDOW_DAYS=30 # in days; we only look for tracks spanning <= this number of nights.
-MAX_START_IMAGES_PER_RUN=1
+TRACKING_WINDOW_DAYS=15 # in days; we only look for tracks spanning <= this number of nights.
+MAX_START_IMAGES_PER_RUN=15
 
-TRACKLETS_BY_OBSHIST_DIR="/workspace1/jmyers/nightlyDiasAstromErr/tracklets/trackletsByObsHist/"
+TRACKLETS_BY_OBSHIST_DIR="/workspace1/jmyers/nightlyDiasAstromErr/tracklets/collapsed/byObsHistId/"
 TRACKLETS_BY_OBSHIST_SUFFIX=".tracklets.byDiaId"
 OBSHIST_TO_TRACKLETS_FILE=lambda x: os.path.join(TRACKLETS_BY_OBSHIST_DIR) + str(x) + TRACKLETS_BY_OBSHIST_SUFFIX
 TRACKLETS_FILE_TO_OBSHIST=lambda x: (int(os.path.basename(x)[:-len(TRACKLETS_BY_OBSHIST_SUFFIX)]))
 
 # place to put .miti files for input to c linkTracklets
-OUTPUT_LINKTRACKLETS_INFILE_DIR="/workspace0/jmyers/nightlyDiasAstromErr_linkTrackletsInfiles_maxv0.5_mint_0.01_30dayWindows"
+OUTPUT_LINKTRACKLETS_INFILE_DIR="/workspace1/jmyers/nightlyDiasAstromErr_linkTrackletsInfiles_maxv0.5_mint_0.01_15dayWindows_collapsedTracklets"
 # place to put start_t_ranges for each linkTracklets input files
 OUTPUT_START_T_RANGE_FILES_DIR=OUTPUT_LINKTRACKLETS_INFILE_DIR
 # if true, will put some metadata about each data set into the start t range files directory.
@@ -64,6 +64,7 @@ MJD_TO_NIGHT_NUM=lambda mjd: int(mjd)
 # set to False if debugging to avoid waiting on that all the time.
 PRELOAD_DIAS=True
 
+WRITE_CPP_INFILES=False
 
 class Detection(object):
     def __init__(self, diaId=None, ra=None, dec=None, mjd=None, mag=None, objId=None):
@@ -306,24 +307,26 @@ def writeOutputFiles(allDias, cursor, obsHistsThisDataSet, supportObsHists, obsH
     mitiOut.close()
     mitiCheatSheetFile.close()
 
-    # new: write C++ style outputs as well.
-    allTrackletsFiles = []
-    for obsHist in obsHistsThisDataSet + supportObsHists:
-        trackletsFileName = OBSHIST_TO_TRACKLETS_FILE(obsHist)
-        allTrackletsFiles.append(trackletsFileName)
-
-    detsOutName = basename + ".dets"
-    detsOutFile = file(os.path.join(OUTPUT_LINKTRACKLETS_INFILE_DIR, detsOutName),'w')
-    idsOutName = basename + ".ids"
-    idsOutFile = file(os.path.join(OUTPUT_LINKTRACKLETS_INFILE_DIR, idsOutName),'w')
-    writeDetsIdsFiles(detsOutFile, idsOutFile, allTrackletsFiles, allDias, cursor)
-    detsOutFile.close()
-    idsOutFile.close()
-
     startTRangeOut = os.path.join(OUTPUT_START_T_RANGE_FILES_DIR, basename + ".start_t_range")
     startTRangeOutFile = file(startTRangeOut,'w')
     startTRangeOutFile.write("%f"%(obsHistToExpMjd[obsHistsThisDataSet[-1]] + EPSILON))
     startTRangeOutFile.close()
+
+    if WRITE_CPP_INFILES:
+        # new: write C++ style outputs as well.
+        allTrackletsFiles = []
+        for obsHist in obsHistsThisDataSet + supportObsHists:
+            trackletsFileName = OBSHIST_TO_TRACKLETS_FILE(obsHist)
+            allTrackletsFiles.append(trackletsFileName)
+
+        detsOutName = basename + ".dets"
+        detsOutFile = file(os.path.join(OUTPUT_LINKTRACKLETS_INFILE_DIR, detsOutName),'w')
+        idsOutName = basename + ".ids"
+        idsOutFile = file(os.path.join(OUTPUT_LINKTRACKLETS_INFILE_DIR, idsOutName),'w')
+        writeDetsIdsFiles(detsOutFile, idsOutFile, allTrackletsFiles, allDias, cursor)
+        detsOutFile.close()
+        idsOutFile.close()
+
 
     
 

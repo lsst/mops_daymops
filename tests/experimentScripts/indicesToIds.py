@@ -16,35 +16,25 @@ DiaSources used at each of the lines in the .tracklet.miti files.
 Then use this script to convert from the output of C linkTracklets
 (sets of line numbers) over to sets of DiaSourceIds.
 
+This modified version alters a SINGLE OUTPUT FILE specified as its one argument.
+
 """
 
 
-DIA_IDS_DIR="/workspace0/jmyers/nightlyDiasAstromErr_linkTrackletsInfiles_maxv0.5_mint_0.01_30dayWindows/"
-DIA_IDS_SUFFIX=".miti.diaIds"
-
-
-TRACKS_DIR="/workspace0/jmyers/nightlyDiasAstromErr_linkTrackletsInfiles_maxv0.5_mint_0.01_30dayWindows/results/finished/"
-TRACKS_SUFFIX=".c.tracks.byIndices"
 
 import glob
 
-TRACKFILES=glob.glob(TRACKS_DIR + "*" + TRACKS_SUFFIX)
-
-TRACK_BY_DIA_SUFFIX=".c.tracks.byDiaId"
 
 
 
-def lineNumToIdsAndMjds(detsFile):
+def lineNumToId(detsFile):
     line = detsFile.readline()
     ids = []
-    #mjds = []
     while line != "":
         diaId = int(line.split()[0])
-        #mjd = float(line.split()[1])
         ids.append(diaId)        
-        #mjds.append(mjd)
         line = detsFile.readline()
-    return ids #, mjds
+    return ids
 
 
 
@@ -60,43 +50,38 @@ if __name__ == "__main__":
 
     import sys
 
-
-    trackId = 0
-
-
-    for trackFileName in TRACKFILES:
-
-        diaIdsFileName = DIA_IDS_DIR + trackFileName[len(TRACKS_DIR):-len(TRACKS_SUFFIX)] + DIA_IDS_SUFFIX
-        outFileName = TRACKS_DIR + trackFileName[len(TRACKS_DIR):-len(TRACKS_SUFFIX)] + TRACK_BY_DIA_SUFFIX
-
-        print trackFileName, diaIdsFileName, outFileName
+    trackFileName = sys.argv[1]
+    diaIdsFileName = sys.argv[2]
+    outFileName = sys.argv[3]
 
 
-        trackFile = file(trackFileName, 'r')
-        diaIdsFile = file(diaIdsFileName, 'r')
-        outFile = file(outFileName, 'w')
-        
-        diaIds = lineNumToIdsAndMjds(diaIdsFile)
+    print "Reading tracks-by-indices from: ", trackFileName
+    print "Reading diaIds from: ", diaIdsFileName
+    print "Writing outFile: ", outFileName
 
-        # the track file holds line numbers from the .tracklets.miti
-        # file. the diaIds file holds lines s.t. line X of diaIds file
-        # is the DiaId and obs. time of the dia source at line X of
-        # the .tracklets.miti file.
-        
+
+    trackFile = file(trackFileName, 'r')
+    diaIdsFile = file(diaIdsFileName, 'r')
+    outFile = file(outFileName, 'w')
+    
+    diaIds = lineNumToId(diaIdsFile)
+
+    # the track file holds line numbers from the .tracklets.miti
+    # file. the diaIds file holds lines s.t. line X of diaIds file
+    # is the DiaId and obs. time of the dia source at line X of
+    # the .tracklets.miti file.
+    
+    trackLine = trackFile.readline()
+    while trackLine != "":
+        lineNums = map(int, trackLine.split())
+        trackDiaIds = []
+        for lineNum in lineNums:
+            trackDiaIds.append(diaIds[lineNum])
+            
+        for dia in sorted(trackDiaIds):
+            outFile.write(" %d " % dia)
+        outFile.write("\n")
+
         trackLine = trackFile.readline()
-        while trackLine != "":
-            lineNums = map(int, trackLine.split())
-            trackDiaIds = []
-            #trackMjds = []
-            for lineNum in lineNums:
-                trackDiaIds.append(diaIds[lineNum])
-                #trackMjds.append(mjds[lineNum])
-
-            for dia in sorted(trackDiaIds):
-                outFile.write(" %d " % dia)
-
-            outFile.write("\n")
-
-            trackLine = trackFile.readline()
-            trackId += 1
-
+    outFile.close()
+    print "FINISHED successfully."

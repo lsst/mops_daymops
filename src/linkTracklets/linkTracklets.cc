@@ -64,8 +64,7 @@ namespace lsst {
 
 double getAllDetectionsForTrackletTime, getFirstDetectionForTrackletTime, 
     modifyWithAccelerationTime, positionAndVelocityRangesOverlapAfterAccelerationTime, 
-    areCompatibleTime, getBestFitVelocityAndAccelerationTime,
-    getBestFitVelocityAndAccelerationForTrackletsTime, addBestCompatibleTrackletsAndDetectionsToTrackTime, 
+    areCompatibleTime, calculateBestFitQuadraticTime,
     trackMeetsRequirementsTime, endpointTrackletsAreCompatibleTime, buildTracksAddToResultsTime, 
     areAllLeavesTime, nodeWidthTime, addAllDetectedObjectsToSetTime, doLinkingRecurseTime;
 
@@ -436,9 +435,6 @@ void debugPrintTimingInfo(const TrackSet &results)
     std::cout << "modifyWithAcceleration:\t" << modifyWithAccelerationTime << "sec\n"; 
     std::cout << "positionAndVelocityRangesOverlapAfterAcceleration:\t" << positionAndVelocityRangesOverlapAfterAccelerationTime << "sec\n"; 
     std::cout << "areCompatible:\t" << areCompatibleTime << "sec\n"; 
-    std::cout << "getBestFitVelocityAndAcceleration:\t" << getBestFitVelocityAndAccelerationTime << "sec\n";
-    std::cout << "getBestFitVelocityAndAccelerationForTracklets:\t" << getBestFitVelocityAndAccelerationForTrackletsTime << "sec\n"; 
-    std::cout << "addBestCompatibleTrackletsAndDetectionsToTrack:\t" << addBestCompatibleTrackletsAndDetectionsToTrackTime << "sec\n"; 
     std::cout << "trackMeetsRequirements:\t" << trackMeetsRequirementsTime << "sec\n"; 
     std::cout << "endpointTrackletsAreCompatible:\t" << endpointTrackletsAreCompatibleTime << "sec\n"; 
     std::cout << "buildTracksAddToResults:\t" << buildTracksAddToResultsTime << "sec\n"; 
@@ -485,9 +481,7 @@ void initDebugTimingInfo()
     modifyWithAccelerationTime = 0; 
     positionAndVelocityRangesOverlapAfterAccelerationTime = 0; 
     areCompatibleTime = 0; 
-    getBestFitVelocityAndAccelerationTime = 0;
-    getBestFitVelocityAndAccelerationForTrackletsTime = 0; 
-    addBestCompatibleTrackletsAndDetectionsToTrackTime = 0; 
+    calculateBestFitQuadraticTime = 0;
     trackMeetsRequirementsTime = 0; 
     endpointTrackletsAreCompatibleTime = 0; 
     buildTracksAddToResultsTime = 0; 
@@ -1009,7 +1003,6 @@ bool areMutuallyCompatible(const TreeNodeAndTime &firstNode,
 
 
 
-//TBD: searches should really be extended with quadraticErrorThresh
 bool areCompatible(const TreeNodeAndTime  &nodeA,
                    const TreeNodeAndTime  &nodeB,
                    linkTrackletsConfig searchConfig,
@@ -1135,164 +1128,106 @@ void setTrackletVelocities(const std::vector<MopsDetection> &allDetections,
 
 
 
-void getBestFitVelocityAndAcceleration(std::vector<double> positions, const std::vector<double> & times,
-                                       double & velocity, double &acceleration, double &position0)
+
+/*
+ * Takes a track which is ASSUMED TO HOLD exactly two tracklets; the endpoint tracklets used to get 
+ * a track started.  Returns true iff:
+ *
+ * - the first and last detection are at least minTimeSeparation apart 
+ * - the best-fit accelerations are within min/max bounds
+ * 
+ */
+// TBD: This function is a little dumb in that it looks at the time separation
+// between the first and last detection, not the start time of the two tracklets.
+bool endpointTrackletsAreCompatible(const std::vector<MopsDetection> & allDetections, 
+                                    const Track &newTrack,
+                                    linkTrackletsConfig searchConfig)
 {
-    if (positions.size() < 1) {
-        velocity = 0; 
-        acceleration = 0;
-        position0 = 0;
-        return;
-    }
-
-    // try to get these guys along the same 180-degree stretch of degrees...
-    double p0 = positions.at(0);
-    for (uint i = 1; i < positions.size(); i++) {
-        while ( positions.at(i) - p0 > 180) {
-            positions.at(i) -= 360;
-        }
-        while ( p0 - positions.at(i) > 180) {
-            positions.at(i) += 360;
-        }
-    }
-    
     double start = std::clock();
-    if (positions.size() != times.size()) {
-        throw LSST_EXCEPT(ProgrammerErrorException,
-                          "getBestFitVelocityAndAcceleration: position and time vectors not same size!");
+    bool allOK = true;
+
+    double epoch, ra0, raV, raAcc;
+    double dec0, decV, decAcc;
+    newTrack.getBestFitQuadratic(epoch, ra0, raV, raAcc, dec0, decV, decAcc);
+
+    if (raAcc > searchConfig.maxRAAccel) {
+        allOK = false;
+    }
+    if (decAcc > searchConfig.maxDecAccel) {
+        allOK = false;
     }
 
-    /* we're using GSL for this. this is roughly adapted from the GSL
-     * documentation; see
-     * http://www.gnu.org/software/gsl/manual/html_node/Fitting-Examples.html
-     */ 
-
-    gsl_vector * y = gsl_vector_alloc(positions.size());
-    gsl_matrix * X = gsl_matrix_alloc(positions.size(), 3);
         
-    for (uint i = 0; i < positions.size(); i++) {
-        gsl_matrix_set(X, i, 0, 1.0);
-        gsl_matrix_set(X, i, 1, times.at(i) );
-        gsl_matrix_set(X, i, 2, times.at(i)*times.at(i) );
-        gsl_vector_set(y, i, positions.at(i));
-    }
-    gsl_vector * c = gsl_vector_alloc(3); // times*c = positions 
-    gsl_multifit_linear_workspace * work = gsl_multifit_linear_alloc (positions.size(), 3);
-    gsl_matrix * covariance = gsl_matrix_alloc(3,3);
-    double chiSquared = 0;    
-    // TBD: check return values for error, etc
-    gsl_multifit_linear(X, y, c, covariance, &chiSquared, work);
-    position0    = gsl_vector_get(c,0);
-    velocity     = gsl_vector_get(c,1);
-    acceleration = 2 * gsl_vector_get(c,2); // we need to multiply by 2 due to the 1/2 part of 1/2 at^2 
+    if (allOK == true) {
+        //check that time separation is good
+        double minMJD, maxMJD;
+        std::set<uint> trackDets = newTrack.getComponentDetectionIndices();
+        std::set<uint>::const_iterator detIter;
+        detIter = trackDets.begin();
 
-    gsl_vector_free(y);
-    gsl_matrix_free(X);
-    gsl_vector_free(c);
-    gsl_matrix_free(covariance);
-    gsl_multifit_linear_free(work);
-    getBestFitVelocityAndAccelerationTime += timeSince(start);
+        minMJD = allDetections.at(*detIter).getEpochMJD();
+        maxMJD = minMJD;
+        for (detIter = trackDets.begin();
+             detIter != trackDets.end();
+             detIter++) {
+            double thisMJD = allDetections.at(*detIter).getEpochMJD();
+            if (thisMJD < minMJD) { 
+                minMJD = thisMJD; }
+            if (thisMJD > maxMJD) {
+                maxMJD = thisMJD;
+            }
+        }
+        if (maxMJD - minMJD < searchConfig.minEndpointTimeSeparation) {
+            allOK = false;
+        }
+    }
+
+    endpointTrackletsAreCompatibleTime += timeSince(start);
+    return allOK;
 }
 
 
-
-
-
-
-
-
-void getBestFitVelocityAndAccelerationForTracklets(const std::vector<MopsDetection> &allDetections,
-                                                   const std::vector<Tracklet> &queryTracklets,
-                                                   const uint trackletId1,
-                                                   const uint trackletId2,
-                                                   double & RAVelocity, double & RAAcceleration, 
-                                                   double & RAPosition0,
-                                                   double & DecVelocity, double & DecAcceleration, 
-                                                   double & DecPosition0, 
-                                                   double & time0) 
-{
-    double start = std::clock();
-    //get the detection Ids from tracklet 1 and tracklet 2 into a std::set.
-
-    std::set <uint> allDetectionIds;
-    std::set<uint>::const_iterator trackletDetIter;
-    for (trackletDetIter = queryTracklets.at(trackletId1).indices.begin(); 
-         trackletDetIter != queryTracklets.at(trackletId1).indices.end();
-         trackletDetIter++) {
-        allDetectionIds.insert(*trackletDetIter);
-    }
-    for (trackletDetIter = queryTracklets.at(trackletId2).indices.begin(); 
-         trackletDetIter != queryTracklets.at(trackletId2).indices.end();
-         trackletDetIter++) {
-        allDetectionIds.insert(*trackletDetIter);
-    }
-
-    // use a helper function to get the velocities and accelerations in RA, Dec.
-    std::vector<double> RAs;
-    std::vector<double> Decs;
-    std::vector<double> times;
-    std::set<uint>::const_iterator detIter;
-
-    double firstTime = allDetections.at(*allDetectionIds.begin()).getEpochMJD();
-    time0 = firstTime;
-    
-    for (detIter = allDetectionIds.begin(); detIter != allDetectionIds.end(); detIter++) {
-        const MopsDetection * curDetection = &(allDetections.at(*detIter));
-        RAs.push_back(curDetection->getRA());
-        Decs.push_back(curDetection->getDec());
-        times.push_back(curDetection->getEpochMJD() - firstTime);
-    }
-    getBestFitVelocityAndAcceleration(RAs, times,  RAVelocity,  RAAcceleration,  RAPosition0 );
-    getBestFitVelocityAndAcceleration(Decs, times, DecVelocity, DecAcceleration, DecPosition0);
-    getBestFitVelocityAndAccelerationForTrackletsTime += timeSince(start);
-}
 
 
 
 
 // this helper class is used just to make
-// addBestCompatibleTrackletsAndDetectionsToTrack a little more readable.
+// addDetectionsCloseToPredictedPositions a little more readable.
 
 class CandidateDetection {
 public:
     CandidateDetection() {
         distance = 0; 
-        detIndex = 0;
-        detDiaId = 0;
+        detId = 0;
         parentTrackletId = 0;
     }
-    CandidateDetection(double nDistance, uint nDetIndex, uint nDetDiaId, uint nParentTrackletId) {
+    CandidateDetection(double nDistance, unsigned int nDetId, unsigned int nParentTrackletId) {
         distance = nDistance;
-        detIndex = nDetIndex;
-        detDiaId = nDetDiaId;
+        detId = nDetId;
         parentTrackletId = nParentTrackletId;
     }
     double distance;
-    uint detIndex;
-    uint detDiaId;
-    uint parentTrackletId;
+    unsigned int detId;
+    unsigned int parentTrackletId;
 };
 
-/* 
- * addBestCompatibleTrackletsAndDetectionsToTrack: this function uses an RA/Dec
- * motion prediction and finds the most compatible points owned by tracklets in
- * the candidateTrackletsIDs vector.  The best-fit points are added in order of
- * fit quality, with at most one detection added per image time.  "Compatible"
- * here is defined by the parameters in searchConfig.
+/*
+ * ASSUMES newTrack is prepared to call getBestFitQuadratic- this means
+ * calculateBestFitQuadratic MUST have been called already.
  *
- * Detection IDs and the IDs of the detections' parents are added to newTrack's
- * relevant fields.
+ * uses Track::predictLocationAtTime to find things within
+ * searchConfig.trackAdditionThreshold of the predicted location.
  */
-void addBestCompatibleTrackletsAndDetectionsToTrack(const std::vector<MopsDetection> &allDetections, 
-                                                    const std::vector<Tracklet> &allTracklets, 
-                                                    const std::vector<uint> candidateTrackletIds, 
-                                                    double RAVelocity, double RAAcceleration, double RAPosition0,
-                                                    double DecVelocity, double DecAcceleration, double DecPosition0,
-                                                    double time0,
-                                                    const linkTrackletsConfig &searchConfig,
-                                                    Track &newTrack) 
+void addDetectionsCloseToPredictedPositions(const std::vector<MopsDetection> &allDetections, 
+                                            const std::vector<Tracklet> &allTracklets, 
+                                            const std::vector<uint> &candidateTrackletIds,
+                                            Track &newTrack, 
+                                            const linkTrackletsConfig searchConfig)
 {
-    double start = std::clock();
+    /* SPEEDUP TBD: this way of doing things will result in one track location
+     * prediction per candidate support point.  we could save ourselves a lot of
+     *  computation if we ordered the candidate detection IDs by image time
+     * first, then did just one track location prediction per image time. */
 
     /* the scoreToIDsMap will hold detection MJDs as the key, map from detection
      * time to best-fitting candidate detection at that time
@@ -1300,54 +1235,52 @@ void addBestCompatibleTrackletsAndDetectionsToTrack(const std::vector<MopsDetect
     std::map<double, CandidateDetection > timeToCandidateMap;
 
     // find the best compatible detection at each unique image time
-    std::vector<uint>::const_iterator trackletIdIter;
-    std::set<uint>::const_iterator detectionIdIter;
-    for (trackletIdIter = candidateTrackletIds.begin();
-         trackletIdIter != candidateTrackletIds.end();
-         trackletIdIter++) {
-        const Tracklet * curTracklet = &allTracklets.at(*trackletIdIter);
-        for (detectionIdIter =  curTracklet->indices.begin();
-             detectionIdIter != curTracklet->indices.end();
-             detectionIdIter++) {
-            double detMJD = allDetections.at(*detectionIdIter).getEpochMJD();
-            double detRA  = allDetections.at(*detectionIdIter).getRA();
-            double detDec = allDetections.at(*detectionIdIter).getDec();
-            uint detDiaId = allDetections.at(*detectionIdIter).getID();
-            double timeOffset = detMJD - time0;
-            double predRA  = RAPosition0 + RAVelocity*timeOffset + .5 * RAAcceleration*timeOffset*timeOffset;
-            double predDec = DecPosition0 + DecVelocity*timeOffset + .5 * DecAcceleration*timeOffset*timeOffset;
+    std::vector<unsigned int>::const_iterator trackletIDIter;
+    std::set<unsigned int>::const_iterator detectionIDIter;
+    for (trackletIDIter = candidateTrackletIds.begin();
+         trackletIDIter != candidateTrackletIds.end();
+         trackletIDIter++) {
+        const Tracklet * curTracklet = &allTracklets.at(*trackletIDIter);
+        for (detectionIDIter =  curTracklet->indices.begin();
+             detectionIDIter != curTracklet->indices.end();
+             detectionIDIter++) {
+            double detMjd = allDetections.at(*detectionIDIter).getEpochMJD();
+            double detRa  = allDetections.at(*detectionIDIter).getRA();
+            double detDec = allDetections.at(*detectionIDIter).getDec();
+
+            double predRa, predDec;
+            newTrack.predictLocationAtTime(detMjd, predRa, predDec);
 
             double decDistance = fabs(detDec - predDec);
-            // filter on dec distance, which is easy to compute, before trying the angular distance.
-            if (decDistance < searchConfig.quadraticFitErrorThresh + searchConfig.detectionLocationErrorThresh) {
-                double distance = angularDistanceRADec_deg(detRA, detDec, predRA, predDec);
-            
+            if (decDistance < searchConfig.trackAdditionThreshold) {
+
+                double distance = angularDistanceRADec_deg(detRa, detDec, predRa, predDec);
+                
                 // if the detection is compatible, consider whether it's the best at the image time
-                if (distance < searchConfig.quadraticFitErrorThresh + searchConfig.detectionLocationErrorThresh) {
+                if (distance < searchConfig.trackAdditionThreshold) {
                     std::map<double, CandidateDetection>::iterator candidateAtTime;
-                    candidateAtTime = timeToCandidateMap.find(detMJD);
+                    candidateAtTime = timeToCandidateMap.find(detMjd);
                     
                     // more crazy C++-talk for "if we have no candidate, or if this is a
                     // better candidate than the one we have, then add this as the new
                     // candidate at that time"
                     if ((candidateAtTime == timeToCandidateMap.end()) 
                         || (candidateAtTime->second.distance > distance)) {
-                        CandidateDetection newCandidate(distance, *detectionIdIter, detDiaId, *trackletIdIter);
-                        timeToCandidateMap[detMJD] = newCandidate;
+                        CandidateDetection newCandidate(distance, *detectionIDIter, *trackletIDIter);
+                        timeToCandidateMap[detMjd] = newCandidate;
                     }
                 }
             }
         }
     }
-    
+
     /* initialize a list of image times present in the track already. */
     std::set<double> trackMJDs;
-    std::set<uint>::const_iterator trackDetectionIndicesIter;
-    std::set<uint> trackDetectionIndices = newTrack.getComponentDetectionIndices();
-    for (trackDetectionIndicesIter = trackDetectionIndices.begin();
-         trackDetectionIndicesIter != trackDetectionIndices.end();
-         trackDetectionIndicesIter++) {
-        trackMJDs.insert(allDetections.at(*trackDetectionIndicesIter).getEpochMJD());        
+    std::set<unsigned int>::const_iterator trackDetectionIndices;
+    for (trackDetectionIndices =  newTrack.getComponentDetectionIndices().begin();
+         trackDetectionIndices != newTrack.getComponentDetectionIndices().end();
+         trackDetectionIndices++) {
+        trackMJDs.insert(allDetections.at(*trackDetectionIndices).getEpochMJD());        
     }
     
     /* add detections (and their parent tracklets) in order of 'score' (distance
@@ -1361,144 +1294,93 @@ void addBestCompatibleTrackletsAndDetectionsToTrack(const std::vector<MopsDetect
          candidatesIter++) {
 
         if (trackMJDs.find(candidatesIter->first) == trackMJDs.end()) {
-            /* add this detection and tracklet to the track and add the associated MJD to 
-             * trackMJDs */
+            /* add this detection and tracklet */
             
             trackMJDs.insert(candidatesIter->first);
+            newTrack.addDetection(candidatesIter->second.detId, allDetections);
             newTrack.componentTrackletIndices.insert(candidatesIter->second.parentTrackletId);
-            newTrack.addDetection(candidatesIter->second.detIndex, allDetections);
         }
     }
-    addBestCompatibleTrackletsAndDetectionsToTrackTime += timeSince(start);
 }
 
 
 
 
-
-
-
-bool trackMeetsRequirements(const std::vector<MopsDetection> & allDetections, 
-                            const Track &newTrack, 
-                            double RAVelocity, double RAAcceleration, double RAPosition0,
-                            double DecVelocity, double DecAcceleration, double DecPosition0,
-                            double time0,
-                            linkTrackletsConfig searchConfig)
-{
-    double start = std::clock();
-    bool meetsReqs = true;
-
-    if (newTrack.componentTrackletIndices.size() < searchConfig.minSupportTracklets + 2) {
-        meetsReqs = false;
-    }
-
-    if (newTrack.getComponentDetectionIndices().size() < searchConfig.minDetectionsPerTrack) {
-        meetsReqs = false;
-    }
-
-    if ((RAAcceleration > searchConfig.maxRAAccel) || (DecAcceleration > searchConfig.maxDecAccel)) {
-        meetsReqs = false;
-    }
-
-    trackMeetsRequirementsTime += timeSince(start);
-    return meetsReqs;
-    
-    
-}
-
-
-
-
-
-
-
-/*
- * checks that endpoint tracklets are compatible.  
- * 
- * this checks several things and returns true iff all are true:
+/* 
+ * Return true iff the track has enough support points, and they fall on enough
+ * unique nights.
  *
- * - all points are within error threshholds of the predicted location (as predicected by *Velocity, *Acceleration *Position0).
- * - the first and last detection are at least minTimeSeparation apart 
- * - the best-fit accelerations are within min/max bounds
- * 
- */
-bool endpointTrackletsAreCompatible(const std::vector<MopsDetection> & allDetections, 
-                                    const std::vector<Tracklet> &allTracklets,
-                                    uint trackletId1,
-                                    uint trackletId2,
-                                    double RAVelocity, double RAAcceleration, double RAPosition0,
-                                    double DecVelocity, double DecAcceleration, double DecPosition0,
-                                    double time0,
-                                    linkTrackletsConfig searchConfig)
+ * WARNING HACKISHNESS IN ACTION: see comments on how we count unique nights.
+ */ 
+bool trackHasSufficientSupport(const std::vector<MopsDetection> &allDetections,
+                               const Track &newTrack, const linkTrackletsConfig searchConfig)
 {
-    double start = std::clock();
-    bool allOK = true;
+    if (newTrack.getComponentDetectionIndices().size() < searchConfig.minDetectionsPerTrack) {
+        return false;
+    }
+    /* count the number of NIGHTS of support.  Do this in a slightly hackish
+     * way: if two successive detections are > .5 days apart in time, then they
+     * must be from different nights.  So just order all the detection MJDs and
+     * then walk across them looking for unique nights.
+     */
+    const std::set<uint> trackDets = newTrack.getComponentDetectionIndices();
+    std::set<double> allMjds;
+    for (std::set<uint>::const_iterator detIter = trackDets.begin();
+         detIter != trackDets.end(); detIter++) {
+        allMjds.insert(allDetections.at(*detIter).getEpochMJD());
+    }
 
-    if (RAAcceleration > searchConfig.maxRAAccel) {
-        allOK = false;
-    }
-    if (DecAcceleration > searchConfig.maxDecAccel) {
-        allOK = false;
-    }
+    uint uniqueNightsSeen = 1;
+    // this line could cause an exception if the program is run with
+    // minDetectionsPerTrack <= 0 but that'd be totally insane.
+    double lastDetTime = *(allMjds.begin());
 
-    if (allOK == true) {
+    // note: we start at the second item, because we already looked at the first. Ugly C++ syntax.
+    std::set<double>::const_iterator mjdIter = allMjds.begin();
+    for (++mjdIter; mjdIter != allMjds.end();  mjdIter++) {
         
-        std::set<uint> allDetectionIndices; // the set of all detections held by both tracklets
-        std::set<uint>::const_iterator detIter;
-        for (detIter = allTracklets.at(trackletId1).indices.begin();
-             detIter != allTracklets.at(trackletId1).indices.end();
-             detIter++) {
-            allDetectionIndices.insert(*detIter);
+        if (*mjdIter - lastDetTime > .5) {
+            uniqueNightsSeen++;
         }
-        for (detIter = allTracklets.at(trackletId2).indices.begin();
-             detIter != allTracklets.at(trackletId2).indices.end();
-             detIter++) {
-            allDetectionIndices.insert(*detIter);
-        }
-        
-        
-        for (detIter = allDetectionIndices.begin();
-             detIter != allDetectionIndices.end();
-             detIter++) {
-            double detMJD = allDetections.at(*detIter).getEpochMJD();
-            double timeOffset = detMJD - time0;
-            double RAPred = RAPosition0 + RAVelocity*timeOffset + .5 * RAAcceleration*timeOffset*timeOffset;
-            double DecPred = DecPosition0 + DecVelocity*timeOffset + .5 * DecAcceleration*timeOffset*timeOffset;
-            double observedRA = allDetections.at(*detIter).getRA();
-            double observedDec = allDetections.at(*detIter).getDec();
-            double distanceError = 
-                angularDistanceRADec_deg(RAPred, DecPred, observedRA, observedDec);
-            if (distanceError > searchConfig.quadraticFitErrorThresh + searchConfig.detectionLocationErrorThresh) {
-                allOK = false;
-            }
-        }
-        
-        
-        if (allOK == true) {
-            //check that time separation is good
-            double minMJD, maxMJD;
-            detIter = allDetectionIndices.begin();
-            minMJD = allDetections.at(*detIter).getEpochMJD();
-            maxMJD = minMJD;
-            for (detIter = allDetectionIndices.begin();
-                 detIter != allDetectionIndices.end();
-                 detIter++) {
-                double thisMJD = allDetections.at(*detIter).getEpochMJD();
-                if (thisMJD < minMJD) { 
-                    minMJD = thisMJD; }
-                if (thisMJD > maxMJD) {
-                    maxMJD = thisMJD;
-                }
-            }
-            if (maxMJD - minMJD < searchConfig.minEndpointTimeSeparation) {
-                allOK = false;
-            }
-        }
+        lastDetTime = *mjdIter;            
     }
-    endpointTrackletsAreCompatibleTime += timeSince(start);
-    return allOK;
+    
+    if (uniqueNightsSeen < searchConfig.minUniqueNights) {
+        return false;
+    }
+    return true;
 }
 
+
+
+
+
+/* 
+ * Calculate track RMS. Trust that the best fit quadratic has been calculated
+ * since the last addition of a detection and thus is up to date.  Return true
+ * iff RMS < searchConfig.maxTrackRms.
+ */ 
+bool trackRmsIsSufficientlyLow(const std::vector<MopsDetection> &allDetections,
+                               const Track &newTrack, const linkTrackletsConfig searchConfig)
+{
+
+    double netSqError = 0.;
+    std::set<uint> trackDets = newTrack.getComponentDetectionIndices();
+
+    std::set<uint>::const_iterator detIter;
+    for (detIter = trackDets.begin(); detIter != trackDets.end(); detIter++) {
+        const MopsDetection thisDet = allDetections.at(*detIter);
+        double predictedRa, predictedDec;
+        newTrack.predictLocationAtTime(thisDet.getEpochMJD(), predictedRa, predictedDec);
+        double dist = angularDistanceRADec_deg(thisDet.getRA(), thisDet.getDec(), 
+                                               predictedRa, predictedDec);
+        netSqError += dist*dist;
+    }
+
+    double rmsError = sqrt(netSqError / trackDets.size());
+
+    return (rmsError < searchConfig.trackMaxRms);
+}
 
 
 
@@ -1522,9 +1404,6 @@ void buildTracksAddToResults(const std::vector<MopsDetection> &allDetections,
     buildTracksAddToResultsVisits++;
 
     uint numCompatible = 0;
-    double addBestStartTime;
-    double addBestTotalTime = 0;
-
 
     //debugPrint(firstEndpoint, secondEndpoint, supportNodes, allDetections, allTracklets);
 
@@ -1552,55 +1431,38 @@ void buildTracksAddToResults(const std::vector<MopsDetection> &allDetections,
              secondEndpointIter != secondEndpoint.myTree->getMyData()->end();
              secondEndpointIter++) {
             
-            std::set<uint>::const_iterator notFound = 
-                allTracklets.at(firstEndpointIter->getValue()).indices.end();
-            std::set<uint>::const_iterator notFound2 = 
-                allTracklets.at(secondEndpointIter->getValue()).indices.end();
-
             /* figure out the rough quadratic track fitting the two endpoints.
              * if error is too large, quit. Otherwise, choose support points
              * from the support nodes, using best-fit first, and ignoring those
              * too far off the line.  If we get enough points, return a track.
             */
 
-            double RAVelocity, DecVelocity, RAAcceleration, DecAcceleration;
-            double RAPosition0, DecPosition0;
-            double time0;
-            getBestFitVelocityAndAccelerationForTracklets(allDetections,
-                                                          allTracklets, 
-                                                          firstEndpointIter->getValue(),
-                                                          secondEndpointIter->getValue(),
-                                                          RAVelocity,RAAcceleration,RAPosition0,
-                                                          DecVelocity,DecAcceleration,DecPosition0,
-                                                          time0);
+            // create a new track with these endpoints
+            Track newTrack;
+            
+            uint firstEndpointTrackletIndex = firstEndpointIter->getValue();
+            uint secondEndpointTrackletIndex = secondEndpointIter->getValue();
+            
+            newTrack.addTracklet(firstEndpointTrackletIndex, 
+                                 allTracklets.at(firstEndpointTrackletIndex),
+                                 allDetections);
+            
+            newTrack.addTracklet(secondEndpointTrackletIndex, 
+                                 allTracklets.at(secondEndpointTrackletIndex),
+                                 allDetections);
+            
+            newTrack.calculateBestFitQuadratic(allDetections);
 
             if (endpointTrackletsAreCompatible(allDetections, 
-                                               allTracklets,
-                                               firstEndpointIter->getValue(),
-                                               secondEndpointIter->getValue(),
-                                               RAVelocity,RAAcceleration,RAPosition0,
-                                               DecVelocity,DecAcceleration,DecPosition0,
-                                               time0,searchConfig)) {
+                                               newTrack,
+                                               searchConfig)) {
                 
                 numCompatible++;
                 compatibleEndpointsFound++;
-                // create a new track with these endpoints
-                Track newTrack;
+                
                 std::vector<uint> candidateTrackletIds;
-                candidateTrackletIds.push_back(firstEndpointIter->getValue() );
-                candidateTrackletIds.push_back(secondEndpointIter->getValue());
-                addBestCompatibleTrackletsAndDetectionsToTrack(allDetections, allTracklets, candidateTrackletIds, 
-                                                               RAVelocity, RAAcceleration, RAPosition0,
-                                                               DecVelocity, DecAcceleration, DecPosition0,
-                                                               time0,searchConfig,
-                                                               newTrack);
-                
-                candidateTrackletIds.clear();
-                
-                /* add the best compatible support points */
-
-                // put all support tracklet Ids in curSupportNodeData, then call
-                // addBestCompatibleTrackletsAndDetectionsToTrack
+                // put all support tracklet Ids in curSupportNodeData, then call 
+                // addDetectionsCloseToPredictedPositions
                 for (supportNodeIter = supportNodes.begin(); supportNodeIter != supportNodes.end();
                      supportNodeIter++) {
                     const std::vector<PointAndValue <uint> > * curSupportNodeData;
@@ -1616,22 +1478,25 @@ void buildTracksAddToResults(const std::vector<MopsDetection> &allDetections,
                         candidateTrackletIds.push_back(supportPointIter->getValue());
                     }
                 }
-                addBestStartTime = std::clock();
-                addBestCompatibleTrackletsAndDetectionsToTrack(allDetections, allTracklets, candidateTrackletIds,
-                                                               RAVelocity, RAAcceleration, RAPosition0,
-                                                               DecVelocity, DecAcceleration, DecPosition0, time0,
-                                                               searchConfig,
-                                                               newTrack);
-                addBestTotalTime += timeSince(addBestStartTime);
+
+                // Add support points if they are within thresholds.
+                addDetectionsCloseToPredictedPositions(allDetections, allTracklets, candidateTrackletIds,
+                                                       newTrack, searchConfig);
+
                 
-                if (trackMeetsRequirements(allDetections, newTrack,  
-                                           RAVelocity, RAAcceleration, RAPosition0, 
-                                           DecVelocity, DecAcceleration, DecPosition0,
-                                           time0,searchConfig)) {
-                    results.insert(newTrack);
+                // Final check to see if track meets requirements: first sufficient support,
+                // then RMS fitting error
+
+                if (trackHasSufficientSupport(allDetections, newTrack,searchConfig)) {
+                    // recalculate best-fit quadratic and check if RMS is sufficient
+                    newTrack.calculateBestFitQuadratic(allDetections);
+                    if (trackRmsIsSufficientlyLow(allDetections, newTrack, searchConfig)) {
+                        results.insert(newTrack);
+                    }
                 }
 
-                if ((RACE_TO_MAX_COMPATIBLE == true) && (compatibleEndpointsFound >= MAX_COMPATIBLE_TO_FIND)) {
+                if ((RACE_TO_MAX_COMPATIBLE == true) && 
+                    (compatibleEndpointsFound >= MAX_COMPATIBLE_TO_FIND)) {
                     debugPrintTimingInfo(results);
                     exit(0);
                 }
@@ -1640,10 +1505,6 @@ void buildTracksAddToResults(const std::vector<MopsDetection> &allDetections,
         }    
     }
 
-    /*std::cout << "BuildTracksAddToResults found " << numCompatible << " compatible endpoint and searched " <<
-        supportNodes.size() << " support nodes for support.\n";
-    std::cout << " this took "  << timeSince(start) << " sec, with " << addBestTotalTime
-    << " spent on choosing support detections." << std::endl;*/
     buildTracksAddToResultsTime += timeSince(start);
 
 }
@@ -1898,12 +1759,15 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
             uniqueSupportMJDs.insert(supportIter->myTime.getMJD());
         }
 
-        if (uniqueSupportMJDs.size() < searchConfig.minSupportTracklets) {
-            // we can't possibly have enough distinct support tracklets between endpoints
+        // we get at least 2 unique nights from endpoints, and 4 unique detections from endpoints.
+        // add those in and see if we have sufficient support.
+        if ((uniqueSupportMJDs.size() + 2 < searchConfig.minUniqueNights) || 
+            (uniqueSupportMJDs.size() + 4 < searchConfig.minDetectionsPerTrack)) {
+            // we can't possibly have enough distinct support points. quit.
             rejectedOnLackOfSupport++;
             doLinkingRecurseTime += timeSince(start);
-            // std::cout << "Exiting doLinkingRecurse due to lack of support.\n";
             return; 
+
         }
         else 
         {
@@ -1918,19 +1782,14 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                 // we checked for compatibility, then split off the children. of course, buildTracksAddToResults won't 
                 // be affected with regards to correctness, just performance. So it may not even be wise to add a
                 // mostly-needless check.
-                //std::cout << "Calling buildTracksAddToResults\n";
-                //double buildTracksStart = std::clock();
-                //uint numResults = results.size();
                 buildTracksAddToResults(allDetections, allTracklets, searchConfig,
                                         firstEndpoint, secondEndpoint, newSupportNodes,
                                         results);
-                //std::cout << "Brute-force track building took " << timeSince(buildTracksStart) << " sec.";
-                //std::cout << "Found " << results.size() - numResults << " new tracks. Exiting." << std::endl;
             }
-            else  {
-               
+            else {
+                
                 iterationsTillSplit -= 1;
-
+                
                 // find the "widest" node, where width is just the product
                 // of RA range, Dec range, RA velocity range, Dec velocity range.
                 // we will split that node and recurse.

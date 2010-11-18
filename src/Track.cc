@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <set>
 
 #include "lsst/mops/Track.h"
 #include "lsst/mops/Exceptions.h"
@@ -10,6 +11,22 @@ Track::Track()
     epoch = 0;
 }
 
+
+void Track::addTracklet(unsigned int trackletIndex, 
+			const Tracklet &t, 
+			const std::vector<MopsDetection> & allDets)
+{
+     componentTrackletIndices.insert(trackletIndex);
+     std::set<unsigned int>::const_iterator trackletDetIter;
+     for (trackletDetIter = t.indices.begin(); 
+	  trackletDetIter != t.indices.end(); 
+	  trackletDetIter++) {
+	  componentDetectionIndices.insert(*trackletDetIter);
+	  componentDetectionDiaIds.insert(allDets.at(*trackletDetIter).getID());
+     }
+
+}
+	  
 
 
 void Track::addDetection(unsigned int detIndex, const std::vector<MopsDetection> & allDets)
@@ -80,10 +97,21 @@ void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets)
 
 
 
-void Track::bestFit1d(const std::vector<double> &X, 
+void Track::bestFit1d(std::vector<double> &X, 
                       const std::vector<double> &time, 
                       std::vector<double> & res) 
 {
+     // jmyers: input is in degrees; try to get everything contiguous.
+     double p0 = X.at(0);
+     for (uint i = 1; i < X.size(); i++) {
+	  while ( X.at(i) - p0 > 180) {
+	       X.at(i) -= 360;
+	  }
+	  while ( p0 - X.at(i) > 180) {
+	       X.at(i) += 360;
+	  }
+     }
+     
     /* jmyers sep 2010 
        
        copy-pasting Kubica's method for calculating quadratic fits,
@@ -110,11 +138,10 @@ void Track::bestFit1d(const std::vector<double> &X,
     
     double A, B, C, D, E, F, G;
     double a, b, c, t, x;
-    double bot, w, sum;
+    double bot, w;
     double dobN, tspread;
     res.resize(3,0);
     unsigned int i;
-    int Nv;
     unsigned int N;
 
     /* Count the number of observations and the number of virtual

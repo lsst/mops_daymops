@@ -33,6 +33,29 @@ MopsDetection::MopsDetection(long int ID, double epochMJD, double RA, double Dec
 
 
 
+void MopsDetection::setID(long int newId)
+{
+    ID = newId;
+}
+
+
+void MopsDetection::setEpochMJD(double newMjd)
+{
+    MJD = newMjd;
+}
+
+void MopsDetection::setRA(double newRa)
+{
+    RA = newRa;
+}
+
+
+void MopsDetection::setDec(double newDec)
+{
+    dec = newDec;
+}
+        
+
 long int MopsDetection::getID() const 
 {
     return ID;

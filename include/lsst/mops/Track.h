@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "MopsDetection.h"
+#include "Tracklet.h"
 
 /* A track is really a set of *DETECTIONS*.  We also allow the user to track the
    *tracklets* which were used to build the track, but this is just for their
@@ -43,16 +44,29 @@ namespace lsst { namespace mops {
 class Track {
 public:
 
+    Track();
+    
     void addDetection(unsigned int detIndex, const std::vector<MopsDetection> & allDets);
 
-    Track();
+    /* Add a tracklet to the track; this will add the DETECTIONS of the tracklet
+       to the current track's detection set AND add the tracklet's given tracklet index
+       to componentTrackletIndices.  Used in LinkTracklets to quickly add endpoint tracklets.
+
+       DO NOT BE MISLEAD: This is not the only way in which detection/tracklets
+       are added in linkTracklets. Support detections may be added without any
+       associated tracklets.
+    */
+    void addTracklet(unsigned int trackletIndex, 
+                     const Tracklet &t, 
+                     const std::vector<MopsDetection> & allDets);
 
     const std::set<unsigned int> getComponentDetectionIndices() const;
 
     const std::set<unsigned int> getComponentDetectionDiaIds() const;
 
-    /* until this function is called, initial position, velocity and acceleration
-       for the track are NOT SET.  
+    /* until this function is called, initial position, velocity and
+       acceleration for the track are NOT SET.  the USER is responsible for
+       calling before using predictLocationAtTime() or getBestFitQuadratic().
      */
     void calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets);
     
@@ -60,6 +74,7 @@ public:
      if calculateBestFitQuadratic has not been called.*/
     void predictLocationAtTime(const double mjd, double &ra, double &dec) const;
     
+    /* you MUST call calculateBestFitQuadratic before calling this. */
     void getBestFitQuadratic(double &epoch,
                              double &ra0, double &raV, double &raAcc,
                              double &dec0, double &decV, double &decAcc) const;
@@ -97,7 +112,7 @@ private:
     std::vector<double> raFunc;
     std::vector<double> decFunc;
     double epoch;
-    void  bestFit1d(const std::vector<double> &X,
+    void  bestFit1d(std::vector<double> &X,
                     const std::vector<double> &time,
                     std::vector<double> & res);
 };

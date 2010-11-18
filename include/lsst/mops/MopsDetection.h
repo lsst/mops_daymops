@@ -46,6 +46,11 @@ public:
     double getRA() const ;
     double getDec() const ;
 
+    void setID(long int newId);
+    void setEpochMJD(double newMjd);
+    void setRA(double newRa);
+    void setDec(double newDec);
+
 private:
 
     long int ID;

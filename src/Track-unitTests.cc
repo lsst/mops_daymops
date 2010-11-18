@@ -272,13 +272,91 @@ BOOST_AUTO_TEST_CASE (trackSet_3) {
 
 
 
-
 // helper function for creating sets of detections
 void addDetectionAt(double MJD, double RA, double dec,  std::vector<MopsDetection> &detVec)
 {
     MopsDetection tmpDet(detVec.size(), MJD, RA, dec);
     detVec.push_back(tmpDet);
 }
+
+
+
+template <typename T>
+bool setsEqual(const std::set<T> s1, const std::set<T> s2)
+{
+    if (s1.size() != s2.size()) {
+        return false;
+    }
+
+    // take advantage of the fact that sets are ordered
+    typename std::set<T>::const_iterator sIter1;
+    typename std::set<T>::const_iterator sIter2;
+    sIter1 = s1.begin();
+    sIter2 = s2.begin();
+
+    while ((sIter1 != s1.end()) && (sIter2 != s2.end())) {
+        if (*sIter1  != *sIter2) {
+            return false;
+        }
+        sIter1++;
+        sIter2++;
+    }
+    return true;
+}
+
+
+
+BOOST_AUTO_TEST_CASE( track_quadraticFitting_addTracklet ) 
+{
+    std::vector<MopsDetection> allDets;
+    addDetectionAt(0, 0, 0,     allDets);
+    addDetectionAt(1, 1.5, 1.5, allDets);
+    addDetectionAt(2, 4, 4,     allDets);
+    addDetectionAt(3, 4.5, 4.5,     allDets);
+
+    Tracklet t1, t2;
+    allDets.at(0).setID(42);
+    allDets.at(1).setID(43);
+    allDets.at(2).setID(1337);
+    allDets.at(3).setID(1338);
+
+    t1.indices.insert(0);
+    t1.indices.insert(1);
+
+    t2.indices.insert(2);
+    t2.indices.insert(3);
+
+    Track testTrack;
+
+    testTrack.addTracklet(0, t1, allDets);
+    testTrack.addTracklet(1, t2, allDets);
+    
+    std::set<unsigned int> expectedDetIndices;
+    expectedDetIndices.insert(0);
+    expectedDetIndices.insert(1);
+    expectedDetIndices.insert(2);
+    expectedDetIndices.insert(3);
+    std::set<unsigned int> expectedDiaIds;
+    expectedDiaIds.insert(42);
+    expectedDiaIds.insert(43);
+    expectedDiaIds.insert(1337);
+    expectedDiaIds.insert(1338);
+    std::set<unsigned int> expectedTrackletIndices;
+    expectedTrackletIndices.insert(0);
+    expectedTrackletIndices.insert(1);
+
+    BOOST_CHECK(setsEqual(testTrack.componentTrackletIndices, 
+                          expectedTrackletIndices));
+    
+    BOOST_CHECK( setsEqual (testTrack.getComponentDetectionIndices(), 
+                            expectedDetIndices));
+    
+    BOOST_CHECK( setsEqual( testTrack.getComponentDetectionDiaIds(), 
+                            expectedDiaIds));
+}
+
+
+
 
 
 BOOST_AUTO_TEST_CASE( track_quadraticFitting_test0) 
@@ -328,6 +406,13 @@ BOOST_AUTO_TEST_CASE( track_quadraticFit_test1)
     BOOST_CHECK(Eq(dec0,          1));
     BOOST_CHECK(Eq(decV,          1));
     BOOST_CHECK(Eq(decAcc,        1));    
+    double predRa, predDec;
+    testTrack.predictLocationAtTime(1,predRa, predDec);
+    BOOST_CHECK(Eq(predRa,  1));
+    BOOST_CHECK(Eq(predDec, 1));
+    testTrack.predictLocationAtTime(2,predRa, predDec);
+    BOOST_CHECK(Eq(predRa,  2.5));
+    BOOST_CHECK(Eq(predDec, 2.5));
 }
 
 
@@ -398,7 +483,11 @@ BOOST_AUTO_TEST_CASE( big_quadFit_test0)
         BOOST_CHECK(Eq(dec0,     answerKey.at(i).at(0) + 5));
         BOOST_CHECK(Eq(decV,     answerKey.at(i).at(1)));
         BOOST_CHECK(Eq(decAcc,   answerKey.at(i).at(1)));
+
     }
 }
+
+
+
 
 }} // close lsst::mops

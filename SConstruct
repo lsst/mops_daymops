@@ -28,8 +28,7 @@ env['IgnoreFiles'] = r"(~$|\.pyc$|^\.svn$|\.o$)"
 
 # the "install" target
 #
-Alias("install", [env.Install(env['prefix'], "python"),
-                  env.Install(env['prefix'], "include"),
+Alias("install", [env.Install(env['prefix'], "include"),
                   env.InstallEups(env['prefix'] + "/ups",
                                   glob.glob("ups/*.table"))])
 

@@ -230,7 +230,7 @@ public:
    otherwise queryTracklets will not be changed. */
 TrackSet* linkTracklets(const std::vector<MopsDetection> &allDetections,
                         std::vector<Tracklet> &queryTracklets,
-                        linkTrackletsConfig searchConfig);
+                        const linkTrackletsConfig &searchConfig);
 
 
 

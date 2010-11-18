@@ -857,7 +857,7 @@ void extendBoundsToTime(const KDTreeNode<uint> * treeNode,
 bool areMutuallyCompatible(const TreeNodeAndTime &firstNode,
                            const TreeNodeAndTime &secondNode,
                            const TreeNodeAndTime &thirdNode,
-                           linkTrackletsConfig searchConfig)
+                           const linkTrackletsConfig &searchConfig)
 {
     bool valid = true;
     
@@ -1005,7 +1005,7 @@ bool areMutuallyCompatible(const TreeNodeAndTime &firstNode,
 
 bool areCompatible(const TreeNodeAndTime  &nodeA,
                    const TreeNodeAndTime  &nodeB,
-                   linkTrackletsConfig searchConfig,
+                   const linkTrackletsConfig &searchConfig,
                    LTCache &rangeCache)
 {
 
@@ -1141,7 +1141,7 @@ void setTrackletVelocities(const std::vector<MopsDetection> &allDetections,
 // between the first and last detection, not the start time of the two tracklets.
 bool endpointTrackletsAreCompatible(const std::vector<MopsDetection> & allDetections, 
                                     const Track &newTrack,
-                                    linkTrackletsConfig searchConfig)
+                                    const linkTrackletsConfig &searchConfig)
 {
     double start = std::clock();
     bool allOK = true;
@@ -1222,7 +1222,7 @@ void addDetectionsCloseToPredictedPositions(const std::vector<MopsDetection> &al
                                             const std::vector<Tracklet> &allTracklets, 
                                             const std::vector<uint> &candidateTrackletIds,
                                             Track &newTrack, 
-                                            const linkTrackletsConfig searchConfig)
+                                            const linkTrackletsConfig &searchConfig)
 {
     /* SPEEDUP TBD: this way of doing things will result in one track location
      * prediction per candidate support point.  we could save ourselves a lot of
@@ -1233,6 +1233,7 @@ void addDetectionsCloseToPredictedPositions(const std::vector<MopsDetection> &al
      * time to best-fitting candidate detection at that time
      */
     std::map<double, CandidateDetection > timeToCandidateMap;
+    
 
     // find the best compatible detection at each unique image time
     std::vector<unsigned int>::const_iterator trackletIDIter;
@@ -1276,9 +1277,10 @@ void addDetectionsCloseToPredictedPositions(const std::vector<MopsDetection> &al
 
     /* initialize a list of image times present in the track already. */
     std::set<double> trackMJDs;
+    std::set<uint> trackDetIndicesSet;
     std::set<unsigned int>::const_iterator trackDetectionIndices;
-    for (trackDetectionIndices =  newTrack.getComponentDetectionIndices().begin();
-         trackDetectionIndices != newTrack.getComponentDetectionIndices().end();
+    for (trackDetectionIndices =  trackDetIndicesSet.begin();
+         trackDetectionIndices != trackDetIndicesSet.end();
          trackDetectionIndices++) {
         trackMJDs.insert(allDetections.at(*trackDetectionIndices).getEpochMJD());        
     }
@@ -1313,7 +1315,7 @@ void addDetectionsCloseToPredictedPositions(const std::vector<MopsDetection> &al
  * WARNING HACKISHNESS IN ACTION: see comments on how we count unique nights.
  */ 
 bool trackHasSufficientSupport(const std::vector<MopsDetection> &allDetections,
-                               const Track &newTrack, const linkTrackletsConfig searchConfig)
+                               const Track &newTrack, const linkTrackletsConfig &searchConfig)
 {
     if (newTrack.getComponentDetectionIndices().size() < searchConfig.minDetectionsPerTrack) {
         return false;
@@ -1361,7 +1363,7 @@ bool trackHasSufficientSupport(const std::vector<MopsDetection> &allDetections,
  * iff RMS < searchConfig.maxTrackRms.
  */ 
 bool trackRmsIsSufficientlyLow(const std::vector<MopsDetection> &allDetections,
-                               const Track &newTrack, const linkTrackletsConfig searchConfig)
+                               const Track &newTrack, const linkTrackletsConfig &searchConfig)
 {
 
     double netSqError = 0.;
@@ -1394,7 +1396,7 @@ bool trackRmsIsSufficientlyLow(const std::vector<MopsDetection> &allDetections,
  */
 void buildTracksAddToResults(const std::vector<MopsDetection> &allDetections,
                              const std::vector<Tracklet> &allTracklets,
-                             linkTrackletsConfig searchConfig,
+                             const linkTrackletsConfig &searchConfig,
                              TreeNodeAndTime &firstEndpoint,
                              TreeNodeAndTime &secondEndpoint,
                              std::vector<TreeNodeAndTime> &supportNodes,
@@ -1572,7 +1574,7 @@ bool supportTooWide(const TreeNodeAndTime& firstEndpoint, const TreeNodeAndTime&
 
 void splitSupportRecursively(const TreeNodeAndTime& firstEndpoint, const TreeNodeAndTime& secondEndpoint, 
                              bool requireLeaves,
-                             const TreeNodeAndTime &supportNode, linkTrackletsConfig searchConfig, 
+                             const TreeNodeAndTime &supportNode, const linkTrackletsConfig &searchConfig, 
                              LTCache &rangeCache,
                              std::vector<TreeNodeAndTime> &newSupportNodes)
 {
@@ -1637,7 +1639,8 @@ void splitSupportRecursively(const TreeNodeAndTime& firstEndpoint, const TreeNod
 
 
 void filterAndSplitSupport(const TreeNodeAndTime& firstEndpoint, const TreeNodeAndTime& secondEndpoint, 
-                           const std::vector<TreeNodeAndTime> &supportNodes, linkTrackletsConfig searchConfig, 
+                           const std::vector<TreeNodeAndTime> &supportNodes, 
+                           const linkTrackletsConfig &searchConfig, 
                            LTCache &rangeCache,
                            std::vector<TreeNodeAndTime> &newSupportNodes) 
 {
@@ -1694,7 +1697,7 @@ double nodeWidth(KDTreeNode<uint> *node)
  */
 void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                       const std::vector<Tracklet> &allTracklets,
-                      linkTrackletsConfig searchConfig,
+                      const linkTrackletsConfig &searchConfig,
                       TreeNodeAndTime &firstEndpoint,
                       TreeNodeAndTime &secondEndpoint,
                       std::vector<TreeNodeAndTime> &supportNodes,
@@ -1734,7 +1737,6 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
         if ((iterationsTillSplit <= 0) || 
             (firstEndpoint.myTree->isLeaf() && secondEndpoint.myTree->isLeaf())) {
             
-            double filterStartTime = std::clock();
             //std::cout << "calling filterAndSplitSupport with " << supportNodes.size() << " support nodes.\n";
             filterAndSplitSupport(firstEndpoint, secondEndpoint, 
                                   supportNodes, searchConfig, rangeCache,
@@ -1761,8 +1763,7 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
 
         // we get at least 2 unique nights from endpoints, and 4 unique detections from endpoints.
         // add those in and see if we have sufficient support.
-        if ((uniqueSupportMJDs.size() + 2 < searchConfig.minUniqueNights) || 
-            (uniqueSupportMJDs.size() + 4 < searchConfig.minDetectionsPerTrack)) {
+        if (uniqueSupportMJDs.size() + 2 < searchConfig.minUniqueNights) {
             // we can't possibly have enough distinct support points. quit.
             rejectedOnLackOfSupport++;
             doLinkingRecurseTime += timeSince(start);
@@ -1895,7 +1896,7 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
 
 void doLinking(const std::vector<MopsDetection> &allDetections,
                std::vector<Tracklet> &allTracklets,
-               linkTrackletsConfig searchConfig,
+               const linkTrackletsConfig &searchConfig,
                std::map<ImageTime, KDTree <uint> > &trackletTimeToTreeMap,
                TrackSet &results)
 {
@@ -2056,7 +2057,7 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
 
 TrackSet* linkTracklets(const std::vector<MopsDetection> &allDetections,
                         std::vector<Tracklet> &queryTracklets,
-                        linkTrackletsConfig searchConfig) {
+                        const linkTrackletsConfig &searchConfig) {
     TrackSet * toRet;
     if (searchConfig.outputMethod == RETURN_TRACKS) {
         toRet = new TrackSet();

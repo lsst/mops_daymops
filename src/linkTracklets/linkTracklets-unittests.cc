@@ -383,64 +383,66 @@ BOOST_AUTO_TEST_CASE( linkTracklets_easy_4 )
 
 
 
+/* JMYERS: design changes rendered this unit test irrelevant - the RMS of this
+ * track is too high. WISHLIST: Perhaps someday get a new one?
+ */
+// BOOST_AUTO_TEST_CASE( linkTracklets_realworld_1) {
 
-BOOST_AUTO_TEST_CASE( linkTracklets_realworld_1) {
+//     std::vector<MopsDetection> allDetections;
+//     std::vector<Tracklet> allTracklets;
+//     MopsDetection tmp;
+//     Tracklet tmpTracklet;
 
-    std::vector<MopsDetection> allDetections;
-    std::vector<Tracklet> allTracklets;
-    MopsDetection tmp;
-    Tracklet tmpTracklet;
-
-    /*
-      2 49523.416229 353.624260 0.521654 20.940280 566 10682481 0. 0.
-      74408 49523.422041 353.624302 0.521646 20.352173 566 10682481 0. 0.
-      97273 49534.303363 352.326802 1.872652 20.845180 566 10752581 0. 0.
-      99300 49534.305146 352.326796 1.872652 20.845182 566 10752581 0. 0.
-      130073 49543.427348 350.757850 4.674333 21.576199 566 6206408 0. 0.
-      132286 49543.440873 350.755445 4.679549 20.568481 566 2079498 0. 0.
+//     /*
+//       2 49523.416229 353.624260 0.521654 20.940280 566 10682481 0. 0.
+//       74408 49523.422041 353.624302 0.521646 20.352173 566 10682481 0. 0.
+//       97273 49534.303363 352.326802 1.872652 20.845180 566 10752581 0. 0.
+//       99300 49534.305146 352.326796 1.872652 20.845182 566 10752581 0. 0.
+//       130073 49543.427348 350.757850 4.674333 21.576199 566 6206408 0. 0.
+//       132286 49543.440873 350.755445 4.679549 20.568481 566 2079498 0. 0.
       
-      the above track *IS* good enough (though incorrect) but it doesn't get found.
-      let's see why.
-     */
+//       the above track *IS* good enough (though incorrect) but it doesn't get found.
+//       let's see why.
+//      */
 
-    linkTrackletsConfig myConfig;
-    myConfig.velocityErrorThresh = .192;
-    myConfig.detectionLocationErrorThresh = .002;
+//     linkTrackletsConfig myConfig;
+//     myConfig.velocityErrorThresh = .192;
+//     myConfig.detectionLocationErrorThresh = .002;
 
-    tmp.fromMITIString("2 49523.416229 353.624260 0.521654 20.940280 566 10682481 0. 0.");
-    allDetections.push_back(tmp);
-    tmp.fromMITIString("74408 49523.422041 353.624302 0.521646 20.352173 566 10682481 0. 0.");
-    allDetections.push_back(tmp);
+//     tmp.fromMITIString("2 49523.416229 353.624260 0.521654 20.940280 566 10682481 0. 0.");
+//     allDetections.push_back(tmp);
+//     tmp.fromMITIString("74408 49523.422041 353.624302 0.521646 20.352173 566 10682481 0. 0.");
+//     allDetections.push_back(tmp);
 
-    tmpTracklet.indices.insert(0);
-    tmpTracklet.indices.insert(1);
-    allTracklets.push_back(tmpTracklet);
-    tmpTracklet.indices.clear();
+//     tmpTracklet.indices.insert(0);
+//     tmpTracklet.indices.insert(1);
+//     allTracklets.push_back(tmpTracklet);
+//     tmpTracklet.indices.clear();
 
-    tmp.fromMITIString("97273 49534.303363 352.326802 1.872652 20.845180 566 10752581 0. 0.");
-    allDetections.push_back(tmp);
-    tmp.fromMITIString("99300 49534.305146 352.326796 1.872652 20.845182 566 10752581 0. 0.");
-    allDetections.push_back(tmp);
+//     tmp.fromMITIString("97273 49534.303363 352.326802 1.872652 20.845180 566 10752581 0. 0.");
+//     allDetections.push_back(tmp);
+//     tmp.fromMITIString("99300 49534.305146 352.326796 1.872652 20.845182 566 10752581 0. 0.");
+//     allDetections.push_back(tmp);
 
-    tmpTracklet.indices.insert(2);
-    tmpTracklet.indices.insert(3);
-    allTracklets.push_back(tmpTracklet);
-    tmpTracklet.indices.clear();
+//     tmpTracklet.indices.insert(2);
+//     tmpTracklet.indices.insert(3);
+//     allTracklets.push_back(tmpTracklet);
+//     tmpTracklet.indices.clear();
 
-    tmp.fromMITIString("130073 49543.427348 350.757850 4.674333 21.576199 566 6206408 0. 0.");
-    allDetections.push_back(tmp);
-    tmp.fromMITIString("132286 49543.440873 350.755445 4.679549 20.568481 566 2079498 0. 0.");
-    allDetections.push_back(tmp);
+//     tmp.fromMITIString("130073 49543.427348 350.757850 4.674333 21.576199 566 6206408 0. 0.");
+//     allDetections.push_back(tmp);
+//     tmp.fromMITIString("132286 49543.440873 350.755445 4.679549 20.568481 566 2079498 0. 0.");
+//     allDetections.push_back(tmp);
 
-    tmpTracklet.indices.insert(4);
-    tmpTracklet.indices.insert(5);
-    allTracklets.push_back(tmpTracklet);
-    tmpTracklet.indices.clear();
+//     tmpTracklet.indices.insert(4);
+//     tmpTracklet.indices.insert(5);
+//     allTracklets.push_back(tmpTracklet);
+//     tmpTracklet.indices.clear();
 
-    TrackSet * results = linkTracklets(allDetections, allTracklets, myConfig);
-    BOOST_CHECK(results->size() == 1);
+//     TrackSet * results = linkTracklets(allDetections, allTracklets, myConfig);
+//     BOOST_CHECK(results->size() == 1);
    
-}
+// }
 
 
 BOOST_AUTO_TEST_CASE( linkTracklets_easy_5 )

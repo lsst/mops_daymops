@@ -7,6 +7,8 @@
 #include "lsst/mops/Exceptions.h"
 #include "lsst/mops/TrackSet.h"
 
+#include <iomanip>
+
 namespace lsst { 
 namespace mops {
 
@@ -76,6 +78,22 @@ void TrackSet::writeToFile()
              detIter++) {
             outFile << *detIter << " ";
         }
+        /* jmyers: new for ticket 1415: also append best-fit function data.
+           note that there is currently no mechanism for checking that this
+           information has been calculated is or up-to-date; this is OK for now
+           because this routine is only ever called by linkTracklets, which
+           calculates an up-to-date fit function for every track, after adding
+           support points.
+         */
+        double epoch, ra0, raV, raAcc, dec0, decV, decAcc;
+        (*curTrack).getBestFitQuadratic(epoch, ra0, raV, raAcc, 
+                                     dec0, decV, decAcc);
+        outFile << std::setprecision(12) 
+                << std::scientific 
+                << "epoch=" << epoch 
+                << " ra0=" << ra0 << " raV=" << raV << " raAcc=" << raAcc
+                << " dec0=" << dec0 << " decV=" << decV << " decAcc=" << decAcc;
+        
         outFile << std::endl;
     }
     outFile.close();

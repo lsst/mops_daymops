@@ -1,3 +1,8 @@
+// -*- LSST-C++ -*-
+/* jonathan myers 
+   8/10/09
+*/
+
 #include <algorithm>
 #include <set>
 
@@ -232,13 +237,20 @@ void Track::predictLocationAtTime(const double mjd, double &ra, double &dec) con
 void Track::getBestFitQuadratic(double &epoch, double &ra0, double &raV, double &raAcc,
                                 double &dec0, double &decV, double &decAcc) const
 {
+    if ((raFunc.size() < 3) || (decFunc.size() < 3)) {
+        throw (LSST_EXCEPT(BadParameterException, 
+      "getBestFitQuadratic called for track before calculateBestFitQuadratic."));
+    }
     epoch = this->epoch;
+
     ra0 = raFunc.at(0);
     raV = raFunc.at(1);
     raAcc = raFunc.at(2);
+
     dec0 = decFunc.at(0);
     decV = decFunc.at(1);
     decAcc = decFunc.at(2);
+    
 }
 
 

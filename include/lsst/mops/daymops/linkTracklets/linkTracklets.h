@@ -52,11 +52,8 @@ public:
             minDetectionsPerTrack = 6;
            
 
-            /* Kubica's default value times two.  Kubica uses .0005 deg, but
-             *  then only adds the point if dist/2.0 < pred_fit, where dist is
-             *  angular distance from the best-fit predicted location for the
-             *  track. */
-            trackAdditionThreshold = .001; 
+            /* Kubica uses .0005, but that's in RADIANS! this is the degree equivalent. */
+            trackAdditionThreshold = .028648;
 
 
             /* This is the square root of value we've been

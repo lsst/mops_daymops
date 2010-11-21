@@ -1189,6 +1189,12 @@ bool endpointTrackletsAreCompatible(const std::vector<MopsDetection> & allDetect
 
 
 
+template <class T>
+bool setContains(std::set<T> s, T foo) 
+{
+    return (s.find(foo) != s.end());
+} 
+
 
 
 // this helper class is used just to make
@@ -1224,11 +1230,6 @@ void addDetectionsCloseToPredictedPositions(const std::vector<MopsDetection> &al
                                             Track &newTrack, 
                                             const linkTrackletsConfig &searchConfig)
 {
-    /* SPEEDUP TBD: this way of doing things will result in one track location
-     * prediction per candidate support point.  we could save ourselves a lot of
-     *  computation if we ordered the candidate detection IDs by image time
-     * first, then did just one track location prediction per image time. */
-
     /* the scoreToIDsMap will hold detection MJDs as the key, map from detection
      * time to best-fitting candidate detection at that time
      */
@@ -1277,7 +1278,7 @@ void addDetectionsCloseToPredictedPositions(const std::vector<MopsDetection> &al
 
     /* initialize a list of image times present in the track already. */
     std::set<double> trackMJDs;
-    std::set<uint> trackDetIndicesSet;
+    std::set<uint> trackDetIndicesSet = newTrack.getComponentDetectionIndices();
     std::set<unsigned int>::const_iterator trackDetectionIndices;
     for (trackDetectionIndices =  trackDetIndicesSet.begin();
          trackDetectionIndices != trackDetIndicesSet.end();

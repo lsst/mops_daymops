@@ -1360,7 +1360,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_5_4 )
 {
 
     // " << expectedTracks.size() << " tracks, following a coherent pattern but randomly perturbed.
-    TrackSet expectedTracks("expectedTracks.txt", false, 0);
+    TrackSet expectedTracks;
     std::vector<MopsDetection> allDets;
     std::vector<Tracklet> allTracklets;
     unsigned int firstDetId = -1;
@@ -1368,9 +1368,6 @@ BOOST_AUTO_TEST_CASE( linkTracklets_5_4 )
 
   
     linkTrackletsConfig myConfig;
-    myConfig.outputMethod = IDS_FILE;
-    myConfig.outputFile = "receivedTracks.txt";
-    myConfig.outputBufferSize = 0;
         
     std::vector<std::vector<double> > imgTimes(3);
 
@@ -1424,13 +1421,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_5_4 )
     std::cout << "got " << foundTracks->size() << " results, checking if they contain the true tracks ";
     std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
 
-    //BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
-    std::cerr << "About to purge expected Tracks set..." << std::endl;
-    expectedTracks.purgeToFile();
-    std::cerr << "Done." << std::endl;
-    std::cerr << "About to purge received Tracks set..." << std::endl;
-    foundTracks->purgeToFile();
-    std::cerr << "Done." << std::endl;
+    BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
 }
 
 

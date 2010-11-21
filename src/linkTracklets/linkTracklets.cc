@@ -1186,6 +1186,12 @@ bool endpointTrackletsAreCompatible(const std::vector<MopsDetection> & allDetect
     return allOK;
 }
 
+template <class T>
+bool setContains(std::set<T> s, T foo)
+{
+    return (s.find(foo) != s.end());
+}
+
 
 
 
@@ -1208,6 +1214,16 @@ void addDetectionsCloseToPredictedPositions(const std::vector<MopsDetection> &al
 
     std::map<double, std::vector<uint> > timeToDetectionsMap;
 
+    // find out what image times are alrady "spoken for" by endpoint tracklets
+    std::set<unsigned int>::const_iterator trackDetectionIndices;
+    std::set<double> trackMJDs;
+    std::set<uint> trackDetIndicesSet = newTrack.getComponentDetectionIndices();
+    for (trackDetectionIndices =  trackDetIndicesSet.begin();
+         trackDetectionIndices != trackDetIndicesSet.end();
+         trackDetectionIndices++) {
+        trackMJDs.insert(allDetections.at(*trackDetectionIndices).getEpochMJD());        
+    }
+
     // sort all detections by time and add to timeToDetectionsMap.
     std::vector<unsigned int>::const_iterator trackletIDIter;
     std::set<unsigned int>::const_iterator detectionIDIter;
@@ -1219,7 +1235,11 @@ void addDetectionsCloseToPredictedPositions(const std::vector<MopsDetection> &al
              detectionIDIter != curTracklet->indices.end();
              detectionIDIter++) {
             double detMjd = allDetections.at(*detectionIDIter).getEpochMJD();
-            timeToDetectionsMap[detMjd].push_back(*detectionIDIter);
+            // throw away detections from times which are already in use
+            // C++ syntax for "not found" is weird
+            if (trackMJDs.find(detMjd) == trackMJDs.end()) {
+                timeToDetectionsMap[detMjd].push_back(*detectionIDIter);
+            }
         }
     }
             
@@ -1261,7 +1281,10 @@ void addDetectionsCloseToPredictedPositions(const std::vector<MopsDetection> &al
                 double distance = angularDistanceRADec_deg(detRa, detDec, predRa, predDec);
                 
                 // if the detection is compatible, consider whether it's the best at the image time
-                if ((foundOne == false)  || (distance < bestDetectionErr)) {
+                if ((distance < searchConfig.trackAdditionThreshold) 
+                    && 
+                    ((foundOne == false)  || (distance < bestDetectionErr))) {
+                    
                     bestDetId = curDet;
                     bestDetectionErr = distance;
                     foundOne = true;

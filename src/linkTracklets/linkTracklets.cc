@@ -1186,12 +1186,6 @@ bool endpointTrackletsAreCompatible(const std::vector<MopsDetection> & allDetect
     return allOK;
 }
 
-template <class T>
-bool setContains(std::set<T> s, T foo)
-{
-    return (s.find(foo) != s.end());
-}
-
 
 
 
@@ -1211,7 +1205,6 @@ void addDetectionsCloseToPredictedPositions(const std::vector<MopsDetection> &al
                                             Track &newTrack, 
                                             const linkTrackletsConfig &searchConfig)
 {
-
     std::map<double, std::vector<uint> > timeToDetectionsMap;
 
     // find out what image times are alrady "spoken for" by endpoint tracklets

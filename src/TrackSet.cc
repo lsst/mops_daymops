@@ -93,6 +93,11 @@ void TrackSet::writeToFile()
                 << "epoch=" << epoch 
                 << " ra0=" << ra0 << " raV=" << raV << " raAcc=" << raAcc
                 << " dec0=" << dec0 << " decV=" << decV << " decAcc=" << decAcc;
+        if ((*curTrack).hasRms()) {
+        outFile << std::setprecision(12) 
+                << std::scientific 
+                << " Rms=" << (*curTrack).getRms();
+        }
         
         outFile << std::endl;
     }

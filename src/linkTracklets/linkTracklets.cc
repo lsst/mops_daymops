@@ -1191,25 +1191,6 @@ bool endpointTrackletsAreCompatible(const std::vector<MopsDetection> & allDetect
 
 
 
-// this helper class is used just to make
-// addDetectionsCloseToPredictedPositions a little more readable.
-
-class CandidateDetection {
-public:
-    CandidateDetection() {
-        distance = 0; 
-        detId = 0;
-        parentTrackletId = 0;
-    }
-    CandidateDetection(double nDistance, unsigned int nDetId, unsigned int nParentTrackletId) {
-        distance = nDistance;
-        detId = nDetId;
-        parentTrackletId = nParentTrackletId;
-    }
-    double distance;
-    unsigned int detId;
-    unsigned int parentTrackletId;
-};
 
 /*
  * ASSUMES newTrack is prepared to call getBestFitQuadratic- this means
@@ -1224,18 +1205,10 @@ void addDetectionsCloseToPredictedPositions(const std::vector<MopsDetection> &al
                                             Track &newTrack, 
                                             const linkTrackletsConfig &searchConfig)
 {
-    /* SPEEDUP TBD: this way of doing things will result in one track location
-     * prediction per candidate support point.  we could save ourselves a lot of
-     *  computation if we ordered the candidate detection IDs by image time
-     * first, then did just one track location prediction per image time. */
 
-    /* the scoreToIDsMap will hold detection MJDs as the key, map from detection
-     * time to best-fitting candidate detection at that time
-     */
-    std::map<double, CandidateDetection > timeToCandidateMap;
-    
+    std::map<double, std::vector<uint> > timeToDetectionsMap;
 
-    // find the best compatible detection at each unique image time
+    // sort all detections by time and add to timeToDetectionsMap.
     std::vector<unsigned int>::const_iterator trackletIDIter;
     std::set<unsigned int>::const_iterator detectionIDIter;
     for (trackletIDIter = candidateTrackletIds.begin();
@@ -1246,61 +1219,59 @@ void addDetectionsCloseToPredictedPositions(const std::vector<MopsDetection> &al
              detectionIDIter != curTracklet->indices.end();
              detectionIDIter++) {
             double detMjd = allDetections.at(*detectionIDIter).getEpochMJD();
-            double detRa  = allDetections.at(*detectionIDIter).getRA();
-            double detDec = allDetections.at(*detectionIDIter).getDec();
+            timeToDetectionsMap[detMjd].push_back(*detectionIDIter);
+        }
+    }
+            
+    // now pass over the detection times sequentially, predict location at that
+    // time, and find the best candidate at each image time.    
+    std::map<double, std::vector<uint> >::const_iterator timeToDetsIter;
+    for (timeToDetsIter = timeToDetectionsMap.begin();
+         timeToDetsIter != timeToDetectionsMap.end();
+         timeToDetsIter++)  {
 
-            double predRa, predDec;
-            newTrack.predictLocationAtTime(detMjd, predRa, predDec);
+        // calculate predicted location at this time.
+        double curTime = timeToDetsIter->first;
+        double predRa, predDec;
+        newTrack.predictLocationAtTime(curTime, predRa, predDec);
+       
+        bool foundOne = false;
+        double bestDetectionErr = 0.;
+        uint bestDetId = -1;
 
+        // find the best support point at this time, if any within threshold.
+        std::vector<uint>::const_iterator detIter;
+        const std::vector<uint> * detsAtTime = &(timeToDetsIter->second);
+        for (detIter = detsAtTime->begin();
+             detIter != detsAtTime->end();
+             detIter++) {
+
+            uint curDet = *detIter;
+            double detRa  = allDetections.at(curDet).getRA();
+            double detDec = allDetections.at(curDet).getDec();
+                        
             double decDistance = fabs(detDec - predDec);
-            if (decDistance < searchConfig.trackAdditionThreshold) {
+            // avoid calling angularDistanceRADec_deg if possible.  angular
+            // distance is always greater than dec distance alone so if dec
+            // distance is higher than bestDetectionErr we can ignore this
+            // candidate.
+            if ((decDistance < searchConfig.trackAdditionThreshold) && 
+                ((foundOne == false) || (decDistance < bestDetectionErr)))  {
 
                 double distance = angularDistanceRADec_deg(detRa, detDec, predRa, predDec);
                 
                 // if the detection is compatible, consider whether it's the best at the image time
-                if (distance < searchConfig.trackAdditionThreshold) {
-                    std::map<double, CandidateDetection>::iterator candidateAtTime;
-                    candidateAtTime = timeToCandidateMap.find(detMjd);
-                    
-                    // more crazy C++-talk for "if we have no candidate, or if this is a
-                    // better candidate than the one we have, then add this as the new
-                    // candidate at that time"
-                    if ((candidateAtTime == timeToCandidateMap.end()) 
-                        || (candidateAtTime->second.distance > distance)) {
-                        CandidateDetection newCandidate(distance, *detectionIDIter, *trackletIDIter);
-                        timeToCandidateMap[detMjd] = newCandidate;
-                    }
-                }
+                if ((foundOne == false)  || (distance < bestDetectionErr)) {
+                    bestDetId = curDet;
+                    bestDetectionErr = distance;
+                    foundOne = true;
+                }                
             }
         }
-    }
 
-    /* initialize a list of image times present in the track already. */
-    std::set<double> trackMJDs;
-    std::set<uint> trackDetIndicesSet;
-    std::set<unsigned int>::const_iterator trackDetectionIndices;
-    for (trackDetectionIndices =  trackDetIndicesSet.begin();
-         trackDetectionIndices != trackDetIndicesSet.end();
-         trackDetectionIndices++) {
-        trackMJDs.insert(allDetections.at(*trackDetectionIndices).getEpochMJD());        
-    }
-    
-    /* add detections (and their parent tracklets) in order of 'score' (distance
-     * from best-fit line) without adding any detections from
-     * already-represented image times
-     */
-    std::map<double, CandidateDetection>::iterator candidatesIter;
-
-    for (candidatesIter = timeToCandidateMap.begin(); 
-         candidatesIter != timeToCandidateMap.end(); 
-         candidatesIter++) {
-
-        if (trackMJDs.find(candidatesIter->first) == trackMJDs.end()) {
-            /* add this detection and tracklet */
-            
-            trackMJDs.insert(candidatesIter->first);
-            newTrack.addDetection(candidatesIter->second.detId, allDetections);
-            newTrack.componentTrackletIndices.insert(candidatesIter->second.parentTrackletId);
+        // now add the support point, if one was found
+        if (foundOne) {
+            newTrack.addDetection(bestDetId, allDetections);
         }
     }
 }
@@ -1363,24 +1334,11 @@ bool trackHasSufficientSupport(const std::vector<MopsDetection> &allDetections,
  * iff RMS < searchConfig.maxTrackRms.
  */ 
 bool trackRmsIsSufficientlyLow(const std::vector<MopsDetection> &allDetections,
-                               const Track &newTrack, const linkTrackletsConfig &searchConfig)
+                               Track &newTrack, const linkTrackletsConfig &searchConfig)
 {
 
-    double netSqError = 0.;
-    std::set<uint> trackDets = newTrack.getComponentDetectionIndices();
-
-    std::set<uint>::const_iterator detIter;
-    for (detIter = trackDets.begin(); detIter != trackDets.end(); detIter++) {
-        const MopsDetection thisDet = allDetections.at(*detIter);
-        double predictedRa, predictedDec;
-        newTrack.predictLocationAtTime(thisDet.getEpochMJD(), predictedRa, predictedDec);
-        double dist = angularDistanceRADec_deg(thisDet.getRA(), thisDet.getDec(), 
-                                               predictedRa, predictedDec);
-        netSqError += dist*dist;
-    }
-
-    double rmsError = sqrt(netSqError / trackDets.size());
-
+    newTrack.calculateRms(allDetections);
+    double rmsError = newTrack.getRms();
     return (rmsError < searchConfig.trackMaxRms);
 }
 

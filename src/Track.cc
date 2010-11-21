@@ -8,12 +8,61 @@
 
 #include "lsst/mops/Track.h"
 #include "lsst/mops/Exceptions.h"
+#include "lsst/mops/common.h"
+
+
 
 namespace lsst { namespace mops {
 
 Track::Track()
 {
     epoch = 0;
+    rmsCalculatedAlready = false;
+    rms = -1;
+}
+
+
+
+bool Track::hasRms() const
+{
+    return rmsCalculatedAlready;
+}
+
+
+
+void Track::calculateRms(const std::vector<MopsDetection> &allDets)
+{
+
+    if ((raFunc.size() != 3) || (decFunc.size() != 3)) {
+        calculateBestFitQuadratic(allDets);
+    }
+
+
+    double netSqError = 0.;
+    
+    std::set<uint>::const_iterator detIter;
+
+    for (detIter = componentDetectionIndices.begin(); 
+         detIter != componentDetectionIndices.end(); 
+         detIter++) {
+
+        const MopsDetection thisDet = allDets.at(*detIter);
+        double predictedRa, predictedDec;
+        predictLocationAtTime(thisDet.getEpochMJD(), predictedRa, predictedDec);
+        double dist = angularDistanceRADec_deg(thisDet.getRA(), thisDet.getDec(), 
+                                               predictedRa, predictedDec);
+        netSqError += dist*dist;
+    }
+
+    rms = sqrt(netSqError / componentDetectionIndices.size());
+    rmsCalculatedAlready = true;
+}
+
+
+
+double Track::getRms() const
+{
+    return rms;
 }
 
 

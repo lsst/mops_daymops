@@ -84,7 +84,10 @@ public:
       information is not used but could be useful for debugging or investigation.
     */
     std::set<unsigned int> componentTrackletIndices;
-    
+
+    bool hasRms() const;
+    void calculateRms(const std::vector<MopsDetection> &allDets);
+    double getRms() const;
 
     Track & operator= (const Track &other);
 
@@ -115,6 +118,8 @@ private:
     void  bestFit1d(std::vector<double> &X,
                     const std::vector<double> &time,
                     std::vector<double> & res);
+    bool rmsCalculatedAlready;
+    double rms;
 };
 
 }} // close lsst::mops namespace

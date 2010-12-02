@@ -6,10 +6,10 @@
 
 #include <vector>
 
-#include "../Detection.h"
-#include "../Tracklet.h"
-#include "Track.h"
-#include "TrackSet.h"
+#include "lsst/mops/MopsDetection.h"
+#include "lsst/mops/Tracklet.h"
+#include "lsst/mops/Track.h"
+#include "lsst/mops/TrackSet.h"
 
 
 
@@ -20,12 +20,14 @@
  * fine for LSST.
  */
 
+namespace lsst { namespace mops {
 
 class linkTrackletsConfig {
 public:
 
     linkTrackletsConfig() 
-        {   maxRAAccel = .02; 
+        {   
+            maxRAAccel = .02; 
             maxDecAccel = .02; 
             detectionLocationErrorThresh = .002; 
             minEndpointTimeSeparation = 2; 
@@ -34,8 +36,15 @@ public:
             quadraticFitErrorThresh = 0.;
             minDetectionsPerTrack = 6;
 
+            restrictTrackStartTimes = false;
+            latestFirstEndpointTime = -1;
+            restrictTrackEndTimes = false;
+            earliestLastEndpointTime = -1;
+
             velocityErrorThresh = .00025;//.5;  per Jon's email 5/20/10
 	    //.00025 turned out to miss some potential tracks;  11/23/10 - setting back to .00025 to test out performance
+
+            
         }
 
     /* acceleration terms are in degrees/(day^2)
@@ -45,6 +54,25 @@ public:
      */
     double maxRAAccel;
     double maxDecAccel;
+
+
+    /* 
+       if you will perform repeated runs, it may be wise to look for tracks
+       which start or end on a limited set of nights or times.
+
+       If you'd like to restrict linkTracklets to finding only tracks which
+       start at or before time X, set restrictTrackStarTimes to true and
+       latestFirstEndpointTime to X.
+
+       if you'd like to look only for tracks which *end* after time Y (that is,
+       their final endpoint tracklet begins on time Y or later) then set
+       restrictTrackEndTimes to true and set earliestLastEndpointTime to Y.
+     */
+    bool restrictTrackStartTimes;
+    double latestFirstEndpointTime;
+
+    bool restrictTrackEndTimes;
+    double earliestLastEndpointTime;
 
 
     /* detection error thresh is the upper bound on observational error for
@@ -96,6 +124,9 @@ public:
      */
     double velocityErrorThresh;
 
+
+
+
 };
 
 
@@ -107,12 +138,12 @@ public:
 
 /* queryTracklets are non-const because we set their velocityRA and velocityDec fields. 
    otherwise queryTracklets will not be changed. */
-TrackSet linkTracklets(const std::vector<Detection> &allDetections,
-                       std::vector<Tracklet> &queryTracklets,
-                       linkTrackletsConfig searchConfig, int numProcs);
+void distributedLinkTracklets(const std::vector<MopsDetection> &allDetections,
+                              std::vector<Tracklet> &queryTracklets,
+                              linkTrackletsConfig searchConfig, int numProcs);
 
 void waitForTask(int rank,
-		 const std::vector<Detection> &allDetections, //from MAIN
+		 const std::vector<MopsDetection> &allDetections, //from MAIN
 		 std::vector<Tracklet> &allTracklets, //from MAIN
 		 linkTrackletsConfig searchConfig  /*from MAIN*/);
 	
@@ -128,5 +159,5 @@ void modifyWithAcceleration(double &position, double &velocity,
                             double acceleration, double time);
 
 
-
+}}; //close lsst::mops namespace
 #endif 

@@ -53,6 +53,8 @@ SConscript(os.path.join('detectionProximity','SConscript'))
 SConscript(os.path.join('fieldProximity','SConscript'))
 SConscript(os.path.join('orbitProximity','SConscript'))
 
+SConscript(os.path.join('distributedLinkTracklets','SConscript'))
+
 
 # swig wrappers
 

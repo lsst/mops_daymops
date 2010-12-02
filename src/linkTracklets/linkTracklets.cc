@@ -1708,15 +1708,6 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
     double start = std::clock();
     doLinkingRecurseVisits++;
     firstEndpoint.myTree->addVisit();
-    //std::cout << "entering doLinkingRecurse." << std::endl;
-    //debugPrint(firstEndpoint, secondEndpoint, supportNodes, allDetections, allTracklets);
-
-    //debugPrintTimingInfo(results);
-    //std::cout << "\ndoLinkingRecurse called with endpoint Ids " << firstEndpoint.myTree->getId() << ",  " <<
-    //    secondEndpoint.myTree->getId() << std::endl;
-    //std::cout << " first endpoint " << (firstEndpoint.myTree->isLeaf() ? std::string("IS") : std::string("IS NOT")) << " a leaf; second endpoint " << 
-    //    (secondEndpoint.myTree->isLeaf() ? std::string("IS") : std::string("IS NOT")) << " a leaf." << "\n";
-    //std::cout << "   also we have " << supportNodes.size() << " support nodes." << std:: endl;
     
     if (areCompatible(firstEndpoint, secondEndpoint, searchConfig, rangeCache) == false)
     {

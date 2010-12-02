@@ -10,8 +10,8 @@
 #include <iomanip>
 
 
-#include "linkTracklets.h"
-#include "../fileUtils.h"
+#include "lsst/mops/daymops/distributedLinkTracklets/linkTracklets.h"
+#include "lsst/mops/fileUtils.h"
 
 
 #define PRINT_TIMING_INFO false
@@ -23,6 +23,8 @@
 
 MPI_Datatype bruteForceArgs;
 
+namespace lsst { namespace mops {
+
 double timeElapsed(clock_t priorEvent)
 {
      return ( std::clock() - priorEvent ) / (double)CLOCKS_PER_SEC;
@@ -31,7 +33,7 @@ double timeElapsed(clock_t priorEvent)
 
 
 void writeResults(std::string outFileName, 
-		  const std::vector<Detection> &allDets,
+		  const std::vector<MopsDetection> &allDets,
 		  const std::vector<Tracklet> &allTracklets,
 		  const std::vector<Track> & tracks) 
 {
@@ -75,14 +77,14 @@ int main(int argc, char* argv[])
   //to the slave nodes, which are all waiting in doLinkingRecurse2
   //processor one is the only one to read data and process arguments
 
-    std::vector<Detection> allDets;
+    std::vector<MopsDetection> allDets;
     std::vector<Tracklet> allTracklets;
     //std::vector<Track> resultTracks;
-    TrackSet resultTracks;
     clock_t last;
     double dif;
     std::string outputFileName = "";
     linkTrackletsConfig searchConfig; 
+
       
     std::string helpString = 
       "Usage: linkTracklets -d <detections file> -t <tracklets file> -o <output (tracks) file>";
@@ -185,8 +187,8 @@ int main(int argc, char* argv[])
     if( rank == 0){
       //run linktracklets program
       std::cout << "Rank " << rank << " calling linkTracklets at " << std::clock() << "." << std::endl;
-      resultTracks = linkTracklets(allDets, allTracklets, searchConfig, /*rank,*/ numProcessors);
-      std::cout << "Master returned from linkTracklets at " << std::clock() << " and got " << resultTracks.size() << " tracks." << std::endl;
+      distributedLinkTracklets(allDets, allTracklets, searchConfig, /*rank,*/ numProcessors);
+      std::cout << "Master returned from linkTracklets at " << std::clock() << std::endl;
       
       if(PRINT_TIMING_INFO) {     
 	dif = timeElapsed (last);
@@ -214,6 +216,7 @@ int main(int argc, char* argv[])
       waitForTask(rank, allDets, allTracklets, searchConfig);
     }
 
+
     /*
      * Terminate MPI runtime environment
      */
@@ -221,3 +224,6 @@ int main(int argc, char* argv[])
     
     return 0;
 }
+
+
+}}; // close lsst::mops namespace

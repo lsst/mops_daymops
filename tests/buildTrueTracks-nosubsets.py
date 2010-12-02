@@ -390,17 +390,18 @@ if __name__ == "__main__":
 
 
         #modified version uses MITI input
-        #curObject = line[6]
-        #mjd = line[1]
-        #ra = line[2]
-        #dec = line[3]
-        #detId = line[0]
+        curObject = line[6]
+        mjd = line[1]
+        ra = line[2]
+        dec = line[3]
+        detId = line[0]
+        # old format: uses output of 
         #select diaSourceId, taiMidPoint, ra, decl, groundTruthMovingObjectId
-        curObject = line[4]
-        mjd = float(line[1])
-        ra = float(line[2])
-        dec = float(line[3])
-        detId = int(line[0])
+        #curObject = line[4]
+        #mjd = float(line[1])
+        #ra = float(line[2])
+        #dec = float(line[3])
+        #detId = int(line[0])
         
         d = Detection(float(mjd), float(ra), float(dec), detId=detId, objId=curObject)
         curObjectData.append(d)

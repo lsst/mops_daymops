@@ -23,7 +23,7 @@ env = scons.makeEnv("mops_daymops",
                     ["python", "Python.h"]
                     ])
 
-env.libs["mops_daymops"] += env.getlibs("boost pex_exceptions gsl python")
+env.libs["mops_daymops"] += env.getlibs("boost pex_exceptions gsl python mpich2")
 
 env['IgnoreFiles'] = r"(~$|\.pyc$|^\.svn$|\.o$)"
 

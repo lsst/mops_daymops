@@ -111,6 +111,7 @@ public:
       track will have two "endpoint" tracklets PLUS this many support tracklets.
      */
     double minSupportTracklets;
+
     
     /*
       the minimum number of detections per track

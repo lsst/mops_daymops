@@ -25,6 +25,7 @@ USAGE:
 
 <scriptName> trackletsFile outputDirectory
 """
+
 import sys
 import os.path
 import MySQLdb as db
@@ -40,6 +41,8 @@ DB_USER="jmyers"
 DB_PASS="jmyers"
 
 OUT_TRACKLETS_SUFFIX=".tracklets.byDiaId"
+
+
 
 def firstObsHistForDias(dias, dbCurs):
     s = """ SELECT ops.obsHistId, ops.expMjd 

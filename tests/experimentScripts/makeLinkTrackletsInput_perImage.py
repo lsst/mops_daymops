@@ -46,7 +46,7 @@ TRACKLETS_BY_OBSHIST_SUFFIX=".tracklets.byDiaId"
 #which are referenced by the corresponding tracklets
 #file. buildDiaSourceSetsForTrackletFiles.py can create these files.
 DIAS_BY_OBSHIST_DIR="/workspace1/jmyers/nightlyDiasAstromErr/tracklets/collapsed/byObsHistId/"
-DIAS_BY_OBSHIST_SUFFIX=".dias_lynneFormat"
+DIAS_BY_OBSHIST_SUFFIX=".tracklets.dias_lynneFormat"
 
 
 OBSHIST_TO_TRACKLETS_FILE=lambda x: os.path.join(TRACKLETS_BY_OBSHIST_DIR) + str(x) + TRACKLETS_BY_OBSHIST_SUFFIX
@@ -73,11 +73,11 @@ MJD_TO_NIGHT_NUM=lambda mjd: int(mjd)
 # from MySQL and the DB stuff must be set below.
 DIAS_FROM_FILE=True
 
-#DB_USER="jmyers"
-#DB_PASSWD="jmyers"
-#DB_HOST="localhost"
-#OPSIM_DB="opsim_3_61"
-#OPSIM_TABLE="output_opsim3_61"
+DB_USER="jmyers"
+DB_PASSWD="jmyers"
+DB_HOST="localhost"
+OPSIM_DB="opsim_3_61"
+OPSIM_TABLE="output_opsim3_61"
 
 #DIAS_DB="mops_noDeepAstromError"
 #DIAS_TABLE="fullerDiaSource"
@@ -222,21 +222,16 @@ def getRemainingObsHistsForNight(nightNumToObsHists, assignedObsHists, nightNum)
     obsHistsTonight = nightNumToObsHists[nightNum]
     remainingObsHistsTonight = filter(lambda x: x not in assignedObsHists, obsHistsTonight)
     return remainingObsHistsTonight
-    
 
 
 
-def makeLinkTrackletsInFile(startEndpointObsHist, outFileBaseName, cursor=None, diasInFile=None, opSimDumpFile=None):
-    # fetch all dias into memory. This will be fasted in the long run than doing lots of    
-    # cross-language/client-server calls to the DB when we need them.
+def getTrackletsFilesAndMetadata(trackletsInfilePattern, cursor=None, opSimDumpFile=None):
 
     if [cursor, opSimDumpFile] == [None, None]:
         raise Exception("makeLinkTrackletsInfile: must give either a DB connection for opsim or name of an input file containing the opsim records.")
 
 
-    # fetch all images which generated tracklets into memory (use a glob of the obshist_to_tracklets directory)
-    # get MJDs of each image (use DB)
-    trackletsFiles = glob.glob(os.path.join(TRACKLETS_BY_OBSHIST_DIR, '*' + TRACKLETS_BY_OBSHIST_SUFFIX))
+    trackletsFiles = glob.glob(trackletsInfilePattern)
     allObsHists = map(TRACKLETS_FILE_TO_OBSHIST, trackletsFiles)
 
     if cursor != None:
@@ -257,24 +252,40 @@ def makeLinkTrackletsInFile(startEndpointObsHist, outFileBaseName, cursor=None, 
         nightNumsToObsHists[nn] = []
     for obsHist in obsHistToExpMjd.keys():
         nightNumsToObsHists[MJD_TO_NIGHT_NUM(obsHistToExpMjd[obsHist])].append(obsHist)
+        
+    return [trackletsFiles, allObsHists, nightNumsToObsHists, obsHistToExpMjd, obsHistToFieldId]
 
 
+
+def getSupportImages(lastFirstEndpointObsHist, nightNumsToObsHists, obsHistToExpMjd):
     # DO THE ACTUAL WORK OF FINDING NEEDED OBSHISTS
-    firstNightNum = MJD_TO_NIGHT_NUM(obsHistToExpMjd[startEndpointObsHist])
+    firstNightNum = MJD_TO_NIGHT_NUM(obsHistToExpMjd[lastFirstEndpointObsHist])
     supportObsHists = []
-
+    
     for night in range(firstNightNum, firstNightNum + TRACKING_WINDOW_DAYS + 1):
         print "Looking for images on night ", night
         if nightNumsToObsHists.has_key(night):
             obsHistsTonight = nightNumsToObsHists[night]
             print "Found images with obsHistIds: ", obsHistsTonight
             for obsHist in obsHistsTonight:
-                if obsHistToExpMjd[obsHist] > obsHistToExpMjd[startEndpointObsHist]:
+                if obsHistToExpMjd[obsHist] > obsHistToExpMjd[lastFirstEndpointObsHist]:
                     print "  Adding ", obsHist, " at time ", obsHistToExpMjd[obsHist], "  to support set."
                     supportObsHists.append(obsHist)
     
+    return supportObsHists
+
+
+def makeLinkTrackletsInFile(startEndpointObsHist, outFileBaseName, cursor=None, diasInFile=None, opSimDumpFile=None):
+
+    [trackletsFiles, allObsHists, nightNumToObsHists, obsHistToExpMjd, obsHistToFieldId] = \
+        getTrackletsFilesAndMetadata(os.path.join(TRACKLETS_BY_OBSHIST_DIR, '*' + TRACKLETS_BY_OBSHIST_SUFFIX),
+                                     cursor, opSimDumpFile)
+
+    getSupportImages(startEndpointObsHist, nightNumToObsHists, obsHistToExpMjd)
+    
     if len(supportObsHists) > 0:
-        writeOutputFiles(outFileBaseName, cursor, [startEndpointObsHist], supportObsHists, obsHistToExpMjd, obsHistToFieldId)
+        writeOutputFiles(outFileBaseName, cursor, [startEndpointObsHist], 
+                         supportObsHists, obsHistToExpMjd, obsHistToFieldId)
 
 
 

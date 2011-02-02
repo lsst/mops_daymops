@@ -19,7 +19,7 @@ def writeRunScript(infile, startTRangeFile):
 
 BN=""" + BASENAME_FOR_INFILE(infile) + """
 
-CMD="$AUTON_DIR/linkTracklets_modified/linkTracklets_modified file ../$BN.miti indicesfile $BN.c.tracks.byIndices start_t_range `cat ../$BN.start_t_range`   acc_r 0.02 acc_d 0.02 fit_thresh  0.000000250000 min_sup 2 min_obs 4"
+CMD="$AUTON_DIR/linkTracklets_modified/linkTracklets_modified file ../$BN.miti indicesfile $BN.c.tracks.byIndices start_t_range `cat ../$BN.start_t_range`   acc_r 0.02 acc_d 0.02 fit_thresh  0.000000250000 min_sup 3 min_obs 6 plate_width .00000001"
 
 echo Running: $CMD
 

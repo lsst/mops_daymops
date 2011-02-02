@@ -248,3 +248,41 @@ need to first run the makeCheatSheetForMITI.py to get the DiaIds
 corresponding to each entry in the MITI file, and you'll then need to
 run indicesToIds.py to get tracks represented as sets of DiaSource
 Ids.
+
+
+
+RUNNING IOD WITH ORBIT_SERVER (ORBFIT)
+----------------------------------
+
+Once you have your tracks in DiaId format, you can convert them to
+input for orbit_server.x, Milani's IOD tool. 
+
+Milani's IOD requires knowledge of per-detection astrometric error
+bars. To calculate those, you'll need to use a database which holds
+per-image information (e.g. the opsim table) and another table which
+maps diaSources, including their parent images.
+
+Use buildOrbitServerInput.py when you're ready; modify the
+database/table names at the top of the file to suit your needs.  
+
+orbit_server.x expects some maximum number of detections per image it
+reads in input. This means that a large set of tracks may be broken up
+into many input files for orbit_server.x.  Create a directory where
+you'd like all those outfiles to go and cd there.
+
+You'll need to tell the buildOrbitServerInput.py script a prefix for these outfiles, e.g. myTracks.  It will create many files, e.g.
+
+myTracks_0.in.request
+myTracks_0.in.tracklet
+myTracks_0.in.manifest
+myTracks_1.in.request
+... etc.
+
+So in the directory where you want all these files written: 
+
+$ python $MOPS_HACKS/buildOrbitServerInput.py /path/to/tracks.byDiaId myTracks
+
+
+
+Next, to run orbit_server on all these files, use runOrbitServer.sh.  Modify the file so it points to the orbit_server.x executable on your system, then just run it in the directory with the in.request,  in.tracklet, etc. files.
+

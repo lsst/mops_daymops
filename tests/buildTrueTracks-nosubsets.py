@@ -281,7 +281,7 @@ def linkTracklets(objectDets, tracklets, raAccLimit, decAccLimit, timeWindow, mi
             trackletStartTimes.append(jTime)
 
         if DEBUG:
-            print "Built maximal track, got tracklet start times: ", trackletStartTimes                
+            print "Built maximal track, got tracklet start times: ", [startTime] + trackletStartTimes
 
         #isFindableFromTimes checks whether we have detections from three distinct nights.
         # if we do, add them to output.
@@ -289,7 +289,7 @@ def linkTracklets(objectDets, tracklets, raAccLimit, decAccLimit, timeWindow, mi
         for tracklet in trackSubset:
             for dia in tracklet:
                 numObs += 1
-        if numObs > minObs:
+        if numObs >= minObs:
             
             if isFindableFromTimes(trackletStartTimes, minPerNight=1, minNights=minNights):
                 tracks.append(trackSubset)
@@ -390,17 +390,18 @@ if __name__ == "__main__":
 
 
         #modified version uses MITI input
-        #curObject = line[6]
-        #mjd = line[1]
-        #ra = line[2]
-        #dec = line[3]
-        #detId = line[0]
+        curObject = line[6]
+        mjd = line[1]
+        ra = line[2]
+        dec = line[3]
+        detId = line[0]
+        # old format: uses output of 
         #select diaSourceId, taiMidPoint, ra, decl, groundTruthMovingObjectId
-        curObject = line[4]
-        mjd = float(line[1])
-        ra = float(line[2])
-        dec = float(line[3])
-        detId = int(line[0])
+        #curObject = line[4]
+        #mjd = float(line[1])
+        #ra = float(line[2])
+        #dec = float(line[3])
+        #detId = int(line[0])
         
         d = Detection(float(mjd), float(ra), float(dec), detId=detId, objId=curObject)
         curObjectData.append(d)
@@ -411,8 +412,8 @@ if __name__ == "__main__":
         #check whether this was the last line containing this object's data
         if nextLine == []:
             done = True
-        #elif nextLine[6] != curObject:
-        elif nextLine[4] != curObject:
+        #elif nextLine[4] != curObject:
+        elif nextLine[6] != curObject:
             done = True
 
         if done:

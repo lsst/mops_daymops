@@ -76,9 +76,16 @@ def isFindableFromTimes(times, minPerNight=2, minNights=3):
         if nightHistogram[night] >= minPerNight:
             usableNights.append(night)
 
+    if DEBUG:
+        print "Track had obs times: ", times
+        print "Got usableNights = ", usableNights
     if len(usableNights) >= minNights:
+        if DEBUG:
+            print "Found track contained tracklets from ", len(usableNights), " nights.  It IS acceptable"
         return True
     else:
+        if DEBUG:
+            print "Found track contained tracklets from ", len(usableNights), " nights.  It IS NOT acceptable"
         return False
 
 
@@ -291,7 +298,7 @@ def linkTracklets(objectDets, tracklets, raAccLimit, decAccLimit, timeWindow, mi
                 numObs += 1
         if numObs >= minObs:
             
-            if isFindableFromTimes(trackletStartTimes, minPerNight=1, minNights=minNights):
+            if isFindableFromTimes([startTime] + trackletStartTimes, minPerNight=1, minNights=minNights):
                 tracks.append(trackSubset)
             else:
                 if DEBUG:

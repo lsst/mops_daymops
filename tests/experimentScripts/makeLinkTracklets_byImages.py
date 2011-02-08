@@ -40,8 +40,8 @@ FORCED_OBSCODE="807"
 # this needs to be larger than the min time between images.
 EPSILON=1e-5
 
-TRACKING_WINDOW_DAYS=15 # in days; we only look for tracks spanning <= this number of nights.
-MAX_START_IMAGES_PER_RUN=15
+TRACKING_WINDOW_DAYS=30 # in days; we only look for tracks spanning <= this number of nights.
+MAX_START_IMAGES_PER_RUN=100000
 
 TRACKLETS_BY_OBSHIST_DIR="/workspace1/jmyers/nightlyDiasAstromErr/tracklets/collapsed/byObsHistId/"
 TRACKLETS_BY_OBSHIST_SUFFIX=".tracklets.byDiaId"
@@ -49,7 +49,7 @@ OBSHIST_TO_TRACKLETS_FILE=lambda x: os.path.join(TRACKLETS_BY_OBSHIST_DIR) + str
 TRACKLETS_FILE_TO_OBSHIST=lambda x: (int(os.path.basename(x)[:-len(TRACKLETS_BY_OBSHIST_SUFFIX)]))
 
 # place to put .miti files for input to c linkTracklets
-OUTPUT_LINKTRACKLETS_INFILE_DIR="/workspace1/jmyers/nightlyDiasAstromErr_linkTrackletsInfiles_maxv0.5_mint_0.01_15dayWindows_collapsedTracklets"
+OUTPUT_LINKTRACKLETS_INFILE_DIR="/workspace1/jmyers/nightlyDiasAstromErr_linkTrackletsInfiles_maxv0.5_mint_0.01_30dayWindows_collapsedTracklets/really30Days/"
 # place to put start_t_ranges for each linkTracklets input files
 OUTPUT_START_T_RANGE_FILES_DIR=OUTPUT_LINKTRACKLETS_INFILE_DIR
 # if true, will put some metadata about each data set into the start t range files directory.

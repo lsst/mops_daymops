@@ -244,7 +244,7 @@ def linkTracklets(objectDets, tracklets, raAccLimit, decAccLimit, timeWindow, mi
         
         for j in range(i + 1, len(tracklets)):
             secondEndpointTime = objectDets[tracklets[j][0]].time
-            if secondEndpointTime - startTime <= timeWindow and\
+            if nightNumFromMJD(secondEndpointTime) - nightNumFromMJD(startTime) <= timeWindow and\
                     secondEndpointTime - startTime > 0.:
                 # we will later filter on whether there were detections on
                 # >=3 nights; for now only worry about the time window.
@@ -314,7 +314,7 @@ def linkTracklets(objectDets, tracklets, raAccLimit, decAccLimit, timeWindow, mi
     
     return tracks
 
-            
+
 
 
 def euclideanDistance(detection1, detection2):
@@ -464,5 +464,5 @@ if __name__ == "__main__":
         (nObjects, nTrackGeneratingObjects, nTrackGeneratingObjects*100./nObjects)
         
     print "Image times with viable start tracklets for some track: "
-    for imgTime in sorted(imgTimesToTrackCounts.keys()):
-        print imgTime, " : ", imgTimesToTrackCounts[imgTime]
+    #for imgTime in sorted(imgTimesToTrackCounts.keys()):
+    #    print imgTime, " : ", imgTimesToTrackCounts[imgTime]

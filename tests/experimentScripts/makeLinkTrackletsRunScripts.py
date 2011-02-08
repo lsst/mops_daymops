@@ -5,7 +5,7 @@
 import glob
 import os
 
-INFILES_GLOB=glob.glob("../*.miti")
+INFILES_GLOB=glob.glob("../../../*.miti")
 START_T_RANGE_FOR_INFILE=lambda inf: inf[:-4] + "start_t_range"
 BASENAME_FOR_INFILE=lambda inf: os.path.basename(inf[:-5])
 OUTF_FOR_INFILE=lambda inf: os.path.basename(inf[:-4] + "cmd.sh")
@@ -19,7 +19,7 @@ def writeRunScript(infile, startTRangeFile):
 
 BN=""" + BASENAME_FOR_INFILE(infile) + """
 
-CMD="$AUTON_DIR/linkTracklets_modified/linkTracklets_modified file ../$BN.miti indicesfile $BN.c.tracks.byIndices start_t_range `cat ../$BN.start_t_range`   acc_r 0.02 acc_d 0.02 fit_thresh  0.000000250000 min_sup 3 min_obs 6 plate_width .00000001"
+CMD="$AUTON_DIR/linkTracklets_modified/linkTracklets_modified file ../../../$BN.miti indicesfile $BN.c.tracks.byIndices start_t_range `cat ../../../$BN.start_t_range`   acc_r 0.02 acc_d 0.02 fit_thresh  0.000000250000 min_sup 3 min_obs 6 plate_width .00000001 vtree_thresh .001"
 
 echo Running: $CMD
 

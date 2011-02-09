@@ -43,54 +43,68 @@ def getAllDiaIds(curs):
     return allDias
 
 
-def isTrueTrack(curs, dias):
-    query = """ SELECT DISTINCT(ssmId) FROM %s.%s 
-                   WHERE diaSourceId IN (""" % \
-        (DB_DB, DB_TABLE)
-    first = True
-    for dia in dias:
-        if not first:
-            query += ", "
-        query += " %d " % dia
-        first = False
-    query += ");"
-    curs.execute(query)
-    ssmIds = map(lambda x: x[0], curs.fetchall())
-    if (len(set(ssmIds)) == 1) and (FALSE_DET_SSMID not in ssmIds):
+def isTrueTrack(diasToSsmIds, dias):
+    ids = set(map(lambda x: diasToSsmIds[x], dias))
+    if len(ids) == 1 and FALSE_DET_SSMID not in ids:
         return True
     else:
         return False
 
 
+def makeDiaToSsmIdMap(curs):
+    query = """ SELECT diaSourceId, ssmId FROM %s.%s;""" % \
+        (DB_DB, DB_TABLE)
+    curs.execute(query)
+    rows = curs.fetchmany(1000)
 
-def findUnattributedDetections(curs, inFiles):
+    diasToSsmIds = {}
+    count = 0
+
+    while rows != None and len(rows) > 0:
+        for row in rows:
+            diasToSsmIds[row[0]] = row[1]
+            count += 1
+            if count % 10000 == 0:
+                sys.stderr.write("Fetched first %d items...\n" % count)
+        rows = curs.fetchmany(1000)
+
+    sys.stderr.write("Finished building map, returning to caller\n")
+    return diasToSsmIds
+
+
+
+def findAttributedDetections(diasToSsmIds, inFiles):
     """ curs should be a DB cursor. inFiles should be a list of open
     files.  curs.DB_TABLE will be searched for all DiaSources, then
     inFiles will be examined and true tracks found. DiaSources NOT in
     some true track are returned."""
-    
-    #find all dia IDs.
-    sys.stderr.write("Reading all diaSource IDs from DB.\n")
-    allDias = set(getAllDiaIds(curs))
-    sys.stderr.write("Done reading diaSourceIDs from DB.\n")
 
+    attributedDias = set()
+    count = 0
     for inf in inFiles:
         sys.stderr.write("reading contents of infile %r\n" % inf)
         track = inf.readline()
-        while track != "":
-            dias = map(int, track.split())
-            if isTrueTrack(curs, dias):
-                allDias = allDias.difference(set(dias))
-            track = inf.readline()
 
-    return allDias
+        while track != "":
+            count += 1
+            dias = map(int, track.split())
+
+            if isTrueTrack(diasToSsmIds, dias):
+                for dia in dias:
+                    attributedDias.add(dia)
+
+            track = inf.readline()
+            if count % 10000 == 0:
+                sys.stderr.write("so far, read %d lines...\n" % count)
+
+    return attributedDias
 
 
 
 if __name__=="__main__":
     db = db.connect(user=DB_USER, passwd=DB_PASS, db=DB_DB)
     curs = db.cursor()
-    
+
     inFiles = []
     # read each argument. It may be a glob. 
     for arg in sys.argv[1:]: 
@@ -101,9 +115,24 @@ if __name__=="__main__":
             inFiles.append(file(inf,'r'))
             sys.stderr.write("Opened it \n")
 
+
+
+    # make a diaSource -> ssmId map
+    sys.stderr.write("Building map of diaSources -> ssmIds...\n")
+    diasToSsmIds = makeDiaToSsmIdMap(curs)
+
     #sys.stderr.write("Got input files: %r\n" % inFiles)
     sys.stderr.write("Calling findUnattributedDetections\n")
-    unAttributed = findUnattributedDetections(curs, inFiles)
+    attributed = findAttributedDetections(diasToSsmIds, inFiles)
+
+    #find all dia IDs.
+    sys.stderr.write("Reading all diaSource IDs from DB.\n")
+    allDias = set(getAllDiaIds(curs))
+    sys.stderr.write("Done reading diaSourceIDs from DB.\n")
+
+    sys.stderr.write("Taking difference of attributed, unattributed\n")
+    unattributed = allDias.difference(attributed)
+
     sys.stderr.write("Writing results to stdout.")
     for a in unattributed:
         sys.stdout.write("%i\n" % a)

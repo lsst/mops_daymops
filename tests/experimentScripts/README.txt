@@ -122,132 +122,178 @@ C findTracklets uses a different output format.
 OPTIONAL PHASE: RUNNING COLLAPSETRACKLETS
 --------------------------------------
 
-TBD.
+Next, you'll probably want to run collapseTracklets to turn your some
+of your short, length-2 tracklets into longer tracklets.
+CollapseTracklets really has several phases: first collapsing, then
+purifying, then removing subset tracklets.
+
+CollapseTracklets requires you to give some tolerances on the
+command-line.  The ones I use are as follows: .002 .002 5 .05 (see
+example commands below)
+
+You should have a bunch of detections files like 49524.miti and
+tracklets files with names like 49524.maxv0.5.tracklets, etc.  For
+each one, you'll want to do something like this:
+
+# first get the tracklets as a set of indices into the MITI file
+$ python $MOPS_HACKS/idsToIndices.py 49524.maxv0.5.tracklets 49524.miti \
+      49524.maxv0.5.tracklets.byIndices
+
+# collapse the tracklets
+$ $MOPS_DAYMOPS_DIR/bin/collapseTracklets 49524.miti 49524.maxv0.5.tracklets \
+    .002 .002 5 .05 49524.maxv0.5.collapsed
+
+# purify
+$ $MOPS_DAYMOPS_DIR/bin/purifyTracklets --detsFile 49524.miti \
+    --pairsFile 49524.maxv0.5.collapsed \
+    --outFile 49524.maxv0.5.collapsed.pure
+
+# remove subsets
+$ $MOPS_DAYMOPS_DIR/bin/removeSubsets --inFile 49524.maxv0.5.collapsed.pure \
+    --outFile 49524.maxv0.5.final.tracklets.byIndices 
+
+# convert from by-file-index to by-dia-ids format
+$ $MOPS_HACKS/indicesToIds 49524.maxv0.5.final.tracklets.byIndices \
+  49524.miti 49524.maxv0.5.final.tracklets.byDiaIds
+
+Since you have lots of nights, you'll probably want to use a shell
+script or Python script to do the above on all your data (I used a
+Bash for loop and the the 'basename' command.)
 
 
 
-
+====================================
 PREPARING FOR LINKTRACKLETS
------------------------------
+====================================
+
+
+REQUIRED ITEMS IN DATABASE:
+
+In order to make the linkTracklets input and orbit_server input, some
+scripts will expect the following things in the database:
+
+1) the fullerDiaSource table, which holds your diaSources, their SNR,
+and their parent obsHistId
+
+2) the opsim table from the opsim run which generated your dia sources
+
+fullerDiaSource.sql in the $MOPS_HACKS directory will create the
+fullerDiaSource table.  If you're using Lynne's data with astrometric
+error, I recommend you simply copy the contents from mops64's MySQL in
+mops_noDeepAstromError.fullerDiaSource.  Or, you can simply run on
+mops64.
+
+None of the scripts will *write* to the database.
+
+
+
+PREPARING THE TRACKLETS:
 
 LinkTracklets uses bundled up sets of tracklets covering several days
-of observations and looks for tracks which start and end sometime
-within that window of time.  Depending on which flavor (C Auton / C++
-LSST) of linkTracklets you use the input formats are different;
-fortunately our new method generates both inputs simultaneously.
+of observation.  Our new script makeLinkTrackletsInput_byImages.py
+will take care of creating scripts for running linkTracklets for you,
+and can create input for C and/or C++ linkTracklets.
 
-Use 
+Before you run it, you'll need to make sure you have the needed tables
+in your database, and organize your tracklets by start image, in order
+to match the image obsHistIds to their observation times.
 
+First:
 
-e.g.
-$ mkdir /workspace1/jmyers/nightlyDiasAstromErr/15DayWindowsMaxv0.5/
+$ mkdir byObsHistId/
 
-Then run the script:
+For each tracklets file (e.g. 49524.maxv0.5.final.tracklets.byDiaIds)
+you'll want to do this (use a shell script):
 
-$ python $MOPS_HACKS/make15DayWindows.py
+$ python $MOPS_HACKS binTrackletsByObsHist \
+  49524.maxv0.5.final.tracklets.byDiaIds
+  byObsHistId/
 
-Go get yourself a coffee, this will take ~20 min (if you're working with
-a lot of data). 
-
-When you get your outfiles, they will be .dets files (sets of
-diaSources in the window) and .ids files, which are ASCII text,
-newline-delimited sets of LINE NUMBERS into the .dets file describing
-each tracklet.*
-
-The file names should be like:
-
-night_49544_through_49557.dets
-night_49544_through_49557.ids
+The script creates or appends to files like
+byObsHistId/85679000.tracklets.byDiaId. 
 
 
 
-*: LinkTracklets essentially wants to build a big array of detections
-and an represents tracklets as an array of sets of indexes into the
-detections array.  C linkTracklets does this invisibly, but to speed
-things up C++ linkTracklets expects an external tool like
-make15DayWindows.py to do this - hence we represent tracklets as sets
-of line numbers.
+MAKING THE LINKTRACKLETS INPUT FILES:
 
+The script $MOPS_HACKS/makeLinkTracklets_byImages.py contains lots of
+constants at the top, such as where to find the database, and where to
+find the per-obsHist tracklets you created.  
 
+There are also some additional parameters, like the size of the
+tracking window for linkTracklets (15 is fast, 30 is slow).  You can
+also set the max number of "start images" (images for which tracks are
+started) per file (in case you want to break up the busy nights between
+multiple runs).  
+
+You also NEED to set the output directory for your linkTracklets
+infiles: OUTPUT_LINKTRACKLETS_INFILE_DIR.
+
+You can also set the flag WRITE_CPP_INFILES if you like to get input
+for C++ linkTracklets.
+
+Once you are content with the contents of the file, go ahead and run
+the script with no arguments.  Then get ready for a healthy wait and a
+lot of disk I/O; depending on the size of MAX_START_IMAGES_PER_FILE
+this could take anywhere from 20 minutes to 10 hours or so.
+
+When you're done, you shold have the following in OUTPUT_LINKTRACKLETS_INFILE_DIR:
+For many Xs and Ys:
+
+image_X_through_Y.info - human-readable info about the images in this data set, start images as well as potential second endpoint/support images.
+
+image_X_through_Y.miti  - the tracklets, in MITI format.
+
+image_X_through_Y.miti.diaIds - at each line N, the diaId of the
+   detection at line N of the corresponding .miti file.
+
+image_x_through_Y.start_t_range - the time offset of image Y - image X.
 
 
 
 RUNNING LINKTRACKLETS (the new way, distributed by images)
 --------------------------------------
 
-Our last set of runs on Abe demonstrated that a single night of
-processing can require > 150 hours of CPU time. So to try to
-distribute the workload differently, we now have the option of making
-infiles with some maximum number of first (or perhaps someday last)
-endpoint images in the files.
+Go to the directory where you created your .info, .miti,
+.start_t_range files. Create a new directory called tracks/ and cd
+there.  Then run:
 
-You WILL need the Opsim database as well as the a database of Dias
-including the obsHistId of each image producing the diaSources.  
+$ python $MOPS_HACKS/makeLinkTrackletsRunScripts.py
 
-First you'll need to break up the tracklets by start image.  This is
-done with the script binTrackletsByStartImages.py; set the constants
-at the top of the file to suit your needs. Then run it like  this:
+This will create lots of .cmd.sh files in your current directory, one
+for each of the .miti files in ../ .  Each one is a bash script which
+runs linkTracklets for you with our curent set of favored parameters.
 
-Do that for every output file from findTracklets.  
+make sure to
 
-$ mkdir trackletsByStartImage
-$ for TRACKLETSFILE in *.tracklets.byDiaId
-do
-   python $MOPS_HACKS/binTrackletsByStartImage.py trackletsByStartImage
-done
+$ setup auton
 
+and you're ready to run linkTracklets - 
 
-(NB: I think this only works with the output of C++ linkTracklets.)
+$ for CMD in *.cmd.sh 
+  do
+     bash $CMD
+  done
 
-There will be one file created for each ObsHistId of every image with
-a tracklet "rooted" in that image.  All tracklets "rooted" in that
-image will be grouped together.
+Get ready to wait a few more hours!
 
-You'll then need to make the new data sets for linkTracklets. They
-will be automatically paired with the correct start_t_range in order
-to limit the number of first images per data set.
+This will create a lot of files ending in c.tracks.byIndices in the
+current directory.  These are the tracks, in the
+by-line-number-in-the-MITI-file-format.
 
-Open makeLinkTrackletsInput_byImages.py and set all the constants at
-the top to something sane for you; you'll mostly want to edit
-TRACKLETS_BY_OBSHIST_DIR to be the location of trackletsByStartImage/
-(as you just created above) and set up the database references
-correctly.
+You'll later want to convert these to byDiaId format.  Once you've
+done so, you may find you have some redundant tracks, due to a known
+quirk of C linkTracklets.  You can remove these via sort and uniq.
 
-Then update the MAX_START_IMAGES_PER_RUN settings and and
-TRACKING_WINDOW_DAYS settings to your liking.
+so for each image_X_through_Y.c.tracks.byIndices:
 
+$ python $MOPS_HACKS/indicesToIds.py \
+   image_X_through_Y.c.tracks.byIndices \
+   ../image_X_through_Y.miti.diaIds
+   image_X_through_Y.c.tracks.byDiaIds
+$ cat image_X_through_Y.c.tracks.byDiaIds | sort -n | \
+ uniq > image_X_through_Y.c.tracks.byDiaIds.unique
 
-Then just run:
-
-$ python $MOPS_HACKS/makeLinkTrackletsInput_byImages.py
-
-
-This will create lots of input files with .start_t_range files.  To run C linkTracklets on data set foo:
-
-$ $AUTON_DIR/linkTracklets_modified/linkTracklets file foo.miti start_t_range `cat foo.start_t_range` indicesfile foo.tracks.byIndices [args for other params - accel, RMS, etc.]
-
-
-
-
-
-
-
-INTERPRETING THE OUTPUT OF C LINKTRACKLETS
-----------------------------------------------
-
-The "indicesfile" option is only supported by the modified version of
-linkTracklets which I hacked together.  It will dump tracks
-represented as ASCII text, tracks separated by newlines, and each
-track will be represented as *A SET OF LINE NUMBERS* from the
-.tracklets.miti file.  This is pretty ugly, but since I don't know my
-way around Kubica's code that well (and because the input file format
-lacks DiaSourceIds) it was the best thing we could come up with.
-
-If you'd like to get the output in a more sane format, then you'll
-need to first run the makeCheatSheetForMITI.py to get the DiaIds
-corresponding to each entry in the MITI file, and you'll then need to
-run indicesToIds.py to get tracks represented as sets of DiaSource
-Ids.
 
 
 
@@ -270,7 +316,8 @@ reads in input. This means that a large set of tracks may be broken up
 into many input files for orbit_server.x.  Create a directory where
 you'd like all those outfiles to go and cd there.
 
-You'll need to tell the buildOrbitServerInput.py script a prefix for these outfiles, e.g. myTracks.  It will create many files, e.g.
+You'll need to tell the buildOrbitServerInput.py script a prefix for
+these outfiles, e.g. myTracks.  It will create many files, e.g.
 
 myTracks_0.in.request
 myTracks_0.in.tracklet
@@ -284,5 +331,8 @@ $ python $MOPS_HACKS/buildOrbitServerInput.py /path/to/tracks.byDiaId myTracks
 
 
 
-Next, to run orbit_server on all these files, use runOrbitServer.sh.  Modify the file so it points to the orbit_server.x executable on your system, then just run it in the directory with the in.request,  in.tracklet, etc. files.
+Next, to run orbit_server on all these files, use runOrbitServer.sh.
+Modify the file so it points to the orbit_server.x executable on your
+system, then just run it in the directory with the in.request,
+in.tracklet, etc. files.
 

@@ -44,8 +44,16 @@ def getAllDiaIds(curs):
 
 
 def isTrueTrack(curs, dias):
-    query = """ SELECT DISTINCT(ssmId) FROM %s.%s; """ % \
+    query = """ SELECT DISTINCT(ssmId) FROM %s.%s 
+                   WHERE diaSourceId IN (""" % \
         (DB_DB, DB_TABLE)
+    first = True
+    for dia in dias:
+        if not first:
+            query += ", "
+        query += " %d " % dia
+        first = False
+    query += ");"
     curs.execute(query)
     ssmIds = map(lambda x: x[0], curs.fetchall())
     if (len(set(ssmIds)) == 1) and (FALSE_DET_SSMID not in ssmIds):

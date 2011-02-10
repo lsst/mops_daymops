@@ -12,7 +12,7 @@
 namespace lsst {
 namespace mops {
 
-
+  extern std::string curTime();
 
     int removeSubsetsMain(int argc, char** argv) {
 
@@ -88,7 +88,9 @@ namespace mops {
 
         inFile.open(inFileName);
         outFile.open(outFileName);
+	std::cout << "Reading infile, starting at " << curTime() << std::endl;
         populatePairsVectorFromFile(inFile, *pairsVector);
+	std::cout << "Finished reading infile at " << curTime() << std::endl;
 
         /* do the actual work */
 
@@ -110,12 +112,22 @@ namespace mops {
             outputVector = pairsVector;
         }
 
+
+	std::cout << "Finished filtering, writing output starting at " << curTime() << std::endl;
         writeTrackletsToOutFile(outputVector, outFile);
+	outFile.close();
         if (outputVector != pairsVector) {
             delete outputVector;
         }
         delete pairsVector;
-        return 0;
+	if (outFile.good()) {
+	  std::cout << "Finished successfully finished at " << curTime() << std::endl;
+	  return 0;
+	}
+	else {
+	  std::cout << "ERROR writing/closing file. Finished at " << curTime() << std::endl;
+	  return 1;
+	}
     }
 
 

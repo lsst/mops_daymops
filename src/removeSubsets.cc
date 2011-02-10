@@ -13,6 +13,7 @@
 #include <iostream>
 #include <map>
 #include <set>
+#include <time.h>
 
 #include "lsst/mops/removeSubsets.h"
 #include "lsst/mops/Exceptions.h"
@@ -23,6 +24,13 @@
 namespace lsst {
     namespace mops {
 
+  std::string curTime()
+  {
+    time_t timer;
+    timer=time(NULL);
+    return std::string(asctime(localtime(&timer)));
+  }
+
     void SubsetRemover::removeSubsetsPopulateOutputVector(const std::vector<Tracklet> *pairsVector, 
                                                           std::vector<Tracklet> &outVector) {
         /* build a map which maps each detection to each tracklet which uses it. */
@@ -30,6 +38,7 @@ namespace lsst {
         std::map<unsigned int, std::set<unsigned int> > detectionIndexToPairsVectorIndexSet;
         std::set<unsigned int>::iterator indicesIter;
         
+	std::cout << "Building detection-to-track map, starting at " << curTime() << std::endl;
         for (unsigned int curPairIndex = 0; curPairIndex < pairsVector->size(); curPairIndex++) {
 
             const Tracklet *curPair = &(*pairsVector)[curPairIndex];
@@ -42,6 +51,8 @@ namespace lsst {
             }
         }
         
+	std::cout << "Finished detection-to-track map, filtering tracks starting at " << curTime() << std::endl;
+
         std::vector<bool> pairHasBeenWritten(pairsVector->size(), false); 
 
         /* for each tracklet: see if any other tracklet uses all the same
@@ -49,6 +60,11 @@ namespace lsst {
          * identical tracklet. */
 
         for (unsigned int curPairIndex = 0; curPairIndex < pairsVector->size(); curPairIndex++)  {
+ 
+	    if (curPairIndex % 10000 == 0) {
+	      std::cout << "Processing element " << curPairIndex << " of " << pairsVector->size() << " (" 
+		        << 100. * (curPairIndex*1.0) / (pairsVector->size() * 1.0) << "%)" << std::endl;
+	    }
 
             const Tracklet * curPair =  &(*pairsVector)[curPairIndex];
             /* iteratively calculate the intersect of the various sets of pairs

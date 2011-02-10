@@ -31,7 +31,7 @@ namespace lsst {
      * help you find one tracklet, anyway.
      */
     int rmsPurifyMain(int argc, char** argv) {
-        std::string USAGE("USAGE: purifyTracklets --detsFile <detections file> --pairsFile <tracklets (pairs) file) [--maxRMSm <number> --maxRMSb <number> ] --outFile <output tracklets (pairs) file>");
+        std::string USAGE("USAGE: purifyTracklets --detsFile <detections file> --pairsFile <tracklets (pairs) file) --maxRMS --outFile <output tracklets (pairs) file>");
         char* pairsFileName = NULL;
         char* detsFileName = NULL;
         char* outFileName = NULL;

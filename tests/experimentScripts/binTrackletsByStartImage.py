@@ -30,15 +30,7 @@ import sys
 import os.path
 import MySQLdb as db
 import time
-
-OPSIM_DB="opsim_3_61"
-OPSIM_TABLE="output_opsim3_61"
-
-DIAS_DB="mops_noDeepAstromError"
-DIAS_TABLE="fullerDiaSource"
-
-DB_USER="jmyers"
-DB_PASS="jmyers"
+import mopsDatabases
 
 OUT_TRACKLETS_SUFFIX=".tracklets.byDiaId"
 
@@ -52,7 +44,8 @@ def firstObsHistForDias(dias, dbCurs):
               %s.%s as dias 
             ON 
              dias.opSimId=ops.obsHistId""" \
-        % (OPSIM_DB, OPSIM_TABLE, DIAS_DB, DIAS_TABLE)
+        % (mopsDatabases.OPSIM_DB, mopsDatabases.OPSIM_TABLE, \
+               mopsDatabases.DIAS_DB, mopsDatabases.DIAS_TABLE)
         
     s += """  WHERE dias.diaSourceId IN ( """ 
     for i in range(len(dias)):
@@ -109,8 +102,7 @@ def writeTrackletsToPerObsHistFiles(inTracklets, outDirectory, dbCurs):
 if __name__=="__main__":
     inTracklets = file(sys.argv[1],'r')
     outDirectory = sys.argv[2]
-    conn = db.connect(user=DB_USER, passwd=DB_PASS)
-    curs = conn.cursor()
+    curs = mopsDatabases.getCursor()
     print "Starting to sort tracklets at ", time.ctime()
     writeTrackletsToPerObsHistFiles(inTracklets, outDirectory, curs)
     print "DONE writing output files at ", time.ctime()

@@ -24,15 +24,19 @@ import MySQLdb as db
 import sys
 import glob
 
-DB_USER="jmyers"
-DB_PASSWD="jmyers"
-DB_HOST="localhost"
+import mopsDatabases
 
-OPSIM_DB="opsim_3_61"
-OPSIM_TABLE="output_opsim3_61"
+# YOU ABSOLUTELY MUST SET THESE ARGUMENTS
 
-DIAS_DB="mops_noDeepAstromError"
-DIAS_TABLE="fullerDiaSource"
+TRACKLETS_BY_OBSHIST_DIR="/workspace1/jmyers/mopsHacksSanityCheck/tracklets/byObsHistId/"
+
+# place to put .miti files for input to c linkTracklets
+OUTPUT_LINKTRACKLETS_INFILE_DIR="/workspace1/jmyers/mopsHacksSanityCheck/tracklets/linkTrackletsInfiles/"
+
+# place to put start_t_ranges for each linkTracklets input files
+OUTPUT_START_T_RANGE_FILES_DIR=OUTPUT_LINKTRACKLETS_INFILE_DIR
+
+
 
 # obscode added to MITI files.
 FORCED_OBSCODE="807"
@@ -43,15 +47,10 @@ EPSILON=1e-5
 TRACKING_WINDOW_DAYS=20 # in days; we only look for tracks spanning <= this number of nights.
 MAX_START_IMAGES_PER_RUN=15
 
-TRACKLETS_BY_OBSHIST_DIR="/workspace1/jmyers/nightlyDiasAstromErr/tracklets/collapsed/byObsHistId/"
 TRACKLETS_BY_OBSHIST_SUFFIX=".tracklets.byDiaId"
 OBSHIST_TO_TRACKLETS_FILE=lambda x: os.path.join(TRACKLETS_BY_OBSHIST_DIR) + str(x) + TRACKLETS_BY_OBSHIST_SUFFIX
 TRACKLETS_FILE_TO_OBSHIST=lambda x: (int(os.path.basename(x)[:-len(TRACKLETS_BY_OBSHIST_SUFFIX)]))
 
-# place to put .miti files for input to c linkTracklets
-OUTPUT_LINKTRACKLETS_INFILE_DIR="/workspace1/jmyers/nightlyDiasAstromErr_linkTrackletsInfiles_maxv0.5_mint_0.01_20dayWindows_collapsedTracklets/fixedStartTRange/"
-# place to put start_t_ranges for each linkTracklets input files
-OUTPUT_START_T_RANGE_FILES_DIR=OUTPUT_LINKTRACKLETS_INFILE_DIR
 # if true, will put some metadata about each data set into the start t range files directory.
 WRITE_ADDITIONAL_METADATA=True
 
@@ -89,7 +88,7 @@ def fetchAllDiasFromDb(cursor):
     toRet = {}
     print "Fetching DiaSources from DB into memory..."
     s = """ SELECT diaSourceId, ra, decl, taiMidPoint, mag, ssmId FROM
-            %s.%s; """ % (DIAS_DB, DIAS_TABLE)
+            %s.%s; """ % (mopsDatabases.DIAS_DB, mopsDatabases.DIAS_TABLE)
     cursor.execute(s)
     results = cursor.fetchall()
     for row in results:
@@ -124,7 +123,7 @@ def getExpMjdAndFieldIdForObsHists(cursor, obsHists):
     order."""
 
     s = """ SELECT expMjd, fieldId, obsHistId FROM %s.%s where obsHistId in ( """ \
-        % (OPSIM_DB, OPSIM_TABLE)
+        % (mopsDatabases.OPSIM_DB, mopsDatabases.OPSIM_TABLE)
 
     for i in range(len(obsHists)):
         obsHist = obsHists[i]
@@ -352,6 +351,5 @@ def writeOutputFiles(allDias, cursor, obsHistsThisDataSet, supportObsHists, obsH
 
 
 if __name__=="__main__":
-    dbconn = db.connect(host=DB_HOST, user=DB_USER, passwd=DB_PASSWD)
-    dbcurs = dbconn.cursor()
+    dbcurs = mopsDatabases.getCursor()
     makeLinkTrackletsInfiles(dbcurs)

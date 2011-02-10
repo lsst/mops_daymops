@@ -8,7 +8,7 @@ for IN_TRACKLETS in *.tracklets
 do
     echo "Processing $IN_TRACKLETS, starting at:"
     date
-
+    BN=`basename $IN_TRACKLETS .tracklets`
     MITIFILE=../`basename $IN_TRACKLETS .maxv0.5.tracklets`.miti
     python $MOPS_HACKS/idsToIndices.py $IN_TRACKLETS $MITIFILE $IN_TRACKLETS.byIndices
 

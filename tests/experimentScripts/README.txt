@@ -16,7 +16,7 @@ All the scripts should be in the same directory as this readme file.
 INSTALLING/BUILDING C++ FIND/LINKTRACKLETS (etc.)
 ---------------------------------------
 
-Instructions online at http://dev.lsstcorp.org/trac/wiki/MOPS/Installing_MOPS
+Build the C++ tools using instructions online at http://dev.lsstcorp.org/trac/wiki/MOPS/Installing_MOPS
 
 
 
@@ -28,12 +28,6 @@ See instructions online at http://dev.lsstcorp.org/trac/wiki/MOPS/Data
 Tests below run using example data :
 http://www.astro.washington.edu/users/ljones/ephems/dias_pt1_nodeep.short.astromErr
 
-which has the format: 
-
-#diasourceID opsimID   ssmid  ra  dec   expmjd  mag  SNR
-
-You will also need the opsim database which was used to generate the
-detections; currently this is opsim_3_61.
 
 
 
@@ -67,9 +61,9 @@ Output will be in PanSTARRS MITI format:
 ID EPOCH_MJD RA_DEG DEC_DEG MAG OBSCODE OBJECT_NAME LENGTH
 ANGLE 
 
-LENGTH and ANGLE are all set to dummy values as they are not
-used by our sky-plane algorithms. The OBSCODE is necessary for
-doing orbit fitting (and has been set to approximately LSST positions). 
+LENGTH and ANGLE are all set to dummy values as they are not used by
+our sky-plane algorithms. The OBSCODE is also set to a dummy value,
+because it's ignored by the linking stages.
 
 
 
@@ -122,8 +116,13 @@ C findTracklets uses a different output format.
 OPTIONAL PHASE: RUNNING COLLAPSETRACKLETS
 --------------------------------------
 
-Next, you'll probably want to run collapseTracklets to turn your some
-of your short, length-2 tracklets into longer tracklets.
+
+cd to the directory containing the tracklets you generated. Then run
+
+$ bash $MOPS_HACKS/runCollapseTracklets.sh
+
+As to what this script is doing:
+
 CollapseTracklets really has several phases: first collapsing, then
 purifying, then removing subset tracklets.
 
@@ -136,7 +135,8 @@ tracklets files with names like 49524.maxv0.5.tracklets, etc.  For
 each one, you'll want to do something like this:
 
 # first get the tracklets as a set of indices into the MITI file
-$ python $MOPS_HACKS/idsToIndices.py 49524.maxv0.5.tracklets 49524.miti \
+$ python $MOPS_HACKS/idsToIndices.py 49524.maxv0.5.tracklets \
+      49524.maxv0.5.tracklets 49524.miti \
       49524.maxv0.5.tracklets.byIndices
 
 # collapse the tracklets
@@ -156,9 +156,6 @@ $ $MOPS_DAYMOPS_DIR/bin/removeSubsets --inFile 49524.maxv0.5.collapsed.pure \
 $ $MOPS_HACKS/indicesToIds 49524.maxv0.5.final.tracklets.byIndices \
   49524.miti 49524.maxv0.5.final.tracklets.byDiaIds
 
-Since you have lots of nights, you'll probably want to use a shell
-script or Python script to do the above on all your data (I used a
-Bash for loop and the the 'basename' command.)
 
 
 

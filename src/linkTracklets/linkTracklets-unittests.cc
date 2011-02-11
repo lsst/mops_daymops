@@ -23,7 +23,7 @@
 #include "lsst/mops/Tracklet.h"
 #include "lsst/mops/daymops/linkTracklets/linkTracklets.h"
 #include "lsst/mops/Exceptions.h"
-#include "lsst/mops/daymops/linkTracklets/trackletTree.h"
+#include "lsst/mops/daymops/linkTracklets/TrackletTree.h"
 
 
 namespace lsst {
@@ -217,11 +217,14 @@ BOOST_AUTO_TEST_CASE( trackletTreeNode_1 )
 
     std::vector<PointAndValue <unsigned int> > tracklets;
     PointAndValue<unsigned int> tmpPav;
+    double dt = .0001;
+    double posErr = .01;
     std::vector<double> pos;
     pos.push_back(1.0);
     pos.push_back(1.0);
     pos.push_back(1.0);
     pos.push_back(1.0);
+    pos.push_back(dt);
     tmpPav.setPoint(pos);
     tmpPav.setValue(1);
     tracklets.push_back(tmpPav);
@@ -230,6 +233,7 @@ BOOST_AUTO_TEST_CASE( trackletTreeNode_1 )
     pos.push_back(2.0);
     pos.push_back(2.0);
     pos.push_back(2.0);
+    pos.push_back(dt);
     tmpPav.setPoint(pos);
     tmpPav.setValue(2);
     tracklets.push_back(tmpPav);
@@ -237,12 +241,39 @@ BOOST_AUTO_TEST_CASE( trackletTreeNode_1 )
     std::vector<double>UBounds;
     UBounds.push_back(2.0);
     UBounds.push_back(2.0);
+    UBounds.push_back(2.0);
+    UBounds.push_back(2.0);
     std::vector<double>LBounds;
     LBounds.push_back(1.0);
     LBounds.push_back(1.0);
+    LBounds.push_back(1.0);
+    LBounds.push_back(1.0);
     unsigned int startId = 0;
-    TrackletTreeNode myTTN(tracklets, .5, .5, 5, 0, 
+    TrackletTreeNode myTTN(tracklets, posErr, posErr, 1, 0, 
                            UBounds, LBounds, startId);
+    std::vector<double> const *resultingUBounds;
+    std::vector<double> const *resultingLBounds;
+    resultingUBounds = myTTN.getUBounds();
+    resultingLBounds = myTTN.getLBounds();
+
+    // check that position errors were set correctly.
+    BOOST_CHECK(Eq(resultingUBounds->at(0),
+                   2.0 + posErr));
+    BOOST_CHECK(Eq(resultingUBounds->at(1),
+                   2.0 + posErr));
+    BOOST_CHECK(Eq(resultingLBounds->at(0),
+                   1.0 + posErr));
+    BOOST_CHECK(Eq(resultingLBounds->at(1),
+                   1.0 + posErr));
+    // check velocity errors are set correctly
+    BOOST_CHECK(Eq(resultingUBounds->at(3),
+                   2.0 + 2.0 * posErr / dt));
+    BOOST_CHECK(Eq(resultingUBounds->at(4),
+                   2.0 + 2.0 * posErr / dt));
+    BOOST_CHECK(Eq(resultingLBounds->at(3),
+                   2.0 + 2.0 * posErr / dt));
+    BOOST_CHECK(Eq(resultingLBounds->at(4),
+                   2.0 + 2.0 * posErr / dt));
 }
 
 

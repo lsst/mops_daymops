@@ -5,7 +5,7 @@
 /* jmyers 2/10/11
  *
  * Much like KDTree, TrackletTree is the "head" only, and TrackletTreeNode does
- * the real work. 
+ * the real work. See TrackletTreeNode.h for more comments.
  *
  * Tracklet trees are for holding tracklet *rooted in a single image* and are
  * partitioned by RA, Dec, RAv, Decv.  The nodes have potentially *overlapping*
@@ -28,10 +28,12 @@
 #include "lsst/mops/Exceptions.h"
 #include "lsst/mops/PointAndValue.h"
 #include "lsst/mops/KDTree.h"
-#include "lsst/mops/daymops/linkTracklets/trackletTreeNode.h"
+#include "lsst/mops/daymops/linkTracklets/TrackletTreeNode.h"
 
 #include "lsst/mops/MopsDetection.h"
 #include "lsst/mops/TrackletVector.h"
+
+
 
 namespace lsst {
 namespace mops {
@@ -71,41 +73,10 @@ namespace mops {
                            unsigned int maxLeafSize);
 
 
+        // TBD: so... since KDTree has a KDTreeNode<T> myRoot, what happens
+        // here? Do normal KDTree operations which use root simply fail
+        // spectacularly?  probably, yes.
 
-
-        /*
-         * RADecRangeSearch : haven't tested this because it's not needed for linkTracklets.
-         * calling conventions are probably confusing. Don't use this for now.
-         */
-        std::vector<PointAndValue <unsigned int> > 
-            RADecRangeSearch(const std::vector<double> &RADecQueryPoint, 
-                             double RADecQueryRange, 
-			     const std::vector<double> &otherDimsPoint,
-                             const std::vector<double> &otherDimsTolerances,
-                             const std::vector<GeometryType> &spaceTypesByDimension) const; 
-    
-        /* see RADecRangeSearch comments.
-         */
-        std::vector<PointAndValue <unsigned int> > 
-        hyperRectangleSearch(const std::vector<double> &queryPt, 
-                             const std::vector<double> &tolerances, 
-                             const std::vector<GeometryType> &spaceTypesByDimension) const;
-
-
-        void debugPrint() const;
-
-        unsigned int size() const;
-
-        // linkTracklets needs to see individual nodes. this returns a const
-        // pointer to that node.
-        TrackletTreeNode * getRootNode() const;
-      
-        TrackletTree& operator=(const TrackletTree &rhs);
-
-        ~TrackletTree();
-
-        // so... since KDTree has a KDTreeNode<T> myRoot, 
-        // what happens here?
         TrackletTreeNode *myRoot;
 
     };
@@ -152,7 +123,9 @@ void TrackletTree::buildFromData(const std::vector<MopsDetection> &allDetections
 
         // need to convert tracklets to a parameterized format (RA_0, Dec_0, RAv, Dec_v)
         // calculate UBounds, LBounds while we're at it
-        
+
+        // TBD:
+
         
         // build root TrackletTreeNode
 

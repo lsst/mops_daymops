@@ -45,53 +45,6 @@ namespace mops {
                          unsigned int myAxisToSplit, std::vector<double> UBounds,
                          std::vector<double>LBounds, unsigned int &lastId);
         
-        /*
-         * this addReference function is to be used by KDTree *ONLY*.
-         * This way multiple KDTrees can share the same nodes without
-         * expensive copying (and since trees are static, this is fine.)
-         *
-         * it is up to KDTree to handle the creation and deletion of these nodes
-         * based on refcount.
-         */
-        // TBD: make KDTreeNode a friend class and make these protected
-        void addReference();
-
-        void removeReference();
-
-        unsigned int getRefCount();
-
-        /* TBD: I haven't actually tested that these work, but a quick glance
-         * over the code in KDTreeNode says they probably will.  No matter
-         * either way; linkTracklets doesn't use them.
-         */
-        std::vector<PointAndValue <unsigned int> > 
-        rangeSearch(std::vector<double> queryPt, 
-                    double queryRange) const; 
-    
-        std::vector<PointAndValue <unsigned int> > 
-        hyperRectangleSearch(const std::vector<double> &queryPt, 
-                             const std::vector<double> &tolerances, 
-                             const std::vector<GeometryType> &spaceTypesByDimension) const;
-
-
-        // these are to be used by linkTracklets.
-        bool hasLeftChild() const;
-        bool hasRightChild() const;
-        TrackletTreeNode * getLeftChild();
-        TrackletTreeNode * getRightChild();
-        /*return a pointer to a const vector of the per-axis upper bounds of
-          this tree node.  The format is identical to the double vector in the
-          pointsAndValues used to create this node.
-         */
-
-        // note that in tracklet trees, node bounds MAY OVERLAP
-        const std::vector<double> *getUBounds() const;
-        const std::vector<double> *getLBounds() const;
-
-        const std::vector<PointAndValue <unsigned int> > * getMyData() const;
-        bool isLeaf() const;
-        
-        void debugPrint(int depth) const;
     
         std::vector <TrackletTreeNode> myChildren;
         
@@ -147,10 +100,10 @@ namespace mops {
             }
 
             // extend UBounds, LBounds in RA, Dec by position error.
-            UBounds.at(0) += positionalErrorRa;
-            LBounds.at(0) -= positionalErrorRa;
-            UBounds.at(1) += positionalErrorDec;
-            LBounds.at(1) -= positionalErrorDec;
+            myUBounds.at(0) += positionalErrorRa;
+            myLBounds.at(0) -= positionalErrorRa;
+            myUBounds.at(1) += positionalErrorDec;
+            myLBounds.at(1) -= positionalErrorDec;
 
             // find min/max RA, Dec velocities after accounting for error.
 
@@ -165,17 +118,17 @@ namespace mops {
                 double maxDecV = trackletDecV + 2.0 * positionalErrorDec / thisDt;
                 double minDecV = trackletDecV - 2.0 * positionalErrorDec / thisDt;
                 
-                if (UBounds.at(2) < maxRaV) {
-                    UBounds.at(2) = maxRaV;
+                if (myUBounds.at(2) < maxRaV) {
+                    myUBounds.at(2) = maxRaV;
                 }
-                if (UBounds.at(3) < maxDecV) {
-                    UBounds.at(3) = maxDecV;
+                if (myUBounds.at(3) < maxDecV) {
+                    myUBounds.at(3) = maxDecV;
                 }
-                if (LBounds.at(2) > minRaV) {
-                    LBounds.at(2) = minRaV;
+                if (myLBounds.at(2) > minRaV) {
+                    myLBounds.at(2) = minRaV;
                 }
-                if (LBounds.at(3) < minDecV) {
-                    LBounds.at(3) = minDecV;
+                if (myLBounds.at(3) < minDecV) {
+                    myLBounds.at(3) = minDecV;
                 }
             }
 
@@ -183,19 +136,19 @@ namespace mops {
         else {
             // extend our UBounds, LBounds by child max UBounds, LBounds.
             if (KDTreeNode<unsigned int>::hasLeftChild()) {
-                extendBounds(UBounds, 
+                extendBounds(myUBounds, 
                              *(KDTreeNode<unsigned int>::getLeftChild()->getUBounds()),
                              true);
-                extendBounds(LBounds, 
+                extendBounds(myLBounds, 
                              *(KDTreeNode<unsigned int>::getLeftChild()->getLBounds()),
                              false);
 
             }
             if (KDTreeNode<unsigned int>::hasRightChild()) {
-                extendBounds(UBounds, 
+                extendBounds(myUBounds, 
                              *(KDTreeNode<unsigned int>::getRightChild()->getUBounds()),
                              true);
-                extendBounds(LBounds, 
+                extendBounds(myLBounds, 
                              *(KDTreeNode<unsigned int>::getRightChild()->getLBounds()),
                              false);
 

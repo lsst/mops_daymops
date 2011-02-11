@@ -219,7 +219,7 @@ namespace mops {
 
         KDTreeNode<T> *myRoot;
 
-    private:
+    protected:
         void copyTree(const KDTree<T> &source);
         void setUpEmptyTree();
         void clearPrivateData();

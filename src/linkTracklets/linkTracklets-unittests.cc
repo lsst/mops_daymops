@@ -23,7 +23,7 @@
 #include "lsst/mops/Tracklet.h"
 #include "lsst/mops/daymops/linkTracklets/linkTracklets.h"
 #include "lsst/mops/Exceptions.h"
-#include "lsst/mops/daymops/linkTracklets/trackletTreeNode.h"
+#include "lsst/mops/daymops/linkTracklets/trackletTree.h"
 
 
 namespace lsst {

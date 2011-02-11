@@ -79,7 +79,7 @@ void populateDetVectorFromFile(std::ifstream &detsFile, std::vector <MopsDetecti
 
 
 void populatePairsVectorFromFile(std::ifstream &pairsFile, 
-						    std::vector<Tracklet> &pairsVector) {
+                                 std::vector<Tracklet> &pairsVector) {
 
      Tracklet tmpPair;
      std::string line;

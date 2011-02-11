@@ -60,8 +60,10 @@ namespace mops {
 
         unsigned int getRefCount();
 
-        // WARNING: These search functions may not work! I'm including them
-        // because C++ requires we have all the methods from the parent class.
+        /* TBD: I haven't actually tested that these work, but a quick glance
+         * over the code in KDTreeNode says they probably will.  No matter
+         * either way; linkTracklets doesn't use them.
+         */
         std::vector<PointAndValue <unsigned int> > 
         rangeSearch(std::vector<double> queryPt, 
                     double queryRange) const; 
@@ -84,8 +86,8 @@ namespace mops {
 
         // note that in tracklet trees, node bounds MAY OVERLAP
         const std::vector<double> *getUBounds() const;
-        // same, but with the lower bounds rather than upper bounds.
         const std::vector<double> *getLBounds() const;
+
         const std::vector<PointAndValue <unsigned int> > * getMyData() const;
         bool isLeaf() const;
         
@@ -97,11 +99,6 @@ namespace mops {
         const unsigned int getId() const;
         void addVisit();
 
-        /* for a collection of points and values, find the median value
-           along the given axis and return it
-
-           ASSUMES all points have size > axis 
-        */
         double getMedianByAxis(std::vector<PointAndValue<unsigned int> > pointsAndValues,
                                unsigned int axis);
 
@@ -111,7 +108,8 @@ namespace mops {
 
     private:
         // helper function for extending UBounds/LBounds 
-        void extendBounds(std::vector<double> &myBounds, const std::vector<double> &childBounds,
+        void extendBounds(std::vector<double> &myBounds, 
+                          const std::vector<double> &childBounds,
                           bool areUBounds);
 
     };
@@ -122,51 +120,83 @@ namespace mops {
     TrackletTreeNode::TrackletTreeNode(std::vector<PointAndValue <unsigned int> > tracklets, 
                                        double positionalErrorRa, double positionalErrorDec,
                                        unsigned int maxLeafSize, 
-                                       unsigned int myAxisToSplit, std::vector<double> UBounds,
+                                       unsigned int myAxisToSplit, 
+                                       std::vector<double> UBounds,
                                        std::vector<double>LBounds, unsigned int &lastId)
-        : KDTreeNode<unsigned int>(tracklets, 4, maxLeafSize, myAxisToSplit, UBounds, LBounds, lastId)
+
+    /* build a 4-D tree using these parameterized tracklets, which are really
+     * 5-dimensional. KDTreeNode will politely ignore the last item, which is
+     * expected to be delta_time, and just partition on the 4 dimensions we care
+     * about: RA, Dec, RAv, Decv.
+     */
+
+        : KDTreeNode<unsigned int>(tracklets, 4, maxLeafSize, 
+                                   myAxisToSplit, UBounds, LBounds, lastId)
     {
 
-        // KDTreeNode has already set up our refcounts, built our children or
-        // made us a leaf, etc.
+        /* The call to the KDTreeNode constructor has already set up our
+         * refcounts, built our children or made us a leaf, etc. Now just extend
+         * UBounds, LBounds. */
+        
         if (KDTreeNode<unsigned int>::isLeaf()) {
-            // extend UBounds, LBounds based on shortest delta_time in data.
+
+            // extend UBounds, LBounds with knowledge of velocity error.
             if (myData.size() <= 0) {
                 LSST_EXCEPT(ProgrammerErrorException, 
                             "Unexpected condition: tree node is leaf, but has no data.");
             }
-            // find shortest delta_timme in tracklets we own
-            double shortestChildDt = tracklets.at(0).getPoint().at(4);
-            for (unsigned int i = 0; i < tracklets.size(); i++) {
-                double thisDt = tracklets.at(i).getPoint().at(4);
-                if (thisDt < shortestChildDt) {
-                    shortestChildDt = thisDt;
-                }
-            }
-            double velocityErrorRa  = 2.0 * positionalErrorRa  / shortestChildDt;
-            double velocityErrorDec = 2.0 * positionalErrorDec / shortestChildDt;
+
+            // extend UBounds, LBounds in RA, Dec by position error.
             UBounds.at(0) += positionalErrorRa;
             LBounds.at(0) -= positionalErrorRa;
             UBounds.at(1) += positionalErrorDec;
             LBounds.at(1) -= positionalErrorDec;
-            UBounds.at(2) += velocityErrorRa;
-            LBounds.at(2) -= velocityErrorRa;
-            UBounds.at(3) += velocityErrorDec;
-            LBounds.at(3) -= velocityErrorDec;
+
+            // find min/max RA, Dec velocities after accounting for error.
+
+            for (unsigned int i = 0; i < myData.size(); i++) {
+                std::vector<double> trackletPoint = myData.at(i).getPoint();
+                double trackletRaV  = trackletPoint.at(2);
+                double trackletDecV = trackletPoint.at(3);
+                double thisDt = trackletPoint.at(4);
+
+                double maxRaV = trackletRaV + 2.0 * positionalErrorRa / thisDt;
+                double minRaV = trackletRaV - 2.0 * positionalErrorRa / thisDt;
+                double maxDecV = trackletDecV + 2.0 * positionalErrorDec / thisDt;
+                double minDecV = trackletDecV - 2.0 * positionalErrorDec / thisDt;
+                
+                if (UBounds.at(2) < maxRaV) {
+                    UBounds.at(2) = maxRaV;
+                }
+                if (UBounds.at(3) < maxDecV) {
+                    UBounds.at(3) = maxDecV;
+                }
+                if (LBounds.at(2) > minRaV) {
+                    LBounds.at(2) = minRaV;
+                }
+                if (LBounds.at(3) < minDecV) {
+                    LBounds.at(3) = minDecV;
+                }
+            }
+
         }
         else {
             // extend our UBounds, LBounds by child max UBounds, LBounds.
             if (KDTreeNode<unsigned int>::hasLeftChild()) {
-                extendBounds(UBounds, *(KDTreeNode<unsigned int>::getLeftChild()->getUBounds()),
+                extendBounds(UBounds, 
+                             *(KDTreeNode<unsigned int>::getLeftChild()->getUBounds()),
                              true);
-                extendBounds(LBounds, *(KDTreeNode<unsigned int>::getLeftChild()->getLBounds()),
+                extendBounds(LBounds, 
+                             *(KDTreeNode<unsigned int>::getLeftChild()->getLBounds()),
                              false);
 
             }
             if (KDTreeNode<unsigned int>::hasRightChild()) {
-                extendBounds(UBounds, *(KDTreeNode<unsigned int>::getRightChild()->getUBounds()),
+                extendBounds(UBounds, 
+                             *(KDTreeNode<unsigned int>::getRightChild()->getUBounds()),
                              true);
-                extendBounds(LBounds, *(KDTreeNode<unsigned int>::getRightChild()->getLBounds()),
+                extendBounds(LBounds, 
+                             *(KDTreeNode<unsigned int>::getRightChild()->getLBounds()),
                              false);
 
             }

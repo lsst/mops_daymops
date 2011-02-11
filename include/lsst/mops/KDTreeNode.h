@@ -91,18 +91,22 @@ namespace mops {
         const unsigned int getNumVisits() const;
         const unsigned int getId() const;
         void addVisit();
-        
-    private:
+
         /* for a collection of points and values, find the median value
            along the given axis and return it
 
            ASSUMES all points have size > axis 
         */
+        /* making these public so derived classes can call them. (anyone know a
+           way around this? They seem like they should be private.) */
         double getMedianByAxis(std::vector<PointAndValue<T> > pointsAndValues,
                                unsigned int axis);
 
         double maxByAxis(std::vector<PointAndValue<T> > pointsAndValues,
                          unsigned int axis);
+
+        
+    protected:
         unsigned int myRefCount;
         unsigned int myK;
         std::vector <double> myUBounds;
@@ -321,7 +325,6 @@ namespace mops {
 
             leftChildUBounds = UBounds;
             leftChildUBounds[myAxisToSplit] = tmpMedian;
-
 
             leftChildLBounds = LBounds;
     

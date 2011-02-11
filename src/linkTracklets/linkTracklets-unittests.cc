@@ -23,6 +23,7 @@
 #include "lsst/mops/Tracklet.h"
 #include "lsst/mops/daymops/linkTracklets/linkTracklets.h"
 #include "lsst/mops/Exceptions.h"
+#include "lsst/mops/daymops/linkTracklets/trackletTreeNode.h"
 
 
 namespace lsst {
@@ -206,6 +207,44 @@ void addPair(unsigned int id1, unsigned int id2, std::vector<Tracklet> &tracklet
     tmpTracklet.indices.insert(id2);
     trackletVec.push_back(tmpTracklet);
 }
+
+
+
+
+
+BOOST_AUTO_TEST_CASE( trackletTreeNode_1 )
+{
+
+    std::vector<PointAndValue <unsigned int> > tracklets;
+    PointAndValue<unsigned int> tmpPav;
+    std::vector<double> pos;
+    pos.push_back(1.0);
+    pos.push_back(1.0);
+    pos.push_back(1.0);
+    pos.push_back(1.0);
+    tmpPav.setPoint(pos);
+    tmpPav.setValue(1);
+    tracklets.push_back(tmpPav);
+    pos.clear();
+    pos.push_back(2.0);
+    pos.push_back(2.0);
+    pos.push_back(2.0);
+    pos.push_back(2.0);
+    tmpPav.setPoint(pos);
+    tmpPav.setValue(2);
+    tracklets.push_back(tmpPav);
+    pos.clear();    
+    std::vector<double>UBounds;
+    UBounds.push_back(2.0);
+    UBounds.push_back(2.0);
+    std::vector<double>LBounds;
+    LBounds.push_back(1.0);
+    LBounds.push_back(1.0);
+    unsigned int startId = 0;
+    TrackletTreeNode myTTN(tracklets, .5, .5, 5, 0, 
+                           UBounds, LBounds, startId);
+}
+
 
 
 BOOST_AUTO_TEST_CASE( linkTracklets_blackbox_1 )

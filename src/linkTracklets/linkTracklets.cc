@@ -13,6 +13,7 @@
 #include "lsst/mops/rmsLineFit.h"
 #include "lsst/mops/Exceptions.h"
 #include "lsst/mops/KDTree.h"
+#include "lsst/mops/daymops/linkTracklets/TrackletTree.h"
 
 #include "lsst/mops/daymops/linkTracklets/lruCache.h"
 
@@ -222,11 +223,11 @@ private:
 
 class TreeNodeAndTime {
 public:
-    TreeNodeAndTime(KDTreeNode<uint> * tree, ImageTime i) {
+    TreeNodeAndTime(TrackletTreeNode * tree, ImageTime i) {
         myTree = tree;
         myTime = i;
     }
-    KDTreeNode <uint> * myTree;
+    TrackletTreeNode * myTree;
     ImageTime myTime;
 
 };
@@ -274,7 +275,7 @@ std::set<uint> setUnion(const std::set<uint> &s1,
 }
 
 
-std::set<uint> allDetsInTreeNode(KDTreeNode<uint> &t,
+std::set<uint> allDetsInTreeNode(TrackletTreeNode &t,
                                             const std::vector<MopsDetection>&allDets,
                                             const std::vector<Tracklet>&allTracklets) 
 {
@@ -384,7 +385,7 @@ void debugPrint(const TreeNodeAndTime &firstEndpoint, const TreeNodeAndTime &sec
 
 
 
-void showNumVisits(KDTreeNode<uint> *tree, uint &totalNodes, uint &totalVisits) 
+void showNumVisits(TrackletTreeNode *tree, uint &totalNodes, uint &totalVisits) 
 {
     totalNodes++;
     totalVisits += tree->getNumVisits();
@@ -548,7 +549,7 @@ MopsDetection getFirstDetectionForTracklet(const std::vector<MopsDetection> &all
 
 void makeTrackletTimeToTreeMap(const std::vector<MopsDetection> &allDetections,
                                const std::vector<Tracklet> &queryTracklets,
-                               std::map<ImageTime, KDTree <uint> > &newMap,
+                               std::map<ImageTime, TrackletTree > &newMap,
                                linkTrackletsConfig myConf)
 {
     bool printDebug = false;
@@ -597,7 +598,7 @@ void makeTrackletTimeToTreeMap(const std::vector<MopsDetection> &allDetections,
     for (PAVIter = allTrackletPAVsMap.begin(); PAVIter != allTrackletPAVsMap.end(); PAVIter++) {
 
 
-        KDTree<uint> curTree(PAVIter->second, 4, myConf.leafSize);
+        TrackletTree curTree(PAVIter->second, 4, myConf.leafSize);
         newMap[ImageTime(PAVIter->first, curImageId)] = curTree;
 
         if (printDebug) {
@@ -708,7 +709,7 @@ void extendRangeBackward(double &p0Min,  double &p0Max,  double &vMin,
 
 
 
-void extendBoundsToTime(const KDTreeNode<uint> * treeNode,
+void extendBoundsToTime(const TrackletTreeNode * treeNode,
                         double deltaTime, 
                         const linkTrackletsConfig &searchConfig,
                         
@@ -870,8 +871,8 @@ bool areMutuallyCompatible(const TreeNodeAndTime &firstNode,
     // for(i=0;(i<M)&&(valid);i++) {
 
     for (uint whichPair = 0; whichPair < 2; whichPair++) {
-        const KDTreeNode<uint> * A;
-        const KDTreeNode<uint> * B;
+        const TrackletTreeNode * A;
+        const TrackletTreeNode * B;
         double aTime;
         double bTime;
         //   /* Load the model tree and compute the operation order. */
@@ -1016,10 +1017,10 @@ bool areCompatible(const TreeNodeAndTime  &nodeA,
 
     double start = std::clock();
 
-    KDTreeNode<uint> * first;
+    TrackletTreeNode * first;
     double firstTime;
 
-    KDTreeNode<uint> * second;
+    TrackletTreeNode * second;
     double secondTime;
 
     first = nodeA.myTree;
@@ -1665,7 +1666,7 @@ void filterAndSplitSupport(const TreeNodeAndTime& firstEndpoint, const TreeNodeA
 
 
 
-double nodeWidth(KDTreeNode<uint> *node)
+double nodeWidth(TrackletTreeNode *node)
 {
     double start = std::clock();
     double width = 1;
@@ -1898,7 +1899,7 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
 void doLinking(const std::vector<MopsDetection> &allDetections,
                std::vector<Tracklet> &allTracklets,
                const linkTrackletsConfig &searchConfig,
-               std::map<ImageTime, KDTree <uint> > &trackletTimeToTreeMap,
+               std::map<ImageTime, TrackletTree > &trackletTimeToTreeMap,
                TrackSet &results)
 {
     /* for every pair of trees, using the set of every intermediate (temporally) tree as a
@@ -1926,7 +1927,7 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
 
     if (DEBUG) {
         std:: cout << "all MJDs: ";
-        std::map<ImageTime, KDTree<uint> >::const_iterator mapIter;
+        std::map<ImageTime, TrackletTree >::const_iterator mapIter;
         for (mapIter = trackletTimeToTreeMap.begin();
              mapIter != trackletTimeToTreeMap.end();
              mapIter++) {
@@ -1935,13 +1936,13 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
         std::cout << std::endl;
     }
 
-    std::map<ImageTime, KDTree<uint> >::const_iterator firstEndpointIter;
+    std::map<ImageTime, TrackletTree >::const_iterator firstEndpointIter;
     for (firstEndpointIter = trackletTimeToTreeMap.begin(); 
          firstEndpointIter != trackletTimeToTreeMap.end(); 
          firstEndpointIter++)
     {
-        std::map<ImageTime, KDTree<uint> >::const_iterator secondEndpointIter;
-        std::map<ImageTime, KDTree<uint> >::const_iterator afterFirstIter = firstEndpointIter;
+        std::map<ImageTime, TrackletTree >::const_iterator secondEndpointIter;
+        std::map<ImageTime, TrackletTree >::const_iterator afterFirstIter = firstEndpointIter;
         afterFirstIter++;
 
         /* check if the user wants us to look for tracks starting at this time */
@@ -1993,7 +1994,7 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
                          */
                 
                         std::vector<TreeNodeAndTime > supportPoints;
-                        std::map<ImageTime, KDTree<uint> >::const_iterator supportPointIter;
+                        std::map<ImageTime, TrackletTree >::const_iterator supportPointIter;
 
                         for (supportPointIter = afterFirstIter;
                              supportPointIter != secondEndpointIter;
@@ -2084,7 +2085,7 @@ TrackSet* linkTracklets(const std::vector<MopsDetection> &allDetections,
     //std::cout << "setting velocities of tracklets.\n";
     setTrackletVelocities(allDetections, queryTracklets);
     //std::cout << "Building trees on tracklets.\n";
-    std::map<ImageTime, KDTree <uint> > trackletTimeToTreeMap;    
+    std::map<ImageTime, TrackletTree > trackletTimeToTreeMap;    
     makeTrackletTimeToTreeMap(allDetections, queryTracklets, trackletTimeToTreeMap, searchConfig);
     //std::cout << "Beginning the linking process.\n";
     doLinking(allDetections, queryTracklets, searchConfig, trackletTimeToTreeMap, *toRet);

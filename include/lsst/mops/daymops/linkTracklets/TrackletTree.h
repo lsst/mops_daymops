@@ -27,7 +27,7 @@
 #include "lsst/mops/common.h"  
 #include "lsst/mops/Exceptions.h"
 #include "lsst/mops/PointAndValue.h"
-#include "lsst/mops/KDTree.h"
+#include "lsst/mops/BaseKDTree.h"
 #include "lsst/mops/daymops/linkTracklets/TrackletTreeNode.h"
 
 #include "lsst/mops/MopsDetection.h"
@@ -39,12 +39,9 @@ namespace lsst {
 namespace mops {
 
     
-    class TrackletTree: public KDTree<unsigned int> {
+    class TrackletTree: public BaseKDTree<unsigned int, TrackletTreeNode> {
     public:
-
-        /* default constructor - don't instantiate with any data.         
-         */
-        TrackletTree();
+        friend class BaseKDTree<unsigned int, TrackletTreeNode>;
 
         /*
          * Give the MopsDetections and Tracklets rooted in a given image.
@@ -61,23 +58,19 @@ namespace mops {
                      double positionalErrorRa, double positionalErrorDec,
                      unsigned int maxLeafSize);
 
-        /* copy constructor */
-        TrackletTree(const TrackletTree &source);
+
+        TrackletTreeNode * getRootNode() const { return myRoot; };
 
         /* 
-         * populates the tree with given data.  See second constructor.
+         * populates the tree with given data.  Same as constructor
+         * but in case you created a tree before your had the data
+         * ready for it.
          */
         void buildFromData(const std::vector<MopsDetection> &allDetections,
                            const TrackletVector &thisTreeTracklets,
-                           double positionalErrorRa, double positionalErrorDec,
+                           double positionalErrorRa, 
+                           double positionalErrorDec,
                            unsigned int maxLeafSize);
-
-
-        // TBD: so... since KDTree has a KDTreeNode<T> myRoot, what happens
-        // here? Do normal KDTree operations which use root simply fail
-        // spectacularly?  probably, yes.
-
-        TrackletTreeNode *myRoot;
 
     };
 
@@ -88,22 +81,24 @@ namespace mops {
 
 TrackletTree::TrackletTree(const std::vector<MopsDetection> &allDetections,
                            const TrackletVector &thisTreeTracklets,
-                           double positionalErrorRa, double positionalErrorDec,
+                           double positionalErrorRa, 
+                           double positionalErrorDec,
                            unsigned int maxLeafSize)
 {
     setUpEmptyTree();
     buildFromData(allDetections, thisTreeTracklets, positionalErrorRa,
-                  positionalErrorDec, maxLeafSize);
+                        positionalErrorDec, maxLeafSize);
 
 }
 
 
 
 
-void TrackletTree::buildFromData(const std::vector<MopsDetection> &allDetections,
-                                 const TrackletVector &thisTreeTracklets,
-                                 double positionalErrorRa, double positionalErrorDec,
-                                 unsigned int maxLeafSize)
+void TrackletTree::buildFromData(
+    const std::vector<MopsDetection> &allDetections,
+    const TrackletVector &thisTreeTracklets,
+    double positionalErrorRa, double positionalErrorDec,
+    unsigned int maxLeafSize)
 {
     // need to set up fields used by KDTree just the way KDTree would; then 
     // create our set of child TrackletTreesNodes

@@ -24,8 +24,9 @@ namespace lsst {
 namespace mops {
 
 
-    class TrackletTreeNode: public KDTreeNode<unsigned int> {
+    class TrackletTreeNode: public BaseKDTreeNode<unsigned int, TrackletTreeNode> {
     public: 
+        friend class BaseKDTreeNode<unsigned int, TrackletTreeNode>;
 
         /* tracklets is a series of pointAndValues and should hold a bunch of
          * elements like:
@@ -59,13 +60,129 @@ namespace mops {
                          unsigned int axis);
         
 
+        // these are to be used by linkTracklets.
+        bool hasLeftChild() const;
+        bool hasRightChild() const;
+        TrackletTreeNode * getLeftChild();
+        TrackletTreeNode * getRightChild();
+
+        /*return a pointer to a const vector of the per-axis upper bounds of
+          this tree node.  The format is identical to the double vector in the
+          pointsAndValues used to create this node.
+         */
+        const std::vector<double> *getUBounds() const;
+        const std::vector<double> *getLBounds() const;
+        const std::vector<PointAndValue <unsigned int> > * getMyData() const;
+        bool isLeaf() const;
+
+
+    protected:
+        /* Our "real" constructor calls the BaseKDTreeNode constructor then does
+         * some followup.  The BaseKDTreeNode constructor needs to call *our*
+         * constructor with this form.  This constructor should not be called by
+         * the outside world. 
+         */
+        
+        TrackletTreeNode(std::vector<PointAndValue <unsigned int> > pointsAndValues, 
+                         unsigned int k, unsigned int maxLeafSize, 
+                         unsigned int myAxisToSplit, std::vector<double> Ubounds,
+                         std::vector<double>LBounds, unsigned int &lastId);
+
     private:
         // helper function for extending UBounds/LBounds 
         void extendBounds(std::vector<double> &myBounds, 
                           const std::vector<double> &childBounds,
                           bool areUBounds);
 
+        unsigned int numVisits;
     };
+
+
+
+
+// these are to be used by linkTracklets.
+const unsigned int TrackletTreeNode::getNumVisits() const
+{
+    return numVisits;
+}
+
+
+void TrackletTreeNode::addVisit() 
+{
+    numVisits++;
+}
+
+
+
+
+bool TrackletTreeNode::hasLeftChild() const
+{
+    if (myChildren.size() >= 1) {
+        return true;
+    }
+    return false;
+}
+
+
+bool TrackletTreeNode::hasRightChild() const
+{
+    if (myChildren.size() >= 2) {
+        return true;
+    }
+    return false;
+}
+
+
+TrackletTreeNode * TrackletTreeNode::getLeftChild()
+{
+    if (!hasLeftChild()) {
+        return NULL;
+    }
+    return &(myChildren.at(0));
+}
+
+
+TrackletTreeNode * TrackletTreeNode::getRightChild()
+{
+    if (!hasRightChild()) {
+        return NULL;
+    }
+    return &(myChildren.at(1));
+}
+
+
+const std::vector<double> *TrackletTreeNode::getUBounds() const
+{
+    return &myUBounds;
+}
+
+
+const std::vector<double> *TrackletTreeNode::getLBounds() const
+{
+    return &myLBounds;
+}
+
+
+const std::vector<PointAndValue <unsigned int> > * 
+TrackletTreeNode::getMyData() const
+{
+    if (!isLeaf()) {
+        LSST_EXCEPT(BadParameterException,
+                    "KDTreeNode got request for data, but is not a leaf node.");
+    }
+    return &myData;
+}
+
+
+bool TrackletTreeNode::isLeaf() const
+{
+    if (myChildren.size() == 0) 
+    {
+        return true;
+    }
+    return false;
+}
+    
 
 
 
@@ -83,15 +200,18 @@ namespace mops {
      * about: RA, Dec, RAv, Decv.
      */
 
-        : KDTreeNode<unsigned int>(tracklets, 4, maxLeafSize, 
-                                   myAxisToSplit, UBounds, LBounds, lastId)
+        : BaseKDTreeNode<unsigned int, TrackletTreeNode>(tracklets, 4, maxLeafSize, 
+                                                         myAxisToSplit, UBounds, LBounds, 
+                                                         lastId)
     {
+
+        numVisits = 0;
 
         /* The call to the KDTreeNode constructor has already set up our
          * refcounts, built our children or made us a leaf, etc. Now just extend
          * UBounds, LBounds. */
         
-        if (KDTreeNode<unsigned int>::isLeaf()) {
+        if (isLeaf()) {
 
             // extend UBounds, LBounds with knowledge of velocity error.
             if (myData.size() <= 0) {
@@ -135,21 +255,23 @@ namespace mops {
         }
         else {
             // extend our UBounds, LBounds by child max UBounds, LBounds.
-            if (KDTreeNode<unsigned int>::hasLeftChild()) {
+            if (hasLeftChild()) {
+
                 extendBounds(myUBounds, 
-                             *(KDTreeNode<unsigned int>::getLeftChild()->getUBounds()),
+                             *(getLeftChild()->getUBounds()),
                              true);
                 extendBounds(myLBounds, 
-                             *(KDTreeNode<unsigned int>::getLeftChild()->getLBounds()),
+                             *(getLeftChild()->getLBounds()),
                              false);
 
             }
-            if (KDTreeNode<unsigned int>::hasRightChild()) {
+            if (hasRightChild()) {
+
                 extendBounds(myUBounds, 
-                             *(KDTreeNode<unsigned int>::getRightChild()->getUBounds()),
+                             *(getRightChild()->getUBounds()),
                              true);
                 extendBounds(myLBounds, 
-                             *(KDTreeNode<unsigned int>::getRightChild()->getLBounds()),
+                             *(getRightChild()->getLBounds()),
                              false);
 
             }

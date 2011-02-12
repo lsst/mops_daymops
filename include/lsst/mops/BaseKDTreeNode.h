@@ -6,6 +6,7 @@
 
 #include <iostream>
 
+#include "lsst/mops/common.h"
 #include "lsst/mops/PointAndValue.h"
 #include "Exceptions.h"
 
@@ -39,14 +40,15 @@ namespace mops {
                        unsigned int k, unsigned int maxLeafSize, 
                        unsigned int myAxisToSplit, std::vector<double> Ubounds,
                        std::vector<double>LBounds, unsigned int &lastId=0);
+        BaseKDTreeNode();
 
         /*
          * this addReference operator is to be used by KDTree *ONLY*.
          * This way multiple KDTrees can share the same nodes without
          * expensive copying (and since trees are static, this is fine.)
          *
-         * it is up to KDTree to handle the creation and deletion of these nodes
-         * based on refcount.
+         * it is up to KDTree to handle the creation and deletion of
+         * these nodes based on refcount.
          */
         void addReference();
 
@@ -167,9 +169,9 @@ than dimensions of data\n");
      
            this means that we need to be a leaf no matter what.
      
-           for real-world (LSST) purposes, this should virtually NEVER happen,
-           but it is theoretically possible, especially if this code is used for
-           discrete values.
+           for real-world (LSST) purposes, this should virtually NEVER
+           happen, but it is theoretically possible, especially if
+           this code is used for discrete values.
         */
         bool forceLeaf = true;
         for (unsigned int i = 0; (i < myUBounds.size()) && (forceLeaf == true); i++) 
@@ -182,15 +184,17 @@ than dimensions of data\n");
 
         tmpMedian = getMedianByAxis(pointsAndValues, myAxisToSplit);
         /* 
-         * catch the special case John Dailey from WISE found: if the median value is
-         * also the max value, we can't just give all values <= the median to the left
-         * child; this would be *all* the values and can lead to infinite recursion.
+         * catch the special case John Dailey from WISE found: if the
+         * median value is also the max value, we can't just give all
+         * values <= the median to the left child; this would be *all*
+         * the values and can lead to infinite recursion.
          */
         if (tmpMedian == maxByAxis(pointsAndValues, myAxisToSplit)) {
             forceLeaf = true;
-            /* in the future, we may consider changing this behavior; rather than
-             * force a leaf node at this location, use < rather than <= in choosing
-             * values to send to the left child. */
+            /* in the future, we may consider changing this behavior;
+             * rather than force a leaf node at this location, use <
+             * rather than <= in choosing values to send to the left
+             * child. */
         }
 
 
@@ -236,12 +240,14 @@ than dimensions of data\n");
             nextAxis = (myAxisToSplit + 1) % (myK);
     
             RecursiveT leftChild(leftPointsAndValues, k, maxLeafSize,
-                                    nextAxis, leftChildUBounds, leftChildLBounds, lastId);
+                                 nextAxis, 
+                                 leftChildUBounds, leftChildLBounds, lastId);
     
             myChildren.push_back(leftChild);
     
             RecursiveT rightChild(rightPointsAndValues, k, maxLeafSize,
-                                     nextAxis, rightChildUBounds, rightChildLBounds, lastId);
+                                  nextAxis, rightChildUBounds, 
+                                  rightChildLBounds, lastId);
 
             myChildren.push_back(rightChild);
         }
@@ -328,6 +334,13 @@ than dimensions of data\n");
 
 }
 
+template <class T, class RecursiveT>
+BaseKDTreeNode<T, RecursiveT>::BaseKDTreeNode() 
+{
+    myRefCount = 0;
+    myK = 0;
+    id = 0;        
+}
 
 
 

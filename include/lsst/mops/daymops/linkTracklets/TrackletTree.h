@@ -30,6 +30,9 @@
 #include "lsst/mops/BaseKDTree.h"
 #include "lsst/mops/daymops/linkTracklets/TrackletTreeNode.h"
 
+// for leastSquaresSolveForRADecLinear
+#include "lsst/mops/rmsLineFit.h"
+
 #include "lsst/mops/MopsDetection.h"
 #include "lsst/mops/TrackletVector.h"
 
@@ -44,22 +47,21 @@ namespace mops {
         friend class BaseKDTree<unsigned int, TrackletTreeNode>;
 
         /*
-         * Give the MopsDetections and Tracklets rooted in a given image.
-         * Builds a TrackletTree on (RA, Dec, RAv, Decv). 
+         * Give the MopsDetections and Tracklets rooted in a given
+         * image.  Builds a TrackletTree on (RA, Dec, RAv, Decv).
          *
-         * The bounds of the tree nodes are extended by the positional error
-         * bars given, and the max velocities are extended as well using
-         * delta_time and positional error.
+         * The bounds of the tree nodes are extended by the positional
+         * error baqrs given, and the max velocities are extended as
+         * well using delta_time and positional error.
          *
          * maxLeafSize should be a positive integer.
          */
         TrackletTree(const std::vector<MopsDetection> &allDetections,
                      const TrackletVector &thisTreeTracklets,
-                     double positionalErrorRa, double positionalErrorDec,
+                     double positionalErrorRa, 
+                     double positionalErrorDec,
                      unsigned int maxLeafSize);
 
-
-        TrackletTreeNode * getRootNode() const { return myRoot; };
 
         /* 
          * populates the tree with given data.  Same as constructor
@@ -71,6 +73,21 @@ namespace mops {
                            double positionalErrorRa, 
                            double positionalErrorDec,
                            unsigned int maxLeafSize);
+        
+        TrackletTreeNode * getRootNode() const { return myRoot; };
+
+
+    private:
+        // these are helper functions for building the tree.
+        // previously, they lived in linkTracklets.cc.
+        void setTrackletVelocities(
+            const std::vector<MopsDetection> &allDetections,
+            std::vector<Tracklet> &queryTracklets);
+
+        void getAllDetectionsForTracklet(
+            const std::vector<MopsDetection> & allDetections,
+            const Tracklet &t,
+            std::vector<MopsDetection> &detectionsForTracklet);
 
     };
 
@@ -94,6 +111,9 @@ TrackletTree::TrackletTree(const std::vector<MopsDetection> &allDetections,
 
 
 
+
+
+
 void TrackletTree::buildFromData(
     const std::vector<MopsDetection> &allDetections,
     const TrackletVector &thisTreeTracklets,
@@ -112,12 +132,14 @@ void TrackletTree::buildFromData(
 
         if (maxLeafSize < 1) {
             throw LSST_EXCEPT(BadParameterException, 
-                              "EE: KDTree: max leaf size must be strictly positive!\n");
+       "EE: KDTree: max leaf size must be strictly positive!\n");
         }
 
 
-        // need to convert tracklets to a parameterized format (RA_0, Dec_0, RAv, Dec_v)
-        // calculate UBounds, LBounds while we're at it
+        // need to convert tracklets to a parameterized format (RA_0,
+        // Dec_0, RAv, Dec_v) 
+
+        //calculate UBounds, LBounds while we're at it
 
         // TBD:
 
@@ -128,7 +150,8 @@ void TrackletTree::buildFromData(
          * recursively), save it to private var. */
         unsigned int idCounter = 0;
         myRoot = new TrackletTreeNode(parameterizedTracklets, 
-                                      positionalErrorRa, positionalErrorDec, maxLeafSize, 0,
+                                      positionalErrorRa, positionalErrorDec,
+                                      maxLeafSize, 0,
                                       pointsUBounds, pointsLBounds, 
                                       idCounter);
         // don't set hasData until now, when the tree is actually built.
@@ -142,6 +165,61 @@ void TrackletTree::buildFromData(
     }
 }
 
+
+
+
+
+
+
+/* the final parameter is modified; it will hold Detections associated
+   with the tracklet t. */
+
+void TrackletTree::getAllDetectionsForTracklet(
+    const std::vector<MopsDetection> & allDetections,
+    const Tracklet &t,
+    std::vector<MopsDetection> &detectionsForTracklet) 
+{
+    double start = std::clock();
+    
+    detectionsForTracklet.clear();
+    std::set<uint>::const_iterator trackletIndexIter;
+
+    for (trackletIndexIter = t.indices.begin();
+         trackletIndexIter != t.indices.end();
+         trackletIndexIter++) {
+        detectionsForTracklet.push_back(allDetections.at(
+                                            *trackletIndexIter));
+    }
+
+    getAllDetectionsForTrackletTime += getTimeElapsed(start);
+}
+
+
+
+
+void TrackletTree::setTrackletVelocities(
+    const std::vector<MopsDetection> &allDetections,
+    std::vector<Tracklet> &queryTracklets)
+
+{
+    for (uint i = 0; i < queryTracklets.size(); i++) {
+        Tracklet *curTracklet = &queryTracklets.at(i);
+        std::vector <MopsDetection> trackletDets;
+        getAllDetectionsForTracklet(allDetections, 
+                                    *curTracklet, 
+                                    trackletDets);
+
+        std::vector<double> RASlopeAndOffset;
+        std::vector<double> DecSlopeAndOffset;
+        leastSquaresSolveForRADecLinear(&trackletDets,
+                                        RASlopeAndOffset,
+                                        DecSlopeAndOffset);
+        
+        curTracklet->velocityRA = RASlopeAndOffset.at(0);
+        curTracklet->velocityDec = DecSlopeAndOffset.at(0);
+    }
+
+}
 
 
 

@@ -44,7 +44,7 @@ namespace mops {
 
     
     template <class T>
-    class KDTree : public BaseKDTree<T, KDTree<T> > {
+    class KDTree : public BaseKDTree<T, KDTreeNode<T> > {
     public:
 
 
@@ -69,12 +69,12 @@ namespace mops {
 
 
         // public access to the build a tree after setting it up.
-        void buildFromData(std::vector<PointAndValue <T> > pointsAndValues, 
-                           unsigned int k, unsigned int maxLeafSize) 
-            { 
-                BaseKDTree<T, KDTree<T> >(pointsAndValues,
-                                          k, maxLeafSize); 
-            }
+        // void buildFromData(std::vector<PointAndValue <T> > pointsAndValues, 
+        //                    unsigned int k, unsigned int maxLeafSize) 
+        //     { 
+        //         this->buildFromData(pointsAndValues,
+        //                             k, maxLeafSize); 
+        //     }
 
         /* rangeSearch: given a point queryPt and a range queryRange, treat all
          * the data points in the tree as though they live on the same
@@ -205,6 +205,15 @@ namespace mops {
                              const std::vector<GeometryType> 
                                     &spaceTypesByDimension) 
             const;
+
+        /* turns out we don't automatically inherit BaseKDTree's
+         * constructors/destructors because it's not a direct
+         * ancestor, due to template issues.  We'll have to copy-pase
+         * the code, for now. . TBD: Does anyone know a better way to
+         * avoid this ugliness?
+         */
+        KDTree<T>() { this->setUpEmptyTree() ;}
+        ~KDTree<T>() { this->clearPrivateData(); }
 
 
     };
@@ -429,10 +438,6 @@ KDTree<T>::hyperRectangleSearch(const std::vector<double> &queryPt,
           queryPt, tolerances, spaceTypesByDimensions);
   }
 }
-
-
-
-
 
 
 

@@ -9,6 +9,7 @@
 #include <time.h>
 #include <algorithm>
 
+#include "lsst/mops/rmsLineFit.h"
 #include "lsst/mops/daymops/linkTracklets/linkTracklets.h"
 #include "lsst/mops/Exceptions.h"
 #include "lsst/mops/KDTree.h"
@@ -142,8 +143,8 @@ public:
         imgId = rhs.getImageId();
         return *this;
     }
-    // NB: since IDs are assigned in order of image time, would it be faster if
-    // we did < based on imgId (int rather than double?)
+    // NB: since IDs are assigned in order of image time, would it be
+    // faster if we did < based on imgId (int rather than double?)
     bool operator< (const ImageTime &other) const {
         return MJD < other.getMJD();
     }
@@ -155,11 +156,12 @@ private:
 
 
 /*
- * this class is only used as a key to the cache of TreeNode, img time T -> node
- * bounding box at time T. 
+ * this class is only used as a key to the cache of TreeNode, img time
+ * T -> node bounding box at time T.
  *
- * note that KDTreeNodes have unique IDs *WITHIN THEIR TREE* but every tree will
- * contain a node with ID 1.  Tree node ID + Image Time yields a unique identity.
+ * note that KDTreeNodes have unique IDs *WITHIN THEIR TREE* but every
+ * tree will contain a node with ID 1.  Tree node ID + Image Time
+ * yields a unique identity.
  *
  */
 class GlobalNodeIdAndProjectionId {
@@ -257,9 +259,9 @@ public:
 
 
 
-/* *****************************************************************************
- * These functions are for debugging/ diagnostics only.                        *
- * *************************************************************************** */
+/* *****************************************************
+* These functions are for debugging/ diagnostics only.  
+********************************************************/
 
 
 // for debugging and calculating timing info
@@ -277,7 +279,7 @@ void debugPrintTimingInfo(const TrackSet &results);
 
 
 std::set<uint> setUnion(const std::set<uint> &s1, 
-                                const std::set<uint> &s2) 
+                        const std::set<uint> &s2) 
 {
     std::set<uint> toRet;
     std::set<uint>::const_iterator iter;
@@ -292,8 +294,8 @@ std::set<uint> setUnion(const std::set<uint> &s1,
 
 
 std::set<uint> allDetsInTreeNode(TrackletTreeNode &t,
-                                            const std::vector<MopsDetection>&allDets,
-                                            const std::vector<Tracklet>&allTracklets) 
+                                 const std::vector<MopsDetection>&allDets,
+                                 const std::vector<Tracklet>&allTracklets) 
 {
     std::set<uint> toRet;
     std::vector<PointAndValue<uint> >::const_iterator tIter;
@@ -310,7 +312,8 @@ std::set<uint> allDetsInTreeNode(TrackletTreeNode &t,
     }
     else 
     {
-        // t.getMyData() holds points and values. the "value" part is index into allTracklets.
+        // t.getMyData() holds points and values. the "value" part is
+        // index into allTracklets.
         for (tIter = t.getMyData()->begin();
              tIter != t.getMyData()->end();
              tIter++) {
@@ -352,7 +355,8 @@ void printSet(const std::set<uint> s, std::string delimiter)
 
 
 
-void debugPrint(const TreeNodeAndTime &firstEndpoint, const TreeNodeAndTime &secondEndpoint, 
+void debugPrint(const TreeNodeAndTime &firstEndpoint, 
+                const TreeNodeAndTime &secondEndpoint, 
                 std::vector<TreeNodeAndTime> &supportNodes, 
                 const std::vector<MopsDetection> &allDetections,
                 const std::vector<Tracklet> &allTracklets) 
@@ -496,89 +500,135 @@ void initDebugTimingInfo()
 
 
 
-/* *****************************************************************************
- * LINKTRACKLETS: The actual algorithm implementation                          *
- * *************************************************************************** */
+/* **********************************************************************
+* LINKTRACKLETS: The actual algorithm implementation *
+* **********************************************************************/
+
+
+
+/* the final parameter is modified; it will hold Detections associated
+   with the tracklet t. */
+
+void getAllDetectionsForTracklet(
+    const std::vector<MopsDetection> & allDetections,
+    const Tracklet &t,
+    std::vector<MopsDetection> &detectionsForTracklet) 
+{
+    detectionsForTracklet.clear();
+    std::set<uint>::const_iterator trackletIndexIter;
+
+    for (trackletIndexIter = t.indices.begin();
+         trackletIndexIter != t.indices.end();
+         trackletIndexIter++) {
+        detectionsForTracklet.push_back(allDetections.at(
+                                            *trackletIndexIter));
+    }
+}
+
+
+
+void setTrackletVelocities(
+    const std::vector<MopsDetection> &allDetections,
+    std::vector<Tracklet> queryTracklets)
+    
+{
+    for (uint i = 0; i < queryTracklets.size(); i++) {
+        Tracklet *curTracklet = &queryTracklets.at(i);
+        std::vector <MopsDetection> trackletDets;
+        getAllDetectionsForTracklet(allDetections, 
+                                    *curTracklet, 
+                                    trackletDets);
+
+        std::vector<double> RASlopeAndOffset;
+        std::vector<double> DecSlopeAndOffset;
+        leastSquaresSolveForRADecLinear(&trackletDets,
+                                        RASlopeAndOffset,
+                                        DecSlopeAndOffset);
+        
+        curTracklet->velocityRA = RASlopeAndOffset.at(0);
+        curTracklet->velocityDec = DecSlopeAndOffset.at(0);
+    }
+
+}
 
 
 
 
-
-
-
-
-
-
-void makeTrackletTimeToTreeMap(const std::vector<MopsDetection> &allDetections,
-                               const std::vector<Tracklet> &queryTracklets,
-                               std::map<ImageTime, TrackletTree > &newMap,
-                               linkTrackletsConfig myConf)
+void makeTrackletTimeToTreeMap(
+    const std::vector<MopsDetection> &allDetections,
+    std::vector<Tracklet> &queryTracklets,
+    std::map<ImageTime, TrackletTree > &newMap,
+    linkTrackletsConfig myConf)
 {
     bool printDebug = false;
     if (printDebug) {
         std::cout << "Sorting tracklets by \"root\" time. We have  " 
                   << allDetections.size() 
                   << " detections and " << queryTracklets.size() 
-                  << " trakclets.\n";
+                  << " tracklets.\n";
 
     }
 
     newMap.clear();
-    //sort all tracklets by their first image time; make
-    //PointAndValues from these so we can build a tree.
-    //allTrackletPAVsMap will map from image time -> [ all tracklets
-    //starting at that image time. ]
-    std::map<double, std::vector<PointAndValue<uint> > > allTrackletPAVsMap;
 
-    allTrackletPAVsMap.clear();
+    //sort all tracklets by their first image time and assign them IDs.
+    // IDs are their indices into the queryTracklets[] vector.
+    
+    // we use a std::vector of tracklets rather than trackletvector
+    // because TrackletVectors are for large output sets, not for
+    // small dynamic stuff like this. Also they have no copy
+    // contructor, which is needed for map, because C++ STL doesn't
+    // let you copy streams.
+    std::map<double, std::vector<Tracklet> > allTrackletsByTime;
+
+    allTrackletsByTime.clear();
 
     for (uint i = 0; i < queryTracklets.size(); i++) {
+
         double firstDetectionTime = 
             queryTracklets.at(i).getStartTime(allDetections);
-        PointAndValue<uint> trackletPAV;
-        std::vector<double> trackletPoint;
 
-        trackletPoint.push_back(firstDetection.getRA());
-        trackletPoint.push_back(firstDetection.getDec());
-        trackletPoint.push_back(queryTracklets.at(i).velocityRA);
-        trackletPoint.push_back(queryTracklets.at(i).velocityDec);
-        trackletPAV.setPoint(trackletPoint);        
-
-        trackletPAV.setValue(i);
-
-        allTrackletPAVsMap[firstDetectionTime].push_back(trackletPAV);
+        queryTracklets.at(i).setId(i);
+        allTrackletsByTime[firstDetectionTime].push_back(
+            queryTracklets.at(i));
     }
 
     if (printDebug) 
-        std::cout << " got " << allTrackletPAVsMap.size() << " image times.\n";
+        std::cout << " got" << allTrackletsByTime.size()
+                  << " image times.\n";
     
-    // iterate over each time/pointAndValueVec pair and build a
+    // iterate over each time/trackletVec pair and build a
     // corresponding time/KDTree pair.  note that we iterate over a
     // Map which uses MJD as key; Maps sort their data by their key,
     // so we are iterating over all image times in order.
     uint curImageId = 0;
 
-    std::map<double, std::vector<PointAndValue<uint> > >::const_iterator 
-        PAVIter;
+    std::map<double, std::vector<Tracklet> >::const_iterator 
+        timesIter;
     
-    for (PAVIter = allTrackletPAVsMap.begin(); 
-         PAVIter != allTrackletPAVsMap.end(); 
-         PAVIter++) {
+    for (timesIter = allTrackletsByTime.begin(); 
+         timesIter != allTrackletsByTime.end(); 
+         timesIter++) {
 
 
-        TrackletTree curTree(PAVIter->second, 4, myConf.leafSize);
-        newMap[ImageTime(PAVIter->first, curImageId)] = curTree;
+        TrackletTree curTree(allDetections, 
+                             timesIter->second,
+                             myConf.detectionLocationErrorThresh,
+                             myConf.detectionLocationErrorThresh,
+                             myConf.leafSize);
+
+        newMap[ImageTime(timesIter->first, curImageId)] = curTree;
 
         if (printDebug) {
-            std::cout << " image time " << PAVIter->first 
+            std::cout << " image time " << timesIter->first 
                       << " (with Id = " << curImageId << ") had " 
-                      << PAVIter->second.size() 
+                      << timesIter->second.size() 
                       << " tracklets, generating a tree of size " 
                       << curTree.size() << std::endl;
             std::cout << "    with leaf node size = " 
                       << myConf.leafSize 
                       << ", and an average leaf size of about " 
-                      << PAVIter->second.size() * 2. / curTree.size() 
+                      << timesIter->second.size() * 2. / curTree.size() 
                       << std::endl;
         }
 
@@ -746,7 +796,7 @@ void extendBoundsToTime(const TrackletTreeNode * treeNode,
         //std::cout << " cache miss...\n"; 
 
         //we have not yet projected this bounding box to the given
-        // image time.  do so, adding in error, and save the results.
+        // image time.  do so, and save the results.
         
         cacheMisses++;
         
@@ -759,27 +809,19 @@ void extendBoundsToTime(const TrackletTreeNode * treeNode,
         */
         
         
-        raPositionMax = treeNode->getUBounds()->at(POINT_RA) + 
-            searchConfig.detectionLocationErrorThresh;
-        raVelocityMax = treeNode->getUBounds()->at(POINT_RA_VELOCITY) + 
-            searchConfig.velocityErrorThresh;
+        raPositionMax = treeNode->getUBounds()->at(POINT_RA);
+        raVelocityMax = treeNode->getUBounds()->at(POINT_RA_VELOCITY);
 
-        raPositionMin = treeNode->getLBounds()->at(POINT_RA) - 
-            searchConfig.detectionLocationErrorThresh;
-        raVelocityMin = treeNode->getLBounds()->at(POINT_RA_VELOCITY) - 
-            searchConfig.velocityErrorThresh;
+        raPositionMin = treeNode->getLBounds()->at(POINT_RA);
+        raVelocityMin = treeNode->getLBounds()->at(POINT_RA_VELOCITY);
 
         //get upper and lower bounds of node's Dec position, velocity
                 
-        decPositionMax = treeNode->getUBounds()->at(POINT_DEC) + 
-            searchConfig.detectionLocationErrorThresh;
-        decVelocityMax = treeNode->getUBounds()->at(POINT_DEC_VELOCITY) + 
-            searchConfig.velocityErrorThresh;
+        decPositionMax = treeNode->getUBounds()->at(POINT_DEC);
+        decVelocityMax = treeNode->getUBounds()->at(POINT_DEC_VELOCITY);
 
-        decPositionMin = treeNode->getLBounds()->at(POINT_DEC) - 
-            searchConfig.detectionLocationErrorThresh;
-        decVelocityMin = treeNode->getLBounds()->at(POINT_DEC_VELOCITY) - 
-            searchConfig.velocityErrorThresh;
+        decPositionMin = treeNode->getLBounds()->at(POINT_DEC);
+        decVelocityMin = treeNode->getLBounds()->at(POINT_DEC_VELOCITY);
 
         if (deltaTime >= 0) {
 
@@ -899,26 +941,24 @@ bool areMutuallyCompatible(const TreeNodeAndTime &firstNode,
         double dti = 1.0/dt;
         double acc;
 
-        double pe = searchConfig.detectionLocationErrorThresh;
-        double ve = searchConfig.velocityErrorThresh;
 
 
         //   /* Do the velocity+position/position tests. */
         //   if(valid) {
     //  acc = dt2*  ((tbt_hi_RA(B)                         -  tbt_lo_RA(A)                       ) - tbt_lo_vRA(A)                                 * dt);
-        acc = dt2 * (((B->getUBounds()->at(POINT_RA) + pe) - (A->getLBounds()->at(POINT_RA) - pe)) - (A->getLBounds()->at(POINT_RA_VELOCITY) - ve) * dt);
+        acc = dt2 * (((B->getUBounds()->at(POINT_RA)) - (A->getLBounds()->at(POINT_RA))) - (A->getLBounds()->at(POINT_RA_VELOCITY)) * dt);
     //  if(maxR > acc) { maxR = acc; }
         if (maxR > acc) {maxR = acc; }
     //  acc = dt2*((tbt_lo_RA(B)                         -  tbt_hi_RA(A))                        -  tbt_hi_vRA(A)                                * dt);
-        acc = dt2*(((B->getLBounds()->at(POINT_RA) - pe) - (A->getUBounds()->at(POINT_RA) + pe)) - (A->getUBounds()->at(POINT_RA_VELOCITY) + ve) * dt);
+        acc = dt2*(((B->getLBounds()->at(POINT_RA)) - (A->getUBounds()->at(POINT_RA))) - (A->getUBounds()->at(POINT_RA_VELOCITY)) * dt);
         //if(minR < acc) { minR = acc; }
         if (minR < acc)  {minR = acc; }
     //  acc  = dt2*(( tbt_hi_DEC(B)                        -  tbt_lo_DEC(A))                        -  tbt_lo_vDEC(A)                                * dt)
-        acc = dt2 *(((B->getUBounds()->at(POINT_DEC) + pe) - (A->getLBounds()->at(POINT_DEC) - pe)) - (A->getLBounds()->at(POINT_DEC_VELOCITY) - ve) * dt);
+        acc = dt2 *(((B->getUBounds()->at(POINT_DEC)) - (A->getLBounds()->at(POINT_DEC))) - (A->getLBounds()->at(POINT_DEC_VELOCITY)) * dt);
     //  if(maxD > acc) { maxD = acc; }
         if (maxD > acc) { maxD = acc; }
     //  acc = dt2*(( tbt_lo_DEC(B)                       -  tbt_hi_DEC(A))                        -   tbt_hi_vDEC(A)                               * dt);
-        acc = dt2*(((B->getLBounds()->at(POINT_DEC) -pe) - (A->getUBounds()->at(POINT_DEC) + pe)) - (A->getUBounds()->at(POINT_DEC_VELOCITY) + ve) * dt);
+        acc = dt2*(((B->getLBounds()->at(POINT_DEC)) - (A->getUBounds()->at(POINT_DEC))) - (A->getUBounds()->at(POINT_DEC_VELOCITY)) * dt);
     //  if (minD < acc) { minD = acc; }
         if (minD < acc) {  minD = acc; }
     //  valid = (minD <= maxD)&&(minR <= maxR);
@@ -928,19 +968,19 @@ bool areMutuallyCompatible(const TreeNodeAndTime &firstNode,
         //     if(valid) {
         if (valid) {
         //  acc = dt2*(tbt_hi_RA(A)                         - tbt_lo_RA(B)                         + tbt_hi_vRA(B)                                *dt);
-            acc = dt2*((A->getUBounds()->at(POINT_RA) + pe) - (B->getLBounds()->at(POINT_RA) - pe) + (B->getUBounds()->at(POINT_RA_VELOCITY) + ve)*dt);
+            acc = dt2*((A->getUBounds()->at(POINT_RA)) - (B->getLBounds()->at(POINT_RA)) + (B->getUBounds()->at(POINT_RA_VELOCITY))*dt);
         //  if(maxR > acc) { maxR = acc; }
             if(maxR > acc) { maxR = acc; }
         //  acc = dt2*( tbt_lo_RA(A)                        -   tbt_hi_RA(B)                       +  tbt_lo_vRA(B)                                * dt);
-            acc = dt2*((A->getLBounds()->at(POINT_RA) - pe) - (B->getUBounds()->at(POINT_RA) + pe) + (B->getLBounds()->at(POINT_RA_VELOCITY) - ve) * dt);
+            acc = dt2*((A->getLBounds()->at(POINT_RA)) - (B->getUBounds()->at(POINT_RA)) + (B->getLBounds()->at(POINT_RA_VELOCITY)) * dt);
         //  if(minR < acc) { minR = acc; }
             if(minR < acc) { minR = acc; }
         //  acc = dt2*( tbt_hi_DEC(A)                        -  tbt_lo_DEC(B)                        + tbt_hi_vDEC(B)                                 * dt);
-            acc = dt2*((A->getUBounds()->at(POINT_DEC) + pe) - (B->getLBounds()->at(POINT_DEC) - pe) + (B->getUBounds()->at(POINT_DEC_VELOCITY) + ve) * dt);
+            acc = dt2*((A->getUBounds()->at(POINT_DEC)) - (B->getLBounds()->at(POINT_DEC)) + (B->getUBounds()->at(POINT_DEC_VELOCITY)) * dt);
         //  if(maxD > acc) { maxD = acc; }
             if(maxD > acc) { maxD = acc; }
         //  acc = dt2*( tbt_lo_DEC(A)                  -        tbt_hi_DEC(B)                        +  tbt_lo_vDEC(B)                               * dt);
-            acc = dt2*((A->getLBounds()->at(POINT_DEC) - pe) - (B->getUBounds()->at(POINT_DEC) + pe) + (B->getLBounds()->at(POINT_DEC_VELOCITY) - ve) * dt);
+            acc = dt2*((A->getLBounds()->at(POINT_DEC)) - (B->getUBounds()->at(POINT_DEC)) + (B->getLBounds()->at(POINT_DEC_VELOCITY)) * dt);
         //  if(minD < acc) { minD = acc; }
             if(minD < acc) { minD = acc; }
         //  valid = (minD <= maxD)&&(minR <= maxR);
@@ -949,19 +989,19 @@ bool areMutuallyCompatible(const TreeNodeAndTime &firstNode,
             //       if(valid) {
             if (valid) {
                 //      acc = (tbt_hi_vRA(B)                         -  tbt_lo_vRA(A))                    * dti;
-                acc = ((B->getUBounds()->at(POINT_RA_VELOCITY) + ve) - (A->getLBounds()->at(POINT_RA_VELOCITY) - ve)) * dti;
+                acc = ((B->getUBounds()->at(POINT_RA_VELOCITY)) - (A->getLBounds()->at(POINT_RA_VELOCITY))) * dti;
                 //      if(maxR > acc) { maxR = acc; }
                 if(maxR > acc) { maxR = acc; }
                 //      acc = (tbt_lo_vRA(B)                    - tbt_hi_vRA(A)                   )*dti;
-                acc = ((B->getLBounds()->at(POINT_RA_VELOCITY) - ve) - (A->getUBounds()->at(POINT_RA_VELOCITY) + ve))*dti;
+                acc = ((B->getLBounds()->at(POINT_RA_VELOCITY)) - (A->getUBounds()->at(POINT_RA_VELOCITY)))*dti;
                 //      if(minR < acc) { minR = acc; }
                 if(minR < acc) { minR = acc; }
                 //      acc = (tbt_hi_vDEC(B)                          - tbt_lo_vDEC(A))                    *dti;
-                acc = ((B->getUBounds()->at(POINT_DEC_VELOCITY) + ve) - (A->getLBounds()->at(POINT_DEC_VELOCITY) - ve)) *dti;
+                acc = ((B->getUBounds()->at(POINT_DEC_VELOCITY)) - (A->getLBounds()->at(POINT_DEC_VELOCITY))) *dti;
                 //      if(maxD > acc) { maxD = acc; }
                 if(maxD > acc) { maxD = acc; }
                 //      acc = (tbt_lo_vDEC(B)                    - tbt_hi_vDEC(A))                    *dti;
-                acc = ((B->getLBounds()->at(POINT_DEC_VELOCITY) - ve) - (A->getUBounds()->at(POINT_DEC_VELOCITY) + ve)) *dti;
+                acc = ((B->getLBounds()->at(POINT_DEC_VELOCITY)) - (A->getUBounds()->at(POINT_DEC_VELOCITY))) *dti;
                 //      if(minD < acc) { minD = acc; }
                 if(minD < acc) { minD = acc; }
                 //      valid = (minR <= maxR)&&(minD <= maxD);
@@ -1111,18 +1151,20 @@ bool areCompatible(const TreeNodeAndTime  &nodeA,
 
 
 /*
- * Takes a track which is ASSUMED TO HOLD exactly two tracklets; the endpoint tracklets used to get 
- * a track started.  Returns true iff:
+ * Takes a track which is ASSUMED TO HOLD exactly two tracklets; the
+ * endpoint tracklets used to get a track started.  Returns true iff:
  *
  * - the first and last detection are at least minTimeSeparation apart 
  * - the best-fit accelerations are within min/max bounds
  * 
  */
-// TBD: This function is a little dumb in that it looks at the time separation
-// between the first and last detection, not the start time of the two tracklets.
-bool endpointTrackletsAreCompatible(const std::vector<MopsDetection> & allDetections, 
-                                    const Track &newTrack,
-                                    const linkTrackletsConfig &searchConfig)
+// TBD: This function is a little dumb in that it looks at the time
+// separation between the first and last detection, not the start time
+// of the two tracklets.
+bool endpointTrackletsAreCompatible(
+    const std::vector<MopsDetection> & allDetections, 
+    const Track &newTrack,
+    const linkTrackletsConfig &searchConfig)
 {
     double start = std::clock();
     bool allOK = true;
@@ -2223,6 +2265,7 @@ TrackSet* linkTracklets(const std::vector<MopsDetection> &allDetections,
       DecVelocity] and the returned keys are indices into
       queryTracklets.
     */
+    setTrackletVelocities(allDetections, queryTracklets);
     std::map<ImageTime, TrackletTree > trackletTimeToTreeMap;    
     makeTrackletTimeToTreeMap(allDetections, 
                               queryTracklets, 

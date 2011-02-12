@@ -6,7 +6,7 @@
 
 #include <iostream>
 
-#include "lsst/mops/KDTree.h"
+#include "lsst/mops/BaseKDTree.h"
 #include "lsst/mops/Exceptions.h"
 
 
@@ -28,15 +28,16 @@ namespace mops {
     public: 
         friend class BaseKDTreeNode<unsigned int, TrackletTreeNode>;
 
-        /* tracklets is a series of pointAndValues and should hold a bunch of
-         * elements like:
+        /* tracklets is a series of pointAndValues and should hold a
+         * bunch of elements like:
          * 
          * (RA, Dec, RAv, DecV, deltaTime)
          *
-         * of the tracklet, mapped to the ID of the tracklet.  
+         * of the tracklet, mapped to the ID of the tracklet.
          * 
-         * Max allowable positional error is specified by the user; this is used
-         * along with tracklet delta-time to calculate the velocity error.
+         * Max allowable positional error is specified by the user;
+         * this is used along with tracklet delta-time to calculate
+         * the velocity error.
          */
 
 
@@ -89,10 +90,6 @@ namespace mops {
                          std::vector<double>LBounds, unsigned int &lastId);
 
     private:
-        // helper function for extending UBounds/LBounds 
-        void extendBounds(std::vector<double> &myBounds, 
-                          const std::vector<double> &childBounds,
-                          bool areUBounds);
 
         unsigned int numVisits;
     };
@@ -280,26 +277,6 @@ bool TrackletTreeNode::isLeaf() const
 
 
 
-void TrackletTreeNode::extendBounds(std::vector<double> &myBounds, const std::vector<double> &childBounds,
-                  bool areUBounds) 
-{
-    if (myBounds.size() != childBounds.size()) {
-        LSST_EXCEPT(BadParameterException, "Expect argument vectors of same length.");
-    }
-    for (unsigned int i = 0; i < myBounds.size(); i++) {
-        if (areUBounds) {
-            if (childBounds.at(i) > myBounds.at(i)) {
-                myBounds.at(i) = childBounds.at(i);
-            }
-        }
-        else {
-            if (childBounds.at(i) < myBounds.at(i)) {
-                myBounds.at(i) = childBounds.at(i);
-            }
-
-        }
-    }
-}
 
 
 }} // close namespace lsst::mops

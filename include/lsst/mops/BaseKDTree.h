@@ -65,7 +65,6 @@ namespace mops {
          */
         void buildFromData(std::vector<PointAndValue <T> > pointsAndValues, 
                unsigned int k, unsigned int maxLeafSize);
-
         void copyTree(const BaseKDTree<T, TreeNodeClass> &source);
         void setUpEmptyTree();
         void clearPrivateData();
@@ -321,7 +320,6 @@ void BaseKDTree<T, TreeNodeClass>::buildFromData(
         hasData = true;
     }
 }
-
 
 
 

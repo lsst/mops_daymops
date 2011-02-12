@@ -30,8 +30,6 @@
 #include "lsst/mops/BaseKDTree.h"
 #include "lsst/mops/daymops/linkTracklets/TrackletTreeNode.h"
 
-// for leastSquaresSolveForRADecLinear
-#include "lsst/mops/rmsLineFit.h"
 
 #include "lsst/mops/MopsDetection.h"
 #include "lsst/mops/TrackletVector.h"
@@ -55,9 +53,11 @@ namespace mops {
          * well using delta_time and positional error.
          *
          * maxLeafSize should be a positive integer.
+         *
+         * We ASSUME all tracklets already have their velocities set.
          */
         TrackletTree(const std::vector<MopsDetection> &allDetections,
-                     const TrackletVector &thisTreeTracklets,
+                     const std::vector<Tracklet> &thisTreeTracklets,
                      double positionalErrorRa, 
                      double positionalErrorDec,
                      unsigned int maxLeafSize);
@@ -69,7 +69,7 @@ namespace mops {
          * ready for it.
          */
         void buildFromData(const std::vector<MopsDetection> &allDetections,
-                           const TrackletVector &thisTreeTracklets,
+                           const std::vector<Tracklet> &thisTreeTracklets,
                            double positionalErrorRa, 
                            double positionalErrorDec,
                            unsigned int maxLeafSize);
@@ -77,17 +77,16 @@ namespace mops {
         TrackletTreeNode * getRootNode() const { return myRoot; };
 
 
-    private:
-        // these are helper functions for building the tree.
-        // previously, they lived in linkTracklets.cc.
-        void setTrackletVelocities(
-            const std::vector<MopsDetection> &allDetections,
-            std::vector<Tracklet> &queryTracklets);
 
-        void getAllDetectionsForTracklet(
-            const std::vector<MopsDetection> & allDetections,
-            const Tracklet &t,
-            std::vector<MopsDetection> &detectionsForTracklet);
+        /* turns out we don't automatically inherit BaseKDTree's
+         * constructors/destructors because it's not a direct
+         * ancestor, due to template issues.  We'll have to copy-pase
+         * the code, for now. . TBD: Does anyone know a better way to
+         * avoid this ugliness?
+         */
+        TrackletTree() { this->setUpEmptyTree() ;}
+        ~TrackletTree() { this->clearPrivateData(); }
+
 
     };
 
@@ -97,7 +96,7 @@ namespace mops {
 
 
 TrackletTree::TrackletTree(const std::vector<MopsDetection> &allDetections,
-                           const TrackletVector &thisTreeTracklets,
+                           const std::vector<Tracklet> &thisTreeTracklets,
                            double positionalErrorRa, 
                            double positionalErrorDec,
                            unsigned int maxLeafSize)
@@ -116,7 +115,7 @@ TrackletTree::TrackletTree(const std::vector<MopsDetection> &allDetections,
 
 void TrackletTree::buildFromData(
     const std::vector<MopsDetection> &allDetections,
-    const TrackletVector &thisTreeTracklets,
+    const std::vector<Tracklet> &thisTreeTracklets,
     double positionalErrorRa, double positionalErrorDec,
     unsigned int maxLeafSize)
 {
@@ -136,30 +135,67 @@ void TrackletTree::buildFromData(
         }
 
 
-        // need to convert tracklets to a parameterized format (RA_0,
-        // Dec_0, RAv, Dec_v) 
+        // need to convert tracklets to a parameterized format:
 
-        //calculate UBounds, LBounds while we're at it
-
-        // TBD:
-
+        // (RA_0, Dec_0, RAv, Dec_v) 
         
+        // and make a PointAndValue vector.
+
+        //calculate initial, without-error UBounds, LBounds while
+        //we're at it (they are needed for the BaseKDTree constructor)
+        std::vector<double> initialUBounds;
+        std::vector<double> initialLBounds;
+
+        for (uint i = 0; i < thisTreeTracklets.size(); i++) {
+            Tracklet myT = thisTreeTracklets.at(i);
+            MopsDetection firstDetection = 
+                myT.getFirstDetection(allDetections);
+            PointAndValue<unsigned int> trackletPav;
+
+            std::vector<double> trackletPoint;
+            trackletPoint.push_back(firstDetection.getRA());
+            trackletPoint.push_back(firstDetection.getDec());
+            trackletPoint.push_back(myT.velocityRA);
+            trackletPoint.push_back(myT.velocityDec);
+            trackletPoint.push_back(myT.getDeltaTime(allDetections));
+
+            trackletPav.setPoint(trackletPoint);
+            trackletPav.setValue(myT.getId());
+
+            parameterizedTracklets.push_back(trackletPav);
+
+            // calculate UBounds, LBounds
+            if (initialUBounds.size() == 0) {
+                initialUBounds = trackletPoint;
+            }
+            if (initialLBounds.size() == 0) {
+                initialLBounds = trackletPoint;
+            }
+            extendBounds(initialUBounds, trackletPoint, true);
+            extendBounds(initialUBounds, trackletPoint, false);
+        }
+
         // build root TrackletTreeNode
 
         /* create the root of the tree (and the rest of the tree
          * recursively), save it to private var. */
         unsigned int idCounter = 0;
         myRoot = new TrackletTreeNode(parameterizedTracklets, 
-                                      positionalErrorRa, positionalErrorDec,
-                                      maxLeafSize, 0,
-                                      pointsUBounds, pointsLBounds, 
+                                      positionalErrorRa, 
+                                      positionalErrorDec,
+                                      maxLeafSize, 
+                                      0,
+                                      pointsUBounds, 
+                                      pointsLBounds, 
                                       idCounter);
         // don't set hasData until now, when the tree is actually built.
         mySize = idCounter;
 
-        // *read* UBounds, UBounds from TrackletTreeNode (They have been
-        // *updated) and set our own
-
+        // *read* UBounds, UBounds from TrackletTreeNode (They have
+        // *been updated* and extended to account for tracklet
+        // *position/velocity error) and set our own
+        myUBounds = *(myRoot->getUBounds());
+        myLBounds = *(myRoot->getLBounds());
   
         hasData = true;
     }
@@ -171,55 +207,10 @@ void TrackletTree::buildFromData(
 
 
 
-/* the final parameter is modified; it will hold Detections associated
-   with the tracklet t. */
-
-void TrackletTree::getAllDetectionsForTracklet(
-    const std::vector<MopsDetection> & allDetections,
-    const Tracklet &t,
-    std::vector<MopsDetection> &detectionsForTracklet) 
-{
-    double start = std::clock();
-    
-    detectionsForTracklet.clear();
-    std::set<uint>::const_iterator trackletIndexIter;
-
-    for (trackletIndexIter = t.indices.begin();
-         trackletIndexIter != t.indices.end();
-         trackletIndexIter++) {
-        detectionsForTracklet.push_back(allDetections.at(
-                                            *trackletIndexIter));
-    }
-
-    getAllDetectionsForTrackletTime += getTimeElapsed(start);
-}
 
 
 
 
-void TrackletTree::setTrackletVelocities(
-    const std::vector<MopsDetection> &allDetections,
-    std::vector<Tracklet> &queryTracklets)
-
-{
-    for (uint i = 0; i < queryTracklets.size(); i++) {
-        Tracklet *curTracklet = &queryTracklets.at(i);
-        std::vector <MopsDetection> trackletDets;
-        getAllDetectionsForTracklet(allDetections, 
-                                    *curTracklet, 
-                                    trackletDets);
-
-        std::vector<double> RASlopeAndOffset;
-        std::vector<double> DecSlopeAndOffset;
-        leastSquaresSolveForRADecLinear(&trackletDets,
-                                        RASlopeAndOffset,
-                                        DecSlopeAndOffset);
-        
-        curTracklet->velocityRA = RASlopeAndOffset.at(0);
-        curTracklet->velocityDec = DecSlopeAndOffset.at(0);
-    }
-
-}
 
 
 

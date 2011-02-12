@@ -20,14 +20,15 @@ public:
     Tracklet();
     Tracklet(std::set <unsigned int> startIndices);
 
-    /* a tracklet is just a collection of detections.  To conserve memory, we
-       don't hold copies of those detections here, we hold references to them.
-       In all my code, I represent a detection with its index from the
-       Detections vector I'm working with.  Note that these indices ARE NOT
-       NECESSARILY the same as the ID's of the Detections themselves.
+    /* a tracklet is just a collection of detections.  To conserve
+       memory, we don't hold copies of those detections here, we hold
+       references to them.  In all my code, I represent a detection
+       with its index from the Detections vector I'm working with.
+       Note that these indices ARE NOT NECESSARILY the same as the
+       ID's of the Detections themselves.
        
-       It is TOTALLY UP TO THE USER of this class to make sure that they
-       associate Tracklets with the correct Detection vector.
+       It is TOTALLY UP TO THE USER of this class to make sure that
+       they associate Tracklets with the correct Detection vector.
      */
 
     std::set<unsigned int> indices;
@@ -37,39 +38,41 @@ public:
     double velocityRA;
     double velocityDec;
     
-    /* return start time. does NOT assume indices are assigned
-     * chronologically. ASSUMES that you send in the same vector of detections
-     * used to create this tracklet! */
-    double getStartTime(std::vector<MopsDetection> dets);
+    /* return start/end times and first/last detections. does NOT
+     * assume indices are assigned chronologically. DOES ASSUME,
+     * however, that you send in the same vector of detections used to
+     * create this tracklet! */
+    double getStartTime(const std::vector<MopsDetection> &dets) const;
+    MopsDetection getFirstDetection(const std::vector<MopsDetection> &dets)
+        const;
+    double getDeltaTime(const std::vector<MopsDetection> &dets) const;
+    MopsDetection getLastDetection(const std::vector<MopsDetection> &dets)
+        const;
 
     /*
-     * The following operators consider only the indices set.  Note that if you
-     * compare two tracklets with indices into different detection vectors, the
-     * results are MEANINGLESS! It is up to the user to ensure that
-     * when comparing tracklets t1 and t2 that if t1.indices contains id X, then
-     * X in t2.indices has the same meaning.
+     * The following operators consider only the indices set.  Note
+     * that if you compare two tracklets with indices into different
+     * detection vectors, the results are MEANINGLESS! It is up to the
+     * user to ensure that when comparing tracklets t1 and t2 that if
+     * t1.indices contains id X, then X in t2.indices has the same
+     * meaning.
      */
 
-    Tracklet & operator= (const Tracklet &other) {
-        indices = other.indices;
-        return *this;
-    }
+    void setId(unsigned int nId) { myId = nId;}
+    unsigned int getId() const { return myId; }
 
-    bool operator==(const Tracklet &other) const {
-        bool toRet = indices == other.indices;
-        return toRet ;
-    }
 
-    bool operator!=(const Tracklet &other) const {
-        return ! (*this == other);
-    }
+    Tracklet & operator= (const Tracklet &other);
 
-    bool operator<(const Tracklet &other) const {
-        bool toRet = indices < other.indices;
-        return toRet;
-        
-    }
+    bool operator==(const Tracklet &other) const; 
 
+    bool operator!=(const Tracklet &other) const;
+
+    bool operator<(const Tracklet &other) const; 
+
+private:
+    void copy(const Tracklet &other);
+    unsigned int myId; 
 
 };
 

@@ -192,20 +192,6 @@ TrackletTreeNode::TrackletTreeNode(
 
 
 
-TrackletTreeNode::TrackletTreeNode(
-    const std::vector<PointAndValue <unsigned int> > & pointsAndValues, 
-    unsigned int k, 
-    unsigned int maxLeafSize, 
-    unsigned int myAxisToSplit, 
-    const std::vector<double> &UBounds,
-    const std::vector<double> &LBounds, 
-    unsigned int &lastId)
-{
-    BaseKDTreeNode<unsigned int, TrackletTreeNode>::
-        BaseKDTreeNode
-        ( pointsAndValues, k, maxLeafSize, myAxisToSplit,
-          UBounds, LBounds, lastId);
-}
      
 
         

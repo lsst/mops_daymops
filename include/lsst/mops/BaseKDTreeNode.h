@@ -43,6 +43,7 @@ namespace mops {
             const std::vector<double> &Ubounds,
             const std::vector<double> &LBounds, 
             unsigned int &lastId=0);
+
         BaseKDTreeNode();
 
         /*
@@ -161,14 +162,14 @@ BaseKDTreeNode<T, RecursiveT>::BaseKDTreeNode(
     myK = k;  
     myUBounds = UBounds;
     myLBounds = LBounds;
+    lastId++;
+    id = lastId;
 
     std::cout << " BaseKDTreeNode constructor called, tracklets size = "
               << pointsAndValues.size() 
               << "\n  object has address " << (void*)this << "\n"
-              <<  "   myUBounds size = " << myUBounds.size() << "\n";
-              
-    lastId++;
-    id = lastId;
+              <<  "   myUBounds size = " << myUBounds.size() << "\n"
+              <<  "   my ID is " << id << "\n";
 
     std::vector<double> rightChildUBounds, rightChildLBounds,     
         leftChildUBounds, leftChildLBounds;
@@ -282,6 +283,8 @@ than dimensions of data\n");
             &(myChildren[0]) << "\n";
         std::cout << "! child has ubounds size: " <<
             myChildren[0].getUBounds()->size() << "\n";
+        std::cout << "! child has id size: " <<
+            myChildren[0].getId() << "\n";
     
         RecursiveT rightChild(rightPointsAndValues, k, maxLeafSize,
                               nextAxis, rightChildUBounds, 
@@ -292,7 +295,9 @@ than dimensions of data\n");
         std::cout << "! Created a child with address " <<
             &(myChildren[1]) << "\n";
         std::cout << "! child has ubounds size: " <<
-            myChildren[0].getUBounds()->size() << "\n";
+            myChildren[1].getUBounds()->size() << "\n";
+        std::cout << "! child has id size: " <<
+            myChildren[1].getId() << "\n";
     }
 }
 

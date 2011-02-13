@@ -81,6 +81,12 @@ bool TrackletTreeNode::isLeaf() const
 
 
 
+/*
+ * this constructor is only ever called for the head node; it calls
+ * the BaseKDTreeNode constructor for its children, which splits up
+ * the data and calls the homomorphic constructor of TrackletTreeNode,
+ * who in turn call the BaseKDTree constructor for their children.
+ */
 
 TrackletTreeNode::TrackletTreeNode(
     const std::vector<PointAndValue <unsigned int> > &tracklets, 
@@ -90,7 +96,6 @@ TrackletTreeNode::TrackletTreeNode(
     const std::vector<double> &UBounds,
     const std::vector<double> &LBounds,
     unsigned int &lastId)
-    
     /* build a 4-D tree using these parameterized tracklets, which are
      * really 5-dimensional. KDTreeNode will politely ignore the last
      * item, which is expected to be delta_time, and just partition on
@@ -102,23 +107,26 @@ TrackletTreeNode::TrackletTreeNode(
         myAxisToSplit, UBounds, LBounds, 
         lastId)
 {
-    std::cout << " TrackletTreeNode constructor called, tracklets size = "
-              << tracklets.size() 
-              << " object has addres " << (void*) this << "\n";
-    for (unsigned int i = 0; i < myChildren.size(); i++) {
-        std::cout << "   I have a child at " <<  &(myChildren.at(i))
-                  << "\n";
-    }
-
     numVisits = 0;
     
     /* The call to the KDTreeNode constructor has already set up
      * our refcounts, built our children or made us a leaf,
      * etc. Now just extend UBounds, LBounds. */
     
-    // WRONG! Need to do a full traversal of our children first, which
-    // do NOT yet have their bounds extended. TBD TBD TBD
+    recalculateBoundsWithError(positionalErrorRa, 
+                               positionalErrorDec);
+    
+}
 
+    
+
+
+
+     
+double TrackletTreeNode::recalculateBoundsWithError(
+    double positionalErrorRa,
+    double positionalErrorDec)
+{
     if (isLeaf()) {
         
         // extend UBounds, LBounds with knowledge of velocity error.
@@ -166,8 +174,12 @@ TrackletTreeNode::TrackletTreeNode(
         
     }
     else {
-        // extend our UBounds, LBounds by child max UBounds, LBounds.
+        // traverse children, then extend your own bounds.
         if (hasLeftChild()) {
+            
+            getLeftChild()->recalculateBoundsWithError(
+                positionalErrorRa,
+                positionalErrorDec);
             
             extendBounds(myUBounds, 
                          *(getLeftChild()->getUBounds()),
@@ -179,6 +191,10 @@ TrackletTreeNode::TrackletTreeNode(
         }
         if (hasRightChild()) {
             
+            getRightChild()->recalculateBoundsWithError(
+                positionalErrorRa,
+                positionalErrorDec);
+
             extendBounds(myUBounds, 
                          *(getRightChild()->getUBounds()),
                          true);
@@ -188,11 +204,8 @@ TrackletTreeNode::TrackletTreeNode(
             
         }
     }
+    
 }
-
-
-
-     
 
         
 

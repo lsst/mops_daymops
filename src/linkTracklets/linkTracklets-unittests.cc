@@ -261,18 +261,19 @@ BOOST_AUTO_TEST_CASE( trackletTreeNode_1 )
     BOOST_CHECK(Eq(resultingUBounds->at(1),
                    2.0 + posErr));
     BOOST_CHECK(Eq(resultingLBounds->at(0),
-                   1.0 + posErr));
+                   1.0 - posErr));
     BOOST_CHECK(Eq(resultingLBounds->at(1),
-                   1.0 + posErr));
+                   1.0 - posErr));
     // check velocity errors are set correctly
+    BOOST_CHECK(Eq(resultingUBounds->at(2),
+                   2.0 + 2.0 * posErr / dt));
     BOOST_CHECK(Eq(resultingUBounds->at(3),
                    2.0 + 2.0 * posErr / dt));
-    BOOST_CHECK(Eq(resultingUBounds->at(4),
-                   2.0 + 2.0 * posErr / dt));
+
+    BOOST_CHECK(Eq(resultingLBounds->at(2),
+                   1.0 - 2.0 * posErr / dt));
     BOOST_CHECK(Eq(resultingLBounds->at(3),
-                   2.0 + 2.0 * posErr / dt));
-    BOOST_CHECK(Eq(resultingLBounds->at(4),
-                   2.0 + 2.0 * posErr / dt));
+                   1.0 - 2.0 * posErr / dt));
 }
 
 

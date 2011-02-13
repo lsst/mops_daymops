@@ -91,6 +91,13 @@ namespace mops {
                 lastId) {};
         
 
+        /* after the "real" constructor is called at the root, and the
+         * BaseKDTree constructor sets up the children, this function
+         * is used to do a post-traversal of the children and update
+         * their error bounds.
+         */
+        double recalculateBoundsWithError(double positionalErrorRa,
+                                          double positionalErrorDec);
 
     private:
 

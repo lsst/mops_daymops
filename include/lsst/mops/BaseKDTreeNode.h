@@ -44,8 +44,6 @@ namespace mops {
             const std::vector<double> &LBounds, 
             unsigned int &lastId=0);
 
-        BaseKDTreeNode();
-
         /*
          * this addReference operator is to be used by KDTree *ONLY*.
          * This way multiple KDTrees can share the same nodes without
@@ -165,11 +163,6 @@ BaseKDTreeNode<T, RecursiveT>::BaseKDTreeNode(
     lastId++;
     id = lastId;
 
-    std::cout << " BaseKDTreeNode constructor called, tracklets size = "
-              << pointsAndValues.size() 
-              << "\n  object has address " << (void*)this << "\n"
-              <<  "   myUBounds size = " << myUBounds.size() << "\n"
-              <<  "   my ID is " << id << "\n";
 
     std::vector<double> rightChildUBounds, rightChildLBounds,     
         leftChildUBounds, leftChildLBounds;
@@ -279,25 +272,12 @@ than dimensions of data\n");
                              leftChildUBounds, leftChildLBounds, lastId);
     
         myChildren.push_back(leftChild);
-        std::cout << "! Created a child with address " <<
-            &(myChildren[0]) << "\n";
-        std::cout << "! child has ubounds size: " <<
-            myChildren[0].getUBounds()->size() << "\n";
-        std::cout << "! child has id size: " <<
-            myChildren[0].getId() << "\n";
     
         RecursiveT rightChild(rightPointsAndValues, k, maxLeafSize,
                               nextAxis, rightChildUBounds, 
                               rightChildLBounds, lastId);
 
         myChildren.push_back(rightChild);
-
-        std::cout << "! Created a child with address " <<
-            &(myChildren[1]) << "\n";
-        std::cout << "! child has ubounds size: " <<
-            myChildren[1].getUBounds()->size() << "\n";
-        std::cout << "! child has id size: " <<
-            myChildren[1].getId() << "\n";
     }
 }
 
@@ -382,13 +362,6 @@ double BaseKDTreeNode<T, RecursiveT>::getMedianByAxis(
     
 }
 
-template <class T, class RecursiveT>
-BaseKDTreeNode<T, RecursiveT>::BaseKDTreeNode() 
-{
-    myRefCount = 0;
-    myK = 0;
-    id = 0;        
-}
 
 
 

@@ -312,7 +312,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_easy_1 )
   linkTrackletsConfig myConfig;
 
   TrackSet * results = linkTracklets(myDets, pairs, myConfig);
-
+  std::cout << "results were sized " << results->size() << std::endl;
   BOOST_CHECK(results->size() == 1);
 }
 

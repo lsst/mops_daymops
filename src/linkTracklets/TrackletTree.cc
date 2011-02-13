@@ -52,8 +52,6 @@ void TrackletTree::buildFromData(
 
         //calculate initial, without-error UBounds, LBounds while
         //we're at it (they are needed for the BaseKDTree constructor)
-        std::vector<double> initialUBounds;
-        std::vector<double> initialLBounds;
 
         for (uint i = 0; i < thisTreeTracklets.size(); i++) {
             Tracklet myT = thisTreeTracklets.at(i);
@@ -74,14 +72,14 @@ void TrackletTree::buildFromData(
             parameterizedTracklets.push_back(trackletPav);
 
             // calculate UBounds, LBounds
-            if (initialUBounds.size() == 0) {
-                initialUBounds = trackletPoint;
+            if (pointsUBounds.size() == 0) {
+                pointsUBounds = trackletPoint;
             }
-            if (initialLBounds.size() == 0) {
-                initialLBounds = trackletPoint;
+            if (pointsLBounds.size() == 0) {
+                pointsLBounds = trackletPoint;
             }
-            extendBounds(initialUBounds, trackletPoint, true);
-            extendBounds(initialUBounds, trackletPoint, false);
+            extendBounds(pointsUBounds, trackletPoint, true);
+            extendBounds(pointsUBounds, trackletPoint, false);
         }
 
         // build root TrackletTreeNode

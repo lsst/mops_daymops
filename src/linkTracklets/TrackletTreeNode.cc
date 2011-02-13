@@ -112,7 +112,6 @@ TrackletTreeNode::TrackletTreeNode(
     /* The call to the KDTreeNode constructor has already set up
      * our refcounts, built our children or made us a leaf,
      * etc. Now just extend UBounds, LBounds. */
-    
     recalculateBoundsWithError(positionalErrorRa, 
                                positionalErrorDec);
     

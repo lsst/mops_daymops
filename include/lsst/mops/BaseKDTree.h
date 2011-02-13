@@ -233,11 +233,11 @@ void BaseKDTree<T, TreeNodeClass>::debugPrint() const
 
 template <class T, class TreeNodeClass>
 void BaseKDTree<T, TreeNodeClass>::buildFromData(
-    std::vector<PointAndValue <T> > 
-    pointsAndValues,
+    std::vector<PointAndValue <T> > pointsAndValues,
     unsigned int k, 
     unsigned int maxLeafSize)
 {
+
 
     myK = k;
 

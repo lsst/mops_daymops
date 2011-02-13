@@ -41,25 +41,18 @@ namespace mops {
          */
 
 
-        TrackletTreeNode(std::vector<PointAndValue <unsigned int> > tracklets, 
-                         double positionalErrorRa, double positionalErrorDec,
-                         unsigned int maxLeafSize, 
-                         unsigned int myAxisToSplit, std::vector<double> UBounds,
-                         std::vector<double>LBounds, unsigned int &lastId);
+        TrackletTreeNode(
+            const std::vector<PointAndValue <unsigned int> > &tracklets, 
+            double positionalErrorRa, 
+            double positionalErrorDec,
+            unsigned int maxLeafSize, 
+            unsigned int myAxisToSplit, 
+            const std::vector<double> &UBounds,
+            const std::vector<double> &LBounds, unsigned int &lastId);
         
     
-        std::vector <TrackletTreeNode> myChildren;
-        
         const unsigned int getNumVisits() const;
         void addVisit();
-
-        //double getMedianByAxis(
-        //std::vector<PointAndValue<unsigned int> > pointsAndValues,
-        //                     unsigned int axis);
-
-        //double maxByAxis(
-        //std::vector<PointAndValue<unsigned int> > pointsAndValues,
-        //unsigned int axis);
         
 
         // these are to be used by linkTracklets.
@@ -68,13 +61,6 @@ namespace mops {
         TrackletTreeNode * getLeftChild();
         TrackletTreeNode * getRightChild();
 
-        /*return a pointer to a const vector of the per-axis upper
-          bounds of this tree node.  The format is identical to the
-          double vector in the pointsAndValues used to create this
-          node.
-         */
-        const std::vector<double> *getUBounds() const;
-        const std::vector<double> *getLBounds() const;
         const std::vector<PointAndValue <unsigned int> > * getMyData() const;
         bool isLeaf() const;
 
@@ -87,12 +73,12 @@ namespace mops {
          * form)!
          */
         TrackletTreeNode(
-            std::vector<PointAndValue <unsigned int> > pointsAndValues, 
+            const std::vector<PointAndValue <unsigned int> > &pointsAndValue,
             unsigned int k, 
             unsigned int maxLeafSize, 
             unsigned int myAxisToSplit, 
-            std::vector<double> UBounds,
-            std::vector<double>LBounds, 
+            const std::vector<double> & UBounds,
+            const std::vector<double> & LBounds, 
             unsigned int &lastId);
 
 

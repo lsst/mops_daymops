@@ -44,10 +44,13 @@ namespace mops {
          *
          * automatically sets ref count to 1.
          */
-        KDTreeNode(std::vector<PointAndValue <T> > pointsAndValues, 
-                       unsigned int k, unsigned int maxLeafSize, 
-                       unsigned int myAxisToSplit, std::vector<double> Ubounds,
-                       std::vector<double>LBounds, unsigned int &lastId=0) 
+        KDTreeNode(const std::vector<PointAndValue <T> > &pointsAndValues, 
+                   unsigned int k, 
+                   unsigned int maxLeafSize, 
+                   unsigned int myAxisToSplit, 
+                   const std::vector<double> &Ubounds,
+                   const std::vector<double> &LBounds, 
+                   unsigned int &lastId=0) 
             
             : BaseKDTreeNode<T, KDTreeNode<T> >(pointsAndValues, 
                                                 k, maxLeafSize, 
@@ -56,8 +59,9 @@ namespace mops {
         
 
 
-        std::vector<PointAndValue <T> > rangeSearch(std::vector<double> queryPt, 
-                                                    double queryRange) const; 
+        std::vector<PointAndValue <T> > rangeSearch(
+            std::vector<double> queryPt, 
+            double queryRange) const; 
     
         std::vector<PointAndValue <T> > 
         hyperRectangleSearch(const std::vector<double> &queryPt, 

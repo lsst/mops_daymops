@@ -25,7 +25,6 @@
 #include "lsst/mops/Exceptions.h"
 #include "lsst/mops/daymops/linkTracklets/TrackletTree.h"
 
-
 namespace lsst {
     namespace mops {
 
@@ -275,7 +274,6 @@ BOOST_AUTO_TEST_CASE( trackletTreeNode_1 )
     BOOST_CHECK(Eq(resultingLBounds->at(4),
                    2.0 + 2.0 * posErr / dt));
 }
-
 
 
 BOOST_AUTO_TEST_CASE( linkTracklets_blackbox_1 )

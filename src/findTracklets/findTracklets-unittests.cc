@@ -38,6 +38,7 @@ BOOST_AUTO_TEST_CASE( findTracklets_blackbox_1 )
   config.maxDt = 1.5;
   pairs = findTracklets(myDets, config);
   BOOST_CHECK(pairs->size() == 0);
+  delete pairs;
 }
 
 

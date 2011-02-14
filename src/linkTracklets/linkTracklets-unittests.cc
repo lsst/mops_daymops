@@ -308,6 +308,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_4 )
     TrackSet * foundTracks = linkTracklets(allDets, allTracklets, myConfig);
 
     BOOST_CHECK(*foundTracks == expectedTracks);
+    delete foundTracks;
 
 }
 
@@ -335,6 +336,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_easy_1 )
   TrackSet * results = linkTracklets(myDets, pairs, myConfig);
   std::cout << "results were sized " << results->size() << std::endl;
   BOOST_CHECK(results->size() == 1);
+  delete results;
 }
 
 
@@ -415,7 +417,8 @@ BOOST_AUTO_TEST_CASE( linkTracklets_blackbox_1 )
   std::vector<Tracklet> pairs;
   linkTrackletsConfig myConfig;
   TrackSet * results = linkTracklets(myDets, pairs, myConfig);
-  BOOST_CHECK(pairs.size() == 0);
+  BOOST_CHECK(results->size() == 0);
+  delete results;
 }
 
 
@@ -455,6 +458,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_easy_2 )
   TrackSet * results = linkTracklets(myDets, pairs, myConfig);
 
   BOOST_CHECK(results->size() == 10);
+  delete results;
 }
 
 
@@ -489,6 +493,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_easy_3 )
   TrackSet * results = linkTracklets(myDets, pairs, myConfig);
 
   BOOST_CHECK(results->size() == 10);
+  delete results;
 }
 
 
@@ -519,6 +524,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_easy_4_1 )
 
   //std::cout << "results size = " << results->size() << '\n';
   BOOST_CHECK(results->size() == 1);
+  delete results;
 }
 
 
@@ -551,6 +557,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_easy_4 )
 
   //std::cout << "results size = " << results->size() << '\n';
   BOOST_CHECK(results->size() == 10);
+  delete results;
 }
 
 
@@ -615,6 +622,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_realworld_1) {
 
     TrackSet * results = linkTracklets(allDetections, allTracklets, myConfig);
     BOOST_CHECK(results->size() == 1);
+    delete results;
    
 }
 
@@ -666,6 +674,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_easy_5 )
   // }
 
   BOOST_CHECK(results->size() == 10);
+  delete results;
 }
 
 
@@ -712,6 +721,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_1 )
     TrackSet * foundTracks = linkTracklets(allDets, allTracklets, myConfig);
 
     BOOST_CHECK(*foundTracks == expectedTracks);
+    delete foundTracks;
 
 }
 
@@ -764,6 +774,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_2 )
 
 
     BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
 
 }
 
@@ -828,6 +839,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_3 )
     
 
     BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
     // std::cout << " got tracks: \n";
     // debugPrintTrackSet(foundTracks, allDets);
     // std::cout << " expected tracks: \n";
@@ -909,6 +921,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_4_pt_5 )
     std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
 
     BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
 
     // std::cout << " got tracks: \n";
     // debugPrintTrackSet(foundTracks, allDets);
@@ -989,6 +1002,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_5 )
     std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
 
     BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
 
 }
 
@@ -1052,6 +1066,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_5_high_acc )
     BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
 
     BOOST_CHECK(!implausibleTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
 
 }
 
@@ -1103,6 +1118,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_too_high_acc )
 
 
     BOOST_CHECK(!implausibleTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
 
 }
 
@@ -1200,6 +1216,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_5_1_plus_high_acc )
     std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
 
     BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
 
 }
 
@@ -1274,6 +1291,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_5_1 )
     std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
 
     BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
 
 }
 
@@ -1346,6 +1364,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_5_2 )
     std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
 
     BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
 
 }
 
@@ -1419,6 +1438,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_5_3 )
     std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
 
     BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
 
 }
 
@@ -1488,6 +1508,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_5_4 )
     std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
 
     BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
 
 }
 
@@ -1562,6 +1583,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_5_5 )
     std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
 
     BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
 
 }
 

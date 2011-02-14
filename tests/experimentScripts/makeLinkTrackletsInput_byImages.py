@@ -59,9 +59,12 @@ MJD_TO_NIGHT_NUM=lambda mjd: int(mjd)
 
 
 # set to True if dias will fit in memory; they will load at beginning
-# of execution and this will allow for faster lookups later.
-# set to False if debugging to avoid waiting on that all the time.
+# of execution and this will allow for MUCH faster lookups later.
+# set to False if debugging to avoid a big wait at startup.
 PRELOAD_DIAS=True
+
+
+
 
 WRITE_CPP_INFILES=True
 
@@ -107,7 +110,7 @@ def lookUpDia(allDias, diaId, cursor=None):
         return allDias[diaId]
     else:
         s = """ SELECT diaSourceId, ra, decl, taiMidPoint, mag, ssmId FROM 
-                %s.%s WHERE diaSourceId=%d; """ % (DIAS_DB, DIAS_TABLE, diaId)
+                %s.%s WHERE diaSourceId=%d; """ % (mopsDatabases.DIAS_DB, mopsDatabases.DIAS_TABLE, diaId)
         cursor.execute(s)
         [diaId, ra, dec, mjd, mag, objId] = cursor.fetchone()
         d = Detection(diaId=diaId, ra=ra, dec=dec, mjd=mjd, mag=mag, objId=objId)
@@ -287,7 +290,7 @@ def writeDetsIdsFiles(detsOutFile, idsOutFile, allTrackletsFileNames, allDias, c
         tletLine = trackletsFile.readline()
         while tletLine != "":
             ids = map(int, tletLine.split())
-            lineNums = map(lambda x: diaIdToLineNum[x], ids)
+            lineNums = map(lambda x: diaToLineNum[x], ids)
             trackletsAsString = " ".join(map(str, lineNums))
             idsOutFile.write("%s\n" % trackletsAsString)
             tletLine = trackletsFile.readline()

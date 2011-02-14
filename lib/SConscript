@@ -20,5 +20,6 @@ env.SharedLibrary(pkg, [j("..","src","rmsLineFit.cc"),
                         j("..","src","findTracklets","findTracklets.cc"),
                         j("..","src","linkTracklets","linkTracklets.cc"),
                         j("..","src","Orbit.cc"),
-                        j("..","src","orbitProximity","orbitProximity.cc"),
-                        j("..","src","PointAndValue.cc")], LIBS=env.getlibs("boost gsl pex_exceptions"))
+                        j("..","src","Tracklet.cc"),
+                        j("..","src","orbitProximity","orbitProximity.cc")],
+                  LIBS=env.getlibs("boost gsl pex_exceptions"))

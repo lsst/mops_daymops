@@ -41,8 +41,6 @@ int main(int argc, char* argv[])
 	  std::string("  optional arguments: ") + std::string("\n") +
 	  std::string("     -e / --detectionErrorThresh (float) : maximum allowed observational error, default = ")
 	  + boost::lexical_cast<std::string>(searchConfig.detectionLocationErrorThresh) + std::string("\n") +
-	  std::string("     -v / --velocityErrorThresh (float) : maximum velocity error for a tracklet, default = ")
-	  + boost::lexical_cast<std::string>(searchConfig.velocityErrorThresh) + std::string("\n") +
 	  std::string("     -D / --maxDecAcceleration (float) : maximum sky-plane acceleration of a track (declination),  default = ")
 	  + boost::lexical_cast<std::string>(searchConfig.maxDecAccel) + std::string("\n") +
 	  std::string("     -R / --maxRAAcceleration (float) : maximum sky-plane acceleration of a track (RA), default = ")
@@ -57,7 +55,6 @@ int main(int argc, char* argv[])
 	  { "trackletsFile", required_argument, NULL, 't' },
 	  { "outputFile", required_argument, NULL, 'o' },
 	  { "detectionErrorThresh", required_argument, NULL, 'e'},
-	  { "velocityErrorThresh", required_argument, NULL, 'v'},
 	  { "maxDecAcceleration", required_argument, NULL, 'D'},
 	  { "maxRAAcceleration", required_argument, NULL, 'R'},
 	  { "latestFirstEndpoint", required_argument, NULL, 'F'},
@@ -73,43 +70,26 @@ int main(int argc, char* argv[])
 
      
      int longIndex = -1;
-     const char *optString = "d:t:o:e:v:D:R:F:L:h";
+     const char *optString = "d:t:o:e:D:R:F:L:h";
      int opt = getopt_long( argc, argv, optString, longOpts, &longIndex );
      while( opt != -1 ) {
 	  switch( opt ) {
 	  case 'd':	       
-	       /*ss << optarg; 
-		 ss >> detectionsFileName;*/
 	       detectionsFileName = optarg;
 	       break;
 	  case 't':
-	       /*ss << optarg;
-		 ss >> trackletsFileName; */
 	       trackletsFileName = optarg;
 	       break;
 	  case 'o':
-	       /*ss << optarg;
-		 ss >> outputFileName; */
 	       searchConfig.outputFile = optarg;
 	       break;
 	  case 'e':
-	       /*ss << optarg;
-		 ss >> outputFileName; */
 	       searchConfig.detectionLocationErrorThresh = atof(optarg);
 	       break;
-	  case 'v':
-	       /*ss << optarg;
-		 ss >> outputFileName; */
-	       searchConfig.velocityErrorThresh = atof(optarg);
-	       break;
 	  case 'D':
-	       /*ss << optarg;
-		 ss >> outputFileName; */
 	       searchConfig.maxDecAccel = atof(optarg);
 	       break;
 	  case 'R':
-	       /*ss << optarg;
-		 ss >> outputFileName; */
 	       searchConfig.maxRAAccel = atof(optarg);
 	       break;
 

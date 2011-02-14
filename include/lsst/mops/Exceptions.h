@@ -60,6 +60,9 @@
 
         LSST_EXCEPTION_TYPE(UninitializedException, std::exception,
                             lsst::mops::UninitializedException)
+
+        LSST_EXCEPTION_TYPE(BadIndexException, std::exception,
+                            lsst::mops::BadIndexException)
         
     
     
@@ -98,6 +101,8 @@ LSST_EXCEPTION_TYPE(FileException, lsst::pex::exceptions::Exception,
 LSST_EXCEPTION_TYPE(UninitializedException, lsst::pex::exceptions::Exception,
                     lsst::mops::UninitializedException)
 
+LSST_EXCEPTION_TYPE(BadIndexException, lsst::pex::exceptions::Exception,
+                    lsst::mops::BadIndexException)
 
 
 

@@ -11,7 +11,7 @@ Import("env")
 #ext_libs = ["gsl", "gslcblas", "pex_exceptions"]
 		      
 commonStuff = ['common', 'MopsDetection',
-               'Orbit', 'TrackletVector', 'TrackSet', 'Track']
+               'Orbit', 'TrackletVector', 'TrackSet', 'Track', 'Tracklet']
 
 common_libs = []
 
@@ -20,9 +20,9 @@ for lib in commonStuff:
 
 
 common_libs.append(env.StaticLibrary('rmsLineFit', 
-                                     ['rmsLineFit.cc', 'common', 'MopsDetection']))
+                                     ['rmsLineFit.cc', 'common', 'MopsDetection', 'Tracklet']))
 
-common_libs.append(env.StaticLibrary('fileUtils', ['fileUtils.cc', 'MopsDetection']))
+common_libs.append(env.StaticLibrary('fileUtils', ['fileUtils.cc', 'MopsDetection','Tracklet']))
 
 
 common_libs.append(env.StaticLibrary('removeSubsets',  ['removeSubsets.cc'] + common_libs))

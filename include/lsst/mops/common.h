@@ -122,6 +122,10 @@ namespace mops {
 
         std::string stringToLower(std::string strToConvert);
         
+    // helper function for extending UBounds/LBounds in trees/treeNodes
+    void extendBounds(std::vector<double> &myBounds, 
+                      const std::vector<double> &childBounds,
+                      bool areUBounds);
 
 }} // close namespace lsst::mops
 

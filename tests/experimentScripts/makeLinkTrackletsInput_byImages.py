@@ -28,10 +28,10 @@ import mopsDatabases
 
 # YOU ABSOLUTELY MUST SET THESE ARGUMENTS
 
-TRACKLETS_BY_OBSHIST_DIR="/workspace1/jmyers/mopsHacksSanityCheck/tracklets/byObsHistId/"
+TRACKLETS_BY_OBSHIST_DIR="/workspace1/jmyers/nightlyDiasAstromErr/tracklets/collapsed/byObsHistId/"
 
 # place to put .miti files for input to c linkTracklets
-OUTPUT_LINKTRACKLETS_INFILE_DIR="/workspace1/jmyers/mopsHacksSanityCheck/tracklets/linkTrackletsInfiles/"
+OUTPUT_LINKTRACKLETS_INFILE_DIR="/workspace1/jmyers/nightlyDiasAstromErr_linkTrackletsInfiles_cpp_15dayWindows_collapsedTracklets/"
 
 # place to put start_t_ranges for each linkTracklets input files
 OUTPUT_START_T_RANGE_FILES_DIR=OUTPUT_LINKTRACKLETS_INFILE_DIR
@@ -63,7 +63,7 @@ MJD_TO_NIGHT_NUM=lambda mjd: int(mjd)
 # set to False if debugging to avoid waiting on that all the time.
 PRELOAD_DIAS=True
 
-WRITE_CPP_INFILES=False
+WRITE_CPP_INFILES=True
 
 class Detection(object):
     def __init__(self, diaId=None, ra=None, dec=None, mjd=None, mag=None, objId=None):
@@ -255,9 +255,10 @@ def writeDetsIdsFiles(detsOutFile, idsOutFile, allTrackletsFileNames, allDias, c
 
     writes the simpler linkTracklets input as would be used for C++
     linkTracklets; dets are all the diaSources (miti format) for the
-    data set and ids are the tracklets (as sets of diaIds) for all
-    tracklets in the data set."""
+    data set and ids are the tracklets (as sets of LINE NUMBERS into
+    the dtes file) for all tracklets in the data set."""
 
+    # first figure out what diaIds need to be written.
     allIds = []
     for trackletsFileName in allTrackletsFileNames:
         trackletsFile = file(trackletsFileName, 'r')
@@ -265,16 +266,32 @@ def writeDetsIdsFiles(detsOutFile, idsOutFile, allTrackletsFileNames, allDias, c
         while tletLine != "":
             ids = map(int, tletLine.split())
             allIds += ids
-            idsOutFile.write(tletLine)
             tletLine = trackletsFile.readline()
         trackletsFile.close()
 
-    for diaId in allIds:
+    # write dias that are needed.
+    lineNum = 0
+    diaToLineNum = {}
+    for diaId in allIds:            
         det = lookUpDia(allDias, diaId, cursor=cursor)
         detsOutFile.write("%d %2.10f %2.10f %2.10f %2.10f %s %s 0.0 0.0\n" % \
                               (diaId,
                                det.mjd, det.ra, det.dec, det.mag, FORCED_OBSCODE, 
                                det.objId))
+        diaToLineNum[diaId] = lineNum
+        lineNum += 1
+
+    # now translate from diaIds to indices (line nums) into the file.
+    for trackletsFileName in allTrackletsFileNames:
+        trackletsFile = file(trackletsFileName, 'r')
+        tletLine = trackletsFile.readline()
+        while tletLine != "":
+            ids = map(int, tletLine.split())
+            lineNums = map(lambda x: diaIdToLineNum[x], ids)
+            trackletsAsString = " ".join(map(str, lineNums))
+            idsOutFile.write("%s\n" % trackletsAsString)
+            tletLine = trackletsFile.readline()
+        trackletsFile.close()
 
 
 
@@ -306,10 +323,13 @@ def writeOutputFiles(allDias, cursor, obsHistsThisDataSet, supportObsHists, obsH
     mitiOut.close()
     mitiCheatSheetFile.close()
 
+    # turns out C linkTracklets takes start_t_range as a time offset (in days) from the first image. 
     startTRangeOut = os.path.join(OUTPUT_START_T_RANGE_FILES_DIR, basename + ".start_t_range")
     startTRangeOutFile = file(startTRangeOut,'w')
     startTRangeOutFile.write("%f"%(obsHistToExpMjd[obsHistsThisDataSet[-1]] - obsHistToExpMjd[obsHistsThisDataSet[0]] + EPSILON))
     startTRangeOutFile.close()
+    
+    
 
     if WRITE_CPP_INFILES:
         # new: write C++ style outputs as well.
@@ -325,7 +345,12 @@ def writeOutputFiles(allDias, cursor, obsHistsThisDataSet, supportObsHists, obsH
         writeDetsIdsFiles(detsOutFile, idsOutFile, allTrackletsFiles, allDias, cursor)
         detsOutFile.close()
         idsOutFile.close()
-
+        # write C++ style start_t_range, which takes a fixed MJD.
+        startTRangeOutCpp = os.path.join(OUTPUT_START_T_RANGE_FILES_DIR, basename + ".date.start_t_range")
+        startTRangeOutFileCpp = file(startTRangeOutCpp,'w')
+        startTRangeOutFileCpp.write("%f"%(obsHistToExpMjd[obsHistsThisDataSet[-1]] + EPSILON))
+        startTRangeOutFileCpp.close()
+        
 
     
 

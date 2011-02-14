@@ -529,7 +529,7 @@ void getAllDetectionsForTracklet(
 
 void setTrackletVelocities(
     const std::vector<MopsDetection> &allDetections,
-    std::vector<Tracklet> queryTracklets)
+    std::vector<Tracklet> &queryTracklets)
     
 {
     for (uint i = 0; i < queryTracklets.size(); i++) {

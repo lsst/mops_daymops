@@ -79,7 +79,7 @@ void TrackletTree::buildFromData(
                 pointsLBounds = trackletPoint;
             }
             extendBounds(pointsUBounds, trackletPoint, true);
-            extendBounds(pointsUBounds, trackletPoint, false);
+            extendBounds(pointsLBounds, trackletPoint, false);
         }
 
         // build root TrackletTreeNode

@@ -81,7 +81,6 @@ orbitProximity(std::vector<Orbit> dataOrbits,
  ***********************************************************************/
 KDTree<unsigned int> buildKDTree(const std::vector<Orbit> orbits)
 {
-    KDTree<unsigned int> toReturn;
     
     std::vector<PointAndValue<unsigned int> > vecPV;
     
@@ -104,7 +103,7 @@ KDTree<unsigned int> buildKDTree(const std::vector<Orbit> orbits)
 	vecPV.push_back(tempPV);
     }
     
-    toReturn.buildFromData(vecPV, orbitDimensions, 100);
+    KDTree<unsigned int> toReturn(vecPV, orbitDimensions, 100);
     return toReturn;
 }
 

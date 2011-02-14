@@ -68,14 +68,6 @@ namespace mops {
                unsigned int k, unsigned int maxLeafSize);
 
 
-        // public access to the build a tree after setting it up.
-        // void buildFromData(std::vector<PointAndValue <T> > pointsAndValues, 
-        //                    unsigned int k, unsigned int maxLeafSize) 
-        //     { 
-        //         this->buildFromData(pointsAndValues,
-        //                             k, maxLeafSize); 
-        //     }
-
         /* rangeSearch: given a point queryPt and a range queryRange, treat all
          * the data points in the tree as though they live on the same
          * homogenous Euclidean space (i.e. all dimensions have the ame units)

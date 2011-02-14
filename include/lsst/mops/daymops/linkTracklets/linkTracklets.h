@@ -64,7 +64,8 @@ public:
             trackMaxRms = .0005;
 
 
-
+            // Matt's old experiments indicate 16 is best.
+            // setting to 1 for unit testing for now.
             leafSize=16;
 
             restrictTrackStartTimes = false;
@@ -169,14 +170,6 @@ public:
       the minimum number of detections per track
      */
     unsigned int minDetectionsPerTrack;
-
-    /*
-      velocity error thresh: this is used when calculating whether two
-      regions could contain the same object.  this is the maximum
-      believable discrepancy between *actual* velocity and best-fit
-      velocity, measured in deg/day.
-     */
-    double velocityErrorThresh;
 
     /* 
        max # tracklets per each leaf node of the tree. Affects

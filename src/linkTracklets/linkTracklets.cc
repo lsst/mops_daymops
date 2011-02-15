@@ -1641,9 +1641,9 @@ void splitSupportRecursively(const TreeNodeAndTime& firstEndpoint, const TreeNod
     }
 
     if ((areCompatible(firstEndpoint, supportNode, searchConfig, rangeCache) && 
-       areCompatible(secondEndpoint, supportNode, searchConfig, rangeCache))) {
+         areCompatible(secondEndpoint, supportNode, searchConfig, rangeCache))) {
         //if (areMutuallyCompatible(firstEndpoint, supportNode,
-        //secondEndpoint, searchConfig)) {
+        //                      secondEndpoint, searchConfig)) {
 
         if (supportNode.myTree->isLeaf()) {
             newSupportNodes.push_back(supportNode);
@@ -2071,21 +2071,10 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
 
     initDebugTimingInfo();
 
-    double iterationTime = std::clock();
-    
-
-    if (DEBUG) {
-        std:: cout << "all MJDs: ";
-        std::map<ImageTime, TrackletTree >::const_iterator mapIter;
-        for (mapIter = trackletTimeToTreeMap.begin();
-             mapIter != trackletTimeToTreeMap.end();
-             mapIter++) {
-            std::cout << std::setprecision (10) << mapIter->first.getMJD() << " ";
-        }
-        std::cout << std::endl;
-    }
+    unsigned int numImages = trackletTimeToTreeMap.size();
 
     std::map<ImageTime, TrackletTree >::const_iterator firstEndpointIter;
+
     for (firstEndpointIter = trackletTimeToTreeMap.begin(); 
          firstEndpointIter != trackletTimeToTreeMap.end(); 
          firstEndpointIter++)
@@ -2095,6 +2084,7 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
         std::map<ImageTime, TrackletTree >::const_iterator 
             afterFirstIter = firstEndpointIter;
         afterFirstIter++;
+
 
         /* check if the user wants us to look for tracks starting at this time */
         if (( !searchConfig.restrictTrackStartTimes ) || 
@@ -2121,28 +2111,6 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
                     if (secondEndpointIter->first.getMJD() 
                         - firstEndpointIter->first.getMJD() 
                         >= searchConfig.minEndpointTimeSeparation) {
-                        if (DEBUG) {
-                            time_t rawtime;
-                            
-                            if (timeSince(iterationTime) > 5) {
-                                debugPrintTimingInfo(results);
-                            }
-                            iterationTime = std::clock();
-                            struct tm * timeinfo;
-                            
-                            time ( &rawtime );
-                            timeinfo = localtime ( &rawtime );                    
-                            
-                            std::cout << " current wall-clock time is " 
-                                      << asctime (timeinfo) << std::endl;
-                            std::cout << "attempting linking between times "
-                                      << std::setprecision(12)  
-                                      << firstEndpointIter->first.getMJD() 
-                                      << " and " 
-                                      << std::setprecision(12) 
-                                      << secondEndpointIter->first.getMJD() 
-                                      << std::endl;
-                        }
 
                         // get all intermediate points as support
                         // nodes.
@@ -2167,23 +2135,20 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
                             /* don't pass along second tracklets which
                                are 'too close' to the endpoints; see
                                linkTracklets.h for more comments */
-                            if ((fabs(supportPointIter->first.getMJD() 
-                                      - firstEndpointIter->first.getMJD()) 
-                                 > 
+                            double firstToSup = supportPointIter->first.getMJD() 
+                                - firstEndpointIter->first.getMJD(); 
+                            double supToSecond =  secondEndpointIter->first.getMJD() 
+                                - supportPointIter->first.getMJD();
+                            if ((firstToSup > 
                                  searchConfig.minSupportToEndpointTimeSeparation) 
                                 && 
-                                (fabs(supportPointIter->first.getMJD() 
-                                      - secondEndpointIter->first.getMJD())
-                                 > 
+                                (supToSecond > 
                                  searchConfig.minSupportToEndpointTimeSeparation)) 
                             {
                                 
                                 TreeNodeAndTime tmpTAT(supportPointIter->second.getRootNode(),
                                                        supportPointIter->first);
                                 supportPoints.push_back(tmpTAT);
-                                if (DEBUG) {
-                                    //std::cout << std::setprecision(10) << tmpTAT.myTime << " ";
-                                }
                             }
                         }
                 
@@ -2206,6 +2171,31 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
                         // trees.
                         LTCache rangeCache(CACHE_SIZE);
 
+                        double iterationTime = std::clock();
+                        if (searchConfig.myVerbosity.printStatus) {
+                            std::cerr << "Looking for tracks between images at times " 
+                                      << std::setprecision(12) 
+                                      << firstEndpointIter->first.getMJD() 
+                                      << " (image " << firstEndpointIter->first.getImageId() 
+                                      << " / " << numImages << ")"
+                                      << " and " 
+                                      << std::setprecision(12)
+                                      << secondEndpointIter->first.getMJD()
+                                      << " (image " 
+                                      << secondEndpointIter->first.getImageId() 
+                                      << " / " << numImages << ") "
+                                      << " (with " 
+                                      << supportPoints.size() << " support images).\n";
+                            struct tm * timeinfo;
+                            time_t rawtime;
+                            time ( &rawtime );
+                            timeinfo = localtime ( &rawtime );                    
+                            
+                            std::cerr << " current wall-clock time is " 
+                                      << asctime (timeinfo);
+
+                        }
+ 
                         doLinkingRecurse(allDetections,
                                          allTracklets, 
                                          searchConfig,
@@ -2216,7 +2206,18 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
                                          ITERATIONS_PER_SPLIT, 
                                          rangeCache);
 
-
+                        if (searchConfig.myVerbosity.printStatus) {
+                            time_t rawtime;
+                            
+                            struct tm * timeinfo;
+                            std::cerr << "That iteration took " 
+                                      << timeSince(iterationTime) << " seconds. "
+                                      << std::endl;
+                            std::cerr << " so far, we have found " << 
+                                results.size() << " tracks.\n\n";
+                            time ( &rawtime );
+                            timeinfo = localtime ( &rawtime );                    
+                        }
                     }
                 }
             }
@@ -2265,18 +2266,35 @@ TrackSet* linkTracklets(const std::vector<MopsDetection> &allDetections,
       DecVelocity] and the returned keys are indices into
       queryTracklets.
     */
+    if (searchConfig.myVerbosity.printStatus) {
+        std::cerr << "Setting tracklet velocities.\n";
+    }
     setTrackletVelocities(allDetections, queryTracklets);
+
+    if (searchConfig.myVerbosity.printStatus) {
+        std::cerr << "Sorting tracklets by image time and creating trees.\n";
+    }
     std::map<ImageTime, TrackletTree > trackletTimeToTreeMap;    
     makeTrackletTimeToTreeMap(allDetections, 
                               queryTracklets, 
                               trackletTimeToTreeMap, 
                               searchConfig);
-    //std::cout << "Beginning the linking process.\n";
+    if (searchConfig.myVerbosity.printStatus) {
+        std::cerr << "Doing the linking.\n";
+    }
     doLinking(allDetections, 
               queryTracklets, 
               searchConfig, 
               trackletTimeToTreeMap, 
               *toRet);
+    if (searchConfig.myVerbosity.printStatus) {
+        std::cerr << "Finished linking.\n";
+    }
+    if (searchConfig.myVerbosity.printVisitCounts) {
+        std::cerr << "Made " << doLinkingRecurseVisits << " calls to doLinkingRecurse.\n";
+        std::cerr << "Made " << buildTracksAddToResultsVisits << 
+            " calls to buildTracksAddToResults.\n";
+    }
     
     return toRet;
 }

@@ -18,6 +18,29 @@ enum trackOutputMethod { RETURN_TRACKS = 0,
                          IDS_FILE,
                          IDS_FILE_WITH_CACHE};
 
+
+/* use settings in this class to declare the verbosity of
+ * linkTracklets. Useful for debugging. */
+class linkTrackletsVerbositySettings 
+{
+public: 
+    linkTrackletsVerbositySettings() {
+        /* if set to true, will announce what phase of processing is
+         * going on and which imag e endpoint pair is in use for
+         * linking.
+         */
+        printStatus = false;
+        printVisitCounts = false;
+        printTimesByCategory = false;
+    }
+    bool printStatus;
+    bool printVisitCounts;
+    bool printTimesByCategory;
+};
+
+
+
+
 /*
  * linkTrackletsConfig is a simple class which holds the many configurable
  * parameters for running linkTracklets.  The default values should be 
@@ -79,7 +102,7 @@ public:
             outputMethod = RETURN_TRACKS;
             outputFile = "";
             outputBufferSize = 0;
-
+            
         }
 
     /* acceleration terms are in degrees/(day^2)
@@ -196,9 +219,9 @@ public:
     std::string outputFile;
     unsigned int outputBufferSize;
 
+    linkTrackletsVerbositySettings myVerbosity;
 
 };
-
 
 
 

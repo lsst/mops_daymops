@@ -8,10 +8,10 @@ import os
 INFILES_GLOB=glob.glob("../*.miti")
 START_T_RANGE_FOR_INFILE=lambda inf: inf[:-4] + "start_t_range"
 CPP_START_T_RANGE_FOR_INFILE=lambda inf: inf[:-4] + "date.start_t_range"
-CPP_DETS_FOR_INFILE=lambda inf: inf[:-4] + ".dets"
-CPP_IDS_FOR_INFILE=lambda inf: inf[:-4] + ".ids"
-CPP_TRACKS_FOR_INFILE=lambda inf: inf[:-4] + ".cpp.tracks"
-CPP_OUTF_FOR_INFILE=lambda inf: os.path.basename(inf[:-4] + ".cpp.cmd.sh")
+CPP_DETS_FOR_INFILE=lambda inf: inf[:-4] + "dets"
+CPP_IDS_FOR_INFILE=lambda inf: inf[:-4] + "ids"
+CPP_TRACKS_FOR_INFILE=lambda inf: inf[:-4] + "cpp.tracks"
+CPP_OUTF_FOR_INFILE=lambda inf: os.path.basename(inf[:-4] + "cpp.cmd.sh")
 
 BASENAME_FOR_INFILE=lambda inf: os.path.basename(inf[:-5])
 OUTF_FOR_INFILE=lambda inf: os.path.basename(inf[:-4] + "c.cmd.sh")
@@ -39,12 +39,14 @@ def writeCppRunScript(infile, startTRangeFile):
     dets = CPP_DETS_FOR_INFILE(infile)
     ids = CPP_IDS_FOR_INFILE(infile)
     tracks = CPP_TRACKS_FOR_INFILE(infile)
-    args = "-d " + dets + " -t " + ids + " -o " + tracks
+    startRange = CPP_START_T_RANGE_FOR_INFILE(infile)
+
+    args = "-d " + dets + " -t " + ids + " -o " + tracks + " -F `cat " + startRange + "`"
 
     outS = """#!/usr/bin/bash
 
 
-CMD="$MOPS_DAYMOPS_DIR/bin/linkTracklets """ + args + """
+CMD="$MOPS_DAYMOPS_DIR/bin/linkTracklets """ + args + """ "
 
 echo Running: $CMD
 

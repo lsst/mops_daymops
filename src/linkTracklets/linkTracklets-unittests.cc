@@ -23,12 +23,18 @@
 #include "lsst/mops/Tracklet.h"
 #include "lsst/mops/daymops/linkTracklets/linkTracklets.h"
 #include "lsst/mops/Exceptions.h"
-
+#include "lsst/mops/daymops/linkTracklets/TrackletTree.h"
 
 namespace lsst {
     namespace mops {
 
 
+
+/*********************************************************************
+
+                          HELPER FUNCTIONS
+
+*********************************************************************/
 
 bool Eq(double a, double b) 
 {
@@ -183,14 +189,6 @@ Track generateTrack(double ra0, double dec0, double raV, double decV,
 
 
 
-
-
-
-
-
-
-
-
 // helper function for creating sets of detections
 void addDetectionAt(double MJD, double RA, double dec,  std::vector<MopsDetection> &detVec)
 {
@@ -208,16 +206,47 @@ void addPair(unsigned int id1, unsigned int id2, std::vector<Tracklet> &tracklet
 }
 
 
-BOOST_AUTO_TEST_CASE( linkTracklets_blackbox_1 )
+
+
+
+
+
+
+/*********************************************************************
+
+                          UNIT TESTS
+
+*********************************************************************/
+
+
+
+
+BOOST_AUTO_TEST_CASE( linkTracklets_easy_4_1 )
 {
-  // call with empty dets
+    // same as 1, but with track crossing RA 0 line
+
   std::vector<MopsDetection> myDets;
   std::vector<Tracklet> pairs;
-  linkTrackletsConfig myConfig;
-  TrackSet * results = linkTracklets(myDets, pairs, myConfig);
-  BOOST_CHECK(pairs.size() == 0);
-}
 
+  addDetectionAt(5300.0,  359.9,       50, myDets);
+  addDetectionAt(5300.01, 359.901, 50.001, myDets);
+  addDetectionAt(5301.0,  0.,        50.1, myDets);
+  addDetectionAt(5301.01, 0.001,    50.101, myDets);
+  addDetectionAt(5302.0,   0.1,      50.2, myDets);
+  addDetectionAt(5302.01,  0.101,  50.201, myDets);
+  
+  addPair(0,1, pairs);
+  addPair(2,3, pairs);
+  addPair(4,5, pairs);
+  
+  linkTrackletsConfig myConfig;
+
+  TrackSet * results = linkTracklets(myDets, pairs, myConfig);
+
+  //std::cout << "results size = " << results->size() << '\n';
+  BOOST_CHECK(results->size() == 1);
+  delete results;
+}
 
 
 
@@ -243,9 +272,96 @@ BOOST_AUTO_TEST_CASE( linkTracklets_easy_1 )
   linkTrackletsConfig myConfig;
 
   TrackSet * results = linkTracklets(myDets, pairs, myConfig);
-
+  std::cout << "results were sized " << results->size() << std::endl;
   BOOST_CHECK(results->size() == 1);
+  delete results;
 }
+
+
+
+
+
+
+BOOST_AUTO_TEST_CASE( trackletTreeNode_1 )
+{
+
+    std::vector<PointAndValue <unsigned int> > tracklets;
+    PointAndValue<unsigned int> tmpPav;
+    double dt = .0001;
+    double posErr = .01;
+    std::vector<double> pos;
+    pos.push_back(1.0);
+    pos.push_back(1.0);
+    pos.push_back(1.0);
+    pos.push_back(1.0);
+    pos.push_back(dt);
+    tmpPav.setPoint(pos);
+    tmpPav.setValue(1);
+    tracklets.push_back(tmpPav);
+    pos.clear();
+    pos.push_back(2.0);
+    pos.push_back(2.0);
+    pos.push_back(2.0);
+    pos.push_back(2.0);
+    pos.push_back(dt);
+    tmpPav.setPoint(pos);
+    tmpPav.setValue(2);
+    tracklets.push_back(tmpPav);
+    pos.clear();    
+    std::vector<double>UBounds;
+    UBounds.push_back(2.0);
+    UBounds.push_back(2.0);
+    UBounds.push_back(2.0);
+    UBounds.push_back(2.0);
+    std::vector<double>LBounds;
+    LBounds.push_back(1.0);
+    LBounds.push_back(1.0);
+    LBounds.push_back(1.0);
+    LBounds.push_back(1.0);
+    unsigned int startId = 0;
+    TrackletTreeNode myTTN(tracklets, posErr, posErr, 1, 0, 
+                           UBounds, LBounds, startId);
+    std::vector<double> const *resultingUBounds;
+    std::vector<double> const *resultingLBounds;
+    resultingUBounds = myTTN.getUBounds();
+    resultingLBounds = myTTN.getLBounds();
+
+    // check that position errors were set correctly.
+    BOOST_CHECK(Eq(resultingUBounds->at(0),
+                   2.0 + posErr));
+    BOOST_CHECK(Eq(resultingUBounds->at(1),
+                   2.0 + posErr));
+    BOOST_CHECK(Eq(resultingLBounds->at(0),
+                   1.0 - posErr));
+    BOOST_CHECK(Eq(resultingLBounds->at(1),
+                   1.0 - posErr));
+    // check velocity errors are set correctly
+    BOOST_CHECK(Eq(resultingUBounds->at(2),
+                   2.0 + 2.0 * posErr / dt));
+    BOOST_CHECK(Eq(resultingUBounds->at(3),
+                   2.0 + 2.0 * posErr / dt));
+
+    BOOST_CHECK(Eq(resultingLBounds->at(2),
+                   1.0 - 2.0 * posErr / dt));
+    BOOST_CHECK(Eq(resultingLBounds->at(3),
+                   1.0 - 2.0 * posErr / dt));
+}
+
+
+BOOST_AUTO_TEST_CASE( linkTracklets_blackbox_1 )
+{
+  // call with empty dets
+  std::vector<MopsDetection> myDets;
+  std::vector<Tracklet> pairs;
+  linkTrackletsConfig myConfig;
+  TrackSet * results = linkTracklets(myDets, pairs, myConfig);
+  BOOST_CHECK(results->size() == 0);
+  delete results;
+}
+
+
+
+
 
 
 
@@ -280,6 +396,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_easy_2 )
   TrackSet * results = linkTracklets(myDets, pairs, myConfig);
 
   BOOST_CHECK(results->size() == 10);
+  delete results;
 }
 
 
@@ -314,37 +431,11 @@ BOOST_AUTO_TEST_CASE( linkTracklets_easy_3 )
   TrackSet * results = linkTracklets(myDets, pairs, myConfig);
 
   BOOST_CHECK(results->size() == 10);
+  delete results;
 }
 
 
 
-
-
-BOOST_AUTO_TEST_CASE( linkTracklets_easy_4_1 )
-{
-    // same as 1, but with track crossing RA 0 line
-
-  std::vector<MopsDetection> myDets;
-  std::vector<Tracklet> pairs;
-
-  addDetectionAt(5300.0,  359.9,       50, myDets);
-  addDetectionAt(5300.01, 359.901, 50.001, myDets);
-  addDetectionAt(5301.0,  0.,        50.1, myDets);
-  addDetectionAt(5301.01, 0.001,    50.101, myDets);
-  addDetectionAt(5302.0,   0.1,      50.2, myDets);
-  addDetectionAt(5302.01,  0.101,  50.201, myDets);
-  
-  addPair(0,1, pairs);
-  addPair(2,3, pairs);
-  addPair(4,5, pairs);
-  
-  linkTrackletsConfig myConfig;
-
-  TrackSet * results = linkTracklets(myDets, pairs, myConfig);
-
-  //std::cout << "results size = " << results->size() << '\n';
-  BOOST_CHECK(results->size() == 1);
-}
 
 
 
@@ -376,6 +467,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_easy_4 )
 
   //std::cout << "results size = " << results->size() << '\n';
   BOOST_CHECK(results->size() == 10);
+  delete results;
 }
 
 
@@ -406,7 +498,6 @@ BOOST_AUTO_TEST_CASE( linkTracklets_realworld_1) {
      */
 
     linkTrackletsConfig myConfig;
-    myConfig.velocityErrorThresh = .192;
     myConfig.detectionLocationErrorThresh = .002;
 
     tmp.fromMITIString("2 49523.416229 353.624260 0.521654 20.940280 566 10682481 0. 0.");
@@ -441,6 +532,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_realworld_1) {
 
     TrackSet * results = linkTracklets(allDetections, allTracklets, myConfig);
     BOOST_CHECK(results->size() == 1);
+    delete results;
    
 }
 
@@ -492,6 +584,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_easy_5 )
   // }
 
   BOOST_CHECK(results->size() == 10);
+  delete results;
 }
 
 
@@ -538,6 +631,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_1 )
     TrackSet * foundTracks = linkTracklets(allDets, allTracklets, myConfig);
 
     BOOST_CHECK(*foundTracks == expectedTracks);
+    delete foundTracks;
 
 }
 
@@ -590,6 +684,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_2 )
 
 
     BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
 
 }
 
@@ -654,12 +749,99 @@ BOOST_AUTO_TEST_CASE( linkTracklets_3 )
     
 
     BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
     // std::cout << " got tracks: \n";
     // debugPrintTrackSet(foundTracks, allDets);
     // std::cout << " expected tracks: \n";
     // debugPrintTrackSet(expectedTracks, allDets);
 
 }
+
+
+
+
+
+
+
+
+
+
+BOOST_AUTO_TEST_CASE( linkTracklets_4_pt_5 )
+{
+
+    // lots of tracks, following a coherent pattern but randomly perturbed.
+    TrackSet expectedTracks;
+    std::vector<MopsDetection> allDets;
+    std::vector<Tracklet> allTracklets;
+    unsigned int firstDetId = -1;
+    unsigned int firstTrackletId = -1;
+
+  
+    linkTrackletsConfig myConfig;
+
+    std::vector<std::vector<double> > imgTimes(3);
+
+    imgTimes.at(0).push_back(5300);
+    imgTimes.at(0).push_back(5300.03);
+
+    imgTimes.at(1).push_back(5305);
+    imgTimes.at(1).push_back(5305.03);
+
+    imgTimes.at(2).push_back(5312);
+    imgTimes.at(2).push_back(5312.03);
+
+    // seed the random number generator with a known value;
+    // this way the test will be identical on each run.
+    srand(2); // srand(1);
+
+    for (unsigned int i = 0; i < 10; i++) {
+
+        // get 6 floating point numbers between 0 and 1.
+        std::vector<double> someRands;         
+        for (unsigned int j = 0; j < 6; j++) {
+            someRands.push_back( (double) rand() / RAND_MAX );
+        }
+        //generate a random permutation on this track.
+        expectedTracks.insert(generateTrack(20. + someRands[0] * 10., //location 
+                                            20. + someRands[1] * 10., //location
+                                            (someRands[2] - .1) * 2., //1 in 10 chance of retrograde, maxv 2
+                                            (someRands[3] - .5) * .5, // maxv .5 in dec 
+                                            (someRands[4]) * .0019, //max acc of .0019, always positive
+                                            (someRands[5]) * .0019, //same
+                                            imgTimes, 
+                                            allDets, allTracklets, 
+                                            firstDetId, firstTrackletId));
+    }
+
+    struct tm * timeinfo;
+    time_t rawtime;
+    
+    time ( &rawtime );
+    timeinfo = localtime ( &rawtime );                    
+    
+    std::cout << "Generated " << expectedTracks.size() << " tracks. Calling linkTracklets ";
+    std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
+
+    TrackSet * foundTracks = linkTracklets(allDets, allTracklets, myConfig);
+
+    time ( &rawtime );
+    timeinfo = localtime ( &rawtime );                    
+    
+    std::cout << "got " << foundTracks->size() << " results, checking if they contain the true tracks ";
+    std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
+
+    BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
+
+    // std::cout << " got tracks: \n";
+    // debugPrintTrackSet(foundTracks, allDets);
+    // std::cout << " expected tracks: \n";
+    // debugPrintTrackSet(expectedTracks, allDets);
+
+
+
+}
+
 
 
 
@@ -761,87 +943,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_4 )
     TrackSet * foundTracks = linkTracklets(allDets, allTracklets, myConfig);
 
     BOOST_CHECK(*foundTracks == expectedTracks);
-
-}
-
-
-
-
-
-
-
-BOOST_AUTO_TEST_CASE( linkTracklets_4_pt_5 )
-{
-
-    // lots of tracks, following a coherent pattern but randomly perturbed.
-    TrackSet expectedTracks;
-    std::vector<MopsDetection> allDets;
-    std::vector<Tracklet> allTracklets;
-    unsigned int firstDetId = -1;
-    unsigned int firstTrackletId = -1;
-
-  
-    linkTrackletsConfig myConfig;
-
-    std::vector<std::vector<double> > imgTimes(3);
-
-    imgTimes.at(0).push_back(5300);
-    imgTimes.at(0).push_back(5300.03);
-
-    imgTimes.at(1).push_back(5305);
-    imgTimes.at(1).push_back(5305.03);
-
-    imgTimes.at(2).push_back(5312);
-    imgTimes.at(2).push_back(5312.03);
-
-    // seed the random number generator with a known value;
-    // this way the test will be identical on each run.
-    srand(2); // srand(1);
-
-    for (unsigned int i = 0; i < 10; i++) {
-
-        // get 6 floating point numbers between 0 and 1.
-        std::vector<double> someRands;         
-        for (unsigned int j = 0; j < 6; j++) {
-            someRands.push_back( (double) rand() / RAND_MAX );
-        }
-        //generate a random permutation on this track.
-        expectedTracks.insert(generateTrack(20. + someRands[0] * 10., //location 
-                                            20. + someRands[1] * 10., //location
-                                            (someRands[2] - .1) * 2., //1 in 10 chance of retrograde, maxv 2
-                                            (someRands[3] - .5) * .5, // maxv .5 in dec 
-                                            (someRands[4]) * .0019, //max acc of .0019, always positive
-                                            (someRands[5]) * .0019, //same
-                                            imgTimes, 
-                                            allDets, allTracklets, 
-                                            firstDetId, firstTrackletId));
-    }
-
-    struct tm * timeinfo;
-    time_t rawtime;
-    
-    time ( &rawtime );
-    timeinfo = localtime ( &rawtime );                    
-    
-    std::cout << "Generated " << expectedTracks.size() << " tracks. Calling linkTracklets ";
-    std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
-
-    TrackSet * foundTracks = linkTracklets(allDets, allTracklets, myConfig);
-
-    time ( &rawtime );
-    timeinfo = localtime ( &rawtime );                    
-    
-    std::cout << "got " << foundTracks->size() << " results, checking if they contain the true tracks ";
-    std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
-
-    BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
-
-    // std::cout << " got tracks: \n";
-    // debugPrintTrackSet(foundTracks, allDets);
-    // std::cout << " expected tracks: \n";
-    // debugPrintTrackSet(expectedTracks, allDets);
-
-
+    delete foundTracks;
 
 }
 
@@ -915,6 +1017,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_5 )
     std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
 
     BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
 
 }
 
@@ -978,6 +1081,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_5_high_acc )
     BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
 
     BOOST_CHECK(!implausibleTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
 
 }
 
@@ -1029,6 +1133,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_too_high_acc )
 
 
     BOOST_CHECK(!implausibleTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
 
 }
 
@@ -1126,6 +1231,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_5_1_plus_high_acc )
     std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
 
     BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
 
 }
 
@@ -1200,6 +1306,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_5_1 )
     std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
 
     BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
 
 }
 
@@ -1272,6 +1379,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_5_2 )
     std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
 
     BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
 
 }
 
@@ -1345,6 +1453,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_5_3 )
     std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
 
     BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
 
 }
 
@@ -1414,6 +1523,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_5_4 )
     std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
 
     BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
 
 }
 
@@ -1488,6 +1598,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_5_5 )
     std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
 
     BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
 
 }
 

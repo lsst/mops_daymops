@@ -15,16 +15,26 @@ Import("common_libs")
 
 
 
-		      
+TrackletTreeNode = env.StaticLibrary('TrackletTreeNode',
+                                     'TrackletTreeNode.cc')
 
-env.Library('../../lib/linkTracklets', ['linkTracklets.cc'] + common_libs, 
+TrackletTree = env.StaticLibrary('TrackletTree',
+                                 'TrackletTree.cc')
+
+env.Library('../../lib/linkTracklets', 
+            ['linkTracklets.cc']             
+            + common_libs + [TrackletTreeNode, TrackletTree], 
             LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
 
-env.Program('../../tests/linkTracklets-unitTests', ['linkTracklets-unittests.cc', 'linkTracklets.o'] + common_libs,
+env.Program('../../tests/linkTracklets-unitTests', 
+            ['linkTracklets-unittests.cc', 'linkTracklets.o']
+            + common_libs + [TrackletTreeNode, TrackletTree],
             LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
 
 
-env.Program('../../bin/linkTracklets', ['linkTrackletsMain.cc', 'linkTracklets.o'] + common_libs,
+env.Program('../../bin/linkTracklets', 
+            ['linkTrackletsMain.cc', 'linkTracklets.o',
+             'TrackletTree', 'TrackletTreeNode'] + common_libs,
             LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
 
 

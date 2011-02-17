@@ -278,9 +278,7 @@ void generateTreeMap(std::vector< std::vector<FieldProximityTrack> > *trackSets,
                     vecPV.push_back(tempPV);
 
                 }
-                KDTree<int> tempKDTree;
-
-                tempKDTree.buildFromData(vecPV, 2, 100);
+                KDTree<int> tempKDTree(vecPV, 2, 100);
                 myTreeMap->insert(std::make_pair(thisEpoch, tempKDTree) );
             }
         }

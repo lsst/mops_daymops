@@ -611,22 +611,6 @@ BOOST_AUTO_TEST_CASE( angularDistance_3 )
  * some queries are from the 'other side' of zero.)
  */
 
-void populateTree_Dataset1(KDTree<int> &kdt)
-{
-    std::vector<PointAndValue<int> > myPts;
-    PointAndValue<int> tmpPAV;
-
-    std::vector<double>tmpPt;
-    tmpPt.push_back(10.0);
-    tmpPt.push_back(20.0);
-
-    tmpPAV.setPoint(tmpPt);
-    tmpPAV.setValue(30);
-    myPts.push_back(tmpPAV);
-
-    kdt.buildFromData(myPts, 2, 1);
-}
-
 
 
 void queryTree_Dataset1(KDTree<int> &kdt)
@@ -706,52 +690,8 @@ void queryTree_Dataset1(KDTree<int> &kdt)
 
 
 
-BOOST_AUTO_TEST_CASE( KDTree_blackbox_1 )
-{
-    KDTree<int> myKDT;
-    KDTree<int> myKDT2;
-
-    populateTree_Dataset1(myKDT);
-    queryTree_Dataset1(myKDT);
-
-    //test operator= , make sure it works as expected
-    myKDT2 = myKDT;
-    queryTree_Dataset1(myKDT2);
-
-    //test copy constructor, make sure it works as expected
-    KDTree<int> myKDT3(myKDT);
-
-    queryTree_Dataset1(myKDT3);
-}
 
 
-
-
-/* populate/queryTree with data set 1: 
-   this time, 100 pts, basically a grid of all points of the form
-   (i,j) where i,j are integers and 0 <= i,j < 10.  each should have a unique ID from 0 to 99.
- */
-
-void populateTree_Dataset2(KDTree<int> &kdt)
-{
-    std::vector<PointAndValue<int> > myPts;
-
-    for (int i = 0; i < 10; i++)
-    {
-        for (int j = 0; j < 10; j++)
-        {
-            std::vector<double>tmpPt;
-            tmpPt.push_back(i);
-            tmpPt.push_back(j);            
-            PointAndValue<int> tmpPAV;
-            tmpPAV.setPoint(tmpPt);
-            tmpPAV.setValue(i*10+j);
-            myPts.push_back(tmpPAV);
-        }
-    }
-
-    kdt.buildFromData(myPts, 2, 1);
-}
 
 
 
@@ -855,23 +795,6 @@ void queryTree_Dataset2(KDTree<int> &kdt)
 
 
 
-BOOST_AUTO_TEST_CASE( KDTree_blackbox_2 )
-{
-    KDTree<int> myKDT;
-    KDTree<int> myKDT2;
-
-    populateTree_Dataset2(myKDT);
-    queryTree_Dataset2(myKDT);
-
-    //test operator= , make sure it works as expected
-    myKDT2 = myKDT;
-    queryTree_Dataset2(myKDT2);
-
-    //test copy constructor, make sure it works as expected
-    KDTree<int> myKDT3(myKDT);
-
-    queryTree_Dataset2(myKDT3);
-}
 
 
 

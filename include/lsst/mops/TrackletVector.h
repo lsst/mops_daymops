@@ -37,6 +37,8 @@ public:
      */
     TrackletVector(std::string outFileName, bool useCache=false, unsigned int cacheSize=0);
 
+    /* copy constructor intentionally ignored, because C++
+     * does not allow copying of streams. */
 
     /*
      * calls purgeToFile for you, in case there are still items in the

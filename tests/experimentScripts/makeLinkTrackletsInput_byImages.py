@@ -28,10 +28,11 @@ import mopsDatabases
 
 # YOU ABSOLUTELY MUST SET THESE ARGUMENTS
 
-TRACKLETS_BY_OBSHIST_DIR="/workspace1/jmyers/mopsHacksSanityCheck/tracklets/byObsHistId/"
+TRACKLETS_BY_OBSHIST_DIR="/workspace1/jmyers/nightlyDiasAstromErr/tracklets/collapsed/byObsHistId/"
 
 # place to put .miti files for input to c linkTracklets
-OUTPUT_LINKTRACKLETS_INFILE_DIR="/workspace1/jmyers/mopsHacksSanityCheck/tracklets/linkTrackletsInfiles/"
+OUTPUT_LINKTRACKLETS_INFILE_DIR="/workspace1/jmyers/nightlyDiasAstromErr_linkTrackletsInfiles_cpp_15dayWindows_collapsedTracklets/"
+
 
 # place to put start_t_ranges for each linkTracklets input files
 OUTPUT_START_T_RANGE_FILES_DIR=OUTPUT_LINKTRACKLETS_INFILE_DIR
@@ -44,8 +45,8 @@ FORCED_OBSCODE="807"
 # this needs to be larger than the min time between images.
 EPSILON=1e-5
 
-TRACKING_WINDOW_DAYS=20 # in days; we only look for tracks spanning <= this number of nights.
-MAX_START_IMAGES_PER_RUN=15
+TRACKING_WINDOW_DAYS=15 # in days; we only look for tracks spanning <= this number of nights.
+MAX_START_IMAGES_PER_RUN=1
 
 TRACKLETS_BY_OBSHIST_SUFFIX=".tracklets.byDiaId"
 OBSHIST_TO_TRACKLETS_FILE=lambda x: os.path.join(TRACKLETS_BY_OBSHIST_DIR) + str(x) + TRACKLETS_BY_OBSHIST_SUFFIX
@@ -59,11 +60,14 @@ MJD_TO_NIGHT_NUM=lambda mjd: int(mjd)
 
 
 # set to True if dias will fit in memory; they will load at beginning
-# of execution and this will allow for faster lookups later.
-# set to False if debugging to avoid waiting on that all the time.
+# of execution and this will allow for MUCH faster lookups later.
+# set to False if debugging to avoid a big wait at startup.
 PRELOAD_DIAS=True
 
-WRITE_CPP_INFILES=False
+
+
+
+WRITE_CPP_INFILES=True
 
 class Detection(object):
     def __init__(self, diaId=None, ra=None, dec=None, mjd=None, mag=None, objId=None):
@@ -107,7 +111,7 @@ def lookUpDia(allDias, diaId, cursor=None):
         return allDias[diaId]
     else:
         s = """ SELECT diaSourceId, ra, decl, taiMidPoint, mag, ssmId FROM 
-                %s.%s WHERE diaSourceId=%d; """ % (DIAS_DB, DIAS_TABLE, diaId)
+                %s.%s WHERE diaSourceId=%d; """ % (mopsDatabases.DIAS_DB, mopsDatabases.DIAS_TABLE, diaId)
         cursor.execute(s)
         [diaId, ra, dec, mjd, mag, objId] = cursor.fetchone()
         d = Detection(diaId=diaId, ra=ra, dec=dec, mjd=mjd, mag=mag, objId=objId)
@@ -255,9 +259,10 @@ def writeDetsIdsFiles(detsOutFile, idsOutFile, allTrackletsFileNames, allDias, c
 
     writes the simpler linkTracklets input as would be used for C++
     linkTracklets; dets are all the diaSources (miti format) for the
-    data set and ids are the tracklets (as sets of diaIds) for all
-    tracklets in the data set."""
+    data set and ids are the tracklets (as sets of LINE NUMBERS into
+    the dtes file) for all tracklets in the data set."""
 
+    # first figure out what diaIds need to be written.
     allIds = []
     for trackletsFileName in allTrackletsFileNames:
         trackletsFile = file(trackletsFileName, 'r')
@@ -265,16 +270,32 @@ def writeDetsIdsFiles(detsOutFile, idsOutFile, allTrackletsFileNames, allDias, c
         while tletLine != "":
             ids = map(int, tletLine.split())
             allIds += ids
-            idsOutFile.write(tletLine)
             tletLine = trackletsFile.readline()
         trackletsFile.close()
 
-    for diaId in allIds:
+    # write dias that are needed.
+    lineNum = 0
+    diaToLineNum = {}
+    for diaId in allIds:            
         det = lookUpDia(allDias, diaId, cursor=cursor)
         detsOutFile.write("%d %2.10f %2.10f %2.10f %2.10f %s %s 0.0 0.0\n" % \
                               (diaId,
                                det.mjd, det.ra, det.dec, det.mag, FORCED_OBSCODE, 
                                det.objId))
+        diaToLineNum[diaId] = lineNum
+        lineNum += 1
+
+    # now translate from diaIds to indices (line nums) into the file.
+    for trackletsFileName in allTrackletsFileNames:
+        trackletsFile = file(trackletsFileName, 'r')
+        tletLine = trackletsFile.readline()
+        while tletLine != "":
+            ids = map(int, tletLine.split())
+            lineNums = map(lambda x: diaToLineNum[x], ids)
+            trackletsAsString = " ".join(map(str, lineNums))
+            idsOutFile.write("%s\n" % trackletsAsString)
+            tletLine = trackletsFile.readline()
+        trackletsFile.close()
 
 
 
@@ -306,10 +327,13 @@ def writeOutputFiles(allDias, cursor, obsHistsThisDataSet, supportObsHists, obsH
     mitiOut.close()
     mitiCheatSheetFile.close()
 
+    # turns out C linkTracklets takes start_t_range as a time offset (in days) from the first image. 
     startTRangeOut = os.path.join(OUTPUT_START_T_RANGE_FILES_DIR, basename + ".start_t_range")
     startTRangeOutFile = file(startTRangeOut,'w')
     startTRangeOutFile.write("%f"%(obsHistToExpMjd[obsHistsThisDataSet[-1]] - obsHistToExpMjd[obsHistsThisDataSet[0]] + EPSILON))
     startTRangeOutFile.close()
+    
+    
 
     if WRITE_CPP_INFILES:
         # new: write C++ style outputs as well.
@@ -325,7 +349,12 @@ def writeOutputFiles(allDias, cursor, obsHistsThisDataSet, supportObsHists, obsH
         writeDetsIdsFiles(detsOutFile, idsOutFile, allTrackletsFiles, allDias, cursor)
         detsOutFile.close()
         idsOutFile.close()
-
+        # write C++ style start_t_range, which takes a fixed MJD.
+        startTRangeOutCpp = os.path.join(OUTPUT_START_T_RANGE_FILES_DIR, basename + ".date.start_t_range")
+        startTRangeOutFileCpp = file(startTRangeOutCpp,'w')
+        startTRangeOutFileCpp.write("%f"%(obsHistToExpMjd[obsHistsThisDataSet[-1]] + EPSILON))
+        startTRangeOutFileCpp.close()
+        
 
     
 

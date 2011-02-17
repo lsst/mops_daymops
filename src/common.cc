@@ -440,6 +440,28 @@ namespace mops {
         }
         
         
+void extendBounds(std::vector<double> &myBounds, 
+                  const std::vector<double> &childBounds,
+                  bool areUBounds) 
+{
+    if (myBounds.size() != childBounds.size()) {
+        LSST_EXCEPT(BadParameterException, 
+    "Expect argument vectors of same length.");
+    }
+    for (unsigned int i = 0; i < myBounds.size(); i++) {
+        if (areUBounds) {
+            if (childBounds.at(i) > myBounds.at(i)) {
+                myBounds.at(i) = childBounds.at(i);
+            }
+        }
+        else {
+            if (childBounds.at(i) < myBounds.at(i)) {
+                myBounds.at(i) = childBounds.at(i);
+            }
+
+        }
+    }
+}
         
 
 }} // close namespace lsst::mops

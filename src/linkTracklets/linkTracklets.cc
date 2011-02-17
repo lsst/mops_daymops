@@ -15,18 +15,8 @@
 #include "lsst/mops/KDTree.h"
 #include "lsst/mops/daymops/linkTracklets/TrackletTree.h"
 
-#include "lsst/mops/daymops/linkTracklets/lruCache.h"
 
 
-/* since it is expensive to compute the compatible ranges of
- * position/velocity-space associated with each tree node, use a cache
- * which takes a tree node ID and an observation time and reports
- * stores the compatible region.  This seems to give a big performance
- * boost, but you need to set the cache size to something intelligent
- * for your machine/architecture.
- */
-#define CACHE_SIZE 100000
-#define USE_CACHE true
 
 /* taking a queue from Kubica, it's only once per ITERATIONS_PER_SPLIT
  * calls to doLinkingRecurse that we actually split the (non-leaf)
@@ -66,10 +56,8 @@ namespace lsst {
 
 double modifyWithAccelerationTime, 
     positionAndVelocityRangesOverlapAfterAccelerationTime, 
-    areCompatibleTime, 
     calculateBestFitQuadraticTime,
     trackMeetsRequirementsTime, 
-    endpointTrackletsAreCompatibleTime, 
     buildTracksAddToResultsTime, 
     areAllLeavesTime, 
     nodeWidthTime, 
@@ -233,8 +221,6 @@ private:
 
 
 
-// a quick macro to remove a lot of ugly typing
-#define LTCache LRUCache <GlobalNodeIdAndProjectionId, std::vector <std::vector <double> > >
 
 
 
@@ -362,9 +348,9 @@ void debugPrint(const TreeNodeAndTime &firstEndpoint,
                 const std::vector<Tracklet> &allTracklets) 
 {
     std::set<uint> leftEndpointDetIds = allDetsInTreeNode(*(firstEndpoint.myTree), 
-                                                                  allDetections, allTracklets);
+                                                          allDetections, allTracklets);
     std::set<uint> rightEndpointDetIds = allDetsInTreeNode(*(secondEndpoint.myTree),
-                                                                   allDetections, allTracklets);
+                                                           allDetections, allTracklets);
 
     std::cout << "in doLinkingRecurse,       first endpoint contains     " ;
     printSet(leftEndpointDetIds, " ");
@@ -376,7 +362,7 @@ void debugPrint(const TreeNodeAndTime &firstEndpoint,
     for(uint i = 0; i < supportNodes.size(); i++) {
         std::cout << " support node " << i << " contains                      ";
         std::set <uint> supDetIds = allDetsInTreeNode(*(supportNodes.at(i).myTree), 
-                                                              allDetections, allTracklets);
+                                                      allDetections, allTracklets);
         printSet(supDetIds, " ");
         std::cout << '\n';
     }
@@ -434,9 +420,7 @@ void debugPrintTimingInfo(const TrackSet &results)
     std::cout << "TIMING STATS: \n---------------------\n";
     std::cout << "modifyWithAcceleration:\t" << modifyWithAccelerationTime << "sec\n"; 
     std::cout << "positionAndVelocityRangesOverlapAfterAcceleration:\t" << positionAndVelocityRangesOverlapAfterAccelerationTime << "sec\n"; 
-    std::cout << "areCompatible:\t" << areCompatibleTime << "sec\n"; 
     std::cout << "trackMeetsRequirements:\t" << trackMeetsRequirementsTime << "sec\n"; 
-    std::cout << "endpointTrackletsAreCompatible:\t" << endpointTrackletsAreCompatibleTime << "sec\n"; 
     std::cout << "buildTracksAddToResults:\t" << buildTracksAddToResultsTime << "sec\n"; 
     std::cout << "areAllLeaves:\t" << areAllLeavesTime << "sec\n"; 
     std::cout << "nodeWidth:\t" << nodeWidthTime << "sec\n"; 
@@ -478,10 +462,8 @@ void initDebugTimingInfo()
     compatibleEndpointsFound = 0;
     modifyWithAccelerationTime = 0; 
     positionAndVelocityRangesOverlapAfterAccelerationTime = 0; 
-    areCompatibleTime = 0; 
     calculateBestFitQuadraticTime = 0;
     trackMeetsRequirementsTime = 0; 
-    endpointTrackletsAreCompatibleTime = 0; 
     buildTracksAddToResultsTime = 0; 
     areAllLeavesTime = 0; 
     nodeWidthTime = 0; 
@@ -698,215 +680,6 @@ void modifyWithAcceleration(double &position, double &velocity,
 
 
 
-inline bool positionAndVelocityRangesOverlap(
-    double firstPositionMin, double firstPositionMax, 
-    double firstVelocityMin, double firstVelocityMax,
-    double secondPositionMin, double secondPositionMax,
-    double secondVelocityMin, double secondVelocityMax)
-{
-
-    double start = std::clock();
-
-    bool velocityCompatible = regionsOverlap1D_unsafe(firstVelocityMin, 
-                                                      firstVelocityMax,
-                                                      secondVelocityMin,
-                                                      secondVelocityMax);
-    if (!velocityCompatible) {
-        rejectedOnVelocity++;
-        positionAndVelocityRangesOverlapAfterAccelerationTime += 
-            timeSince(start);
-        return false;
-    }
-
-    firstPositionMin = convertToStandardDegrees(firstPositionMin);
-    firstPositionMax = convertToStandardDegrees(firstPositionMax);
-
-    secondPositionMin = convertToStandardDegrees(secondPositionMin);
-    secondPositionMax = convertToStandardDegrees(secondPositionMax);
-
-    bool positionCompatible = angularRegionsOverlapSafe(firstPositionMin, 
-                                                        firstPositionMax,
-                                                        secondPositionMin, 
-                                                        secondPositionMax);
-    if (!positionCompatible) {
-        rejectedOnPosition++;
-        positionAndVelocityRangesOverlapAfterAccelerationTime 
-            += timeSince(start);
-        return false;
-    }
-    
-    wereCompatible++;
-    positionAndVelocityRangesOverlapAfterAccelerationTime 
-        += timeSince(start);
-    return true;
-}
-
-
-
-/*
- * to be used by areCompatible and probably nothing else.  extend the
- * position/velocity region BACKWARD in time; we expect deltaTime to
- * be NEGATIVE.
- *
- * This answers the question: what range contains all objects
- * (accelerating no faster than accel) that COULD reach this region of
- * position/velocity space?
- */
-void extendRangeBackward(double &p0Min,  double &p0Max,  double &vMin,
-                         double &vMax,   double accel,  double deltaTime)
-{
-    if (deltaTime > 0) {
-        throw LSST_EXCEPT(ProgrammerErrorException, 
-            "extendRangeBackward: Expected deltaTime to be negative!");
-    }
-    double newVMax = vMax + accel*fabs(deltaTime);
-    double newVMin = vMin - accel*fabs(deltaTime);
-    double newP0Max = p0Max + vMin*deltaTime + accel*deltaTime*deltaTime;
-    double newP0Min = p0Min + vMax*deltaTime - accel*deltaTime*deltaTime;
-
-    p0Min = newP0Min;
-    p0Max = newP0Max;
-    vMax = newVMax;
-    vMin = newVMin;
-}
-
-
-
-void extendBoundsToTime(const TrackletTreeNode * treeNode,
-                        double deltaTime, 
-                        const linkTrackletsConfig &searchConfig,
-                        
-                        const GlobalNodeIdAndProjectionId &lookupKey,
-                        LTCache &rangeCache,
-                        
-                        double &raPositionMax,
-                        double &raPositionMin,
-                        double &raVelocityMax,
-                        double &raVelocityMin,
-                        
-                        double &decPositionMax,
-                        double &decPositionMin,
-                        double &decVelocityMax,
-                        double &decVelocityMin)
-{
-    std::vector<std::vector<double> > cachedBounds;
-
-    //std::cout << "do we use cache?" << USE_CACHE << " cache has size
-    //" << rangeCache.size() << std::endl;
-    if ((USE_CACHE) && (rangeCache.find(lookupKey, cachedBounds))) {
-        //std::cout << " cache hit!\n";
-        // we don't have to recompute it -it's there already!
-        cacheHits++;
-        std::vector<double> uBounds = cachedBounds.at(0);
-        std::vector<double> lBounds = cachedBounds.at(1);
-        
-        raPositionMax = uBounds.at(POINT_RA);
-        raPositionMin = lBounds.at(POINT_RA);
-
-        raVelocityMax = uBounds.at(POINT_RA_VELOCITY);
-        raVelocityMin = lBounds.at(POINT_RA_VELOCITY);
-        
-        decPositionMax = uBounds.at(POINT_DEC);
-        decPositionMin = lBounds.at(POINT_DEC);
-
-        decVelocityMax = uBounds.at(POINT_DEC_VELOCITY);
-        decVelocityMin = lBounds.at(POINT_DEC_VELOCITY);
-        
-        if (
-            (raVelocityMax < treeNode->getUBounds()->at(POINT_RA_VELOCITY))
-            ||
-            (raVelocityMin > treeNode->getLBounds()->at(POINT_RA_VELOCITY))) {
-            throw LSST_EXCEPT(ProgrammerErrorException, 
-                              "Found cached bounds at another time more restrictive than bounds at current time!");
-        }
-        
-    }
-    else {
-        
-        //std::cout << " cache miss...\n"; 
-
-        //we have not yet projected this bounding box to the given
-        // image time.  do so, and save the results.
-        
-        cacheMisses++;
-        
-        //get upper and lower bounds of node's RA position, velocity
-        //modify the positional bounds using error thresholds provided
-        //by user
-        /*
-          TBD: we need a way to track the possible extensions to the
-          velocity range which would be caused by observational error.
-        */
-        
-        
-        raPositionMax = treeNode->getUBounds()->at(POINT_RA);
-        raVelocityMax = treeNode->getUBounds()->at(POINT_RA_VELOCITY);
-
-        raPositionMin = treeNode->getLBounds()->at(POINT_RA);
-        raVelocityMin = treeNode->getLBounds()->at(POINT_RA_VELOCITY);
-
-        //get upper and lower bounds of node's Dec position, velocity
-                
-        decPositionMax = treeNode->getUBounds()->at(POINT_DEC);
-        decVelocityMax = treeNode->getUBounds()->at(POINT_DEC_VELOCITY);
-
-        decPositionMin = treeNode->getLBounds()->at(POINT_DEC);
-        decVelocityMin = treeNode->getLBounds()->at(POINT_DEC_VELOCITY);
-
-        if (deltaTime >= 0) {
-
-            modifyWithAcceleration(raPositionMax, raVelocityMax, 
-                                   searchConfig.maxRAAccel, deltaTime);
-            
-            modifyWithAcceleration(raPositionMin, raVelocityMin, 
-                                   searchConfig.maxRAAccel*-1.0, deltaTime);
-
-            modifyWithAcceleration(decPositionMax, decVelocityMax, 
-                                   searchConfig.maxDecAccel, deltaTime);
-            
-            modifyWithAcceleration(decPositionMin, decVelocityMin, 
-                                   searchConfig.maxDecAccel * -1.0, 
-                                   fabs(deltaTime));
-        }
-        else {
-            // negative delta time - we are asking what region of
-            // RA/Dec/dRA/dDec space could *reach* this point
-
-            extendRangeBackward(raPositionMin,  raPositionMax,  
-                                raVelocityMin,  raVelocityMax,  
-                                searchConfig.maxRAAccel, deltaTime);
-
-            extendRangeBackward(decPositionMin, decPositionMax, 
-                                decVelocityMin, decVelocityMax, 
-                                searchConfig.maxDecAccel, deltaTime);
-            
-        }
-
-        if (USE_CACHE) {
-            // save these newly-computed values to cache!        
-            std::vector<std::vector <double> > boundsForStorage(2);
-            std::vector<double> uBounds(4);
-            std::vector<double> lBounds(4);
-            
-            uBounds.at(POINT_RA) =  raPositionMax;
-            uBounds.at(POINT_DEC) = decPositionMax;
-            uBounds.at(POINT_RA_VELOCITY) = raVelocityMax;
-            uBounds.at(POINT_DEC_VELOCITY)= decVelocityMax;
-            
-            lBounds.at(POINT_RA) = raPositionMin;
-            lBounds.at(POINT_DEC)= decPositionMin;
-            lBounds.at(POINT_RA_VELOCITY) = raVelocityMin;
-            lBounds.at(POINT_DEC_VELOCITY) = decVelocityMin;
-            
-            boundsForStorage.at(0) = uBounds;
-            boundsForStorage.at(1) = lBounds;
-            
-            rangeCache.insert(lookupKey, boundsForStorage);
-        }
-    }
-    
-}
-
 
 
 /*
@@ -1042,129 +815,6 @@ bool areMutuallyCompatible(const TreeNodeAndTime &firstNode,
 
 
 
-/*
-  return whether two KDTreeNodes holding
-
-  [RA, Dec, RAvelocity, Decvelocity] -> tracklet ID
-
-  are "compatible": that is, whether an object contained in the first
-  node could reach the second node.  This is computed using the upper
-  and lower bounds on the nodes' [RA, Dec, RAvelocity, Decvelocity]
-  values.
-
-  Note that we treat RA, Dec as unrelated and euclidean.
-
-  all tracklets held in the node are assumed to start at the specified
-  times.
-
-  are compatible according to the rules parameters provided by
-  searchConfig.
-
- */
-
-
-
-bool areCompatible(const TreeNodeAndTime  &nodeA,
-                   const TreeNodeAndTime  &nodeB,
-                   const linkTrackletsConfig &searchConfig,
-                   LTCache &rangeCache)
-{
-
-    double firstRAPositionMax,  firstRAPositionMin,  
-        secondRAPositionMax,  secondRAPositionMin;
-    double firstDecPositionMax, firstDecPositionMin, 
-        secondDecPositionMax, secondDecPositionMin;
-    double firstRAVelocityMax,  firstRAVelocityMin,  
-        secondRAVelocityMax,  secondRAVelocityMin;
-    double firstDecVelocityMax, firstDecVelocityMin, 
-        secondDecVelocityMax, secondDecVelocityMin;
-
-    double start = std::clock();
-
-    TrackletTreeNode * first;
-    double firstTime;
-
-    TrackletTreeNode * second;
-    double secondTime;
-
-    first = nodeA.myTree;
-    firstTime = nodeA.myTime.getMJD();
-    uint firstTimeId = nodeA.myTime.getImageId();
-
-    second = nodeB.myTree;
-    secondTime = nodeB.myTime.getMJD();
-    uint secondTimeId = nodeB.myTime.getImageId();
-
-
-    bool RACompatible = false;
-    bool DecCompatible = false;
-
-    // we want to project out to the MIDPOINT time between these two 
-    // regions. This will have a smaller overlap than quadratically
-    // extending one all the way out to the second time.
-    double deltaTime = (secondTime - firstTime) / 2.;
-
-    GlobalNodeIdAndProjectionId lookupKeyFirst(first->getId(), 
-                                               firstTimeId, 
-                                               secondTimeId);
-    GlobalNodeIdAndProjectionId lookupKeySecond(second->getId(), 
-                                                secondTimeId, 
-                                                firstTimeId);
-
-
-        
-    extendBoundsToTime(first, deltaTime, searchConfig,
-                       lookupKeyFirst, rangeCache,
-                       firstRAPositionMax,  firstRAPositionMin,
-                       firstRAVelocityMax,  firstRAVelocityMin,
-                       firstDecPositionMax, firstDecPositionMin,
-                       firstDecVelocityMax, firstDecVelocityMin);
-
-    extendBoundsToTime(second, -1 * deltaTime, searchConfig,
-                       lookupKeySecond, rangeCache,
-                       secondRAPositionMax,  secondRAPositionMin,
-                       secondRAVelocityMax,  secondRAVelocityMin,
-                       secondDecPositionMax, secondDecPositionMin,
-                       secondDecVelocityMax, secondDecVelocityMin);
-                       
-        
-    
-    DecCompatible = positionAndVelocityRangesOverlap(firstDecPositionMin, 
-                                                     firstDecPositionMax,
-                                                     firstDecVelocityMin, 
-                                                     firstDecVelocityMax,
-                                                     secondDecPositionMin, 
-                                                     secondDecPositionMax,
-                                                     secondDecVelocityMin, 
-                                                     secondDecVelocityMax);
-    if (!DecCompatible) {
-        areCompatibleTime += timeSince(start);
-        return false;
-
-    }
-
-    RACompatible = positionAndVelocityRangesOverlap(firstRAPositionMin, 
-                                                    firstRAPositionMax,
-                                                    firstRAVelocityMin, 
-                                                    firstRAVelocityMax,
-                                                    secondRAPositionMin, 
-                                                    secondRAPositionMax,
-                                                    secondRAVelocityMin, 
-                                                    secondRAVelocityMax);
-
-
-    if ((RACompatible == false)) {
-        areCompatibleTime += timeSince(start);
-        return false;
-    }
-    
-    areCompatibleTime += timeSince(start);
-    return true;
-}
-
-
-
-
 
 
 
@@ -1189,7 +839,6 @@ bool endpointTrackletsAreCompatible(
     const Track &newTrack,
     const linkTrackletsConfig &searchConfig)
 {
-    double start = std::clock();
     bool allOK = true;
 
     double epoch, ra0, raV, raAcc;
@@ -1230,7 +879,6 @@ bool endpointTrackletsAreCompatible(
         }
     }
 
-    endpointTrackletsAreCompatibleTime += timeSince(start);
     return allOK;
 }
 
@@ -1622,7 +1270,8 @@ bool areAllLeaves(const std::vector<TreeNodeAndTime> &nodeArray) {
 
 
 
-bool supportTooWide(const TreeNodeAndTime& firstEndpoint, const TreeNodeAndTime& secondEndpoint,
+bool supportTooWide(const TreeNodeAndTime& firstEndpoint, 
+                    const TreeNodeAndTime& secondEndpoint,
                     const TreeNodeAndTime& supportNode) 
 {
     /* odd-looking stuff with alpha based on test_and_add_support in
@@ -1635,13 +1284,16 @@ bool supportTooWide(const TreeNodeAndTime& firstEndpoint, const TreeNodeAndTime&
     // check the width of the support node in all 4 axes; compare with
     // width of
     for (uint i = 0; i < 4; i++) {
-        double nodeWidth = supportNode.myTree->getUBounds()->at(i) - supportNode.myTree->getLBounds()->at(i);
+        double nodeWidth = supportNode.myTree->getUBounds()->at(i) - 
+            supportNode.myTree->getLBounds()->at(i);
         double maxWidth = (1.0 - alpha) * 
-            (firstEndpoint.myTree->getUBounds()->at(i) - firstEndpoint.myTree->getLBounds()->at(i)) + 
-            alpha * (secondEndpoint.myTree->getUBounds()->at(i) - secondEndpoint.myTree->getLBounds()->at(i));
+            (firstEndpoint.myTree->getUBounds()->at(i) - 
+             firstEndpoint.myTree->getLBounds()->at(i)) + 
+            alpha * (secondEndpoint.myTree->getUBounds()->at(i) - 
+                     secondEndpoint.myTree->getLBounds()->at(i));
         
         // this constant 4 is taken from Kubica's linker.c
-        // test_and_add_support.  Ask him to justify it, not me!
+        // test_and_add_support.  Beware the magic number!
         if (4.0 * nodeWidth > maxWidth) {
             return true;
         }
@@ -1663,7 +1315,6 @@ void splitSupportRecursively(const TreeNodeAndTime& firstEndpoint,
                              const linkTrackletsConfig &searchConfig, 
                              double accMinRa, double accMaxRa,
                              double accMinDec, double accMaxDec,
-                             LTCache &rangeCache,
                              std::vector<TreeNodeAndTime> &newSupportNodes)
 {
 
@@ -1672,8 +1323,6 @@ void splitSupportRecursively(const TreeNodeAndTime& firstEndpoint,
         throw LSST_EXCEPT(BadParameterException, "splitSupportRecursively got impossibly-ordered endpoints/support");
     }
 
-    //if ((areCompatible(firstEndpoint, supportNode, searchConfig, rangeCache) && 
-    //     areCompatible(secondEndpoint, supportNode, searchConfig, rangeCache))) {
     if (areMutuallyCompatible(firstEndpoint, supportNode,
                               secondEndpoint, searchConfig, 
                               accMinRa, accMaxRa,
@@ -1695,7 +1344,6 @@ void splitSupportRecursively(const TreeNodeAndTime& firstEndpoint,
                                         searchConfig, 
                                         accMinRa, accMaxRa,
                                         accMinDec, accMaxDec,
-                                        rangeCache, 
                                         newSupportNodes);
             }
             if (supportNode.myTree->hasRightChild()) {
@@ -1709,7 +1357,6 @@ void splitSupportRecursively(const TreeNodeAndTime& firstEndpoint,
                                         searchConfig, 
                                         accMinRa, accMaxRa,
                                         accMinDec, accMaxDec,
-                                        rangeCache, 
                                         newSupportNodes);
             }
         }
@@ -1735,7 +1382,6 @@ void splitSupportRecursively(const TreeNodeAndTime& firstEndpoint,
                                             searchConfig, 
                                             accMinRa, accMaxRa,
                                             accMinDec, accMaxDec,
-                                            rangeCache, 
                                             newSupportNodes);
                 }
                 if (supportNode.myTree->hasRightChild()) {
@@ -1749,7 +1395,6 @@ void splitSupportRecursively(const TreeNodeAndTime& firstEndpoint,
                                             searchConfig, 
                                             accMinRa, accMaxRa,
                                             accMinDec, accMaxDec,
-                                            rangeCache, 
                                             newSupportNodes);
                 }
             }
@@ -1771,7 +1416,6 @@ void filterAndSplitSupport(
     const linkTrackletsConfig &searchConfig, 
     double accMinRa, double accMaxRa, 
     double accMinDec, double accMaxDec,
-    LTCache &rangeCache,
     std::vector<TreeNodeAndTime> &newSupportNodes) 
 {
 
@@ -1782,11 +1426,11 @@ void filterAndSplitSupport(
     
     for (uint i = 0; i < supportNodes.size(); i++) {
         splitSupportRecursively(firstEndpoint, secondEndpoint, 
-                                endpointsAreLeaves, // 'true' here means we require leaves in output
+                                endpointsAreLeaves, 
                                 supportNodes.at(i),
                                 searchConfig, 
                                 accMinRa, accMaxRa, accMinDec, accMaxDec,
-                                rangeCache, newSupportNodes);
+                                newSupportNodes);
     }
     
     
@@ -1952,22 +1596,18 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                       double accMinRa, double accMaxRa, 
                       double accMinDec, double accMaxDec,
                       TrackSet & results,
-                      int iterationsTillSplit,
-                      LTCache &rangeCache)
+                      int iterationsTillSplit)
 {
     double start = std::clock();
-    doLinkingRecurseVisits++;
     firstEndpoint.myTree->addVisit();
-    //std::cout << "entering doLinkingRecurse." << std::endl;
-    //debugPrint(firstEndpoint, secondEndpoint, supportNodes,
-    //allDetections, allTracklets);
+
+    doLinkingRecurseVisits++;
 
     bool isValid = updateAccBoundsReturnValidity(firstEndpoint, 
                                                  secondEndpoint,
                                                  accMinRa, accMaxRa, 
                                                  accMinDec, accMaxDec); 
 
-    //if (areCompatible(firstEndpoint, secondEndpoint, searchConfig, rangeCache) == false)
     if (!isValid)
     {
         // poor choice of model nodes (endpoint nodes)! give up.
@@ -1991,7 +1631,6 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
             filterAndSplitSupport(firstEndpoint, secondEndpoint, 
                                   supportNodes, searchConfig, 
                                   accMinRa, accMaxRa, accMinDec, accMaxDec,
-                                  rangeCache,
                                   newSupportNodes);
         }        
 
@@ -2075,8 +1714,8 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                     // function again until they *are* all leaves.
                     iterationsTillSplit = 0;
                     doLinkingRecurseTime += timeSince(start);
-                    //std::cout << "Recursing on self in order to
-                    //force splitting of endpoints.\n";
+                    // std::cout << "Recursing on self in order to
+                    // force splitting of endpoints.\n";
                     doLinkingRecurse(allDetections, 
                                      allTracklets, 
                                      searchConfig,
@@ -2088,8 +1727,7 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                                      accMinDec,
                                      accMaxDec,
                                      results, 
-                                     iterationsTillSplit, 
-                                     rangeCache);
+                                     iterationsTillSplit);
                 }
                 else if (firstEndpointWidth >= secondEndpointWidth) {
 
@@ -2120,8 +1758,7 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                                          accMinDec,
                                          accMaxDec,
                                          results, 
-                                         iterationsTillSplit, 
-                                         rangeCache); 
+                                         iterationsTillSplit); 
                         //std::cout << "Returned from recursion on
                         //left child of first endpoint.\n";
                     }
@@ -2144,8 +1781,7 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                                          accMinDec,
                                          accMaxDec,
                                          results, 
-                                         iterationsTillSplit, 
-                                         rangeCache);  
+                                         iterationsTillSplit);  
                         //std::cout << "Returned from recursion on
                         //right child of first endpoint.\n";
                     }
@@ -2179,8 +1815,7 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                                          accMinDec,
                                          accMaxDec,
                                          results, 
-                                         iterationsTillSplit, 
-                                         rangeCache);
+                                         iterationsTillSplit);
                         //std::cout << "Returned from recursion on
                         //left child of second endpoint.\n";
                     }
@@ -2204,8 +1839,7 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                                          accMinDec,
                                          accMaxDec,
                                          results, 
-                                         iterationsTillSplit, 
-                                         rangeCache);
+                                         iterationsTillSplit);
                         //std::cout << "Returned from recursion on
                         //right child of second endpoint.\n";
                         
@@ -2346,7 +1980,6 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
                         // regions forward/backwards in time, so there
                         // will be 0 reuse between pairs of endpoint
                         // trees.
-                        LTCache rangeCache(CACHE_SIZE);
 
                         double iterationTime = std::clock();
                         if (searchConfig.myVerbosity.printStatus) {
@@ -2384,8 +2017,7 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
                                          searchConfig.maxDecAccel*-1.,
                                          searchConfig.maxDecAccel,
                                          results, 
-                                         ITERATIONS_PER_SPLIT, 
-                                         rangeCache);
+                                         ITERATIONS_PER_SPLIT);
 
                         if (searchConfig.myVerbosity.printStatus) {
                             time_t rawtime;

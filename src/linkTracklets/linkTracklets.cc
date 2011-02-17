@@ -554,6 +554,36 @@ void setTrackletVelocities(
 
 
 
+/* 
+ * take 4 angles along (0, 360) and modify so that fabs(a - other) <
+ * 180 for each other, but such that fabs(a - other) is still the real
+ * angular distance between a and other.
+ */
+void makeContiguous(double &a, double &b, double &c, double &d)
+{
+    std::vector<double> angles; 
+    angles.push_back(b);
+    angles.push_back(c);
+    angles.push_back(d);
+    double a0 = a;
+    for (unsigned int i = 0; i < angles.size(); i++) {
+        double angle = angles[i];
+        while (fabs(angle - a0) > 180 ) {
+            if (angle > a0) 
+                angle -= 360;
+            else 
+                angle += 360;
+        }
+        angles[i] = angle;
+    }
+    b = angles.at(0);
+    c = angles.at(1);
+    d = angles.at(2);
+        
+}
+
+
+
 void makeTrackletTimeToTreeMap(
     const std::vector<MopsDetection> &allDetections,
     std::vector<Tracklet> &queryTracklets,
@@ -879,29 +909,24 @@ void extendBoundsToTime(const TrackletTreeNode * treeNode,
 
 
 
+/*
+ * determine whether support node is compatible with endpoint nodes
+ * using math borrowed from C linkTracklets.  Refines min,max
+ * acceleration limits; we assume that these are then potentially used
+ * for splitting child nodes of the support node in question
+ */
 bool areMutuallyCompatible(const TreeNodeAndTime &firstNode,
                            const TreeNodeAndTime &secondNode,
                            const TreeNodeAndTime &thirdNode,
                            const linkTrackletsConfig &searchConfig,
-                           double maxR, double minR, 
-                           double maxD, double minD)
+                           double &minR, double &maxR,
+                           double &minD, double &maxD)
 {
-    bool valid = true;
-    
-    
-
     for (uint whichPair = 0; whichPair < 2; whichPair++) {
         const TrackletTreeNode * A;
         const TrackletTreeNode * B;
         double aTime;
         double bTime;
-        //   /* Load the model tree and compute the operation order. */
-        //   mdl_tr = tbt_ptr_array_ref(mdl_pts,i);
-        //   if(tbt_time(sup_tr) < tbt_time(mdl_tr)) {
-        //     A = sup_tr; B = mdl_tr;
-        //   } else {
-        //     B = sup_tr; A = mdl_tr;
-        //   }
 
         if (whichPair == 0) {
             A = firstNode.myTree;
@@ -916,85 +941,99 @@ bool areMutuallyCompatible(const TreeNodeAndTime &firstNode,
             bTime = thirdNode.myTime.getMJD();
         }
     
-        //   dt  = tbt_lo_time(B) - tbt_hi_time(A);
-        //   dt2 = 2.0 / (dt * dt);
-        //   dti = 1.0/dt;
 
         double dt = bTime - aTime;
         double dt2 = 2.0 / (dt * dt);
         double dti = 1.0/dt;
-        double acc;
-
-
-
-        //   /* Do the velocity+position/position tests. */
-        //   if(valid) {
-    //  acc = dt2*  ((tbt_hi_RA(B)                         -  tbt_lo_RA(A)                       ) - tbt_lo_vRA(A)                                 * dt);
-        acc = dt2 * (((B->getUBounds()->at(POINT_RA)) - (A->getLBounds()->at(POINT_RA))) - (A->getLBounds()->at(POINT_RA_VELOCITY)) * dt);
-    //  if(maxR > acc) { maxR = acc; }
-        if (maxR > acc) {maxR = acc; }
-    //  acc = dt2*((tbt_lo_RA(B)                         -  tbt_hi_RA(A))                        -  tbt_hi_vRA(A)                                * dt);
-        acc = dt2*(((B->getLBounds()->at(POINT_RA)) - (A->getUBounds()->at(POINT_RA))) - (A->getUBounds()->at(POINT_RA_VELOCITY)) * dt);
-        //if(minR < acc) { minR = acc; }
-        if (minR < acc)  {minR = acc; }
-    //  acc  = dt2*(( tbt_hi_DEC(B)                        -  tbt_lo_DEC(A))                        -  tbt_lo_vDEC(A)                                * dt)
-        acc = dt2 *(((B->getUBounds()->at(POINT_DEC)) - (A->getLBounds()->at(POINT_DEC))) - (A->getLBounds()->at(POINT_DEC_VELOCITY)) * dt);
-    //  if(maxD > acc) { maxD = acc; }
-        if (maxD > acc) { maxD = acc; }
-    //  acc = dt2*(( tbt_lo_DEC(B)                       -  tbt_hi_DEC(A))                        -   tbt_hi_vDEC(A)                               * dt);
-        acc = dt2*(((B->getLBounds()->at(POINT_DEC)) - (A->getUBounds()->at(POINT_DEC))) - (A->getUBounds()->at(POINT_DEC_VELOCITY)) * dt);
-    //  if (minD < acc) { minD = acc; }
-        if (minD < acc) {  minD = acc; }
-    //  valid = (minD <= maxD)&&(minR <= maxR);
-        valid = (minD <= maxD) && (minR <= maxR);
-    
-        ///* Do the velocity+position/position tests. */
-        //     if(valid) {
-        if (valid) {
-        //  acc = dt2*(tbt_hi_RA(A)                         - tbt_lo_RA(B)                         + tbt_hi_vRA(B)                                *dt);
-            acc = dt2*((A->getUBounds()->at(POINT_RA)) - (B->getLBounds()->at(POINT_RA)) + (B->getUBounds()->at(POINT_RA_VELOCITY))*dt);
-        //  if(maxR > acc) { maxR = acc; }
-            if(maxR > acc) { maxR = acc; }
-        //  acc = dt2*( tbt_lo_RA(A)                        -   tbt_hi_RA(B)                       +  tbt_lo_vRA(B)                                * dt);
-            acc = dt2*((A->getLBounds()->at(POINT_RA)) - (B->getUBounds()->at(POINT_RA)) + (B->getLBounds()->at(POINT_RA_VELOCITY)) * dt);
-        //  if(minR < acc) { minR = acc; }
-            if(minR < acc) { minR = acc; }
-        //  acc = dt2*( tbt_hi_DEC(A)                        -  tbt_lo_DEC(B)                        + tbt_hi_vDEC(B)                                 * dt);
-            acc = dt2*((A->getUBounds()->at(POINT_DEC)) - (B->getLBounds()->at(POINT_DEC)) + (B->getUBounds()->at(POINT_DEC_VELOCITY)) * dt);
-        //  if(maxD > acc) { maxD = acc; }
-            if(maxD > acc) { maxD = acc; }
-        //  acc = dt2*( tbt_lo_DEC(A)                  -        tbt_hi_DEC(B)                        +  tbt_lo_vDEC(B)                               * dt);
-            acc = dt2*((A->getLBounds()->at(POINT_DEC)) - (B->getUBounds()->at(POINT_DEC)) + (B->getLBounds()->at(POINT_DEC_VELOCITY)) * dt);
-        //  if(minD < acc) { minD = acc; }
-            if(minD < acc) { minD = acc; }
-        //  valid = (minD <= maxD)&&(minR <= maxR);
-            valid = (minD <= maxD)&&(minR <= maxR);
-            //       /* Determine the accel bounds with both velocity bounds. */
-            //       if(valid) {
-            if (valid) {
-                //      acc = (tbt_hi_vRA(B)                         -  tbt_lo_vRA(A))                    * dti;
-                acc = ((B->getUBounds()->at(POINT_RA_VELOCITY)) - (A->getLBounds()->at(POINT_RA_VELOCITY))) * dti;
-                //      if(maxR > acc) { maxR = acc; }
-                if(maxR > acc) { maxR = acc; }
-                //      acc = (tbt_lo_vRA(B)                    - tbt_hi_vRA(A)                   )*dti;
-                acc = ((B->getLBounds()->at(POINT_RA_VELOCITY)) - (A->getUBounds()->at(POINT_RA_VELOCITY)))*dti;
-                //      if(minR < acc) { minR = acc; }
-                if(minR < acc) { minR = acc; }
-                //      acc = (tbt_hi_vDEC(B)                          - tbt_lo_vDEC(A))                    *dti;
-                acc = ((B->getUBounds()->at(POINT_DEC_VELOCITY)) - (A->getLBounds()->at(POINT_DEC_VELOCITY))) *dti;
-                //      if(maxD > acc) { maxD = acc; }
-                if(maxD > acc) { maxD = acc; }
-                //      acc = (tbt_lo_vDEC(B)                    - tbt_hi_vDEC(A))                    *dti;
-                acc = ((B->getLBounds()->at(POINT_DEC_VELOCITY)) - (A->getUBounds()->at(POINT_DEC_VELOCITY))) *dti;
-                //      if(minD < acc) { minD = acc; }
-                if(minD < acc) { minD = acc; }
-                //      valid = (minR <= maxR)&&(minD <= maxD);
-                valid = (minR <= maxR)&&(minD <= maxD);
+        
+        for (uint axis = 0; axis < 2; axis++) {
+            double parentMin, parentMax;
+            double AmaxV, AminV, AmaxP, AminP;
+            double BmaxV, BminV, BmaxP, BminP;
+            unsigned int pos, vel;
+            if (axis == 0) {
+                pos=POINT_RA;
+                vel=POINT_RA_VELOCITY;
+                parentMin = minR;
+                parentMax = maxR;
             }
+            else {
+                pos=POINT_DEC;
+                vel=POINT_DEC_VELOCITY;
+                parentMin = minD;
+                parentMax = maxD;
+            }
+
+            // short circuit ASAP if this won't work
+            if (parentMax < parentMin) return false;
+
+            AmaxP = A->getUBounds()->at(pos);
+            AminP = A->getLBounds()->at(pos);
+            AmaxV = A->getUBounds()->at(vel);
+            AminV = A->getLBounds()->at(vel);
+        
+            BmaxP = B->getUBounds()->at(pos);
+            BminP = B->getLBounds()->at(pos);
+            BmaxV = B->getUBounds()->at(vel);
+            BminV = B->getLBounds()->at(vel);
+
+            // need to make sure min/max positions are all within 180
+            // deg of each other to avoid RA 0/360-crosser issues!
+            makeContiguous(AminP, AmaxP, BminP, BmaxP);
+
+            double newMinAcc, newMaxAcc;            
+            double tmpAcc;
+            std::vector<double> possibleAccs;
+
+            /* calculate min acceleration first. set it to the highest
+             * of the three values we could compute and the value
+             * previously assigned. */
+            possibleAccs.push_back(parentMin);
+
+            tmpAcc = dt2*(BminP - AmaxP - AmaxV * dt);
+            possibleAccs.push_back(tmpAcc);
+
+            tmpAcc = dt2*(AminP - BmaxP + BminV * dt);
+            possibleAccs.push_back(tmpAcc);
+
+            tmpAcc = (BminV - AmaxV) * dti;
+            possibleAccs.push_back(tmpAcc);
+            
+            newMinAcc = *(std::max_element(possibleAccs.begin(),
+                                           possibleAccs.end()));
+            possibleAccs.clear();
+            
+            // now calculate new max acc.
+            possibleAccs.push_back(parentMax);
+            
+            tmpAcc = dt2 * (BmaxP - AminP - AminV * dt);
+            possibleAccs.push_back(tmpAcc);
+            
+            tmpAcc = dt2 * (AmaxP - BminP + BmaxV * dt);
+            possibleAccs.push_back(tmpAcc);
+            
+            tmpAcc = (BmaxV - AminV) * dti;
+            possibleAccs.push_back(tmpAcc);
+            
+            newMaxAcc = *(std::min_element(possibleAccs.begin(),
+                                           possibleAccs.end()));
+            possibleAccs.clear();
+
+            if (axis == 0) {
+                minR = newMinAcc;
+                maxR = newMaxAcc;
+            }
+            else {
+                minD = newMinAcc;
+                maxD = newMaxAcc;
+            }
+            
+            // short-circuit if possible
+            if (newMaxAcc < newMinAcc) return false;
         }
     }
-
-    return valid;
+    // we didn't short circuit so it must be valid. return true.
+    return true;
 }
 
 
@@ -1280,7 +1319,9 @@ void addDetectionsCloseToPredictedPositions(
                     // candidate at that time"
                     if ((candidateAtTime == timeToCandidateMap.end()) 
                         || (candidateAtTime->second.distance > distance)) {
-                        CandidateDetection newCandidate(distance, *detectionIDIter, *trackletIDIter);
+                        CandidateDetection newCandidate(distance, 
+                                                        *detectionIDIter, 
+                                                        *trackletIDIter);
                         timeToCandidateMap[detMjd] = newCandidate;
                     }
                 }
@@ -1312,8 +1353,10 @@ void addDetectionsCloseToPredictedPositions(
             /* add this detection and tracklet */
             
             trackMJDs.insert(candidatesIter->first);
-            newTrack.addDetection(candidatesIter->second.detId, allDetections);
-            newTrack.componentTrackletIndices.insert(candidatesIter->second.parentTrackletId);
+            newTrack.addDetection(candidatesIter->second.detId, 
+                                  allDetections);
+            newTrack.componentTrackletIndices.insert(
+                candidatesIter->second.parentTrackletId);
         }
     }
 }
@@ -1330,7 +1373,8 @@ void addDetectionsCloseToPredictedPositions(
 bool trackHasSufficientSupport(const std::vector<MopsDetection> &allDetections,
                                const Track &newTrack, const linkTrackletsConfig &searchConfig)
 {
-    if (newTrack.getComponentDetectionIndices().size() < searchConfig.minDetectionsPerTrack) {
+    if (newTrack.getComponentDetectionIndices().size() < 
+        searchConfig.minDetectionsPerTrack) {
         return false;
     }
     /* count the number of NIGHTS of support.  Do this in a slightly
@@ -1612,9 +1656,13 @@ bool supportTooWide(const TreeNodeAndTime& firstEndpoint, const TreeNodeAndTime&
 
 
 
-void splitSupportRecursively(const TreeNodeAndTime& firstEndpoint, const TreeNodeAndTime& secondEndpoint, 
+void splitSupportRecursively(const TreeNodeAndTime& firstEndpoint, 
+                             const TreeNodeAndTime& secondEndpoint, 
                              bool requireLeaves,
-                             const TreeNodeAndTime &supportNode, const linkTrackletsConfig &searchConfig, 
+                             const TreeNodeAndTime &supportNode, 
+                             const linkTrackletsConfig &searchConfig, 
+                             double accMinRa, double accMaxRa,
+                             double accMinDec, double accMaxDec,
                              LTCache &rangeCache,
                              std::vector<TreeNodeAndTime> &newSupportNodes)
 {
@@ -1624,10 +1672,12 @@ void splitSupportRecursively(const TreeNodeAndTime& firstEndpoint, const TreeNod
         throw LSST_EXCEPT(BadParameterException, "splitSupportRecursively got impossibly-ordered endpoints/support");
     }
 
-    if ((areCompatible(firstEndpoint, supportNode, searchConfig, rangeCache) && 
-         areCompatible(secondEndpoint, supportNode, searchConfig, rangeCache))) {
-        //if (areMutuallyCompatible(firstEndpoint, supportNode,
-        //                      secondEndpoint, searchConfig)) {
+    //if ((areCompatible(firstEndpoint, supportNode, searchConfig, rangeCache) && 
+    //     areCompatible(secondEndpoint, supportNode, searchConfig, rangeCache))) {
+    if (areMutuallyCompatible(firstEndpoint, supportNode,
+                              secondEndpoint, searchConfig, 
+                              accMinRa, accMaxRa,
+                              accMinDec, accMaxDec)) {
 
         if (supportNode.myTree->isLeaf()) {
             newSupportNodes.push_back(supportNode);
@@ -1643,6 +1693,8 @@ void splitSupportRecursively(const TreeNodeAndTime& firstEndpoint, const TreeNod
                                         requireLeaves, 
                                         leftTat,
                                         searchConfig, 
+                                        accMinRa, accMaxRa,
+                                        accMinDec, accMaxDec,
                                         rangeCache, 
                                         newSupportNodes);
             }
@@ -1655,6 +1707,8 @@ void splitSupportRecursively(const TreeNodeAndTime& firstEndpoint, const TreeNod
                                         requireLeaves, 
                                         rightTat,
                                         searchConfig, 
+                                        accMinRa, accMaxRa,
+                                        accMinDec, accMaxDec,
                                         rangeCache, 
                                         newSupportNodes);
             }
@@ -1679,6 +1733,8 @@ void splitSupportRecursively(const TreeNodeAndTime& firstEndpoint, const TreeNod
                                             requireLeaves, 
                                             leftTat,
                                             searchConfig, 
+                                            accMinRa, accMaxRa,
+                                            accMinDec, accMaxDec,
                                             rangeCache, 
                                             newSupportNodes);
                 }
@@ -1691,6 +1747,8 @@ void splitSupportRecursively(const TreeNodeAndTime& firstEndpoint, const TreeNod
                                             requireLeaves, 
                                             rightTat,
                                             searchConfig, 
+                                            accMinRa, accMaxRa,
+                                            accMinDec, accMaxDec,
                                             rangeCache, 
                                             newSupportNodes);
                 }
@@ -1711,6 +1769,8 @@ void filterAndSplitSupport(
     const TreeNodeAndTime& secondEndpoint, 
     const std::vector<TreeNodeAndTime> &supportNodes, 
     const linkTrackletsConfig &searchConfig, 
+    double accMinRa, double accMaxRa, 
+    double accMinDec, double accMaxDec,
     LTCache &rangeCache,
     std::vector<TreeNodeAndTime> &newSupportNodes) 
 {
@@ -1723,8 +1783,10 @@ void filterAndSplitSupport(
     for (uint i = 0; i < supportNodes.size(); i++) {
         splitSupportRecursively(firstEndpoint, secondEndpoint, 
                                 endpointsAreLeaves, // 'true' here means we require leaves in output
-                                supportNodes[i],
-                                searchConfig, rangeCache, newSupportNodes);
+                                supportNodes.at(i),
+                                searchConfig, 
+                                accMinRa, accMaxRa, accMinDec, accMaxDec,
+                                rangeCache, newSupportNodes);
     }
     
     
@@ -1747,34 +1809,6 @@ double nodeWidth(TrackletTreeNode *node)
     return width;    
 }
 
-
-/* 
- * take 4 angles along (0, 360) and modify so that fabs(a - other) <
- * 180 for each other, but such that fabs(a - other) is still the real
- * angular distance between a and other.
- */
-void makeContiguous(double &a, double &b, double &c, double &d)
-{
-    std::vector<double> angles; 
-    angles.push_back(b);
-    angles.push_back(c);
-    angles.push_back(d);
-    double a0 = a;
-    for (unsigned int i = 0; i < angles.size(); i++) {
-        double angle = angles[i];
-        while (fabs(angle - a0) > 180 ) {
-            if (angle > a0) 
-                angle -= 360;
-            else 
-                angle += 360;
-        }
-        angles[i] = angle;
-    }
-    b = angles.at(0);
-    c = angles.at(1);
-    d = angles.at(2);
-        
-}
 
 
 
@@ -1954,28 +1988,19 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
         if ((iterationsTillSplit <= 0) || 
             (firstEndpoint.myTree->isLeaf() && secondEndpoint.myTree->isLeaf())) {
             
-            //std::cout << "calling filterAndSplitSupport with " <<
-            //supportNodes.size() << " support nodes.\n";
             filterAndSplitSupport(firstEndpoint, secondEndpoint, 
-                                  supportNodes, searchConfig, rangeCache,
+                                  supportNodes, searchConfig, 
+                                  accMinRa, accMaxRa, accMinDec, accMaxDec,
+                                  rangeCache,
                                   newSupportNodes);
-            //std::cout << " returned after " <<
-            //    timeSince(filterStartTime) << " and we now have " <<
-            //    newSupportNodes.size() << " support nodes.\n";
         }        
 
         if (iterationsTillSplit <= 0) {
             iterationsTillSplit = ITERATIONS_PER_SPLIT;
         }
         else{
-            // we still need to get newSupportNodes set up. just use
-            // the old ones.
             newSupportNodes = supportNodes;
         }
-        /*std::cout << "Filtering support nodes took " <<
-        timeSince(start) << " sec.\n"; std::cout << "After filtering
-        support nodes, we now have " << newSupportNodes.size() << "
-        support nodes." << std::endl;*/
         
         std::vector<TreeNodeAndTime>::const_iterator supportIter;
         for (supportIter = newSupportNodes.begin(); 

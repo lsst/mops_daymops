@@ -122,7 +122,7 @@ TrackletTreeNode::TrackletTreeNode(
 
 
      
-double TrackletTreeNode::recalculateBoundsWithError(
+void TrackletTreeNode::recalculateBoundsWithError(
     double positionalErrorRa,
     double positionalErrorDec)
 {

@@ -1570,6 +1570,20 @@ bool updateAccBoundsReturnValidity(const TreeNodeAndTime &firstEndpoint,
 }
 
 
+
+
+unsigned int countImageTimes(const std::vector<TreeNodeAndTime> &nodes)
+{
+    std::set<unsigned int> imageTimes;
+    std::vector<TreeNodeAndTime>::const_iterator nIter;
+    for (nIter = nodes.begin(); nIter != nodes.end(); nIter++) {
+        imageTimes.insert(nIter->myTime.getImageId());
+    }
+    return imageTimes.size();
+}
+
+
+
 /*
  * this is, roughly, the algorithm presented in http://arxiv.org/abs/astro-ph/0703475v1:
  * 
@@ -1608,13 +1622,7 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                                                  accMinRa, accMaxRa, 
                                                  accMinDec, accMaxDec); 
 
-    if (!isValid)
-    {
-        // poor choice of model nodes (endpoint nodes)! give up.
-        doLinkingRecurseTime += timeSince(start);
-        return;
-    }
-    else 
+    if (isValid)
     {
 
         std::set<double> uniqueSupportMJDs;
@@ -1641,41 +1649,20 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
             newSupportNodes = supportNodes;
         }
         
-        std::vector<TreeNodeAndTime>::const_iterator supportIter;
-        for (supportIter = newSupportNodes.begin(); 
-             supportIter != newSupportNodes.end(); 
-             supportIter++) {
-            uniqueSupportMJDs.insert(supportIter->myTime.getMJD());
-        }
+        unsigned int nUniqueMJDs = countImageTimes(newSupportNodes);
 
         // we get at least 2 unique nights from endpoints, and 4
         // unique detections from endpoints.  add those in and see if
         // we have sufficient support.
-        if (uniqueSupportMJDs.size() + 2 < searchConfig.minUniqueNights) {
-            // we can't possibly have enough distinct support
-            // points. quit.
-            rejectedOnLackOfSupport++;
-            doLinkingRecurseTime += timeSince(start);
-            return; 
-
-        }
-        else 
+        if (nUniqueMJDs + 2 >= searchConfig.minUniqueNights)
         {
             // we have enough model nodes, and enough support nodes.
             // if they are all leaves, then start building tracks.  if
             // they are not leaves, split one of them and recurse.
 
             if (firstEndpoint.myTree->isLeaf() && 
-                secondEndpoint.myTree->isLeaf() &&
-                areAllLeaves(newSupportNodes)) {
+                secondEndpoint.myTree->isLeaf()) {
                 
-                // TBD: actually, we need to filter newSupportNodes
-                // one more time here, since we checked for
-                // compatibility, then split off the children. of
-                // course, buildTracksAddToResults won't be affected
-                // with regards to correctness, just performance. So
-                // it may not even be wise to add a mostly-needless
-                // check.
                 buildTracksAddToResults(allDetections, 
                                         allTracklets, 
                                         searchConfig,
@@ -1714,8 +1701,7 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                     // function again until they *are* all leaves.
                     iterationsTillSplit = 0;
                     doLinkingRecurseTime += timeSince(start);
-                    // std::cout << "Recursing on self in order to
-                    // force splitting of endpoints.\n";
+
                     doLinkingRecurse(allDetections, 
                                      allTracklets, 
                                      searchConfig,
@@ -1878,7 +1864,7 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
      * node of each tree.
      */
     bool DEBUG = false;
-
+    unsigned int imagePairs = 0;
 
     initDebugTimingInfo();
 
@@ -2005,7 +1991,7 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
                                       << asctime (timeinfo);
 
                         }
- 
+                        imagePairs += 1;
                         doLinkingRecurse(allDetections,
                                          allTracklets, 
                                          searchConfig,
@@ -2036,8 +2022,9 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
             }
         }
     }
-    if (DEBUG) {
-        debugPrintTimingInfo(results);
+    if (searchConfig.myVerbosity.printVisitCounts) {
+        std::cerr << "Found " << imagePairs << 
+            " valid start/end image pairs.\n";
     }
 }
 
@@ -2095,6 +2082,9 @@ TrackSet* linkTracklets(const std::vector<MopsDetection> &allDetections,
     if (searchConfig.myVerbosity.printStatus) {
         std::cerr << "Doing the linking.\n";
     }
+
+    clock_t linkingStart = std::clock();
+
     doLinking(allDetections, 
               queryTracklets, 
               searchConfig, 
@@ -2104,9 +2094,17 @@ TrackSet* linkTracklets(const std::vector<MopsDetection> &allDetections,
         std::cerr << "Finished linking.\n";
     }
     if (searchConfig.myVerbosity.printVisitCounts) {
-        std::cerr << "Made " << doLinkingRecurseVisits << " calls to doLinkingRecurse.\n";
+        std::cerr << "Made " << doLinkingRecurseVisits 
+                  << " calls to doLinkingRecurse.\n";
         std::cerr << "Made " << buildTracksAddToResultsVisits << 
             " calls to buildTracksAddToResults.\n";
+        double linkingTime = timeSince(linkingStart);
+        std::cerr << "Linking took " << linkingTime << " seconds.\n";
+        std::cerr << " " << buildTracksAddToResultsTime 
+                  << " sec spent on terminal tracklet processing and " 
+                  << linkingTime - buildTracksAddToResultsTime
+                  << " sec on other processing.\n";
+        
     }
     
     return toRet;

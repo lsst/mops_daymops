@@ -162,11 +162,6 @@ int main(int argc, char* argv[])
 
      resultTracks = lsst::mops::linkTracklets(allDets, allTracklets, searchConfig);
 
-     if(PRINT_TIMING_INFO) {     
-	  dif = lsst::mops::timeElapsed (last);
-	  std::cout << "linking took " << std::fixed << std::setprecision(10) <<  dif 
-		    << " seconds."<<std::endl;     
-     }
 
      if(PRINT_TIMING_INFO) {     
 	  last = std::clock();

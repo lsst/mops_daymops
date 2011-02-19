@@ -96,8 +96,8 @@ namespace mops {
          * is used to do a post-traversal of the children and update
          * their error bounds.
          */
-        double recalculateBoundsWithError(double positionalErrorRa,
-                                          double positionalErrorDec);
+        void recalculateBoundsWithError(double positionalErrorRa,
+                                        double positionalErrorDec);
 
     private:
 

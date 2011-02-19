@@ -70,7 +70,8 @@ public:
              * within .3 arcesconds of correct.
              */
             detectionLocationErrorThresh = 0.0002; 
-            minEndpointTimeSeparation = 2; 
+            // kubica sets TBT_MIN_TIME to 1. Try to replicate.
+            minEndpointTimeSeparation = 1;
             minSupportToEndpointTimeSeparation = .5;
             minUniqueNights = 3;
             minDetectionsPerTrack = 6;
@@ -88,7 +89,6 @@ public:
 
 
             // Matt's old experiments indicate 16 is best.
-            // setting to 1 for unit testing for now.
             leafSize=16;
 
             restrictTrackStartTimes = false;

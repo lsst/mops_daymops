@@ -263,13 +263,14 @@ def writeDetsIdsFiles(detsOutFile, idsOutFile, allTrackletsFileNames, allDias, c
     the dtes file) for all tracklets in the data set."""
 
     # first figure out what diaIds need to be written.
-    allIds = []
+    allIds = set()
     for trackletsFileName in allTrackletsFileNames:
         trackletsFile = file(trackletsFileName, 'r')
         tletLine = trackletsFile.readline()
         while tletLine != "":
             ids = map(int, tletLine.split())
-            allIds += ids
+            for i in ids:
+                allIds.add(i)
             tletLine = trackletsFile.readline()
         trackletsFile.close()
 

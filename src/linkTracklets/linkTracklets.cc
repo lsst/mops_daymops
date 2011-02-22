@@ -754,6 +754,18 @@ bool areMutuallyCompatible(const TreeNodeAndTime &firstNode,
             // deg of each other to avoid RA 0/360-crosser issues!
             makeContiguous(AminP, AmaxP, BminP, BmaxP);
 
+            // after makeContiguous, we can get min/max switched!
+            if (AminP > AmaxP) {
+                double tmp = AmaxP;
+                AmaxP = AminP;
+                AminP = tmp;
+            }
+            if (BminP > BmaxP) {
+                double tmp = BmaxP;
+                BmaxP = BminP;
+                BminP = tmp;
+            }
+
             double newMinAcc, newMaxAcc;            
             double tmpAcc;
             std::vector<double> possibleAccs;
@@ -1511,6 +1523,18 @@ bool updateAccBoundsReturnValidity(const TreeNodeAndTime &firstEndpoint,
         // to avoid RA 0/360-crosser issues!
         makeContiguous(node1minP, node1maxP, node2minP, node2maxP);
 
+        // after makeContiguous, we can get min/max switched!
+        if (node1minP > node1maxP) {
+            double tmp = node1maxP;
+            node1maxP = node1minP;
+            node1minP = tmp;
+        }
+        if (node2minP > node2maxP) {
+            double tmp = node2maxP;
+            node2maxP = node2minP;
+            node2minP = tmp;
+        }
+
         double newMinAcc, newMaxAcc;
         
         double tmpAcc;
@@ -1544,8 +1568,8 @@ bool updateAccBoundsReturnValidity(const TreeNodeAndTime &firstEndpoint,
         possibleAccs.push_back(tmpAcc);
 
         tmpAcc = dt2 * (node1maxP - node2minP + node2maxV * dt);
-
         possibleAccs.push_back(tmpAcc);
+
         newMaxAcc = *(std::min_element(possibleAccs.begin(), 
                                        possibleAccs.end()));
 

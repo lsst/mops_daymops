@@ -131,6 +131,9 @@ namespace mops {
                       const std::vector<double> &childBounds,
                       bool areUBounds);
 
+    void toCartesian_deg(double ra, double dec, double &x, double &y, double &z);
+    void toRaDec_deg(double x, double y, double z, double &ra, double &dec);
+
 }} // close namespace lsst::mops
 
 #endif

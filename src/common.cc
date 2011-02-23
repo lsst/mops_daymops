@@ -482,6 +482,24 @@ void extendBounds(std::vector<double> &myBounds,
         }
     }
 }
+
+
+void toCartesian_deg(double ra, double dec, double &x, double &y, double &z)
+{
+    Constants c;
+    x = cos(c.deg_to_rad()*ra) * sin(c.deg_to_rad()*(90 - dec));
+    y = sin(c.deg_to_rad()*ra) * sin(c.deg_to_rad()*(90 - dec));
+    z = cos(c.deg_to_rad()*(90 - dec));        
+}
+
+void toRaDec_deg(double x, double y, double z, double &ra, double &dec)
+{
+    Constants c;
+    ra  = c.rad_to_deg()*(atan2(y, x));
+    dec = c.rad_to_deg()*(atan2(z, sqrt(x*x + y*y)));
+
+}
+
         
 
 }} // close namespace lsst::mops

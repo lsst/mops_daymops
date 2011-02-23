@@ -32,6 +32,7 @@ void TrackletTree::buildFromData(
     // create our set of child TrackletTreesNodes
     myK = 4;
 
+
     if (thisTreeTracklets.size() > 0) 
     {
 
@@ -52,6 +53,8 @@ void TrackletTree::buildFromData(
 
         //calculate initial, without-error UBounds, LBounds while
         //we're at it (they are needed for the BaseKDTree constructor)
+
+	// ASSUME all data comes from the same <180 -degree region of sky in both RA and Dec.
 
         for (uint i = 0; i < thisTreeTracklets.size(); i++) {
             Tracklet myT = thisTreeTracklets.at(i);

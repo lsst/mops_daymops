@@ -6,6 +6,9 @@
 #include <iomanip>
 #include <map>
 #include <gsl/gsl_multifit.h>
+// even more GSL needed for new rotation matrix stuff
+#include <gsl/gsl_matrix.h>
+#include <gsl/gsl_blas.h>
 #include <time.h>
 #include <algorithm>
 
@@ -509,6 +512,203 @@ void getAllDetectionsForTracklet(
 
 
 
+
+
+void recenterDetections(std::vector<MopsDetection> &allDetections, 
+                        const linkTrackletsConfig &searchConfig)
+{
+    if (allDetections.size() < 1) return;
+    /* first, make sure that all data falls along a contiguous
+     * region.  this will probably cause downstream failures in
+     * subtle, hard-to-find ways if we start using full-sky data,
+     * because our accBounds and areMutuallyCompatible math
+     * doesn't deal with wrap-around. Please don't use this code
+     * after DC3. */
+    
+    double firstRa, firstDec;
+    firstRa = allDetections[0].getRA();
+    firstDec = allDetections[0].getDec();
+    double minRa = firstRa;
+    double maxRa = firstRa;
+    double minDec = firstDec;
+    double maxDec = firstDec;
+    for (unsigned int i = 1; i < allDetections.size(); i++) {
+        double thisRa, thisDec;
+        thisRa  = allDetections[i].getRA();
+        thisDec = allDetections[i].getDec();
+        while (firstRa - thisRa > 180.) {
+            thisRa += 360.;
+        }
+        while (firstRa - thisRa < -180.) {
+            thisRa -= 360.;
+        }
+        while (firstDec - thisDec > 180.) {
+            thisDec += 360.;
+        }
+        while (firstDec - thisDec < -180.) {
+            thisDec -= 360.;
+        }
+        allDetections[i].setRA(thisRa);
+        allDetections[i].setDec(thisDec);
+        
+        minRa = minOfTwo(thisRa, minRa);
+        maxRa = maxOfTwo(thisRa, maxRa);
+
+        minDec = minOfTwo(thisDec, minDec);
+        maxDec = maxOfTwo(thisDec, maxDec);
+    }
+
+    if ((maxRa - minRa >= 180.) || 
+        (maxDec - minDec >= 180.)) {
+        LSST_EXCEPT(KnownShortcomingException,
+                    "Detections do not fall on contiguous (180,180) degree range. Math is known to fail in this case.");
+    }
+
+    if (searchConfig.myVerbosity.printBoundsInfo) {
+        std::cout << "   Bounds were (in deg) R=[" << 
+            minRa << ",  " << maxRa << "], D=[ " <<
+            minDec << ",  " << maxDec << "]" << std::endl;
+    }
+    
+    /* now use a rotation matrix to rotate all data to center on (180, 0). */
+    Constants c;
+    double raOld = c.deg_to_rad()*((minRa + maxRa) / 2.);
+    double decOld = c.deg_to_rad()*((minDec + maxDec) / 2.);
+    double newCenterRa = c.deg_to_rad()*180.;
+    double newCenterDec = c.deg_to_rad()*0.;
+    double dDec = newCenterDec - decOld;
+    double tmp1[] = { 0., 0., 0., 
+                      0., 0., 0.,
+                      0., 0., 1.};
+    tmp1[0] =  cos(raOld);
+    tmp1[1] =  sin(raOld);
+    tmp1[3] = -sin(raOld);
+    tmp1[4] =  cos(raOld);
+    double tmp2[] = {0., 0., 0.,
+                     0., 1., 0.,
+                     0., 0., 0.};
+    tmp2[0] =  cos(dDec);
+    tmp2[2] = -sin(dDec);
+    tmp2[6] =  sin(dDec);
+    tmp2[8] =  cos(dDec);
+    double tmp3[] = {0., 0., 0.,
+                     0., 0., 0.,
+                     0., 0., 1.};
+    tmp3[0] =  cos(-newCenterRa);
+    tmp3[1] =  sin(-newCenterRa);
+    tmp3[3] = -sin(-newCenterRa);
+    tmp3[4] =  cos(-newCenterRa);
+
+    double partial[] = {0., 0., 0.,
+                        0., 0., 0.,
+                        0., 0., 0.};
+
+    gsl_matrix_view gTmp1 = gsl_matrix_view_array(tmp1, 3, 3);
+    gsl_matrix_view gTmp2 = gsl_matrix_view_array(tmp2, 3, 3);
+    gsl_matrix_view gTmp3 = gsl_matrix_view_array(tmp3, 3, 3);
+    gsl_matrix_view gPart = gsl_matrix_view_array(partial, 3, 3);
+    gsl_matrix * gRot  = gsl_matrix_alloc(3, 3);
+
+    int err;
+
+    // gPart = gTmp3 . gTmp2
+    err = gsl_blas_dgemm (CblasNoTrans, CblasNoTrans,
+                          1.0, &gTmp3.matrix, &gTmp2.matrix,
+                          0.0, &gPart.matrix);
+    if (err != 0) {
+        LSST_EXCEPT(GSLException, "Error from gsl_blas_dgemm!");
+    }
+    // gRot = gPar . gTmp1
+    err = gsl_blas_dgemm (CblasNoTrans, CblasNoTrans,
+                          1.0, &gPart.matrix, &gTmp1.matrix,
+                          0.0, gRot);
+    if (err != 0) {
+        LSST_EXCEPT(GSLException, "Error from gsl_blas_dgemm!");
+    }
+
+    // gRot is now our rotation matrix.
+
+    gsl_vector *p0 = gsl_vector_alloc(3);
+    gsl_vector *pR = gsl_vector_alloc(3);
+    if ((p0 == NULL) || (pR == NULL)) {
+        LSST_EXCEPT(GSLException, "Got NULL from gsl_vector_alloc!");
+    }
+    
+    // reset center Ra, center Dec to degrees; 
+    // we will use them to choose the numbering of RAs and Decs.
+    newCenterRa = c.rad_to_deg()*newCenterRa;
+    newCenterDec = c.rad_to_deg()*newCenterDec;
+
+    // do the actual rotation; convert to cartesian, pR = gRot . p0,
+    // convert from cartesian to RA/Dec again.
+    for (uint i = 0; i < allDetections.size(); i++){
+        double x,y,z;
+        toCartesian_deg(allDetections[i].getRA(),
+                        allDetections[i].getDec(),
+                        x, y, z);
+        gsl_vector_set(p0, 0, x);
+        gsl_vector_set(p0, 1, y);
+        gsl_vector_set(p0, 2, z);
+        err = gsl_blas_dgemv(CblasNoTrans, 1.0, gRot, p0, 0., pR);
+        if (err != 0) {
+            LSST_EXCEPT(GSLException, "Error from gsl_blas_dgemm!\n");
+        }
+        x = gsl_vector_get(pR, 0);
+        y = gsl_vector_get(pR, 1);
+        z = gsl_vector_get(pR, 2);
+        double newRa, newDec;
+        toRaDec_deg(x, y, z, newRa, newDec);
+
+        while (newCenterRa - newRa > 180.) {
+            newRa += 360.;
+        }
+        while (newCenterRa - newRa < -180.) {
+            newRa -= 360.;
+        }
+        while (newCenterDec - newDec > 180.) {
+            newDec += 360.;
+        }
+        while (newCenterDec - newDec < -180.) {
+            newDec -= 360.;
+        }
+
+        allDetections[i].setRA(newRa);
+        allDetections[i].setDec(newDec);
+
+        if (i == 0) {
+            std::cout << " Center Ra, Dec should be " << newCenterRa
+                      << ", " << newCenterDec << std::endl;
+            std::cout <<" first ra, dec were " << 
+                newRa << ", " << newDec << std::endl;
+            minRa = newRa;
+            maxRa = newRa;
+            minDec = newDec;
+            maxDec = newDec;
+        }
+
+        minRa = minOfTwo(minRa, newRa);
+        maxRa = maxOfTwo(maxRa, newRa);
+        minDec = minOfTwo(minDec, newDec);
+        maxDec = maxOfTwo(maxDec, newDec);
+    }
+    gsl_vector_free(p0);
+    gsl_vector_free(pR);
+    gsl_matrix_free(gRot);
+    
+    if (searchConfig.myVerbosity.printBoundsInfo) {
+        std::cout << "   Bounds are (in deg) R=[" << 
+            minRa << ",  " << maxRa << "], D=[ " <<
+            minDec << ",  " << maxDec << "]" << std::endl;
+    }
+    
+}
+
+
+
+
+
+
+
 void setTrackletVelocities(
     const std::vector<MopsDetection> &allDetections,
     std::vector<Tracklet> &queryTracklets)
@@ -720,7 +920,7 @@ bool areMutuallyCompatible(const TreeNodeAndTime &firstNode,
             // short circuit ASAP if this won't work
             if (parentMax < parentMin) {
                 if (groundTruthShouldKeep) {
-                    std::cerr << "Rejected but should have kept!\n";
+                    std::cout << "Rejected but should have kept!\n";
                 }
                 return false;
             }
@@ -735,73 +935,65 @@ bool areMutuallyCompatible(const TreeNodeAndTime &firstNode,
             BmaxV = B->getUBounds()->at(vel);
             BminV = B->getLBounds()->at(vel);
 
-            // these equations just don't work with large
-            // ranges of positions
-            if ((AmaxP - AminP < 180) && 
-                (BmaxP - BminP < 180)) {
-
-                double newMinAcc, newMaxAcc;            
-                double tmpAcc;
-                std::vector<double> possibleAccs;
                 
-                /* calculate min acceleration first. set it to the highest
-                 * of the three values we could compute and the value
-                 * previously assigned. */
-                possibleAccs.push_back(parentMin);
+            double newMinAcc, newMaxAcc;            
+            double tmpAcc;
+            std::vector<double> possibleAccs;
+            
+            /* calculate min acceleration first. set it to the highest
+             * of the three values we could compute and the value
+             * previously assigned. */
+            possibleAccs.push_back(parentMin);
+            
+            tmpAcc = dt2*(BminP - AmaxP - AmaxV * dt);
+            possibleAccs.push_back(tmpAcc);
                 
-                tmpAcc = dt2*(circularShortestPathLen_Deg_signed(BminP, AmaxP)
-                              - AmaxV * dt);
-                possibleAccs.push_back(tmpAcc);
+            // jmyers: this item shaky - no one seems to understand it...
+            tmpAcc = dt2*(AminP - BmaxP + BminV * dt);
+            possibleAccs.push_back(tmpAcc);
                 
-                // jmyers: this item shaky - no one seems to understand it...
-                tmpAcc = dt2*(circularShortestPathLen_Deg_signed(AminP, BmaxP)
-                              + BminV * dt);
-                possibleAccs.push_back(tmpAcc);
+            tmpAcc = (BminV - AmaxV) * dti;
+            possibleAccs.push_back(tmpAcc);
                 
-                tmpAcc = (BminV - AmaxV) * dti;
-                possibleAccs.push_back(tmpAcc);
+            newMinAcc = *(std::max_element(possibleAccs.begin(),
+                                           possibleAccs.end()));
+            possibleAccs.clear();
                 
-                newMinAcc = *(std::max_element(possibleAccs.begin(),
-                                               possibleAccs.end()));
-                possibleAccs.clear();
+            // now calculate new max acc.
+            possibleAccs.push_back(parentMax);
                 
-                // now calculate new max acc.
-                possibleAccs.push_back(parentMax);
+            tmpAcc = dt2 * (BmaxP - AminP - AminV * dt);
+            possibleAccs.push_back(tmpAcc);
                 
-                tmpAcc = dt2 * (circularShortestPathLen_Deg_signed(BmaxP, AminP)
-                                - AminV * dt);
-                possibleAccs.push_back(tmpAcc);
+            // jmyers: this item shaky - no one seems to understand it...
+            tmpAcc = dt2 * (AmaxP - BminP + BmaxV * dt);
+            possibleAccs.push_back(tmpAcc);
                 
-                // jmyers: this item shaky - no one seems to understand it...
-                tmpAcc = dt2 * (circularShortestPathLen_Deg_signed(AmaxP, BminP)
-                                + BmaxV * dt);
-                possibleAccs.push_back(tmpAcc);
+            tmpAcc = (BmaxV - AminV) * dti;
+            possibleAccs.push_back(tmpAcc);
                 
-                tmpAcc = (BmaxV - AminV) * dti;
-                possibleAccs.push_back(tmpAcc);
+            newMaxAcc = *(std::min_element(possibleAccs.begin(),
+                                           possibleAccs.end()));
+            possibleAccs.clear();
                 
-                newMaxAcc = *(std::min_element(possibleAccs.begin(),
-                                               possibleAccs.end()));
-                possibleAccs.clear();
+            if (axis == 0) {
+                minR = newMinAcc;
+                maxR = newMaxAcc;
+            }
+            else {
+                minD = newMinAcc;
+                maxD = newMaxAcc;
+            }
                 
-                if (axis == 0) {
-                    minR = newMinAcc;
-                    maxR = newMaxAcc;
+            // short-circuit if possible
+            if (newMaxAcc < newMinAcc) {
+                if (groundTruthShouldKeep) {
+                    std::cout << "Rejected but should have kept 2!\n";
                 }
-                else {
-                    minD = newMinAcc;
-                    maxD = newMaxAcc;
-                }
-                
-                // short-circuit if possible
-                if (newMaxAcc < newMinAcc) {
-                    if (groundTruthShouldKeep) {
-                        std::cerr << "Rejected but should have kept 2!\n";
-                    }
-                    return false;
-                }
+                return false;
             }
         }
+        
     }
     // we didn't short circuit so it must be valid. return true.
     return true;
@@ -1166,7 +1358,7 @@ void buildTracksAddToResults(
             {
                 //std::cout << "Saw first endpoint for obj 6522434\n";
                 if (secondEndpointTrackletIndex == 116730) {
-                    std::cerr << "Saw first, last endpoints for obj 6522434\n"
+                    std::cout << "Saw first, last endpoints for obj 6522434\n"
                               << " endpoint tree IDs are: " << firstEndpoint.myTree->getId()
                               << ", " << secondEndpoint.myTree->getId() << "\n";
                     
@@ -1339,10 +1531,6 @@ void splitSupportRecursively(const TreeNodeAndTime& firstEndpoint,
                               secondEndpoint, searchConfig, 
                               accMinRa, accMaxRa,
                               accMinDec, accMaxDec)) {
-
-        if (accMinRa > accMaxRa) {
-            std::cerr << " WTF?!\n";
-        }
 
         if (supportNode.myTree->isLeaf()) {
             newSupportNodes.push_back(supportNode);
@@ -1524,69 +1712,61 @@ bool updateAccBoundsReturnValidity(const TreeNodeAndTime &firstEndpoint,
         node2maxV = node2->getUBounds()->at(vel);
         node2minV = node2->getLBounds()->at(vel);
 
-        // these equations just don't work under the below circumstances!
-        if ((node1maxP - node1minP < 180) && 
-            (node2maxP - node2minP < 180)) {
         
-            double newMinAcc, newMaxAcc;
+        double newMinAcc, newMaxAcc;
             
-            double tmpAcc;
-            std::vector<double> possibleAccs;
-            /* calculate min acceleration first. set it to the highest of
-             * the three values we could compute and the value previously
-             * assigned. */
-            possibleAccs.push_back(parentMin);
+        double tmpAcc;
+        std::vector<double> possibleAccs;
+        /* calculate min acceleration first. set it to the highest of
+         * the three values we could compute and the value previously
+         * assigned. */
+        possibleAccs.push_back(parentMin);
             
-            tmpAcc = (node2minV - node1maxV) * dti;
-            possibleAccs.push_back(tmpAcc);
+        tmpAcc = (node2minV - node1maxV) * dti;
+        possibleAccs.push_back(tmpAcc);
             
-            tmpAcc = dt2 * (circularShortestPathLen_Deg_signed(node2minP, node1maxP)
-                            - node1maxV * dt);
-            possibleAccs.push_back(tmpAcc);
+        tmpAcc = dt2 * (node2minP - node1maxP - node1maxV * dt);
+        possibleAccs.push_back(tmpAcc);
             
-            // jmyers: this item shaky - no one seems to understand it...
-            tmpAcc = dt2 * (circularShortestPathLen_Deg_signed(node1minP, node2maxP)
-                            + node2minV * dt);
-            possibleAccs.push_back(tmpAcc);
+        // jmyers: this item shaky - no one seems to understand it...
+        tmpAcc = dt2 * (node1minP - node2maxP + node2minV * dt);
+        possibleAccs.push_back(tmpAcc);
             
-            newMinAcc = *(std::max_element(possibleAccs.begin(), 
-                                           possibleAccs.end()));
-            possibleAccs.clear();
+        newMinAcc = *(std::max_element(possibleAccs.begin(), 
+                                       possibleAccs.end()));
+        possibleAccs.clear();
             
-            // now calculate max acceleration and take the least of the
-            // possible values.
-            possibleAccs.push_back(parentMax);
+        // now calculate max acceleration and take the least of the
+        // possible values.
+        possibleAccs.push_back(parentMax);
             
-            tmpAcc = (node2maxV - node1minV) * dti;
-            possibleAccs.push_back(tmpAcc);
+        tmpAcc = (node2maxV - node1minV) * dti;
+        possibleAccs.push_back(tmpAcc);
             
-            tmpAcc = dt2 * (circularShortestPathLen_Deg_signed(node2maxP, node1minP)
-                            - node1minV * dt);
-            possibleAccs.push_back(tmpAcc);
+        tmpAcc = dt2 * (node2maxP - node1minP - node1minV * dt);
+        possibleAccs.push_back(tmpAcc);
             
-            // jmyers: this item shaky - no one seems to understand it...
-            tmpAcc = dt2 * (circularShortestPathLen_Deg_signed(node1maxP, node2minP)
-                            + node2maxV * dt);
-            possibleAccs.push_back(tmpAcc);
+        // jmyers: this item shaky - no one seems to understand it...
+        tmpAcc = dt2 * (node1maxP - node2minP + node2maxV * dt);
+        possibleAccs.push_back(tmpAcc);
             
-            newMaxAcc = *(std::min_element(possibleAccs.begin(), 
-                                           possibleAccs.end()));
+        newMaxAcc = *(std::min_element(possibleAccs.begin(), 
+                                       possibleAccs.end()));
             
-            possibleAccs.clear();
+        possibleAccs.clear();
             
-            if (axis == 0) {
-                accMinRa = newMinAcc;
-                accMaxRa = newMaxAcc;
-            }
-            else {
-                accMinDec = newMinAcc;
-                accMaxDec = newMaxAcc;
-            }
+        if (axis == 0) {
+            accMinRa = newMinAcc;
+            accMaxRa = newMaxAcc;
+        }
+        else {
+            accMinDec = newMinAcc;
+            accMaxDec = newMaxAcc;
+        }
             
-            // short-circuit if possible
-            if (newMaxAcc < newMinAcc) return false;
+        // short-circuit if possible
+        if (newMaxAcc < newMinAcc) return false;
 
-        } // end 'if position ranges < 180'
     }
     // we know maxAcc > minAcc because we didn't short-circuit above.
     return true;
@@ -1635,6 +1815,9 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                       TrackSet & results,
                       int iterationsTillSplit)
 {
+    std::cout << " Starting doLinkingRecurse, acc bounds are:\n" 
+              << accMinRa << " , " << accMaxRa << " ; " 
+              << accMinDec << " , " << accMaxDec << ";\n";
     double start = std::clock();
     firstEndpoint.myTree->addVisit();
 
@@ -1971,7 +2154,7 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
 
                         double iterationTime = std::clock();
                         if (searchConfig.myVerbosity.printStatus) {
-                            std::cerr << "Looking for tracks between images at times " 
+                            std::cout << "Looking for tracks between images at times " 
                                       << std::setprecision(12) 
                                       << firstEndpointIter->first.getMJD() 
                                       << " (image " << firstEndpointIter->first.getImageId() 
@@ -1989,7 +2172,7 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
                             time ( &rawtime );
                             timeinfo = localtime ( &rawtime );                    
                             
-                            std::cerr << " current wall-clock time is " 
+                            std::cout << " current wall-clock time is " 
                                       << asctime (timeinfo);
 
                         }
@@ -2011,10 +2194,10 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
                             time_t rawtime;
                             
                             struct tm * timeinfo;
-                            std::cerr << "That iteration took " 
+                            std::cout << "That iteration took " 
                                       << timeSince(iterationTime) << " seconds. "
                                       << std::endl;
-                            std::cerr << " so far, we have found " << 
+                            std::cout << " so far, we have found " << 
                                 results.size() << " tracks.\n\n";
                             time ( &rawtime );
                             timeinfo = localtime ( &rawtime );                    
@@ -2025,7 +2208,7 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
         }
     }
     if (searchConfig.myVerbosity.printVisitCounts) {
-        std::cerr << "Found " << imagePairs << 
+        std::cout << "Found " << imagePairs << 
             " valid start/end image pairs.\n";
     }
 }
@@ -2037,7 +2220,7 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
 
 
 
-TrackSet* linkTracklets(const std::vector<MopsDetection> &allDetections,
+TrackSet* linkTracklets(std::vector<MopsDetection> &allDetections,
                         std::vector<Tracklet> &queryTracklets,
                         const linkTrackletsConfig &searchConfig) {
     TrackSet * toRet;
@@ -2069,12 +2252,17 @@ TrackSet* linkTracklets(const std::vector<MopsDetection> &allDetections,
       queryTracklets.
     */
     if (searchConfig.myVerbosity.printStatus) {
-        std::cerr << "Setting tracklet velocities.\n";
+        std::cout << "Recentering all detections on (180, 0).\n";
+    }
+    recenterDetections(allDetections, searchConfig);
+    
+    if (searchConfig.myVerbosity.printStatus) {
+        std::cout << "Setting tracklet velocities.\n";
     }
     setTrackletVelocities(allDetections, queryTracklets);
 
     if (searchConfig.myVerbosity.printStatus) {
-        std::cerr << "Sorting tracklets by image time and creating trees.\n";
+        std::cout << "Sorting tracklets by image time and creating trees.\n";
     }
     std::map<ImageTime, TrackletTree > trackletTimeToTreeMap;    
     makeTrackletTimeToTreeMap(allDetections, 
@@ -2082,7 +2270,7 @@ TrackSet* linkTracklets(const std::vector<MopsDetection> &allDetections,
                               trackletTimeToTreeMap, 
                               searchConfig);
     if (searchConfig.myVerbosity.printStatus) {
-        std::cerr << "Doing the linking.\n";
+        std::cout << "Doing the linking.\n";
     }
 
     clock_t linkingStart = std::clock();
@@ -2093,16 +2281,16 @@ TrackSet* linkTracklets(const std::vector<MopsDetection> &allDetections,
               trackletTimeToTreeMap, 
               *toRet);
     if (searchConfig.myVerbosity.printStatus) {
-        std::cerr << "Finished linking.\n";
+        std::cout << "Finished linking.\n";
     }
     if (searchConfig.myVerbosity.printVisitCounts) {
-        std::cerr << "Made " << doLinkingRecurseVisits 
+        std::cout << "Made " << doLinkingRecurseVisits 
                   << " calls to doLinkingRecurse.\n";
-        std::cerr << "Made " << buildTracksAddToResultsVisits << 
+        std::cout << "Made " << buildTracksAddToResultsVisits << 
             " calls to buildTracksAddToResults.\n";
         double linkingTime = timeSince(linkingStart);
-        std::cerr << "Linking took " << linkingTime << " seconds.\n";
-        std::cerr << " " << buildTracksAddToResultsTime 
+        std::cout << "Linking took " << linkingTime << " seconds.\n";
+        std::cout << " " << buildTracksAddToResultsTime 
                   << " sec spent on terminal tracklet processing and " 
                   << linkingTime - buildTracksAddToResultsTime
                   << " sec on other processing.\n";

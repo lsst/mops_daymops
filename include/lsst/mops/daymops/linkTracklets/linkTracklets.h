@@ -32,10 +32,12 @@ public:
         printStatus = false;
         printVisitCounts = false;
         printTimesByCategory = false;
+        printBoundsInfo = false;
     }
     bool printStatus;
     bool printVisitCounts;
     bool printTimesByCategory;
+    bool printBoundsInfo;
 };
 
 
@@ -231,8 +233,8 @@ public:
 
 /* queryTracklets are non-const because we set their velocityRA and
    velocityDec fields.  otherwise queryTracklets will not be
-   changed. */
-TrackSet* linkTracklets(const std::vector<MopsDetection> &allDetections,
+   changed. Detections will be recentered, though.*/
+TrackSet* linkTracklets(std::vector<MopsDetection> &allDetections,
                         std::vector<Tracklet> &queryTracklets,
                         const linkTrackletsConfig &searchConfig);
 

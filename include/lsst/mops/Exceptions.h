@@ -64,6 +64,8 @@
         LSST_EXCEPTION_TYPE(BadIndexException, std::exception,
                             lsst::mops::BadIndexException)
         
+        LSST_EXCEPTION_TYPE(KnownShortcomingException, std::Exception,
+                            lsst::mops::KnownShortcomingException)
     
     
 
@@ -103,6 +105,9 @@ LSST_EXCEPTION_TYPE(UninitializedException, lsst::pex::exceptions::Exception,
 
 LSST_EXCEPTION_TYPE(BadIndexException, lsst::pex::exceptions::Exception,
                     lsst::mops::BadIndexException)
+
+LSST_EXCEPTION_TYPE(KnownShortcomingException, lsst::pex::exceptions::Exception,
+                    lsst::mops::KnownShortcomingException)
 
 
 

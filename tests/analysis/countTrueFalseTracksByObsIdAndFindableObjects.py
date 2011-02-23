@@ -163,7 +163,6 @@ def getLotsOfStatsFromTracksFile(diasLookupTool, tracksFile, trueTracksOutFile):
     
     while trackLine != "":
         lineCount += 1
-        print "Read ", lineCount, " lines so far"
         diaIds = map(int, trackLine.split())
         dias = lookUpDias(diasLookupTool, diaIds)
 

@@ -536,33 +536,6 @@ void setTrackletVelocities(
 
 
 
-/* 
- * take 4 angles along (0, 360) and modify so that fabs(a - other) <
- * 180 for each other, but such that fabs(a - other) is still the real
- * angular distance between a and other.
- */
-void makeContiguous(double &a, double &b, double &c, double &d)
-{
-    std::vector<double> angles; 
-    angles.push_back(b);
-    angles.push_back(c);
-    angles.push_back(d);
-    double a0 = a;
-    for (unsigned int i = 0; i < angles.size(); i++) {
-        double angle = angles[i];
-        while (fabs(angle - a0) > 180 ) {
-            if (angle > a0) 
-                angle -= 360;
-            else 
-                angle += 360;
-        }
-        angles[i] = angle;
-    }
-    b = angles.at(0);
-    c = angles.at(1);
-    d = angles.at(2);
-        
-}
 
 
 
@@ -695,6 +668,13 @@ bool areMutuallyCompatible(const TreeNodeAndTime &firstNode,
                            double &minR, double &maxR,
                            double &minD, double &maxD)
 {
+    bool groundTruthShouldKeep = false;
+    if ((firstNode.myTree->hasTracklet(79)) && (thirdNode.myTree->hasTracklet(116730))) {
+        if (secondNode.myTree->hasTracklet(57930)) {
+            groundTruthShouldKeep = true;
+        }
+    }
+
     for (uint whichPair = 0; whichPair < 2; whichPair++) {
         const TrackletTreeNode * A;
         const TrackletTreeNode * B;
@@ -738,7 +718,12 @@ bool areMutuallyCompatible(const TreeNodeAndTime &firstNode,
             }
 
             // short circuit ASAP if this won't work
-            if (parentMax < parentMin) return false;
+            if (parentMax < parentMin) {
+                if (groundTruthShouldKeep) {
+                    std::cerr << "Rejected but should have kept!\n";
+                }
+                return false;
+            }
 
             AmaxP = A->getUBounds()->at(pos);
             AminP = A->getLBounds()->at(pos);
@@ -750,71 +735,72 @@ bool areMutuallyCompatible(const TreeNodeAndTime &firstNode,
             BmaxV = B->getUBounds()->at(vel);
             BminV = B->getLBounds()->at(vel);
 
-            // need to make sure min/max positions are all within 180
-            // deg of each other to avoid RA 0/360-crosser issues!
-            makeContiguous(AminP, AmaxP, BminP, BmaxP);
+            // these equations just don't work with large
+            // ranges of positions
+            if ((AmaxP - AminP < 180) && 
+                (BmaxP - BminP < 180)) {
 
-            // after makeContiguous, we can get min/max switched!
-            if (AminP > AmaxP) {
-                double tmp = AmaxP;
-                AmaxP = AminP;
-                AminP = tmp;
+                double newMinAcc, newMaxAcc;            
+                double tmpAcc;
+                std::vector<double> possibleAccs;
+                
+                /* calculate min acceleration first. set it to the highest
+                 * of the three values we could compute and the value
+                 * previously assigned. */
+                possibleAccs.push_back(parentMin);
+                
+                tmpAcc = dt2*(circularShortestPathLen_Deg_signed(BminP, AmaxP)
+                              - AmaxV * dt);
+                possibleAccs.push_back(tmpAcc);
+                
+                // jmyers: this item shaky - no one seems to understand it...
+                tmpAcc = dt2*(circularShortestPathLen_Deg_signed(AminP, BmaxP)
+                              + BminV * dt);
+                possibleAccs.push_back(tmpAcc);
+                
+                tmpAcc = (BminV - AmaxV) * dti;
+                possibleAccs.push_back(tmpAcc);
+                
+                newMinAcc = *(std::max_element(possibleAccs.begin(),
+                                               possibleAccs.end()));
+                possibleAccs.clear();
+                
+                // now calculate new max acc.
+                possibleAccs.push_back(parentMax);
+                
+                tmpAcc = dt2 * (circularShortestPathLen_Deg_signed(BmaxP, AminP)
+                                - AminV * dt);
+                possibleAccs.push_back(tmpAcc);
+                
+                // jmyers: this item shaky - no one seems to understand it...
+                tmpAcc = dt2 * (circularShortestPathLen_Deg_signed(AmaxP, BminP)
+                                + BmaxV * dt);
+                possibleAccs.push_back(tmpAcc);
+                
+                tmpAcc = (BmaxV - AminV) * dti;
+                possibleAccs.push_back(tmpAcc);
+                
+                newMaxAcc = *(std::min_element(possibleAccs.begin(),
+                                               possibleAccs.end()));
+                possibleAccs.clear();
+                
+                if (axis == 0) {
+                    minR = newMinAcc;
+                    maxR = newMaxAcc;
+                }
+                else {
+                    minD = newMinAcc;
+                    maxD = newMaxAcc;
+                }
+                
+                // short-circuit if possible
+                if (newMaxAcc < newMinAcc) {
+                    if (groundTruthShouldKeep) {
+                        std::cerr << "Rejected but should have kept 2!\n";
+                    }
+                    return false;
+                }
             }
-            if (BminP > BmaxP) {
-                double tmp = BmaxP;
-                BmaxP = BminP;
-                BminP = tmp;
-            }
-
-            double newMinAcc, newMaxAcc;            
-            double tmpAcc;
-            std::vector<double> possibleAccs;
-
-            /* calculate min acceleration first. set it to the highest
-             * of the three values we could compute and the value
-             * previously assigned. */
-            possibleAccs.push_back(parentMin);
-
-            tmpAcc = dt2*(BminP - AmaxP - AmaxV * dt);
-            possibleAccs.push_back(tmpAcc);
-
-            tmpAcc = dt2*(AminP - BmaxP + BminV * dt);
-            possibleAccs.push_back(tmpAcc);
-
-            tmpAcc = (BminV - AmaxV) * dti;
-            possibleAccs.push_back(tmpAcc);
-            
-            newMinAcc = *(std::max_element(possibleAccs.begin(),
-                                           possibleAccs.end()));
-            possibleAccs.clear();
-            
-            // now calculate new max acc.
-            possibleAccs.push_back(parentMax);
-            
-            tmpAcc = dt2 * (BmaxP - AminP - AminV * dt);
-            possibleAccs.push_back(tmpAcc);
-            
-            tmpAcc = dt2 * (AmaxP - BminP + BmaxV * dt);
-            possibleAccs.push_back(tmpAcc);
-            
-            tmpAcc = (BmaxV - AminV) * dti;
-            possibleAccs.push_back(tmpAcc);
-            
-            newMaxAcc = *(std::min_element(possibleAccs.begin(),
-                                           possibleAccs.end()));
-            possibleAccs.clear();
-
-            if (axis == 0) {
-                minR = newMinAcc;
-                maxR = newMaxAcc;
-            }
-            else {
-                minD = newMinAcc;
-                maxD = newMaxAcc;
-            }
-            
-            // short-circuit if possible
-            if (newMaxAcc < newMinAcc) return false;
         }
     }
     // we didn't short circuit so it must be valid. return true.
@@ -1176,6 +1162,18 @@ void buildTracksAddToResults(
             uint firstEndpointTrackletIndex = firstEndpointIter->getValue();
             uint secondEndpointTrackletIndex = secondEndpointIter->getValue();
             
+            if (firstEndpointTrackletIndex == 79) 
+            {
+                //std::cout << "Saw first endpoint for obj 6522434\n";
+                if (secondEndpointTrackletIndex == 116730) {
+                    std::cerr << "Saw first, last endpoints for obj 6522434\n"
+                              << " endpoint tree IDs are: " << firstEndpoint.myTree->getId()
+                              << ", " << secondEndpoint.myTree->getId() << "\n";
+                    
+                }
+            }
+
+            
             newTrack.addTracklet(firstEndpointTrackletIndex, 
                                  allTracklets.at(firstEndpointTrackletIndex),
                                  allDetections);
@@ -1211,6 +1209,7 @@ void buildTracksAddToResults(
                     for (supportPointIter  = curSupportNodeData->begin(); 
                          supportPointIter != curSupportNodeData->end();
                          supportPointIter++) {
+
                         candidateTrackletIds.push_back(
                             supportPointIter->getValue());
                     }
@@ -1335,10 +1334,15 @@ void splitSupportRecursively(const TreeNodeAndTime& firstEndpoint,
         throw LSST_EXCEPT(BadParameterException, "splitSupportRecursively got impossibly-ordered endpoints/support");
     }
 
+    
     if (areMutuallyCompatible(firstEndpoint, supportNode,
                               secondEndpoint, searchConfig, 
                               accMinRa, accMaxRa,
                               accMinDec, accMaxDec)) {
+
+        if (accMinRa > accMaxRa) {
+            std::cerr << " WTF?!\n";
+        }
 
         if (supportNode.myTree->isLeaf()) {
             newSupportNodes.push_back(supportNode);
@@ -1436,10 +1440,11 @@ void filterAndSplitSupport(
     bool endpointsAreLeaves = 
         firstEndpoint.myTree->isLeaf() && secondEndpoint.myTree->isLeaf();
     
+    
     for (uint i = 0; i < supportNodes.size(); i++) {
         splitSupportRecursively(firstEndpoint, secondEndpoint, 
                                 endpointsAreLeaves, 
-                                supportNodes.at(i),
+                                supportNodes[i],
                                 searchConfig, 
                                 accMinRa, accMaxRa, accMinDec, accMaxDec,
                                 newSupportNodes);
@@ -1519,75 +1524,69 @@ bool updateAccBoundsReturnValidity(const TreeNodeAndTime &firstEndpoint,
         node2maxV = node2->getUBounds()->at(vel);
         node2minV = node2->getLBounds()->at(vel);
 
-        // need to make sure min/max positions are all within 180 deg of each other
-        // to avoid RA 0/360-crosser issues!
-        makeContiguous(node1minP, node1maxP, node2minP, node2maxP);
-
-        // after makeContiguous, we can get min/max switched!
-        if (node1minP > node1maxP) {
-            double tmp = node1maxP;
-            node1maxP = node1minP;
-            node1minP = tmp;
-        }
-        if (node2minP > node2maxP) {
-            double tmp = node2maxP;
-            node2maxP = node2minP;
-            node2minP = tmp;
-        }
-
-        double newMinAcc, newMaxAcc;
+        // these equations just don't work under the below circumstances!
+        if ((node1maxP - node1minP < 180) && 
+            (node2maxP - node2minP < 180)) {
         
-        double tmpAcc;
-        std::vector<double> possibleAccs;
-        /* calculate min acceleration first. set it to the highest of
-         * the three values we could compute and the value previously
-         * assigned. */
-        possibleAccs.push_back(parentMin);
+            double newMinAcc, newMaxAcc;
+            
+            double tmpAcc;
+            std::vector<double> possibleAccs;
+            /* calculate min acceleration first. set it to the highest of
+             * the three values we could compute and the value previously
+             * assigned. */
+            possibleAccs.push_back(parentMin);
+            
+            tmpAcc = (node2minV - node1maxV) * dti;
+            possibleAccs.push_back(tmpAcc);
+            
+            tmpAcc = dt2 * (circularShortestPathLen_Deg_signed(node2minP, node1maxP)
+                            - node1maxV * dt);
+            possibleAccs.push_back(tmpAcc);
+            
+            // jmyers: this item shaky - no one seems to understand it...
+            tmpAcc = dt2 * (circularShortestPathLen_Deg_signed(node1minP, node2maxP)
+                            + node2minV * dt);
+            possibleAccs.push_back(tmpAcc);
+            
+            newMinAcc = *(std::max_element(possibleAccs.begin(), 
+                                           possibleAccs.end()));
+            possibleAccs.clear();
+            
+            // now calculate max acceleration and take the least of the
+            // possible values.
+            possibleAccs.push_back(parentMax);
+            
+            tmpAcc = (node2maxV - node1minV) * dti;
+            possibleAccs.push_back(tmpAcc);
+            
+            tmpAcc = dt2 * (circularShortestPathLen_Deg_signed(node2maxP, node1minP)
+                            - node1minV * dt);
+            possibleAccs.push_back(tmpAcc);
+            
+            // jmyers: this item shaky - no one seems to understand it...
+            tmpAcc = dt2 * (circularShortestPathLen_Deg_signed(node1maxP, node2minP)
+                            + node2maxV * dt);
+            possibleAccs.push_back(tmpAcc);
+            
+            newMaxAcc = *(std::min_element(possibleAccs.begin(), 
+                                           possibleAccs.end()));
+            
+            possibleAccs.clear();
+            
+            if (axis == 0) {
+                accMinRa = newMinAcc;
+                accMaxRa = newMaxAcc;
+            }
+            else {
+                accMinDec = newMinAcc;
+                accMaxDec = newMaxAcc;
+            }
+            
+            // short-circuit if possible
+            if (newMaxAcc < newMinAcc) return false;
 
-        tmpAcc = (node2minV - node1maxV) * dti;
-        possibleAccs.push_back(tmpAcc);
-
-        tmpAcc = dt2 * (node2minP - node1maxP - node1maxV * dt);
-        possibleAccs.push_back(tmpAcc);
-
-        tmpAcc = dt2 * (node1minP - node2maxP + node2minV * dt);
-        possibleAccs.push_back(tmpAcc);
-        
-        newMinAcc = *(std::max_element(possibleAccs.begin(), 
-                                       possibleAccs.end()));
-        possibleAccs.clear();
-
-        // now calculate max acceleration and take the least of the
-        // possible values.
-        possibleAccs.push_back(parentMax);
-
-        tmpAcc = (node2maxV - node1minV) * dti;
-        possibleAccs.push_back(tmpAcc);
-
-        tmpAcc = dt2 * (node2maxP - node1minP - node1minV * dt);
-        possibleAccs.push_back(tmpAcc);
-
-        tmpAcc = dt2 * (node1maxP - node2minP + node2maxV * dt);
-        possibleAccs.push_back(tmpAcc);
-
-        newMaxAcc = *(std::min_element(possibleAccs.begin(), 
-                                       possibleAccs.end()));
-
-        possibleAccs.clear();
-
-        if (axis == 0) {
-            accMinRa = newMinAcc;
-            accMaxRa = newMaxAcc;
-        }
-        else {
-            accMinDec = newMinAcc;
-            accMaxDec = newMaxAcc;
-        }
-
-        // short-circuit if possible
-        if (newMaxAcc < newMinAcc) return false;
-
-        
+        } // end 'if position ranges < 180'
     }
     // we know maxAcc > minAcc because we didn't short-circuit above.
     return true;
@@ -1718,28 +1717,7 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                 }
  
                 // choose the widest model node, split it and recurse!
-                if ( (areEqual(firstEndpointWidth, -1)) &&
-                     (areEqual(secondEndpointWidth, -1)) ) {
-                    // in this case, our endpoints are leaves, but not
-                    // all our support nodes are.  just call this
-                    // function again until they *are* all leaves.
-                    iterationsTillSplit = 0;
-                    doLinkingRecurseTime += timeSince(start);
-
-                    doLinkingRecurse(allDetections, 
-                                     allTracklets, 
-                                     searchConfig,
-                                     firstEndpoint, 
-                                     secondEndpoint,
-                                     newSupportNodes, 
-                                     accMinRa,
-                                     accMaxRa,
-                                     accMinDec,
-                                     accMaxDec,
-                                     results, 
-                                     iterationsTillSplit);
-                }
-                else if (firstEndpointWidth >= secondEndpointWidth) {
+                if (firstEndpointWidth >= secondEndpointWidth) {
 
                     //"widest" node is first endpoint, recurse twice
                     // using its children in its place.

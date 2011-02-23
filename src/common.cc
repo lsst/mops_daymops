@@ -182,6 +182,26 @@ namespace mops {
             }
         }
 
+
+        double circularShortestPathLen_Deg_signed(double a, double b)
+        {
+            double tmp;
+            tmp = convertToStandardDegrees(a)
+                       - convertToStandardDegrees(b);
+            if ((tmp < 180.) && (tmp > -180.)) {
+                return tmp;
+            }
+            else {
+                if (tmp > 180.) {
+                    return tmp - 360.;
+                }
+                else {
+                    // tmp < -180
+                    return 360. + tmp;
+                }
+            }
+        }
+
         double circularShortestPathLen_Rad(double a, double b)
         {
             Constants c;

@@ -2,6 +2,7 @@
 /* jmyers 2/10/11 */
 
 #include "lsst/mops/daymops/linkTracklets/TrackletTreeNode.h"
+#define uint unsigned int
 
 namespace lsst { namespace mops {
 
@@ -17,6 +18,31 @@ void TrackletTreeNode::addVisit()
     numVisits++;
 }
 
+
+bool TrackletTreeNode::hasTracklet(unsigned int t)
+{
+    if (isLeaf()) {
+        for (uint i = 0; i < myData.size(); i++) {
+            if (myData[i].getValue() == t) {
+                return true;
+            }
+        }
+        return false;
+    }
+    else {
+        if (hasLeftChild()) {
+            if (getLeftChild()->hasTracklet(t)) {
+                return true;
+            }
+        }
+        if (hasRightChild()) {
+            if (getRightChild()->hasTracklet(t)) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
 
 
 

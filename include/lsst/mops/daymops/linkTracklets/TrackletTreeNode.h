@@ -53,7 +53,9 @@ namespace mops {
     
         const unsigned int getNumVisits() const;
         void addVisit();
-        
+
+        // return true iff this node OR ITS CHILDREN holds the tracklet t
+        bool hasTracklet(unsigned int t);
 
         // these are to be used by linkTracklets.
         bool hasLeftChild() const;

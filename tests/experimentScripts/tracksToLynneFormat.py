@@ -34,17 +34,18 @@ def getDiaInfo(diaIds, cursor):
 
 
 def writeHeader(outf):
-    outf.write("#!trackNum diaSourceId opSimId ssmId ra decl taiMidPoint mag snr")
+    outf.write("#!trackNum diaSourceId opSimId ssmId ra decl taiMidPoint mag snr\n")
 
 
 
 def writeTrackDias(trackId, diasData, outf):
-    trackString = ""
     for dia in diasData:
+        trackString = ""
         trackString += str(trackId) + " "
         for datum in dia:
             trackString += str(datum) + " "
-        outf.write(trackString)
+        outf.write(trackString + "\n")
+        
 
 def tracksToLynneFormat(inf, outf, cursor):
     line = inf.readline()
@@ -55,6 +56,8 @@ def tracksToLynneFormat(inf, outf, cursor):
         diasData = getDiaInfo(diaIds, cursor)
         writeTrackDias(count, diasData, outf)
         count += 1
+        if count % 1000 == 0:
+            print "Written ", count, " tracks so far."
         line = inf.readline()
 
 

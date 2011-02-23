@@ -88,11 +88,11 @@ void TrackSet::writeToFile()
         double epoch, ra0, raV, raAcc, dec0, decV, decAcc;
         (*curTrack).getBestFitQuadratic(epoch, ra0, raV, raAcc, 
                                      dec0, decV, decAcc);
-        outFile << std::setprecision(12) 
-                << std::scientific 
-                << "epoch=" << epoch 
-                << " ra0=" << ra0 << " raV=" << raV << " raAcc=" << raAcc
-                << " dec0=" << dec0 << " decV=" << decV << " decAcc=" << decAcc;
+        // outFile << std::setprecision(12) 
+        //         << std::scientific 
+        //         << "epoch=" << epoch 
+        //         << " ra0=" << ra0 << " raV=" << raV << " raAcc=" << raAcc
+        //         << " dec0=" << dec0 << " decV=" << decV << " decAcc=" << decAcc;
         
         outFile << std::endl;
     }

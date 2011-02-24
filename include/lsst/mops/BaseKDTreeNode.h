@@ -44,6 +44,7 @@ namespace mops {
             const std::vector<double> &LBounds, 
             unsigned int &lastId=0);
 
+
         /*
          * this addReference operator is to be used by KDTree *ONLY*.
          * This way multiple KDTrees can share the same nodes without
@@ -82,6 +83,7 @@ namespace mops {
 
         
     protected:
+        BaseKDTreeNode() {};
         std::vector <RecursiveT > myChildren;        
         unsigned int myRefCount;
         unsigned int myK;

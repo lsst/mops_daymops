@@ -55,14 +55,26 @@ namespace mops {
          * maxLeafSize should be a positive integer.
          *
          * We ASSUME all tracklets already have their velocities set.
+         *
+         * if you specify a non-empty vector for perAxisWidths, then
+         * these widths will be used to determine the axis splitting at each
+         * level as in C linkTracklets mk_tbt - the axis with max width is chosen, 
+         * where width at i is (UBound[i] - LBound[i]) / perAxisWidths[i]
          */
+        TrackletTree(const std::vector<MopsDetection> &allDetections,
+                     const std::vector<Tracklet> &thisTreeTracklets,
+                     double positionalErrorRa, 
+                     double positionalErrorDec,
+                     unsigned int maxLeafSize,
+                     const std::vector<double> &perAxisWidths);
+
         TrackletTree(const std::vector<MopsDetection> &allDetections,
                      const std::vector<Tracklet> &thisTreeTracklets,
                      double positionalErrorRa, 
                      double positionalErrorDec,
                      unsigned int maxLeafSize);
 
-
+        
         /* 
          * populates the tree with given data.  Same as constructor
          * but in case you created a tree before your had the data
@@ -72,7 +84,8 @@ namespace mops {
                            const std::vector<Tracklet> &thisTreeTracklets,
                            double positionalErrorRa, 
                            double positionalErrorDec,
-                           unsigned int maxLeafSize);
+                           unsigned int maxLeafSize,
+                           const std::vector<double> &perAxisWidths);
         
         TrackletTreeNode * getRootNode() const { return myRoot; };
 

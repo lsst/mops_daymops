@@ -676,10 +676,6 @@ void recenterDetections(std::vector<MopsDetection> &allDetections,
         allDetections[i].setDec(newDec);
 
         if (i == 0) {
-            std::cout << " Center Ra, Dec should be " << newCenterRa
-                      << ", " << newCenterDec << std::endl;
-            std::cout <<" first ra, dec were " << 
-                newRa << ", " << newDec << std::endl;
             minRa = newRa;
             maxRa = newRa;
             minDec = newDec;
@@ -743,7 +739,7 @@ void makeTrackletTimeToTreeMap(
     const std::vector<MopsDetection> &allDetections,
     std::vector<Tracklet> &queryTracklets,
     std::map<ImageTime, TrackletTree > &newMap,
-    linkTrackletsConfig myConf)
+    const linkTrackletsConfig &myConf)
 {
     bool printDebug = false;
     if (printDebug) {
@@ -919,9 +915,6 @@ bool areMutuallyCompatible(const TreeNodeAndTime &firstNode,
 
             // short circuit ASAP if this won't work
             if (parentMax < parentMin) {
-                if (groundTruthShouldKeep) {
-                    std::cout << "Rejected but should have kept!\n";
-                }
                 return false;
             }
 
@@ -987,9 +980,6 @@ bool areMutuallyCompatible(const TreeNodeAndTime &firstNode,
                 
             // short-circuit if possible
             if (newMaxAcc < newMinAcc) {
-                if (groundTruthShouldKeep) {
-                    std::cout << "Rejected but should have kept 2!\n";
-                }
                 return false;
             }
         }
@@ -1354,16 +1344,6 @@ void buildTracksAddToResults(
             uint firstEndpointTrackletIndex = firstEndpointIter->getValue();
             uint secondEndpointTrackletIndex = secondEndpointIter->getValue();
             
-            if (firstEndpointTrackletIndex == 79) 
-            {
-                //std::cout << "Saw first endpoint for obj 6522434\n";
-                if (secondEndpointTrackletIndex == 116730) {
-                    std::cout << "Saw first, last endpoints for obj 6522434\n"
-                              << " endpoint tree IDs are: " << firstEndpoint.myTree->getId()
-                              << ", " << secondEndpoint.myTree->getId() << "\n";
-                    
-                }
-            }
 
             
             newTrack.addTracklet(firstEndpointTrackletIndex, 
@@ -1815,9 +1795,9 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                       TrackSet & results,
                       int iterationsTillSplit)
 {
-    std::cout << " Starting doLinkingRecurse, acc bounds are:\n" 
-              << accMinRa << " , " << accMaxRa << " ; " 
-              << accMinDec << " , " << accMaxDec << ";\n";
+    //std::cout << " Starting doLinkingRecurse, acc bounds are:\n" 
+    //          << accMinRa << " , " << accMaxRa << " ; " 
+    //          << accMinDec << " , " << accMaxDec << ";\n";
     double start = std::clock();
     firstEndpoint.myTree->addVisit();
 

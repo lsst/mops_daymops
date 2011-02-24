@@ -6,6 +6,149 @@
 
 namespace lsst { namespace mops {
 
+
+
+
+
+
+        
+TrackletTreeNode::TrackletTreeNode(
+    const std::vector<PointAndValue <unsigned int> > &tracklets, 
+    double positionalErrorRa, 
+    double positionalErrorDec,
+    unsigned int maxLeafSize, 
+    unsigned int myAxisToSplit, 
+    const std::vector<double> &widths,
+    unsigned int &lastId,
+    bool useMedian,
+    bool splitWidest)
+{
+    myRefCount = 1;
+    myK = 4; 
+
+    lastId++;
+    id = lastId;
+
+    std::vector<double> rightChildUBounds, rightChildLBounds,     
+        leftChildUBounds, leftChildLBounds;
+    std::vector<PointAndValue <uint> > leftPointsAndValues, rightPointsAndValues;
+
+    
+    myUBounds.resize(4);
+    myLBounds.resize(4);
+
+    // need to calculate initial UBounds, LBounds for our data.
+    for (uint i = 0; i < tracklets.size(); i++) {
+        if (tracklets.at(i).getPoint().size() != 5) {
+            LSST_EXCEPT(ProgrammerErrorException, 
+       "expected all tracklet points to be 5d: Ra, Dec, RaV, DecV, dt\n");
+        }
+        for (uint axis = 0; axis < 4; axis++) {
+            double val = tracklets.at(i).getPoint().at(axis);
+            if ((i == 0) || (val > myUBounds[axis])) {
+                myUBounds[axis] = val;
+            }
+            if ((i ==0) || (val < myLBounds[axis])) {
+                myLBounds[axis] = val;
+            }
+        }
+    }
+    
+
+    if (tracklets.size() <= maxLeafSize) {
+        // leaf case is easy.
+        myData = tracklets;
+    }
+
+    else {
+        // non-leaf case; we have much to do.
+        double pivot;
+        unsigned int nextAxis;
+
+
+        // if not splitWidest, our parent gave us which axis to split.
+        if (splitWidest) {
+            // choose an axis to split, overwrite myAxisToSplit
+            double maxWidth = -1;
+            uint widestAxis = -1; 
+            for (uint i = 0; i < 4; i++) {
+                // 
+                double width = (myUBounds[i] - myLBounds[i]) / widths[i];
+                if (width < 0) {
+                    LSST_EXCEPT(ProgrammerErrorException,
+                                " Got impossible width when building trackletTree\n");
+                }
+                if (width > maxWidth) {
+                    maxWidth = width;
+                    widestAxis = i;
+                }
+            }
+            myAxisToSplit = widestAxis;
+        }
+        
+        // split up data in our axis.
+        if (useMedian) {
+            // use the median.
+            pivot = getMedianByAxis(tracklets, myAxisToSplit);
+        }
+        else {
+            // use average like C linkTracklets
+            pivot = (myUBounds[myAxisToSplit] + myLBounds[myAxisToSplit]) / 2.0;
+        }
+
+        // try to partition data
+        for (uint i = 0; i < tracklets.size(); i++) {
+            double val = tracklets[i].getPoint()[myAxisToSplit];
+            
+            if (val < pivot) {
+                leftPointsAndValues.push_back(tracklets[i]);
+            }
+            else {
+                rightPointsAndValues.push_back(tracklets[i]);
+            }
+        }
+        
+        // like in C linkTracklets, partition up data and if it doesn't work well
+        // just partition arbitrarily...
+        if ((leftPointsAndValues.size() == 0) || 
+            (rightPointsAndValues.size() == 0)) {
+            leftPointsAndValues.clear();
+            rightPointsAndValues.clear();
+
+            for (uint i = 0; i < tracklets.size(); i++) {
+                if (i % 2 == 0) {
+                    leftPointsAndValues.push_back(tracklets[i]);
+                }
+                else {
+                    rightPointsAndValues.push_back(tracklets[i]);
+                }
+            }
+        }
+
+        nextAxis = (myAxisToSplit + 1) % (myK);
+        
+        TrackletTreeNode leftChild(leftPointsAndValues,
+                                   positionalErrorRa, positionalErrorDec,
+                                   maxLeafSize, nextAxis, widths, lastId, 
+                                   useMedian, splitWidest);
+        
+        myChildren.push_back(leftChild);
+        
+        TrackletTreeNode rightChild(rightPointsAndValues, 
+                                    positionalErrorRa, positionalErrorDec,
+                                    maxLeafSize, nextAxis, widths, lastId, 
+                                    useMedian, splitWidest);
+
+        myChildren.push_back(rightChild);
+    }
+
+
+    // account for error in child tracklets.
+    recalculateBoundsWithError(positionalErrorRa, positionalErrorDec);
+
+}
+        
+
 // these are to be used by linkTracklets.
 const unsigned int TrackletTreeNode::getNumVisits() const
 {
@@ -107,41 +250,8 @@ bool TrackletTreeNode::isLeaf() const
 
 
 
-/*
- * this constructor is only ever called for the head node; it calls
- * the BaseKDTreeNode constructor for its children, which splits up
- * the data and calls the homomorphic constructor of TrackletTreeNode,
- * who in turn call the BaseKDTree constructor for their children.
- */
 
-TrackletTreeNode::TrackletTreeNode(
-    const std::vector<PointAndValue <unsigned int> > &tracklets, 
-    double positionalErrorRa, double positionalErrorDec,
-    unsigned int maxLeafSize, 
-    unsigned int myAxisToSplit, 
-    const std::vector<double> &UBounds,
-    const std::vector<double> &LBounds,
-    unsigned int &lastId)
-    /* build a 4-D tree using these parameterized tracklets, which are
-     * really 5-dimensional. KDTreeNode will politely ignore the last
-     * item, which is expected to be delta_time, and just partition on
-     * the 4 dimensions we care about: RA, Dec, RAv, Decv.
-     */
-    
-    : BaseKDTreeNode<unsigned int, TrackletTreeNode>(
-        tracklets, 4, maxLeafSize, 
-        myAxisToSplit, UBounds, LBounds, 
-        lastId)
-{
-    numVisits = 0;
-    
-    /* The call to the KDTreeNode constructor has already set up
-     * our refcounts, built our children or made us a leaf,
-     * etc. Now just extend UBounds, LBounds. */
-    recalculateBoundsWithError(positionalErrorRa, 
-                               positionalErrorDec);
-    
-}
+
 
     
 
@@ -202,9 +312,6 @@ void TrackletTreeNode::recalculateBoundsWithError(
         // traverse children, then extend your own bounds.
         if (hasLeftChild()) {
             
-            getLeftChild()->recalculateBoundsWithError(
-                positionalErrorRa,
-                positionalErrorDec);
             
             extendBounds(myUBounds, 
                          *(getLeftChild()->getUBounds()),
@@ -216,9 +323,6 @@ void TrackletTreeNode::recalculateBoundsWithError(
         }
         if (hasRightChild()) {
             
-            getRightChild()->recalculateBoundsWithError(
-                positionalErrorRa,
-                positionalErrorDec);
 
             extendBounds(myUBounds, 
                          *(getRightChild()->getUBounds()),

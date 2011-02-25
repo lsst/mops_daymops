@@ -258,8 +258,7 @@ if __name__=="__main__":
         conn = db.connect(user=DB_USER, passwd=DB_PASS, host=DB_HOST)
         diasLookupTool = conn.cursor()
 
-    tracksGlob = glob.glob(tracksGlobPattern)
-    
+    tracksGlob = glob.glob(tracksFilePattern)
 
     print "Reading tracks from ", tracksGlob
 

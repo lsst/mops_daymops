@@ -20,7 +20,6 @@
 
 
 
-
 /* taking a queue from Kubica, it's only once per ITERATIONS_PER_SPLIT
  * calls to doLinkingRecurse that we actually split the (non-leaf)
  * support nodes. The idea is to avoid redundantly calculating whether
@@ -865,11 +864,6 @@ bool areMutuallyCompatible(const TreeNodeAndTime &firstNode,
                            double &minD, double &maxD)
 {
     bool groundTruthShouldKeep = false;
-    if ((firstNode.myTree->hasTracklet(79)) && (thirdNode.myTree->hasTracklet(116730))) {
-        if (secondNode.myTree->hasTracklet(57930)) {
-            groundTruthShouldKeep = true;
-        }
-    }
 
     for (uint whichPair = 0; whichPair < 2; whichPair++) {
         const TrackletTreeNode * A;

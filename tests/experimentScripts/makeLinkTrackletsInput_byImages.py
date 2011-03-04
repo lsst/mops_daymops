@@ -31,7 +31,7 @@ import mopsDatabases
 TRACKLETS_BY_OBSHIST_DIR="/workspace1/jmyers/nightlyDiasAstromErr/tracklets/collapsed/byObsHistId/"
 
 # place to put .miti files for input to c linkTracklets
-OUTPUT_LINKTRACKLETS_INFILE_DIR="/workspace1/jmyers/nightlyDiasAstromErr_linkTrackletsInfiles_cpp_15dayWindows_collapsedTracklets/"
+OUTPUT_LINKTRACKLETS_INFILE_DIR="/workspace0/jmyers/nightlyDiasAstromErr_linkTrackletsInfiles_maxv0.5_mint_0.01_15dayWindows_CandCPP/"
 
 
 # place to put start_t_ranges for each linkTracklets input files
@@ -46,7 +46,7 @@ FORCED_OBSCODE="807"
 EPSILON=1e-5
 
 TRACKING_WINDOW_DAYS=15 # in days; we only look for tracks spanning <= this number of nights.
-MAX_START_IMAGES_PER_RUN=1
+MAX_START_IMAGES_PER_RUN=30
 
 TRACKLETS_BY_OBSHIST_SUFFIX=".tracklets.byDiaId"
 OBSHIST_TO_TRACKLETS_FILE=lambda x: os.path.join(TRACKLETS_BY_OBSHIST_DIR) + str(x) + TRACKLETS_BY_OBSHIST_SUFFIX

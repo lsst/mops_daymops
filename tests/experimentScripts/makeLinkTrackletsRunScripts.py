@@ -64,5 +64,5 @@ if __name__=="__main__":
         startTRangeFile = START_T_RANGE_FOR_INFILE(infile)
         print startTRangeFile
         
-        #writeRunScript(infile, startTRangeFile)
+        writeRunScript(infile, startTRangeFile)
         writeCppRunScript(infile, startTRangeFile)

@@ -569,132 +569,132 @@ void recenterDetections(std::vector<MopsDetection> &allDetections,
             minDec << ",  " << maxDec << "]" << std::endl;
     }
     
-    /* now use a rotation matrix to rotate all data to center on (180, 0). */
-    Constants c;
-    double raOld = c.deg_to_rad()*((minRa + maxRa) / 2.);
-    double decOld = c.deg_to_rad()*((minDec + maxDec) / 2.);
-    double newCenterRa = c.deg_to_rad()*180.;
-    double newCenterDec = c.deg_to_rad()*0.;
-    double dDec = newCenterDec - decOld;
-    double tmp1[] = { 0., 0., 0., 
-                      0., 0., 0.,
-                      0., 0., 1.};
-    tmp1[0] =  cos(raOld);
-    tmp1[1] =  sin(raOld);
-    tmp1[3] = -sin(raOld);
-    tmp1[4] =  cos(raOld);
-    double tmp2[] = {0., 0., 0.,
-                     0., 1., 0.,
-                     0., 0., 0.};
-    tmp2[0] =  cos(dDec);
-    tmp2[2] = -sin(dDec);
-    tmp2[6] =  sin(dDec);
-    tmp2[8] =  cos(dDec);
-    double tmp3[] = {0., 0., 0.,
-                     0., 0., 0.,
-                     0., 0., 1.};
-    tmp3[0] =  cos(-newCenterRa);
-    tmp3[1] =  sin(-newCenterRa);
-    tmp3[3] = -sin(-newCenterRa);
-    tmp3[4] =  cos(-newCenterRa);
+    // /* now use a rotation matrix to rotate all data to center on (180, 0). */
+    // Constants c;
+    // double raOld = c.deg_to_rad()*((minRa + maxRa) / 2.);
+    // double decOld = c.deg_to_rad()*((minDec + maxDec) / 2.);
+    // double newCenterRa = c.deg_to_rad()*180.;
+    // double newCenterDec = c.deg_to_rad()*0.;
+    // double dDec = newCenterDec - decOld;
+    // double tmp1[] = { 0., 0., 0., 
+    //                   0., 0., 0.,
+    //                   0., 0., 1.};
+    // tmp1[0] =  cos(raOld);
+    // tmp1[1] =  sin(raOld);
+    // tmp1[3] = -sin(raOld);
+    // tmp1[4] =  cos(raOld);
+    // double tmp2[] = {0., 0., 0.,
+    //                  0., 1., 0.,
+    //                  0., 0., 0.};
+    // tmp2[0] =  cos(dDec);
+    // tmp2[2] = -sin(dDec);
+    // tmp2[6] =  sin(dDec);
+    // tmp2[8] =  cos(dDec);
+    // double tmp3[] = {0., 0., 0.,
+    //                  0., 0., 0.,
+    //                  0., 0., 1.};
+    // tmp3[0] =  cos(-newCenterRa);
+    // tmp3[1] =  sin(-newCenterRa);
+    // tmp3[3] = -sin(-newCenterRa);
+    // tmp3[4] =  cos(-newCenterRa);
 
-    double partial[] = {0., 0., 0.,
-                        0., 0., 0.,
-                        0., 0., 0.};
+    // double partial[] = {0., 0., 0.,
+    //                     0., 0., 0.,
+    //                     0., 0., 0.};
 
-    gsl_matrix_view gTmp1 = gsl_matrix_view_array(tmp1, 3, 3);
-    gsl_matrix_view gTmp2 = gsl_matrix_view_array(tmp2, 3, 3);
-    gsl_matrix_view gTmp3 = gsl_matrix_view_array(tmp3, 3, 3);
-    gsl_matrix_view gPart = gsl_matrix_view_array(partial, 3, 3);
-    gsl_matrix * gRot  = gsl_matrix_alloc(3, 3);
+    // gsl_matrix_view gTmp1 = gsl_matrix_view_array(tmp1, 3, 3);
+    // gsl_matrix_view gTmp2 = gsl_matrix_view_array(tmp2, 3, 3);
+    // gsl_matrix_view gTmp3 = gsl_matrix_view_array(tmp3, 3, 3);
+    // gsl_matrix_view gPart = gsl_matrix_view_array(partial, 3, 3);
+    // gsl_matrix * gRot  = gsl_matrix_alloc(3, 3);
 
-    int err;
+    // int err;
 
-    // gPart = gTmp3 . gTmp2
-    err = gsl_blas_dgemm (CblasNoTrans, CblasNoTrans,
-                          1.0, &gTmp3.matrix, &gTmp2.matrix,
-                          0.0, &gPart.matrix);
-    if (err != 0) {
-        LSST_EXCEPT(GSLException, "Error from gsl_blas_dgemm!");
-    }
-    // gRot = gPar . gTmp1
-    err = gsl_blas_dgemm (CblasNoTrans, CblasNoTrans,
-                          1.0, &gPart.matrix, &gTmp1.matrix,
-                          0.0, gRot);
-    if (err != 0) {
-        LSST_EXCEPT(GSLException, "Error from gsl_blas_dgemm!");
-    }
+    // // gPart = gTmp3 . gTmp2
+    // err = gsl_blas_dgemm (CblasNoTrans, CblasNoTrans,
+    //                       1.0, &gTmp3.matrix, &gTmp2.matrix,
+    //                       0.0, &gPart.matrix);
+    // if (err != 0) {
+    //     LSST_EXCEPT(GSLException, "Error from gsl_blas_dgemm!");
+    // }
+    // // gRot = gPar . gTmp1
+    // err = gsl_blas_dgemm (CblasNoTrans, CblasNoTrans,
+    //                       1.0, &gPart.matrix, &gTmp1.matrix,
+    //                       0.0, gRot);
+    // if (err != 0) {
+    //     LSST_EXCEPT(GSLException, "Error from gsl_blas_dgemm!");
+    // }
 
-    // gRot is now our rotation matrix.
+    // // gRot is now our rotation matrix.
 
-    gsl_vector *p0 = gsl_vector_alloc(3);
-    gsl_vector *pR = gsl_vector_alloc(3);
-    if ((p0 == NULL) || (pR == NULL)) {
-        LSST_EXCEPT(GSLException, "Got NULL from gsl_vector_alloc!");
-    }
+    // gsl_vector *p0 = gsl_vector_alloc(3);
+    // gsl_vector *pR = gsl_vector_alloc(3);
+    // if ((p0 == NULL) || (pR == NULL)) {
+    //     LSST_EXCEPT(GSLException, "Got NULL from gsl_vector_alloc!");
+    // }
     
-    // reset center Ra, center Dec to degrees; 
-    // we will use them to choose the numbering of RAs and Decs.
-    newCenterRa = c.rad_to_deg()*newCenterRa;
-    newCenterDec = c.rad_to_deg()*newCenterDec;
+    // // reset center Ra, center Dec to degrees; 
+    // // we will use them to choose the numbering of RAs and Decs.
+    // newCenterRa = c.rad_to_deg()*newCenterRa;
+    // newCenterDec = c.rad_to_deg()*newCenterDec;
 
-    // do the actual rotation; convert to cartesian, pR = gRot . p0,
-    // convert from cartesian to RA/Dec again.
-    for (uint i = 0; i < allDetections.size(); i++){
-        double x,y,z;
-        toCartesian_deg(allDetections[i].getRA(),
-                        allDetections[i].getDec(),
-                        x, y, z);
-        gsl_vector_set(p0, 0, x);
-        gsl_vector_set(p0, 1, y);
-        gsl_vector_set(p0, 2, z);
-        err = gsl_blas_dgemv(CblasNoTrans, 1.0, gRot, p0, 0., pR);
-        if (err != 0) {
-            LSST_EXCEPT(GSLException, "Error from gsl_blas_dgemm!\n");
-        }
-        x = gsl_vector_get(pR, 0);
-        y = gsl_vector_get(pR, 1);
-        z = gsl_vector_get(pR, 2);
-        double newRa, newDec;
-        toRaDec_deg(x, y, z, newRa, newDec);
+    // // do the actual rotation; convert to cartesian, pR = gRot . p0,
+    // // convert from cartesian to RA/Dec again.
+    // for (uint i = 0; i < allDetections.size(); i++){
+    //     double x,y,z;
+    //     toCartesian_deg(allDetections[i].getRA(),
+    //                     allDetections[i].getDec(),
+    //                     x, y, z);
+    //     gsl_vector_set(p0, 0, x);
+    //     gsl_vector_set(p0, 1, y);
+    //     gsl_vector_set(p0, 2, z);
+    //     err = gsl_blas_dgemv(CblasNoTrans, 1.0, gRot, p0, 0., pR);
+    //     if (err != 0) {
+    //         LSST_EXCEPT(GSLException, "Error from gsl_blas_dgemm!\n");
+    //     }
+    //     x = gsl_vector_get(pR, 0);
+    //     y = gsl_vector_get(pR, 1);
+    //     z = gsl_vector_get(pR, 2);
+    //     double newRa, newDec;
+    //     toRaDec_deg(x, y, z, newRa, newDec);
 
-        while (newCenterRa - newRa > 180.) {
-            newRa += 360.;
-        }
-        while (newCenterRa - newRa < -180.) {
-            newRa -= 360.;
-        }
-        while (newCenterDec - newDec > 180.) {
-            newDec += 360.;
-        }
-        while (newCenterDec - newDec < -180.) {
-            newDec -= 360.;
-        }
+    //     while (newCenterRa - newRa > 180.) {
+    //         newRa += 360.;
+    //     }
+    //     while (newCenterRa - newRa < -180.) {
+    //         newRa -= 360.;
+    //     }
+    //     while (newCenterDec - newDec > 180.) {
+    //         newDec += 360.;
+    //     }
+    //     while (newCenterDec - newDec < -180.) {
+    //         newDec -= 360.;
+    //     }
 
-        allDetections[i].setRA(newRa);
-        allDetections[i].setDec(newDec);
+    //     allDetections[i].setRA(newRa);
+    //     allDetections[i].setDec(newDec);
 
-        if (i == 0) {
-            minRa = newRa;
-            maxRa = newRa;
-            minDec = newDec;
-            maxDec = newDec;
-        }
+    //     if (i == 0) {
+    //         minRa = newRa;
+    //         maxRa = newRa;
+    //         minDec = newDec;
+    //         maxDec = newDec;
+    //     }
 
-        minRa = minOfTwo(minRa, newRa);
-        maxRa = maxOfTwo(maxRa, newRa);
-        minDec = minOfTwo(minDec, newDec);
-        maxDec = maxOfTwo(maxDec, newDec);
-    }
-    gsl_vector_free(p0);
-    gsl_vector_free(pR);
-    gsl_matrix_free(gRot);
+    //     minRa = minOfTwo(minRa, newRa);
+    //     maxRa = maxOfTwo(maxRa, newRa);
+    //     minDec = minOfTwo(minDec, newDec);
+    //     maxDec = maxOfTwo(maxDec, newDec);
+    // }
+    // gsl_vector_free(p0);
+    // gsl_vector_free(pR);
+    // gsl_matrix_free(gRot);
     
-    if (searchConfig.myVerbosity.printBoundsInfo) {
-        std::cout << "   Bounds are (in deg) R=[" << 
-            minRa << ",  " << maxRa << "], D=[ " <<
-            minDec << ",  " << maxDec << "]" << std::endl;
-    }
+    // if (searchConfig.myVerbosity.printBoundsInfo) {
+    //     std::cout << "   Bounds are (in deg) R=[" << 
+    //         minRa << ",  " << maxRa << "], D=[ " <<
+    //         minDec << ",  " << maxDec << "]" << std::endl;
+    // }
     
 }
 
@@ -863,7 +863,6 @@ bool areMutuallyCompatible(const TreeNodeAndTime &firstNode,
                            double &minR, double &maxR,
                            double &minD, double &maxD)
 {
-    bool groundTruthShouldKeep = false;
 
     for (uint whichPair = 0; whichPair < 2; whichPair++) {
         const TrackletTreeNode * A;
@@ -1789,9 +1788,17 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                       TrackSet & results,
                       int iterationsTillSplit)
 {
-    //std::cout << " Starting doLinkingRecurse, acc bounds are:\n" 
-    //          << accMinRa << " , " << accMaxRa << " ; " 
-    //          << accMinDec << " , " << accMaxDec << ";\n";
+    // if (firstEndpoint.myTree->hasTracklet(6) && secondEndpoint.myTree->hasTracklet(8) 
+    //     && firstEndpoint.myTree->isLeaf() && secondEndpoint.myTree->isLeaf()) {
+    //     std::cout << "\n\n Missing tracklets ARE present.\n";
+    //     std::cout << " Starting doLinkingRecurse, acc bounds are:\n" 
+    //               << accMinRa << " , " << accMaxRa << " ; " 
+    //               << accMinDec << " , " << accMaxDec << ";\n";
+    //     std::cout << " endpoints are leaves: " << firstEndpoint.myTree->isLeaf() << ", " <<
+    //         secondEndpoint.myTree->isLeaf() << "\n";
+
+    // }
+
     double start = std::clock();
     firstEndpoint.myTree->addVisit();
 

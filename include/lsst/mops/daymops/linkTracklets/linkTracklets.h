@@ -90,8 +90,10 @@ public:
             trackMaxRms = .0005;
 
 
-            // Matt's old experiments indicate 16 is best.
-            leafSize=16;
+            // Now with "sparse" KD-Trees it appears that leaf node
+            // size 1 is best (see my spreadsheet on Google docs -
+            // jmyers)
+            leafSize=1;
 
             restrictTrackStartTimes = false;
             latestFirstEndpointTime = -1;

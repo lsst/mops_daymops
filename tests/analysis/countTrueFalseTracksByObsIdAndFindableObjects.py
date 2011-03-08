@@ -61,7 +61,7 @@ import sys
 
 FALSE_DIA_SSM_ID="-1" # the ssmId of a DiaSource which is attributable to non-asteroid sources
 
-PRELOAD_DIAS_FROM_FILE=False
+PRELOAD_DIAS_FROM_FILE=True
 
 if not PRELOAD_DIAS_FROM_FILE:
     import MySQLdb as db
@@ -258,7 +258,7 @@ if __name__=="__main__":
         conn = db.connect(user=DB_USER, passwd=DB_PASS, host=DB_HOST)
         diasLookupTool = conn.cursor()
 
-    tracksGlob = glob.glob(tracksFilePattern)
+    tracksGlob = glob.glob(tracksGlobPattern)
 
     print "Reading tracks from ", tracksGlob
 

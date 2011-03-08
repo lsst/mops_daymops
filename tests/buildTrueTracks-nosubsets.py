@@ -463,6 +463,6 @@ if __name__ == "__main__":
     print "of %i objects, %i generated tracks (%f%%)" % \
         (nObjects, nTrackGeneratingObjects, nTrackGeneratingObjects*100./nObjects)
         
-    print "Image times with viable start tracklets for some track: "
+    #print "Image times with viable start tracklets for some track: "
     #for imgTime in sorted(imgTimesToTrackCounts.keys()):
     #    print imgTime, " : ", imgTimesToTrackCounts[imgTime]

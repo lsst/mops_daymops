@@ -52,7 +52,7 @@ DIAS_DB="mops_noDeepAstromError"
 DIAS_TABLE="fullerDiaSource"
 
 FALSE_DIAS_DB="mops_noDeepAstromError"
-FALSE_DIAS_TABLE="noisePointDiaSource_2400_per_image"
+FALSE_DIAS_TABLE="diasUnattributedAfterSlowMoverPass_plusNoise2500PerImage"
 FALSE_DIA_SSMID=-1
 FALSE_DIA_MAG=1
 FALSE_DIA_SNR=1

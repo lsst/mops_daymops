@@ -32,6 +32,12 @@ env.Program('../../tests/linkTracklets-unitTests',
             LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
 
 
+env.Program('../../tests/linkTracklets-conspic', 
+            ['conspicuousFailure.cc', 'linkTracklets.o']
+            + common_libs + [TrackletTreeNode, TrackletTree],
+            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
+
+
 env.Program('../../bin/linkTracklets', 
             ['linkTrackletsMain.cc', 'linkTracklets.o',
              'TrackletTree', 'TrackletTreeNode'] + common_libs,

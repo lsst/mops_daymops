@@ -17,12 +17,13 @@
 #include <time.h>
 
 
-#include "TrackSet.h"
-#include "../Detection.h"
-#include "../Tracklet.h"
+#include "../../include/lsst/mops/TrackSet.h"
+#include "../../include/lsst/mops/MopsDetection.h"
+#include "../../include/lsst/mops/Tracklet.h"
 #include "linkTracklets.h"
-#include "../Exceptions.h"
+#include "../../include/lsst/mops/Exceptions.h"
 
+using namespace lsst::mops;
 
 bool Eq(double a, double b) 
 {
@@ -31,11 +32,11 @@ bool Eq(double a, double b)
 }
 
 
-void debugPrintTrackletsAndDets(std::vector<Detection> allDets, std::vector<Tracklet> allTracklets) 
+void debugPrintTrackletsAndDets(std::vector<MopsDetection> allDets, std::vector<Tracklet> allTracklets) 
 {
 
     for (unsigned int i = 0; i < allDets.size(); i++) {
-        Detection* curDet = &allDets.at(i);
+      MopsDetection* curDet = &allDets.at(i);
         std::cout << curDet->getID() << "\t" << curDet->getRA() << "\t" << curDet->getDec() << '\n';
     }
     std::cout << "all tracklets:\n";
@@ -51,7 +52,7 @@ void debugPrintTrackletsAndDets(std::vector<Detection> allDets, std::vector<Trac
 
 }
 
-void debugPrintTrackSet(const TrackSet &tracks, const std::vector<Detection> &allDets) 
+void debugPrintTrackSet(const TrackSet &tracks, const std::vector<MopsDetection> &allDets) 
 {
     std::set<Track>::const_iterator trackIter;
     unsigned int trackCount = 0;
@@ -74,7 +75,7 @@ void debugPrintTrackSet(const TrackSet &tracks, const std::vector<Detection> &al
 
 
 
-namespace ctExcept = collapseTracklets::exceptions;
+//namespace ctExcept = collapseTracklets::exceptions;
 
 
 /*
@@ -104,18 +105,18 @@ namespace ctExcept = collapseTracklets::exceptions;
 Track generateTrack(double ra0, double dec0, double raV, double decV,
                     double raAcc, double decAcc,
                     std::vector<std::vector <double> > trackletObsTimes,
-                    std::vector<Detection> &allDetections,
+                    std::vector<MopsDetection> &allDetections,
                     std::vector<Tracklet> &allTracklets, 
                     unsigned int & lastDetId,
                     unsigned int & lastTrackletId) {
 
     if (trackletObsTimes.size() == 0) {
-        throw LSST_EXCEPT(ctExcept::BadParameterException, 
+        throw LSST_EXCEPT(BadParameterException, 
                           std::string(__FUNCTION__)+
                           std::string(": cannot build a track with 0 obs times!"));
     }
     if (trackletObsTimes.at(0).size() == 0) {
-        throw LSST_EXCEPT(ctExcept::BadParameterException, 
+        throw LSST_EXCEPT(BadParameterException, 
                           std::string(__FUNCTION__)+
                           std::string(": cannot build a tracklet with 0 obs times!"));
     }
@@ -129,7 +130,7 @@ Track generateTrack(double ra0, double dec0, double raV, double decV,
         trackletIter != trackletObsTimes.end();
         trackletIter++) {
         if (trackletIter->size() == 0) {
-            throw LSST_EXCEPT(ctExcept::BadParameterException, 
+            throw LSST_EXCEPT(BadParameterException, 
                               std::string(__FUNCTION__)+
                               std::string(": cannot build tracklet with 0 obs times!"));
         }
@@ -149,14 +150,14 @@ Track generateTrack(double ra0, double dec0, double raV, double decV,
             // create new det, add it to our total set of dets,
             // add its ID to the cur tracklet, and cur track.
             lastDetId++;
-            Detection newDet(lastDetId, *obsTime, resultRa, resultDec);
+            MopsDetection newDet(lastDetId, *obsTime, resultRa, resultDec);
             allDetections.push_back(newDet);
             newTracklet.indices.insert(lastDetId);
             newTrack.componentDetectionIndices.insert(lastDetId);           
         }
         allTracklets.push_back(newTracklet);
         if (allTracklets.size() -1 != lastTrackletId) {
-            throw LSST_EXCEPT(ctExcept::BadParameterException,
+            throw LSST_EXCEPT(BadParameterException,
                               std::string(__FUNCTION__)+
                               std::string(": tracklet IDs are assumed to be the index of the tracklet into the tracklet vector."));
         }
@@ -352,11 +353,13 @@ BOOST_AUTO_TEST_CASE( linkTracklets_whitebox_getBestFitVelocityAndAcceleration_t
 
 
 // helper function for creating sets of detections
-void addDetectionAt(double MJD, double RA, double dec,  std::vector<Detection> &detVec)
+void addDetectionAt(double MJD, double RA, double dec,  std::vector<MopsDetection> &detVec)
 {
-    Detection tmpDet(detVec.size(), MJD, RA, dec, 566, "dummy",
-                     24.0, 0., 0.);
-    detVec.push_back(tmpDet);
+  //JOHN LOOK HERE
+  /*MopsDetection tmpDet(detVec.size(), MJD, RA, dec, 566, "dummy",
+    24.0, 0., 0.);*/
+  MopsDetection tmpDet(detVec.size(), 24.0, 0., 0.);
+  detVec.push_back(tmpDet);
 }
 
 
@@ -1123,7 +1126,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_4_pt_5 )
 
     // lots of tracks, following a coherent pattern but randomly perturbed.
     TrackSet expectedTracks;
-    std::vector<Detection> allDets;
+    std::vector<MopsDetection> allDets;
     std::vector<Tracklet> allTracklets;
     unsigned int firstDetId = -1;
     unsigned int firstTrackletId = -1;
@@ -1189,7 +1192,8 @@ BOOST_AUTO_TEST_CASE( linkTracklets_4_pt_5 )
     TrackSet foundTracks;
 
     if( rank == 0 ){
-      foundTracks = linkTracklets(allDets, allTracklets, myConfig, numProcessors);
+      //foundTracks = linkTracklets(allDets, allTracklets, myConfig, numProcessors);
+      linkTracklets(allDets, allTracklets, myConfig, numProcessors, foundTracks);
       std::cerr << "FounTracks size is " << foundTracks.size() << std::endl;
       BOOST_CHECK(expectedTracks.isSubsetOf(foundTracks));
     }

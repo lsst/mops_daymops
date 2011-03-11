@@ -6,12 +6,17 @@
 
 #include <vector>
 #include <time.h>
+#include <map>
 
-#include "../KDTree.h"
-#include "../Detection.h"
-#include "../Tracklet.h"
-#include "Track.h"
-#include "TrackSet.h"
+//#include "../KDTree.h"
+//#include "
+#include "../../include/lsst/mops/MopsDetection.h"
+#include "../../include/lsst/mops/Tracklet.h"
+#include "../../include/lsst/mops/KDTree.h"
+#include "../../include/lsst/mops/KDTreeNode.h"
+//#include "../Tracklet.h"
+#include "../../include/lsst/mops/Track.h"
+#include "../../include/lsst/mops/TrackSet.h"
 
 
 /*
@@ -148,11 +153,11 @@ class TreeNodeAndTime {
 public:
   TreeNodeAndTime(){
   }
-  TreeNodeAndTime(KDTree::KDTreeNode<unsigned int> * tree, ImageTime i) {
+  TreeNodeAndTime(lsst::mops::KDTreeNode<unsigned int> * tree, ImageTime i) {
     myTree = tree;
     myTime = i;
   }
-  KDTree::KDTreeNode <unsigned int> * myTree;
+  lsst::mops::KDTreeNode <unsigned int> * myTree;
   ImageTime myTime;
 };
 
@@ -195,13 +200,14 @@ typedef struct treeIdNodeId{
 
 /* queryTracklets are non-const because we set their velocityRA and velocityDec fields. 
    otherwise queryTracklets will not be changed. */
-TrackSet linkTracklets(const std::vector<Detection> &allDetections,
-                       std::vector<Tracklet> &queryTracklets,
-                       linkTrackletsConfig searchConfig, int numProcs);
+void linkTracklets(const std::vector<lsst::mops::MopsDetection> &allDetections,
+		   std::vector<lsst::mops::Tracklet> &queryTracklets,
+		   linkTrackletsConfig searchConfig, int numProcs,
+		   lsst::mops::TrackSet &tracks);
 
 void waitForTask(int rank,
-		 const std::vector<Detection> &allDetections, //from MAIN
-		 std::vector<Tracklet> &allTracklets, //from MAIN
+		 const std::vector<lsst::mops::MopsDetection> &allDetections, //from MAIN
+		 std::vector<lsst::mops::Tracklet> &allTracklets, //from MAIN
 		 linkTrackletsConfig searchConfig  /*from MAIN*/);
 	
 
@@ -231,20 +237,20 @@ findFarthestNodeIndex(cachedNode *nodeCache, int cacheSize,
 		      const std::vector<std::vector<treeIdNodeIdPair> > &finalEndpointOrder,
 		      unsigned int setStart, unsigned int workItemStart);
 
-KDTree::KDTree<unsigned int> *
+lsst::mops::KDTree<unsigned int> *
 findTreeById(const unsigned int id, 
-	     std::map<ImageTime, KDTree::KDTree<unsigned int> > &treeMap);
+	     std::map<ImageTime, lsst::mops::KDTree<unsigned int> > &treeMap);
 
 ImageTime 
 findImageTimeForTree(const unsigned int id, 
-			       const std::map<ImageTime, KDTree::KDTree<unsigned int> > &treeMap);
+			       const std::map<ImageTime, lsst::mops::KDTree<unsigned int> > &treeMap);
 
-KDTree::KDTreeNode<unsigned int> *
-getNodeByIDAndTime(KDTree::KDTree<unsigned int> *myTree, unsigned int nodeId);
+lsst::mops::KDTreeNode<unsigned int> *
+getNodeByIDAndTime(lsst::mops::KDTree<unsigned int> *myTree, unsigned int nodeId);
 
 int 
 loadNodeFromCache(unsigned int treeId, unsigned int nodeId, int &cacheSize, cachedNode *nodeCache,
-		  std::map<ImageTime, KDTree::KDTree <unsigned int> > &trackletTimeToTreeMap,
+		  std::map<ImageTime, lsst::mops::KDTree <unsigned int> > &trackletTimeToTreeMap,
 		  const std::vector<std::vector<treeIdNodeIdPair> > &finalEndpointOrder,
 		  unsigned long long &pageFaults);
 

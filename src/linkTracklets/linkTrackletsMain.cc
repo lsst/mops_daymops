@@ -11,7 +11,7 @@
 
 
 #include "linkTracklets.h"
-#include "../fileUtils.h"
+#include "../../include/lsst/mops/fileUtils.h"
 
 
 #define PRINT_TIMING_INFO false
@@ -31,15 +31,15 @@ double timeElapsed(clock_t priorEvent)
 
 
 void writeResults(std::string outFileName, 
-		  const std::vector<Detection> &allDets,
-		  const std::vector<Tracklet> &allTracklets,
-		  const std::vector<Track> & tracks) 
+		  const std::vector<lsst::mops::MopsDetection> &allDets,
+		  const std::vector<lsst::mops::Tracklet> &allTracklets,
+		  const std::vector<lsst::mops::Track> & tracks) 
 {
      std::ofstream outFile;
      outFile.open(outFileName.c_str());
      for (unsigned int i = 0; i < tracks.size(); i++) {
 	  std::set<unsigned int>::const_iterator detIter;
-	  const Track* curTrack = &(tracks.at(i));
+	  const lsst::mops::Track* curTrack = &(tracks.at(i));
 	  for (detIter = curTrack->componentDetectionIndices.begin();
 	       detIter != curTrack->componentDetectionIndices.end();
 	       detIter++) {
@@ -75,10 +75,10 @@ int main(int argc, char* argv[])
   //to the slave nodes, which are all waiting in doLinkingRecurse2
   //processor one is the only one to read data and process arguments
 
-    std::vector<Detection> allDets;
-    std::vector<Tracklet> allTracklets;
+    std::vector<lsst::mops::MopsDetection> allDets;
+    std::vector<lsst::mops::Tracklet> allTracklets;
     //std::vector<Track> resultTracks;
-    TrackSet resultTracks;
+    lsst::mops::TrackSet resultTracks;
     clock_t last;
     double dif;
     std::string outputFileName = "";
@@ -185,7 +185,8 @@ int main(int argc, char* argv[])
     if( rank == 0){
       //run linktracklets program
       std::cout << "Rank " << rank << " calling linkTracklets at " << std::clock() << "." << std::endl;
-      resultTracks = linkTracklets(allDets, allTracklets, searchConfig, /*rank,*/ numProcessors);
+      //resultTracks = linkTracklets(allDets, allTracklets, searchConfig, /*rank,*/ numProcessors);
+      linkTracklets(allDets, allTracklets, searchConfig, /*rank,*/ numProcessors, resultTracks);
       std::cout << "Master returned from linkTracklets at " << std::clock() << " and got " << resultTracks.size() << " tracks." << std::endl;
       
       if(PRINT_TIMING_INFO) {     

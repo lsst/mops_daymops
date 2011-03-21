@@ -5,7 +5,6 @@
 #include <ctime>
 #include <iomanip>
 #include <map>
-#include <gsl/gsl_multifit.h>
 #include <time.h>
 #include <algorithm>
 
@@ -14,7 +13,6 @@
 #include "lsst/mops/Exceptions.h"
 #include "lsst/mops/KDTree.h"
 #include "lsst/mops/daymops/linkTracklets/TrackletTree.h"
-
 
 
 
@@ -509,6 +507,73 @@ void getAllDetectionsForTracklet(
 
 
 
+
+
+void recenterDetections(std::vector<MopsDetection> &allDetections, 
+                        const linkTrackletsConfig &searchConfig)
+{
+    if (allDetections.size() < 1) return;
+    /* first, make sure that all data falls along a contiguous
+     * region.  this will probably cause downstream failures in
+     * subtle, hard-to-find ways if we start using full-sky data,
+     * because our accBounds and areMutuallyCompatible math
+     * doesn't deal with wrap-around. Please don't use this code
+     * after DC3. */
+    
+    double firstRa, firstDec;
+    firstRa = allDetections[0].getRA();
+    firstDec = allDetections[0].getDec();
+    double minRa = firstRa;
+    double maxRa = firstRa;
+    double minDec = firstDec;
+    double maxDec = firstDec;
+    for (unsigned int i = 1; i < allDetections.size(); i++) {
+        double thisRa, thisDec;
+        thisRa  = allDetections[i].getRA();
+        thisDec = allDetections[i].getDec();
+        while (firstRa - thisRa > 180.) {
+            thisRa += 360.;
+        }
+        while (firstRa - thisRa < -180.) {
+            thisRa -= 360.;
+        }
+        while (firstDec - thisDec > 180.) {
+            thisDec += 360.;
+        }
+        while (firstDec - thisDec < -180.) {
+            thisDec -= 360.;
+        }
+        allDetections[i].setRA(thisRa);
+        allDetections[i].setDec(thisDec);
+        
+        minRa = minOfTwo(thisRa, minRa);
+        maxRa = maxOfTwo(thisRa, maxRa);
+
+        minDec = minOfTwo(thisDec, minDec);
+        maxDec = maxOfTwo(thisDec, maxDec);
+    }
+
+    if ((maxRa - minRa >= 180.) || 
+        (maxDec - minDec >= 180.)) {
+        LSST_EXCEPT(KnownShortcomingException,
+                    "Detections do not fall on contiguous (180,180) degree range. Math is known to fail in this case.");
+    }
+
+    if (searchConfig.myVerbosity.printBoundsInfo) {
+        std::cout << "   Bounds were (in deg) R=[" << 
+            minRa << ",  " << maxRa << "], D=[ " <<
+            minDec << ",  " << maxDec << "]" << std::endl;
+    }
+    
+    
+}
+
+
+
+
+
+
+
 void setTrackletVelocities(
     const std::vector<MopsDetection> &allDetections,
     std::vector<Tracklet> &queryTracklets)
@@ -543,7 +608,7 @@ void makeTrackletTimeToTreeMap(
     const std::vector<MopsDetection> &allDetections,
     std::vector<Tracklet> &queryTracklets,
     std::map<ImageTime, TrackletTree > &newMap,
-    linkTrackletsConfig myConf)
+    const linkTrackletsConfig &myConf)
 {
     bool printDebug = false;
     if (printDebug) {
@@ -1142,6 +1207,7 @@ void buildTracksAddToResults(
             uint firstEndpointTrackletIndex = firstEndpointIter->getValue();
             uint secondEndpointTrackletIndex = secondEndpointIter->getValue();
             
+
             
             newTrack.addTracklet(firstEndpointTrackletIndex, 
                                  allTracklets.at(firstEndpointTrackletIndex),
@@ -1592,9 +1658,9 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                       TrackSet & results,
                       int iterationsTillSplit)
 {
+
     double start = std::clock();
     firstEndpoint.myTree->addVisit();
-    secondEndpoint.myTree->addVisit();
 
     doLinkingRecurseVisits++;
 
@@ -1656,7 +1722,9 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                 
                 iterationsTillSplit -= 1;
                 
-                // find the "widest" node. we will split that node and
+                // find the "widest" node, where width is just the
+                // product of RA range, Dec range, RA velocity range,
+                // Dec velocity range.  we will split that node and
                 // recurse.
                 
                 double firstEndpointWidth = nodeWidth(firstEndpoint.myTree);
@@ -1678,12 +1746,20 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                     //"widest" node is first endpoint, recurse twice
                     // using its children in its place.
                     
+                    if ((! firstEndpoint.myTree->hasLeftChild()) 
+                        && (!firstEndpoint.myTree->hasRightChild())) {
+                        throw LSST_EXCEPT(ProgrammerErrorException, 
+     "Recursing in a leaf node (first endpoint), must be a bug!");
+                    }
 
                     if (firstEndpoint.myTree->hasLeftChild())
                     {
                         TreeNodeAndTime newTAT(
                             firstEndpoint.myTree->getLeftChild(), 
                             firstEndpoint.myTime);
+                        //doLinkingRecurseTime += timeSince(start);
+                        //std::cout << "Recursing on left child of
+                        //first endpoint.\n";
                         doLinkingRecurse(allDetections, 
                                          allTracklets, 
                                          searchConfig,
@@ -1695,6 +1771,8 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                                          accMaxDec,
                                          results, 
                                          iterationsTillSplit); 
+                        //std::cout << "Returned from recursion on
+                        //left child of first endpoint.\n";
                     }
                     
                     if (firstEndpoint.myTree->hasRightChild())
@@ -1703,6 +1781,8 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                             firstEndpoint.myTree->getRightChild(), 
                             firstEndpoint.myTime);
                         doLinkingRecurseTime += timeSince(start);
+                        //std::cout << "recursing on right child of
+                        //first endpoint..\n";
                         doLinkingRecurse(allDetections, 
                                          allTracklets, 
                                          searchConfig,
@@ -1714,12 +1794,19 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                                          accMaxDec,
                                          results, 
                                          iterationsTillSplit);  
+                        //std::cout << "Returned from recursion on
+                        //right child of first endpoint.\n";
                     }
                 }
                 else {
                     //"widest" node is second endpoint, recurse twice
                     // using its children in its place
                     
+                    if ((!secondEndpoint.myTree->hasLeftChild()) 
+                        && (!secondEndpoint.myTree->hasRightChild())) {
+                        throw LSST_EXCEPT(ProgrammerErrorException, 
+            "Recursing in a leaf node (second endpoint), must be a bug!");
+                    }
 
                     if (secondEndpoint.myTree->hasLeftChild())
                     {
@@ -1727,6 +1814,8 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                             secondEndpoint.myTree->getLeftChild(), 
                             secondEndpoint.myTime);
                         doLinkingRecurseTime += timeSince(start);
+                        //std::cout << "Recursing on left child of
+                        //second endpoint.\n";
                         doLinkingRecurse(allDetections, 
                                          allTracklets, 
                                          searchConfig,
@@ -1739,6 +1828,8 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                                          accMaxDec,
                                          results, 
                                          iterationsTillSplit);
+                        //std::cout << "Returned from recursion on
+                        //left child of second endpoint.\n";
                     }
                     
                     if (secondEndpoint.myTree->hasRightChild())
@@ -1747,6 +1838,8 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                             secondEndpoint.myTree->getRightChild(), 
                             secondEndpoint.myTime);
                         doLinkingRecurseTime += timeSince(start);
+                        //std::cout << "Recursing on right child of
+                        //second endpoint.\n";
                         doLinkingRecurse(allDetections, 
                                          allTracklets, 
                                          searchConfig,
@@ -1759,6 +1852,8 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                                          accMaxDec,
                                          results, 
                                          iterationsTillSplit);
+                        //std::cout << "Returned from recursion on
+                        //right child of second endpoint.\n";
                         
                     }
                 }
@@ -1966,7 +2061,7 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
 
 
 
-TrackSet* linkTracklets(const std::vector<MopsDetection> &allDetections,
+TrackSet* linkTracklets(std::vector<MopsDetection> &allDetections,
                         std::vector<Tracklet> &queryTracklets,
                         const linkTrackletsConfig &searchConfig) {
     TrackSet * toRet;
@@ -1997,6 +2092,11 @@ TrackSet* linkTracklets(const std::vector<MopsDetection> &allDetections,
       DecVelocity] and the returned keys are indices into
       queryTracklets.
     */
+    if (searchConfig.myVerbosity.printStatus) {
+        std::cout << "Recentering all detections on (180, 0).\n";
+    }
+    recenterDetections(allDetections, searchConfig);
+    
     if (searchConfig.myVerbosity.printStatus) {
         std::cout << "Setting tracklet velocities.\n";
     }

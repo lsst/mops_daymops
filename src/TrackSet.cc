@@ -63,6 +63,27 @@ TrackSet::~TrackSet()
 
 
 
+void TrackSet::debugPrint()
+{
+
+    unsigned int count = 0;
+    std::set<Track>::const_iterator curTrack;
+    for (curTrack = componentTracks.begin(); 
+         curTrack != componentTracks.end();
+         curTrack++) {
+        std::cout << "Track " << count << ": \n   Dias are: ";
+        std::set<unsigned int> diaIds = curTrack->getComponentDetectionDiaIds();
+        std::set<unsigned int>::const_iterator detIter;
+        for (detIter = diaIds.begin();
+             detIter != diaIds.end();
+             detIter++) {
+            std::cout << *detIter << " ";
+        }
+        std::cout << "\n\n";
+        count += 1; 
+    }
+}
+
 
 
 void TrackSet::writeToFile()

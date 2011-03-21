@@ -32,10 +32,12 @@ public:
         printStatus = false;
         printVisitCounts = false;
         printTimesByCategory = false;
+        printBoundsInfo = false;
     }
     bool printStatus;
     bool printVisitCounts;
     bool printTimesByCategory;
+    bool printBoundsInfo;
 };
 
 
@@ -88,8 +90,10 @@ public:
             trackMaxRms = .0005;
 
 
-            // Matt's old experiments indicate 16 is best.
-            leafSize=16;
+            // Now with "sparse" KD-Trees it appears that leaf node
+            // size 1 is best (see my spreadsheet on Google docs -
+            // jmyers)
+            leafSize=1;
 
             restrictTrackStartTimes = false;
             latestFirstEndpointTime = -1;
@@ -231,8 +235,8 @@ public:
 
 /* queryTracklets are non-const because we set their velocityRA and
    velocityDec fields.  otherwise queryTracklets will not be
-   changed. */
-TrackSet* linkTracklets(const std::vector<MopsDetection> &allDetections,
+   changed. Detections will be recentered, though.*/
+TrackSet* linkTracklets(std::vector<MopsDetection> &allDetections,
                         std::vector<Tracklet> &queryTracklets,
                         const linkTrackletsConfig &searchConfig);
 

@@ -8,11 +8,26 @@ TrackletTree::TrackletTree(const std::vector<MopsDetection> &allDetections,
                            const std::vector<Tracklet> &thisTreeTracklets,
                            double positionalErrorRa, 
                            double positionalErrorDec,
-                           unsigned int maxLeafSize)
+                           unsigned int maxLeafSize,
+			   const std::vector<double> &perAxisWidths)
 {
     setUpEmptyTree();
     buildFromData(allDetections, thisTreeTracklets, positionalErrorRa,
-                        positionalErrorDec, maxLeafSize);
+		  positionalErrorDec, maxLeafSize, perAxisWidths);
+
+}
+
+
+TrackletTree::TrackletTree(const std::vector<MopsDetection> &allDetections,
+                           const std::vector<Tracklet> &thisTreeTracklets,
+                           double positionalErrorRa, 
+                           double positionalErrorDec,
+                           unsigned int maxLeafSize)
+{
+    setUpEmptyTree();
+    std::vector<double> emptyVec;
+    buildFromData(allDetections, thisTreeTracklets, positionalErrorRa,
+		  positionalErrorDec, maxLeafSize, emptyVec);
 
 }
 
@@ -26,14 +41,13 @@ void TrackletTree::buildFromData(
     const std::vector<MopsDetection> &allDetections,
     const std::vector<Tracklet> &thisTreeTracklets,
     double positionalErrorRa, double positionalErrorDec,
-    unsigned int maxLeafSize)
+    unsigned int maxLeafSize, 
+    const::std::vector<double> &perAxisWidths)
 {
     // need to set up fields used by KDTree just the way KDTree would; then 
     // create our set of child TrackletTreesNodes
     myK = 4;
 
-    double initialRa = 0.;
-    double initialDec = 0.;
 
     if (thisTreeTracklets.size() > 0) 
     {
@@ -53,9 +67,6 @@ void TrackletTree::buildFromData(
         
         // and make a PointAndValue vector.
 
-        //calculate initial, without-error UBounds, LBounds while
-        //we're at it (they are needed for the BaseKDTree constructor)
-
 	// ASSUME all data comes from the same <180 -degree region of sky in both RA and Dec.
 
         for (uint i = 0; i < thisTreeTracklets.size(); i++) {
@@ -65,22 +76,8 @@ void TrackletTree::buildFromData(
             PointAndValue<unsigned int> trackletPav;
 
             std::vector<double> trackletPoint;
-	    double raHere = firstDetection.getRA();
-	    double decHere = firstDetection.getDec();
-	    while (initialRa - raHere > 180) {
-		 raHere += 360;
-	    }
-	    while (initialRa - raHere < -180) {
-		 raHere -= 360;
-	    }
-	    while (initialDec - decHere > 180) {
-		 decHere += 360;
-	    }
-	    while (initialDec - decHere < -180) {
-		 decHere -= 360;
-	    }
-            trackletPoint.push_back(raHere);
-            trackletPoint.push_back(decHere);
+            trackletPoint.push_back(firstDetection.getRA());
+            trackletPoint.push_back(firstDetection.getDec());
             trackletPoint.push_back(myT.velocityRA);
             trackletPoint.push_back(myT.velocityDec);
             trackletPoint.push_back(myT.getDeltaTime(allDetections));
@@ -90,17 +87,29 @@ void TrackletTree::buildFromData(
 
             parameterizedTracklets.push_back(trackletPav);
 
-            // calculate UBounds, LBounds
-            if (pointsUBounds.size() == 0) {
-                pointsUBounds = trackletPoint;
-            }
-            if (pointsLBounds.size() == 0) {
-                pointsLBounds = trackletPoint;
-            }
-            extendBounds(pointsUBounds, trackletPoint, true);
-            extendBounds(pointsLBounds, trackletPoint, false);
+	    // calculate UBounds, LBounds                                                                                                                                                   
+	    if (pointsUBounds.size() == 0) {		 
+		 pointsUBounds = trackletPoint;
+	    }
+	    if (pointsLBounds.size() == 0) {
+		 pointsLBounds = trackletPoint;
+	    }
+	    extendBounds(pointsUBounds, trackletPoint, true);
+	    extendBounds(pointsLBounds, trackletPoint, false);
+	    
         }
 
+	// C linkTracklets calculates the width of the FULL set of tracklets; 
+	// if our parent gave us that set of values use them. otherwise calculate the
+	// width of the tracklets in this actual image.
+	std::vector<double> widthsToSend = perAxisWidths;
+	if (perAxisWidths.size() == 0)
+	{
+	     widthsToSend.resize(4);
+	     for (unsigned int i = 0; i < 4; i++) {		  
+		  widthsToSend[i] = (pointsUBounds[i] - pointsLBounds[i]) / 2.0;
+	     }
+	}
         // build root TrackletTreeNode
 
         /* create the root of the tree (and the rest of the tree
@@ -111,9 +120,10 @@ void TrackletTree::buildFromData(
                                       positionalErrorDec,
                                       maxLeafSize, 
                                       0,
-                                      pointsUBounds, 
-                                      pointsLBounds, 
-                                      idCounter);
+				      widthsToSend,
+                                      idCounter,
+				      false, 
+				      true);
         // don't set hasData until now, when the tree is actually built.
         mySize = idCounter;
 
@@ -122,7 +132,6 @@ void TrackletTree::buildFromData(
         // *position/velocity error) and set our own
         myUBounds = *(myRoot->getUBounds());
         myLBounds = *(myRoot->getLBounds());
-
   
         hasData = true;
     }

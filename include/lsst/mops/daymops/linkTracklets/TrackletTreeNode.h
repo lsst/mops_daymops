@@ -38,6 +38,9 @@ namespace mops {
          * Max allowable positional error is specified by the user;
          * this is used along with tracklet delta-time to calculate
          * the velocity error.
+         *
+         * if useMedian = false, splitWidest=true and widths is nonempty,
+         * we split up values like C linkTracklets does. 
          */
 
 
@@ -47,8 +50,10 @@ namespace mops {
             double positionalErrorDec,
             unsigned int maxLeafSize, 
             unsigned int myAxisToSplit, 
-            const std::vector<double> &UBounds,
-            const std::vector<double> &LBounds, unsigned int &lastId);
+            const std::vector<double> &widths,
+            unsigned int &lastId,
+            bool useMedian=false,
+            bool splitWidest=true);
         
     
         const unsigned int getNumVisits() const;
@@ -68,30 +73,6 @@ namespace mops {
 
 
     protected:
-        /* Our "real" constructor calls the BaseKDTreeNode constructor
-         * then does some followup.  The BaseKDTreeNode constructor
-         * needs to call *our* constructor with this form (which in
-         * turn just calls the BaseKDTree constructor of the same
-         * form)!
-         */
-        TrackletTreeNode(
-            const std::vector<PointAndValue <unsigned int> > 
-            &pointsAndValues,
-            unsigned int k, 
-            unsigned int maxLeafSize, 
-            unsigned int myAxisToSplit, 
-            const std::vector<double> & UBounds,
-            const std::vector<double> & LBounds, 
-            unsigned int &lastId) 
-            : BaseKDTreeNode<unsigned int, TrackletTreeNode>::BaseKDTreeNode
-              ( pointsAndValues, 
-                k, 
-                maxLeafSize, 
-                myAxisToSplit,
-                UBounds, 
-                LBounds, 
-                lastId) {};
-        
 
         /* after the "real" constructor is called at the root, and the
          * BaseKDTree constructor sets up the children, this function
@@ -102,7 +83,6 @@ namespace mops {
                                         double positionalErrorDec);
 
     private:
-
         unsigned int numVisits;
     };
 

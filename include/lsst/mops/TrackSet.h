@@ -39,9 +39,6 @@ public:
 
     ~TrackSet();
 
-    void purgeToFile();
-
-
     /*
      * if there is no outfile, raise exception.
      *
@@ -49,6 +46,8 @@ public:
      * 
      * if cacheing is enabled, clear the local entries as well.
      */
+    void purgeToFile();
+
     void debugPrint();
 
     std::set<Track> componentTracks;

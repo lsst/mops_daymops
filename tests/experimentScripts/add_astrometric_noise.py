@@ -33,27 +33,15 @@ if __name__ == '__main__':
                                  username='lsst', passwdname='lsst', dbname='opsimdev')
 
     # ordered list of input data 
-    inputdata_keys = ('diasourceID', 'ssmid', 'opsimID', 'filter', 'expmjd',  'ra', 'ra_err', 
-                      'dradt', 'dec', 'dec_err', 'ddecdt', 'dist', 'mag', 'mag_err', 'snr')
-    inputdata_keytypes = ('int', 'int', 'int', 'string', 'float', 'float', 'string', 
-                          'string', 'float', 'string', 'string', 'string', 'float', 'string', 'float')
-    #inputdata_keytypes = ('int', 'int', 'int', 'string', 'float', 'float', 'float', 
-    #                      'float', 'float', 'float', 'float', 'float', 'float', 'float', 'float')
-    #inputdata_keys = ('diasourceID', 'opsimID', 'ssmID',  'ra', 'decl', 'expmjd', 'mag', 'snr')
-    #inputdata_keytypes = ('int', 'int', 'int', 'float', 'float', 'float', 'float', 'float')
+    inputdata_keys = ('diasourceID', 'opsimID', 'ssmID', 'ra', 'decl', 'expmjd', 'mag', 'snr')
+    inputdata_keytypes = ('int', 'int', 'int', 'float', 'float', 'float', 'float', 'float')
     data = {} 
     prevopsimid = 0
     for line in f:
         values = line.split()
         for i in range(len(inputdata_keys)):
             if inputdata_keytypes[i] == 'int':
-                try:
-                    data[inputdata_keys[i]] = int(values[i])
-                except:
-                    print values
-                    raise Exception
-            elif inputdata_keytypes[i] == 'string':
-                data[inputdata_keys[i]] = values[i]
+                data[inputdata_keys[i]] = int(values[i])
             else:
                 data[inputdata_keys[i]] = float(values[i])
 
@@ -74,20 +62,17 @@ if __name__ == '__main__':
             data['ra'] = data['ra'] + 360.0
         if data['ra'] > 360 : 
             data['ra'] = data['ra'] % 360.0
-        data['dec'] = data['dec'] + numpy.random.normal(loc=0, scale=astromErr)
-        if data['dec'] > 90:
-            data['dec'] = 90.0
-        if data['dec'] < -90:
-            data['dec'] = -90.0
+        data['decl'] = data['decl'] + numpy.random.normal(loc=0, scale=astromErr)
 
         writestring = ""
         for i in range(len(inputdata_keys)):
             if inputdata_keytypes[i] == 'int':
                 writestring = writestring + "%d " %(data[inputdata_keys[i]])
-            elif inputdata_keytypes[i] == 'string':
-                writestring = writestring + "%s " %(data[inputdata_keys[i]])
             else:
-                writestring = writestring + "%.9f " %(data[inputdata_keys[i]])
+                if (inputdata_keys[i] == 'ra') | (inputdata_keys[i] == 'decl'):
+                    writestring = writestring + "%.9f " %(data[inputdata_keys[i]])
+                else: 
+                    writestring = writestring + "%f " %(data[inputdata_keys[i]])
         print >>fout, writestring
         
     f.close()

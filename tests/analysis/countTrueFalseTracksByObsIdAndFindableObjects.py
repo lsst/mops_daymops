@@ -61,6 +61,22 @@ import sys
 
 FALSE_DIA_SSM_ID="-1" # the ssmId of a DiaSource which is attributable to non-asteroid sources
 
+PRELOAD_DIAS_FROM_FILE=True
+
+if not PRELOAD_DIAS_FROM_FILE:
+    import MySQLdb as db
+
+
+    OPSIM_DB="opsim_3_61"
+    OPSIM_TABLE="output_opsim3_61"
+    
+    DIAS_DB="mops_noDeepAstromError"
+    DIAS_TABLE="fullerDiaSource"
+    
+    DB_USER="jmyers"
+    DB_PASS="jmyers"
+    DB_HOST="localhost"
+
 
 def readDias(diasDataFile):
 
@@ -82,9 +98,26 @@ def readDias(diasDataFile):
     return idToDias
 
 
-def lookUpDia(diasLookupDict, diaId):
-    return diasLookupDict[diaId]
 
+def lookUpDias(diasLookupTool, diaIds):
+    if PRELOAD_DIAS_FROM_FILE:
+        return map(lambda x: diasLookupTool[x], diaIds)
+    else:
+        cursor = diasLookupTool
+        sql = """ SELECT diaSourceId, taiMidPoint, ssmId, opSimId FROM %s.%s 
+                 WHERE diaSourceId IN (""" % (DIAS_DB, DIAS_TABLE)
+        first = True;
+        for dia in diaIds:
+            if not first:
+                sql += ", "
+            first = False
+            sql += str(dia)
+        sql += ");"
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+        return map(lambda row: 
+                   diaSource(diaId=row[0], obsTime=row[1], ssmId=row[2], obsHistId=row[3]), 
+                   rows)
 
 
 class diaSource:
@@ -111,7 +144,7 @@ class diaSource:
 
 
 
-def getLotsOfStatsFromTracksFile(diasLookupDict, tracksFile, trueTracksOutFile):
+def getLotsOfStatsFromTracksFile(diasLookupTool, tracksFile, trueTracksOutFile):
 
     """return number of true tracks, number of false tracks, a
     dictionary mapping obsHistId (image ID) to true/false track counts
@@ -126,10 +159,12 @@ def getLotsOfStatsFromTracksFile(diasLookupDict, tracksFile, trueTracksOutFile):
     nFalse = 0
     obsHistCounts = {}
     foundObjects = set()
+    lineCount = 0
     
     while trackLine != "":
+        lineCount += 1
         diaIds = map(int, trackLine.split())
-        dias = map(lambda x: lookUpDia(diasLookupDict, x), diaIds)
+        dias = lookUpDias(diasLookupTool, diaIds)
 
         ssmIds = set(map(lambda x: x.getSsmId(), dias))
 
@@ -196,20 +231,37 @@ if __name__=="__main__":
     import glob
     "Starting analysis at ", time.ctime()
 
-    if len(sys.argv) != 3:
-        print "USAGE: ", sys.argv[0], " diaDataDump tracksGlob"
-        sys.exit(1)
+
+    # if preloading dias, diasLookupTool is a dict of data read from a
+    # file.  if not, diasLookupTool will be a database connection.
+    # Reading from a dict is MUCH, MUCH faster (1000x) than making
+    # many DB queries.  However, it does impose a few minutes of
+    # start-up overhead.
+
+    if PRELOAD_DIAS_FROM_FILE:
+        if len(sys.argv) != 3:
+            print "USAGE: ", sys.argv[0], " diaDataDump tracksGlob"
+            sys.exit(1)
+        [diaDataDump, tracksGlobPattern] = sys.argv[1:]
+        print "Reading diaSource info from ", diaDataDump
+        diasDataFile = file(diaDataDump,'r')
         
-    [diaDataDump, tracksGlobPattern] = sys.argv[1:]
+        print "Reading dump of all Dias at ", time.ctime()
+        diasLookupTool = readDias(diasDataFile)
+    else:
+
+        if len(sys.argv) != 2:
+            print "USAGE: ", sys.argv[0], " tracksGlob"
+            sys.exit(1)
+
+        tracksGlobPattern = sys.argv[1]
+        conn = db.connect(user=DB_USER, passwd=DB_PASS, host=DB_HOST)
+        diasLookupTool = conn.cursor()
+
     tracksGlob = glob.glob(tracksGlobPattern)
 
-    print "Reading diaSource info from ", diaDataDump
     print "Reading tracks from ", tracksGlob
 
-    diasDataFile = file(diaDataDump,'r')
-
-    print "Reading dump of all Dias at ", time.ctime()
-    diasLookupDict = readDias(diasDataFile)
 
     for tracks in tracksGlob:
             tracksFile = file(tracks,'r')
@@ -218,9 +270,9 @@ if __name__=="__main__":
             foundObjectsOutFile = file(tracks + ".foundObjects",'w')
             trueTracksOutFile = file(tracks + ".trueTracks.byDiaId", 'w')
             
-            print "Done. Starting analysis of ", tracks, " at ", time.ctime()
+            print "Starting analysis of ", tracks, " at ", time.ctime()
             t0 = time.time()
-            nTrue, nFalse, obsHistCounts, foundObjects = getLotsOfStatsFromTracksFile(diasLookupDict, tracksFile, trueTracksOutFile)
+            nTrue, nFalse, obsHistCounts, foundObjects = getLotsOfStatsFromTracksFile(diasLookupTool, tracksFile, trueTracksOutFile)
             print "Done at ", time.ctime()
             dt = time.time() - t0
             print "Reading/analyzing ", nTrue + nFalse, " tracks took ", dt, " seconds."

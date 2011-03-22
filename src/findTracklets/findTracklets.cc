@@ -164,9 +164,7 @@ void generatePerImageTrees(const std::map<double, std::vector<MopsDetection> > &
             vecPV.push_back(tempPV);
         }
         
-        KDTree<long int> tempKDTree;
-        
-        tempKDTree.buildFromData(vecPV, 2, LEAF_NODE_SIZE);
+        KDTree<long int> tempKDTree(vecPV, 2, LEAF_NODE_SIZE);
         myTreeMap.insert(std::make_pair(thisEpoch, tempKDTree) );
     }
 }

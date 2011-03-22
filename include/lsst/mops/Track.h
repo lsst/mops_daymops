@@ -106,9 +106,8 @@ public:
         
     }
 
-    std::set<unsigned int> componentDetectionIndices;
-
 private:
+    std::set<unsigned int> componentDetectionIndices;
     std::set<unsigned int> componentDetectionDiaIds;
     std::vector<double> raFunc;
     std::vector<double> decFunc;

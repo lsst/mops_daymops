@@ -182,6 +182,26 @@ namespace mops {
             }
         }
 
+
+        double circularShortestPathLen_Deg_signed(double a, double b)
+        {
+            double tmp;
+            tmp = convertToStandardDegrees(a)
+                       - convertToStandardDegrees(b);
+            if ((tmp < 180.) && (tmp > -180.)) {
+                return tmp;
+            }
+            else {
+                if (tmp > 180.) {
+                    return tmp - 360.;
+                }
+                else {
+                    // tmp < -180
+                    return 360. + tmp;
+                }
+            }
+        }
+
         double circularShortestPathLen_Rad(double a, double b)
         {
             Constants c;
@@ -440,6 +460,46 @@ namespace mops {
         }
         
         
+void extendBounds(std::vector<double> &myBounds, 
+                  const std::vector<double> &childBounds,
+                  bool areUBounds) 
+{
+    if (myBounds.size() != childBounds.size()) {
+        LSST_EXCEPT(BadParameterException, 
+    "Expect argument vectors of same length.");
+    }
+    for (unsigned int i = 0; i < myBounds.size(); i++) {
+        if (areUBounds) {
+            if (childBounds.at(i) > myBounds.at(i)) {
+                myBounds.at(i) = childBounds.at(i);
+            }
+        }
+        else {
+            if (childBounds.at(i) < myBounds.at(i)) {
+                myBounds.at(i) = childBounds.at(i);
+            }
+
+        }
+    }
+}
+
+
+void toCartesian_deg(double ra, double dec, double &x, double &y, double &z)
+{
+    Constants c;
+    x = cos(c.deg_to_rad()*ra) * sin(c.deg_to_rad()*(90 - dec));
+    y = sin(c.deg_to_rad()*ra) * sin(c.deg_to_rad()*(90 - dec));
+    z = cos(c.deg_to_rad()*(90 - dec));        
+}
+
+void toRaDec_deg(double x, double y, double z, double &ra, double &dec)
+{
+    Constants c;
+    ra  = c.rad_to_deg()*(atan2(y, x));
+    dec = c.rad_to_deg()*(atan2(z, sqrt(x*x + y*y)));
+
+}
+
         
 
 }} // close namespace lsst::mops

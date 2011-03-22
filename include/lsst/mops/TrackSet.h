@@ -48,6 +48,8 @@ public:
      */
     void purgeToFile();
 
+    void debugPrint();
+
     std::set<Track> componentTracks;
 
     void insert(const Track &newTrack);

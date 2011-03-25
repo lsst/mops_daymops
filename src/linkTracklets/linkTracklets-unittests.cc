@@ -17,13 +17,25 @@
 #include <time.h>
 
 
-#include "../../include/lsst/mops/TrackSet.h"
-#include "../../include/lsst/mops/MopsDetection.h"
-#include "../../include/lsst/mops/Tracklet.h"
-#include "linkTracklets.h"
-#include "../../include/lsst/mops/Exceptions.h"
 
-using namespace lsst::mops;
+
+#include "lsst/mops/TrackSet.h"
+#include "lsst/mops/MopsDetection.h"
+#include "lsst/mops/Tracklet.h"
+#include "lsst/mops/daymops/linkTracklets/linkTracklets.h"
+#include "lsst/mops/Exceptions.h"
+#include "lsst/mops/daymops/linkTracklets/TrackletTree.h"
+
+namespace lsst {
+    namespace mops {
+
+
+
+/*********************************************************************
+
+                          HELPER FUNCTIONS
+
+*********************************************************************/
 
 bool Eq(double a, double b) 
 {
@@ -36,7 +48,7 @@ void debugPrintTrackletsAndDets(std::vector<MopsDetection> allDets, std::vector<
 {
 
     for (unsigned int i = 0; i < allDets.size(); i++) {
-      MopsDetection* curDet = &allDets.at(i);
+        MopsDetection* curDet = &allDets.at(i);
         std::cout << curDet->getID() << "\t" << curDet->getRA() << "\t" << curDet->getDec() << '\n';
     }
     std::cout << "all tracklets:\n";
@@ -61,8 +73,9 @@ void debugPrintTrackSet(const TrackSet &tracks, const std::vector<MopsDetection>
          trackIter++) {
         std::cout << " track " << trackCount << ":\n";
         std::set<unsigned int>::const_iterator detIdIter;
-        for (detIdIter = trackIter->componentDetectionIndices.begin();
-             detIdIter != trackIter->componentDetectionIndices.end();
+        std::set<unsigned int> componentDetectionIndices = trackIter->getComponentDetectionIndices();
+        for (detIdIter = componentDetectionIndices.begin();
+             detIdIter != componentDetectionIndices.end();
              detIdIter++) {
             std::cout << '\t' << *detIdIter << ": " << allDets.at(*detIdIter).getID() << " "
                       << allDets.at(*detIdIter).getEpochMJD() << 
@@ -75,7 +88,12 @@ void debugPrintTrackSet(const TrackSet &tracks, const std::vector<MopsDetection>
 
 
 
-//namespace ctExcept = collapseTracklets::exceptions;
+
+
+
+
+
+
 
 
 /*
@@ -91,7 +109,7 @@ void debugPrintTrackSet(const TrackSet &tracks, const std::vector<MopsDetection>
  * weird behavior.
  *
  * each detection will be given a new, unique ID > lastDetId and lastDetId will
- * be MODIFIED to be the last, greated detection ID created. allDetections will
+ * be MODIFIED to be the last, greated detection ID created. allMopsDetections will
  * be MODIFIED and the new detection will be added to it.
  *
  * similarly, allTracklets will be MODIFIED with new tracklets. Each tracklet
@@ -153,7 +171,7 @@ Track generateTrack(double ra0, double dec0, double raV, double decV,
             MopsDetection newDet(lastDetId, *obsTime, resultRa, resultDec);
             allDetections.push_back(newDet);
             newTracklet.indices.insert(lastDetId);
-            newTrack.componentDetectionIndices.insert(lastDetId);           
+            newTrack.addDetection(lastDetId, allDetections);           
         }
         allTracklets.push_back(newTracklet);
         if (allTracklets.size() -1 != lastTrackletId) {
@@ -172,194 +190,11 @@ Track generateTrack(double ra0, double dec0, double raV, double decV,
 
 
 
-/*
-BOOST_AUTO_TEST_CASE( track_1) {
-    Track t1;
-    Track t2;
-    t1.componentDetectionIndices.insert(1);
-    t2.componentDetectionIndices.insert(1);
-    t1.componentDetectionIndices.insert(2);
-    t2.componentDetectionIndices.insert(2);
-
-    t1.componentTrackletIndices.insert(1);
-    t2.componentTrackletIndices.insert(1);
-
-    BOOST_CHECK( t1 == t2 );
-}
-
-
-BOOST_AUTO_TEST_CASE( track_2) {
-    Track t1;
-    Track t2;
-    t1.componentDetectionIndices.insert(1);
-    t2.componentDetectionIndices.insert(1);
-    t1.componentDetectionIndices.insert(2);
-    t2.componentDetectionIndices.insert(3);
-
-    t1.componentTrackletIndices.insert(1);
-    t2.componentTrackletIndices.insert(2);
-
-    BOOST_CHECK( t1 != t2 );
-}
-
-
-BOOST_AUTO_TEST_CASE( trackSet_1) {
-    Track t1;
-    Track t2;
-    t1.componentDetectionIndices.insert(1);
-    t2.componentDetectionIndices.insert(1);
-    t1.componentDetectionIndices.insert(2);
-    t2.componentDetectionIndices.insert(2);
-
-    t1.componentTrackletIndices.insert(1);
-    t2.componentTrackletIndices.insert(1);
-
-    TrackSet ts1;
-    TrackSet ts2;
-    ts1.insert(t1);
-    ts2.insert(t2);
-
-    BOOST_CHECK( ts1 == ts2);
-}
-
-
-
-
-BOOST_AUTO_TEST_CASE( trackSet_2) {
-    Track t1;
-    Track t2;
-    t1.componentDetectionIndices.insert(1);
-    t2.componentDetectionIndices.insert(1);
-    t1.componentDetectionIndices.insert(2);
-    t2.componentDetectionIndices.insert(3);
-
-    t1.componentTrackletIndices.insert(1);
-    t2.componentTrackletIndices.insert(2);
-
-    TrackSet ts1;
-    TrackSet ts2;
-    ts1.insert(t1);
-    ts2.insert(t2);
-
-    BOOST_CHECK( ts1 != ts2);
-}
-
-
-BOOST_AUTO_TEST_CASE (trackSet_3) {
-
-    Track t1;
-    Track t2;
-    Track t11;
-    Track t22;
-
-    Track t3;
-
-    t1.componentDetectionIndices.insert(1);
-    t1.componentDetectionIndices.insert(2);
-
-    t1.componentTrackletIndices.insert(1);
-
-
-    t2.componentDetectionIndices.insert(3);
-    t2.componentDetectionIndices.insert(4);
-
-    t2.componentTrackletIndices.insert(2);
-
-
-    t11.componentDetectionIndices.insert(10);
-    t11.componentDetectionIndices.insert(20);
-
-    t11.componentTrackletIndices.insert(10);
-
-
-    t22.componentDetectionIndices.insert(30);
-    t22.componentDetectionIndices.insert(40);
-
-    t22.componentTrackletIndices.insert(20);
-
-
-    t3.componentDetectionIndices.insert(4);
-    t3.componentDetectionIndices.insert(5);
-
-    t3.componentTrackletIndices.insert(3);
-
-    TrackSet ts1;
-    TrackSet ts2;
-
-    ts1.insert(t1);
-    ts1.insert(t2);
-    BOOST_CHECK(ts1.size() == 2);
-    ts2.insert(t1);
-    ts2.insert(t2);
-    BOOST_CHECK(ts2.size() == 2);
-    
-    BOOST_CHECK(ts1 == ts2);
-    
-    ts2.insert(t3);
-    BOOST_CHECK(ts2.size() == 3);
-
-    BOOST_CHECK(ts1 != ts2);
-    BOOST_CHECK(ts1.isSubsetOf(ts2));
-
-}
-
-
-
-
-
-BOOST_AUTO_TEST_CASE( linkTracklets_whitebox_getBestFitVelocityAndAcceleration_test0) 
-{
-    std::vector<double> positions;
-    std::vector<double> times;
-    positions.push_back(0);
-    positions.push_back(2);
-    positions.push_back(6);
-    times.push_back(0);
-    times.push_back(1);
-    times.push_back(2);
-    double velocity, acceleration, position0;
-    getBestFitVelocityAndAcceleration(positions, times, velocity, acceleration, position0);
-    //std::cout << "position = " << position0 << " + " << velocity << "*t + " << acceleration << "*t^2" << std::endl;
-    BOOST_CHECK(Eq(position0,    0));
-    BOOST_CHECK(Eq(velocity,     1));
-    BOOST_CHECK(Eq(acceleration, 1));    
-}
-
-
-
-
-
-BOOST_AUTO_TEST_CASE( linkTracklets_whitebox_getBestFitVelocityAndAcceleration_test1) 
-{
-    std::vector<double> positions;
-    std::vector<double> times;
-    positions.push_back(2);
-    positions.push_back(6);
-    positions.push_back(12);
-    times.push_back(1);
-    times.push_back(2);
-    times.push_back(3);
-    double velocity, acceleration, position0;
-    getBestFitVelocityAndAcceleration(positions, times, velocity, acceleration, position0);
-    //std::cout << "position = " << position0 << " + " << velocity << "*t + " << acceleration << "*t^2" << std::endl;
-    BOOST_CHECK(Eq(position0,    0));
-    BOOST_CHECK(Eq(velocity,     1));
-    BOOST_CHECK(Eq(acceleration, 1));    
-}
-*/
-
-
-
-
-
 // helper function for creating sets of detections
 void addDetectionAt(double MJD, double RA, double dec,  std::vector<MopsDetection> &detVec)
 {
-  //JOHN LOOK HERE
-  /*MopsDetection tmpDet(detVec.size(), MJD, RA, dec, 566, "dummy",
-    24.0, 0., 0.);*/
-  MopsDetection tmpDet(detVec.size(), 24.0, 0., 0.);
-  detVec.push_back(tmpDet);
+    MopsDetection tmpDet(detVec.size(), MJD, RA, dec);
+    detVec.push_back(tmpDet);
 }
 
 
@@ -373,121 +208,98 @@ void addPair(unsigned int id1, unsigned int id2, std::vector<Tracklet> &tracklet
 
 
 
-int mpi_starter(int *argc, char ***argv)
+
+
+
+
+
+/*********************************************************************
+
+                          UNIT TESTS
+
+*********************************************************************/
+
+
+
+BOOST_AUTO_TEST_CASE( trackletTreeNode_1 )
 {
-  std::cerr << "Initalizing MPI." << std::endl;
-  int requestedLevel = MPI_THREAD_MULTIPLE;
-  int providedLevel;
-  return MPI_Init_thread(argc, argv, requestedLevel, &providedLevel);
+
+    std::vector<PointAndValue <unsigned int> > tracklets;
+    PointAndValue<unsigned int> tmpPav;
+    double dt = .0001;
+    double posErr = .01;
+    std::vector<double> pos;
+    pos.push_back(1.0);
+    pos.push_back(1.0);
+    pos.push_back(1.0);
+    pos.push_back(1.0);
+    pos.push_back(dt);
+    tmpPav.setPoint(pos);
+    tmpPav.setValue(1);
+    tracklets.push_back(tmpPav);
+    pos.clear();
+    pos.push_back(2.0);
+    pos.push_back(2.0);
+    pos.push_back(2.0);
+    pos.push_back(2.0);
+    pos.push_back(dt);
+    tmpPav.setPoint(pos);
+    tmpPav.setValue(2);
+    tracklets.push_back(tmpPav);
+    pos.clear();    
+    std::vector<double>UBounds;
+    UBounds.push_back(2.0);
+    UBounds.push_back(2.0);
+    UBounds.push_back(2.0);
+    UBounds.push_back(2.0);
+    std::vector<double>LBounds;
+    LBounds.push_back(1.0);
+    LBounds.push_back(1.0);
+    LBounds.push_back(1.0);
+    LBounds.push_back(1.0);
+    unsigned int startId = 0;
+    std::vector<double> widths;
+    widths.resize(4);
+    widths[0] = 1.;
+    widths[1] = 1.;
+    widths[2] = 1.;
+    widths[3] = 1.;
+    TrackletTreeNode myTTN(tracklets, posErr, posErr, 1, 0, widths,
+                           startId, false, true);
+    std::vector<double> const *resultingUBounds;
+    std::vector<double> const *resultingLBounds;
+    resultingUBounds = myTTN.getUBounds();
+    resultingLBounds = myTTN.getLBounds();
+
+    // check that position errors were set correctly.
+    BOOST_CHECK(Eq(resultingUBounds->at(0),
+                   2.0 + posErr));
+    BOOST_CHECK(Eq(resultingUBounds->at(1),
+                   2.0 + posErr));
+    BOOST_CHECK(Eq(resultingLBounds->at(0),
+                   1.0 - posErr));
+    BOOST_CHECK(Eq(resultingLBounds->at(1),
+                   1.0 - posErr));
+    // check velocity errors are set correctly
+    BOOST_CHECK(Eq(resultingUBounds->at(2),
+                   2.0 + 2.0 * posErr / dt));
+    BOOST_CHECK(Eq(resultingUBounds->at(3),
+                   2.0 + 2.0 * posErr / dt));
+
+    BOOST_CHECK(Eq(resultingLBounds->at(2),
+                   1.0 - 2.0 * posErr / dt));
+    BOOST_CHECK(Eq(resultingLBounds->at(3),
+                   1.0 - 2.0 * posErr / dt));
 }
 
 
-BOOST_AUTO_TEST_CASE( startMPI )
-{
-  int argc;
-  char **argv;
-  BOOST_CHECK( mpi_starter(&argc, &argv) == MPI_SUCCESS );
-}
 
-
-/************
- *PASSED
- *
-BOOST_AUTO_TEST_CASE( linkTracklets_blackbox_1 )
-{
-  std::cerr << "Starting linktracklets_blackbox_1" << std::endl;
-  
-  // call with empty dets
-  std::vector<Detection> myDets;
-  std::vector<Tracklet> pairs;
-  linkTrackletsConfig myConfig;
-*/
-  /**************************************************
-   * Distributed implementation specific
-   * -set up MPI environment
-   **************************************************/
-
-  // Establish MPI-related variable values
-  /*int rank, numProcessors;
-  MPI_Comm_size(MPI_COMM_WORLD, &numProcessors); 
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank); 
-  
-  TrackSet results;
-
-  if( rank == 0 ){
-    results = linkTracklets(myDets, pairs, myConfig, numProcessors);
-    std::cerr << "Master has returned with results size " << results.size() << std::endl;
-    BOOST_CHECK(pairs.size() == 0);
-  }
-  else{
-    waitForTask(rank, myDets, pairs, myConfig);
-  }
-
-}
-  
-*/
-
-
-
-
-/************
- *PASSED
- *
-BOOST_AUTO_TEST_CASE( linkTracklets_easy_1 )
-{
-  std::cerr << "Starting linktracklets_easy_1" << std::endl;
-
-  std::vector<Detection> myDets;
-  addDetectionAt(5300.0,  50,     50, myDets);
-  addDetectionAt(5300.01, 50.001, 50.001, myDets);
-  addDetectionAt(5301.0,  50.1,   50.1, myDets);
-  addDetectionAt(5301.01, 50.101, 50.101, myDets);
-  addDetectionAt(5302.0,  50.2,   50.2, myDets);
-  addDetectionAt(5302.01, 50.201, 50.201, myDets);
-
-
-  std::vector<Tracklet> pairs;
-  addPair(0,1, pairs);
-  addPair(2,3, pairs);
-  addPair(4,5, pairs);
-  
-  linkTrackletsConfig myConfig;
-*/
-  /**************************************************
-   * Distributed implementation specific
-   * -set up MPI environment
-   **************************************************/
-
-  // Establish MPI-related variable values
-  /*int rank, numProcessors;
-  MPI_Comm_size(MPI_COMM_WORLD, &numProcessors); 
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank); 
-  
-  TrackSet results;
-
-  if( rank == 0 ){
-    results = linkTracklets(myDets, pairs, myConfig, numProcessors);
-    std::cerr << "easy results: " << results.size() << std::endl;
-    BOOST_CHECK(results.size() == 1);
-  }
-  else{
-    waitForTask(rank, myDets, pairs, myConfig);
-  }
-}
-  */
-  
-
-
-/******
- * PASSED
- *
 
 BOOST_AUTO_TEST_CASE( linkTracklets_easy_2 )
 {
     // same as 1, but with more tracks (all clearly separated)
-  std::cerr << "Starting linktracklets_easy_2" << std::endl;
 
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   std::vector<Tracklet> pairs;
   for (unsigned int i = 0; i < 10; i++) {
 
@@ -507,94 +319,22 @@ BOOST_AUTO_TEST_CASE( linkTracklets_easy_2 )
   
   linkTrackletsConfig myConfig;
 
+  TrackSet * results = linkTracklets(myDets, pairs, myConfig);
 
-  // Establish MPI-related variable values
-  int rank, numProcessors;
-  MPI_Comm_size(MPI_COMM_WORLD, &numProcessors); 
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank); 
-  
-  TrackSet results;
-
-  if( rank == 0 ){
-    results = linkTracklets(myDets, pairs, myConfig, numProcessors);
-    std::cerr << "easy_2 results size: " << results.size() << std::endl;
-    BOOST_CHECK(results.size() == 10);
-  }
-  else{
-    waitForTask(rank, myDets, pairs, myConfig);
-  }
+  BOOST_CHECK(results->size() == 10);
+  delete results;
 }
-*/
 
 
 
 
 
 
-
-
-/*****
- * PASSED
- *
-BOOST_AUTO_TEST_CASE( linkTracklets_easy_3 )
-{
-    // same as 2, but with tracks crossing RA 0 line
-  std::cerr << "Starting linktracklets_easy_3" << std::endl;
-  std::vector<Detection> myDets;
-  std::vector<Tracklet> pairs;
-  for (unsigned int i = 0; i < 10; i++) {
-
-      addDetectionAt(5300.0,  50 + i,     50, myDets);
-      addDetectionAt(5300.01, 50.001 + i, 50.001, myDets);
-      addDetectionAt(5301.0,  50.1 + i,   50.1, myDets);
-      addDetectionAt(5301.01, 50.101 + i, 50.101, myDets);
-      addDetectionAt(5302.0,  50.2 + i,   50.2, myDets);
-      addDetectionAt(5302.01, 50.201 + i, 50.201, myDets);
-
-      addPair(0 + 6*i,1 + 6*i, pairs);
-      addPair(2 + 6*i,3 + 6*i, pairs);
-      addPair(4 + 6*i,5 + 6*i, pairs);
-      
-  }
-
-  
-  linkTrackletsConfig myConfig;
-*/
-  /**************************************************
-   * Distributed implementation specific
-   * -set up MPI environment
-   *************************************************/
-
-  // Establish MPI-related variable values
-  /*int rank, numProcessors;
-  MPI_Comm_size(MPI_COMM_WORLD, &numProcessors); 
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank); 
-  
-  TrackSet results;
-
-  if( rank == 0 ){
-    results = linkTracklets(myDets, pairs, myConfig, numProcessors);
-    BOOST_CHECK(results.size() == 10);
-  }
-  else{
-    waitForTask(rank, myDets, pairs, myConfig);
-  }
-
-}
-*/
-
-
-
-
-
-  /******
-   *PASSED
-   *
 BOOST_AUTO_TEST_CASE( linkTracklets_easy_4_1 )
 {
-  // same as 1, but with track crossing RA 0 line
-  std::cerr << "Starting linktracklets_easy_4_1" << std::endl;
-  std::vector<Detection> myDets;
+    // same as 1, but with track crossing RA 0 line
+
+  std::vector<MopsDetection> myDets;
   std::vector<Tracklet> pairs;
 
   addDetectionAt(5300.0,  359.9,       50, myDets);
@@ -609,39 +349,115 @@ BOOST_AUTO_TEST_CASE( linkTracklets_easy_4_1 )
   addPair(4,5, pairs);
   
   linkTrackletsConfig myConfig;
-  */
-  /**************************************************
-   * Distributed implementation specific
-   * -set up MPI environment
-   *************************************************/
 
-  // Establish MPI-related variable values
-    /*int rank, numProcessors;
-  MPI_Comm_size(MPI_COMM_WORLD, &numProcessors); 
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank); 
-  
-  TrackSet results;
+  TrackSet * results = linkTracklets(myDets, pairs, myConfig);
 
-  if( rank == 0 ){
-    results = linkTracklets(myDets, pairs, myConfig, numProcessors);
-    BOOST_CHECK(results.size() == 1);
-  }
-  else{
-    waitForTask(rank, myDets, pairs, myConfig);
-  }
+  //std::cout << "results size = " << results->size() << '\n';
+  BOOST_CHECK(results->size() == 1);
+  delete results;
 }
+
+
+
+
+
+
+BOOST_AUTO_TEST_CASE( linkTracklets_easy_1 )
+{
+  std::vector<MopsDetection> myDets;
+  addDetectionAt(5300.0,  50,     50, myDets);
+  addDetectionAt(5300.01, 50.001, 50.001, myDets);
+  addDetectionAt(5301.0,  50.1,   50.1, myDets);
+  addDetectionAt(5301.01, 50.101, 50.101, myDets);
+  addDetectionAt(5302.0,  50.2,   50.2, myDets);
+  addDetectionAt(5302.01, 50.201, 50.201, myDets);
+
+
+  std::vector<Tracklet> pairs;
+  addPair(0,1, pairs);
+  addPair(2,3, pairs);
+  addPair(4,5, pairs);
   
-    */
+  linkTrackletsConfig myConfig;
+
+  TrackSet * results = linkTracklets(myDets, pairs, myConfig);
+  std::cout << "results were sized " << results->size() << std::endl;
+  BOOST_CHECK(results->size() == 1);
+  delete results;
+}
 
 
-    /*****
-     * PASSED
-     *
+
+
+
+
+
+BOOST_AUTO_TEST_CASE( linkTracklets_blackbox_1 )
+{
+  // call with empty dets
+  std::vector<MopsDetection> myDets;
+  std::vector<Tracklet> pairs;
+  linkTrackletsConfig myConfig;
+  TrackSet * results = linkTracklets(myDets, pairs, myConfig);
+  BOOST_CHECK(results->size() == 0);
+  delete results;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+BOOST_AUTO_TEST_CASE( linkTracklets_easy_3 )
+{
+    // same as 2, but with tracks crossing RA 0 line
+
+  std::vector<MopsDetection> myDets;
+  std::vector<Tracklet> pairs;
+  for (unsigned int i = 0; i < 10; i++) {
+
+      addDetectionAt(5300.0,  50 + i,     50, myDets);
+      addDetectionAt(5300.01, 50.001 + i, 50.001, myDets);
+      addDetectionAt(5301.0,  50.1 + i,   50.1, myDets);
+      addDetectionAt(5301.01, 50.101 + i, 50.101, myDets);
+      addDetectionAt(5302.0,  50.2 + i,   50.2, myDets);
+      addDetectionAt(5302.01, 50.201 + i, 50.201, myDets);
+
+      addPair(0 + 6*i,1 + 6*i, pairs);
+      addPair(2 + 6*i,3 + 6*i, pairs);
+      addPair(4 + 6*i,5 + 6*i, pairs);
+      
+  }
+
+  
+  linkTrackletsConfig myConfig;
+
+  TrackSet * results = linkTracklets(myDets, pairs, myConfig);
+
+  BOOST_CHECK(results->size() == 10);
+  delete results;
+}
+
+
+
+
+
+
 BOOST_AUTO_TEST_CASE( linkTracklets_easy_4 )
 {
     // same as 2, but with tracks crossing RA 0 line
 
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   std::vector<Tracklet> pairs;
   for (unsigned int i = 0; i < 10; i++) {
 
@@ -660,41 +476,86 @@ BOOST_AUTO_TEST_CASE( linkTracklets_easy_4 )
 
   
   linkTrackletsConfig myConfig;
-    */
 
-  /**************************************************
-   * Distributed implementation specific
-   * -set up MPI environment
-   *************************************************/
+  TrackSet * results = linkTracklets(myDets, pairs, myConfig);
 
-  // Establish MPI-related variable values
-  /*int rank, numProcessors;
-  MPI_Comm_size(MPI_COMM_WORLD, &numProcessors); 
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank); 
-  
-  TrackSet results;
-
-  if( rank == 0 ){
-    results = linkTracklets(myDets, pairs, myConfig, numProcessors);
-    BOOST_CHECK(results.size() == 10);
-  }
-  else{
-    waitForTask(rank, myDets, pairs, myConfig);
-  }
+  //std::cout << "results size = " << results->size() << '\n';
+  BOOST_CHECK(results->size() == 10);
+  delete results;
 }
-    */
 
 
 
 
-    /*****
-     * PASSED
-     *
+
+
+/* JMYERS: design changes rendered this unit test irrelevant - the RMS of this
+ * track is too high. WISHLIST: Perhaps someday get a new one?
+ */
+BOOST_AUTO_TEST_CASE( linkTracklets_realworld_1) {
+
+    std::vector<MopsDetection> allDetections;
+    std::vector<Tracklet> allTracklets;
+    MopsDetection tmp;
+    Tracklet tmpTracklet;
+
+    /*
+      2 49523.416229 353.624260 0.521654 20.940280 566 10682481 0. 0.
+      74408 49523.422041 353.624302 0.521646 20.352173 566 10682481 0. 0.
+      97273 49534.303363 352.326802 1.872652 20.845180 566 10752581 0. 0.
+      99300 49534.305146 352.326796 1.872652 20.845182 566 10752581 0. 0.
+      130073 49543.427348 350.757850 4.674333 21.576199 566 6206408 0. 0.
+      132286 49543.440873 350.755445 4.679549 20.568481 566 2079498 0. 0.
+      
+      the above track *IS* good enough (though incorrect) but it doesn't get found.
+      let's see why.
+     */
+
+    linkTrackletsConfig myConfig;
+    myConfig.detectionLocationErrorThresh = .002;
+
+    tmp.fromMITIString("2 49523.416229 353.624260 0.521654 20.940280 566 10682481 0. 0.");
+    allDetections.push_back(tmp);
+    tmp.fromMITIString("74408 49523.422041 353.624302 0.521646 20.352173 566 10682481 0. 0.");
+    allDetections.push_back(tmp);
+
+    tmpTracklet.indices.insert(0);
+    tmpTracklet.indices.insert(1);
+    allTracklets.push_back(tmpTracklet);
+    tmpTracklet.indices.clear();
+
+    tmp.fromMITIString("97273 49534.303363 352.326802 1.872652 20.845180 566 10752581 0. 0.");
+    allDetections.push_back(tmp);
+    tmp.fromMITIString("99300 49534.305146 352.326796 1.872652 20.845182 566 10752581 0. 0.");
+    allDetections.push_back(tmp);
+
+    tmpTracklet.indices.insert(2);
+    tmpTracklet.indices.insert(3);
+    allTracklets.push_back(tmpTracklet);
+    tmpTracklet.indices.clear();
+
+    tmp.fromMITIString("130073 49543.427348 350.757850 4.674333 21.576199 566 6206408 0. 0.");
+    allDetections.push_back(tmp);
+    tmp.fromMITIString("132286 49543.440873 350.755445 4.679549 20.568481 566 2079498 0. 0.");
+    allDetections.push_back(tmp);
+
+    tmpTracklet.indices.insert(4);
+    tmpTracklet.indices.insert(5);
+    allTracklets.push_back(tmpTracklet);
+    tmpTracklet.indices.clear();
+
+    TrackSet * results = linkTracklets(allDetections, allTracklets, myConfig);
+    BOOST_CHECK(results->size() == 1);
+    delete results;
+   
+}
+
+
 BOOST_AUTO_TEST_CASE( linkTracklets_easy_5 )
 {
     // same as 4, but going the other way!
 
-  std::vector<Detection> myDets;
+  std::vector<MopsDetection> myDets;
   std::vector<Tracklet> pairs;
   for (unsigned int i = 0; i < 10; i++) {
 
@@ -715,40 +576,20 @@ BOOST_AUTO_TEST_CASE( linkTracklets_easy_5 )
 
   
   linkTrackletsConfig myConfig;
-    
-*/
-  /**************************************************
-   * Distributed implementation specific
-   * -set up MPI environment
-   *************************************************/
 
-  // Establish MPI-related variable values
-  /*int rank, numProcessors;
-  MPI_Comm_size(MPI_COMM_WORLD, &numProcessors); 
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank); 
-  
-  TrackSet results;
+  TrackSet * results = linkTracklets(myDets, pairs, myConfig);
 
-  if( rank == 0 ){
-    results = linkTracklets(myDets, pairs, myConfig, numProcessors);
-    BOOST_CHECK(results.size() == 10);
-  }
-  else{
-    waitForTask(rank, myDets, pairs, myConfig);
-  }
-
-
-  //std::cout << "results size = " << results.size() << '\n';
-  // for (unsigned int i = 0; i < results.size(); i++) {
+  //std::cout << "results size = " << results->size() << '\n';
+  // for (unsigned int i = 0; i < results->size(); i++) {
       
   //     std::set<unsigned int>::const_iterator dIter;
-  //     const std::set<unsigned int> * cur = &(results.at(i).componentDetectionIndices);
+  //     const std::set<unsigned int> * cur = &(results->at(i).componentDetectionIndices);
 
   //     for (dIter = cur->begin(); dIter != cur->end(); dIter++) {
   //         std::cout << " " << *dIter;
   //     }
   //     std::cout << "\n";
-  //     cur = & ( results.at(i).componentTrackletIndices);
+  //     cur = & ( results->at(i).componentTrackletIndices);
   //     for (dIter = cur->begin(); dIter != cur->end(); dIter++) {
   //         std::cout << " " << *dIter;
   //     }
@@ -756,21 +597,16 @@ BOOST_AUTO_TEST_CASE( linkTracklets_easy_5 )
 
   // }
 
-
+  BOOST_CHECK(results->size() == 10);
+  delete results;
 }
-    */
 
 
 
-
-
-    /*****
-     *PASSED
-     *
 // Track generateTrack(double ra0, double dec0, double raV, double decV,
 //                     double raAcc, double decAcc,
 //                     std::vector<std::vector <double> > trackletObsTimes,
-//                     std::vector<Detection> &allDetections,
+//                     std::vector<MopsDetection> &allMopsDetections,
 //                     std::vector<Tracklet> &allTracklets, 
 //                     unsigned int & lastDetId,
 //                     unsigned int & lastTrackletId) {
@@ -778,7 +614,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_easy_5 )
 BOOST_AUTO_TEST_CASE( linkTracklets_1 )
 {
     TrackSet expectedTracks;
-    std::vector<Detection> allDets;
+    std::vector<MopsDetection> allDets;
     std::vector<Tracklet> allTracklets;
     unsigned int firstDetId = -1;
     unsigned int firstTrackletId = -1;
@@ -803,40 +639,22 @@ BOOST_AUTO_TEST_CASE( linkTracklets_1 )
                                         imgTimes, 
                                         allDets, allTracklets, 
                                         firstDetId, firstTrackletId));
-    */
-    /**************************************************
-     * Distributed implementation specific
-     * -set up MPI environment
-     *************************************************/
-    
-    // Establish MPI-related variable values
-      /*int rank, numProcessors;
-    MPI_Comm_size(MPI_COMM_WORLD, &numProcessors); 
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank); 
-    
-    TrackSet foundTracks;
 
-    if( rank == 0 ){
-      foundTracks = linkTracklets(allDets, allTracklets, myConfig, numProcessors);
-      std::cerr << "Expected track is size " << expectedTracks.size() << std::endl;
-      std::cerr << "Found track is sisze " << foundTracks.size() << std::endl;
-      BOOST_CHECK(foundTracks == expectedTracks);
-    }
-    else{
-      waitForTask(rank, allDets, allTracklets, myConfig);
-    }
+
+
+    TrackSet * foundTracks = linkTracklets(allDets, allTracklets, myConfig);
+
+    BOOST_CHECK(*foundTracks == expectedTracks);
+    delete foundTracks;
+
 }
-      */
 
 
-      /*****
-       *PASSED
-       *
 BOOST_AUTO_TEST_CASE( linkTracklets_2 )
 {
     // lots of support nodes!
     TrackSet expectedTracks;
-    std::vector<Detection> allDets;
+    std::vector<MopsDetection> allDets;
     std::vector<Tracklet> allTracklets;
     unsigned int firstDetId = -1;
     unsigned int firstTrackletId = -1;
@@ -873,44 +691,24 @@ BOOST_AUTO_TEST_CASE( linkTracklets_2 )
                                         imgTimes, 
                                         allDets, allTracklets, 
                                         firstDetId, firstTrackletId));
-    
-      */
-    
-    /**************************************************
-     * Distributed implementation specific
-     * -set up MPI environment
-     *************************************************/
-    
-    // Establish MPI-related variable values
-    /*int rank, numProcessors;
-    MPI_Comm_size(MPI_COMM_WORLD, &numProcessors); 
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank); 
-    
-    TrackSet foundTracks;
 
-    if( rank == 0 ){
-      foundTracks = linkTracklets(allDets, allTracklets, myConfig, numProcessors);
-      
-      std::cout << "checking linkTracklets results; size:" << foundTracks.size() << std::endl;
-      BOOST_CHECK(expectedTracks.isSubsetOf(foundTracks));
-    }
-    else{
-      waitForTask(rank, allDets, allTracklets, myConfig);
-    }
+
+
+    TrackSet * foundTracks = linkTracklets(allDets, allTracklets, myConfig);
+
+
+    BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
+
 }
-    */
 
 
-
-      /*****
-       *PASSED
-       *
 
 BOOST_AUTO_TEST_CASE( linkTracklets_3 )
 {
     // lots of support nodes, and a psuedo-deep stack
     TrackSet expectedTracks;
-    std::vector<Detection> allDets;
+    std::vector<MopsDetection> allDets;
     std::vector<Tracklet> allTracklets;
     unsigned int firstDetId = -1;
     unsigned int firstTrackletId = -1;
@@ -958,40 +756,107 @@ BOOST_AUTO_TEST_CASE( linkTracklets_3 )
                                         allDets, allTracklets, 
                                         firstDetId, firstTrackletId));
 
-*/
-    /**************************************************
-     * Distributed implementation specific
-     * -set up MPI environment
-     *************************************************/
-    
-    // Establish MPI-related variable values
-    /*int rank, numProcessors;
-    MPI_Comm_size(MPI_COMM_WORLD, &numProcessors); 
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank); 
-    
-    TrackSet foundTracks;
 
-    if( rank == 0 ){
-      foundTracks = linkTracklets(allDets, allTracklets, myConfig, numProcessors);
-      BOOST_CHECK(expectedTracks.isSubsetOf(foundTracks));
+
+    TrackSet * foundTracks = linkTracklets(allDets, allTracklets, myConfig);
+
+    
+
+    BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
+    // std::cout << " got tracks: \n";
+    // debugPrintTrackSet(foundTracks, allDets);
+    // std::cout << " expected tracks: \n";
+    // debugPrintTrackSet(expectedTracks, allDets);
+
+}
+
+
+
+
+
+
+
+
+
+
+BOOST_AUTO_TEST_CASE( linkTracklets_4_pt_5 )
+{
+
+    // lots of tracks, following a coherent pattern but randomly perturbed.
+    TrackSet expectedTracks;
+    std::vector<MopsDetection> allDets;
+    std::vector<Tracklet> allTracklets;
+    unsigned int firstDetId = -1;
+    unsigned int firstTrackletId = -1;
+
+  
+    linkTrackletsConfig myConfig;
+
+    std::vector<std::vector<double> > imgTimes(3);
+
+    imgTimes.at(0).push_back(5300);
+    imgTimes.at(0).push_back(5300.03);
+
+    imgTimes.at(1).push_back(5305);
+    imgTimes.at(1).push_back(5305.03);
+
+    imgTimes.at(2).push_back(5312);
+    imgTimes.at(2).push_back(5312.03);
+
+    // seed the random number generator with a known value;
+    // this way the test will be identical on each run.
+    srand(2); // srand(1);
+
+    for (unsigned int i = 0; i < 10; i++) {
+
+        // get 6 floating point numbers between 0 and 1.
+        std::vector<double> someRands;         
+        for (unsigned int j = 0; j < 6; j++) {
+            someRands.push_back( (double) rand() / RAND_MAX );
+        }
+        //generate a random permutation on this track.
+        expectedTracks.insert(generateTrack(20. + someRands[0] * 10., //location 
+                                            20. + someRands[1] * 10., //location
+                                            (someRands[2] - .1) * 2., //1 in 10 chance of retrograde, maxv 2
+                                            (someRands[3] - .5) * .5, // maxv .5 in dec 
+                                            (someRands[4]) * .0019, //max acc of .0019, always positive
+                                            (someRands[5]) * .0019, //same
+                                            imgTimes, 
+                                            allDets, allTracklets, 
+                                            firstDetId, firstTrackletId));
     }
-    else{
-      waitForTask(rank, allDets, allTracklets, myConfig);
-    }
+
+    struct tm * timeinfo;
+    time_t rawtime;
+    
+    time ( &rawtime );
+    timeinfo = localtime ( &rawtime );                    
+    
+    std::cout << "Generated " << expectedTracks.size() << " tracks. Calling linkTracklets ";
+    std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
+
+    TrackSet * foundTracks = linkTracklets(allDets, allTracklets, myConfig);
+
+    time ( &rawtime );
+    timeinfo = localtime ( &rawtime );                    
+    
+    std::cout << "got " << foundTracks->size() << " results, checking if they contain the true tracks ";
+    std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
+
+    BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
 
     // std::cout << " got tracks: \n";
     // debugPrintTrackSet(foundTracks, allDets);
     // std::cout << " expected tracks: \n";
     // debugPrintTrackSet(expectedTracks, allDets);
+
+
+
 }
-*/
 
 
-
-
-      /*****
-       *PASSED
-       *
 
 
 BOOST_AUTO_TEST_CASE( linkTracklets_4 )
@@ -999,7 +864,7 @@ BOOST_AUTO_TEST_CASE( linkTracklets_4 )
 
     // lots of tracks this time. still simple cadence.
     TrackSet expectedTracks;
-    std::vector<Detection> allDets;
+    std::vector<MopsDetection> allDets;
     std::vector<Tracklet> allTracklets;
     unsigned int firstDetId = -1;
     unsigned int firstTrackletId = -1;
@@ -1089,145 +954,23 @@ BOOST_AUTO_TEST_CASE( linkTracklets_4 )
                                         allDets, allTracklets, 
                                         firstDetId, firstTrackletId));
 
-    */
-    /**************************************************
-     * Distributed implementation specific
-     * -set up MPI environment
-     *************************************************/
-    
-    // Establish MPI-related variable values
-    /*int rank, numProcessors;
-    MPI_Comm_size(MPI_COMM_WORLD, &numProcessors); 
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank); 
-    
-    TrackSet foundTracks;
+    TrackSet * foundTracks = linkTracklets(allDets, allTracklets, myConfig);
 
-    if( rank == 0 ){
-      foundTracks = linkTracklets(allDets, allTracklets, myConfig, numProcessors);
-      BOOST_CHECK(foundTracks == expectedTracks);
-    }
-    else{
-      waitForTask(rank, allDets, allTracklets, myConfig);
-    }
+    BOOST_CHECK(*foundTracks == expectedTracks);
+    delete foundTracks;
+
 }
-      */
 
 
 
 
 
-
-
-      /*****
-       *NOT PASSED
-       */
-BOOST_AUTO_TEST_CASE( linkTracklets_4_pt_5 )
-{
-
-    // lots of tracks, following a coherent pattern but randomly perturbed.
-    TrackSet expectedTracks;
-    std::vector<MopsDetection> allDets;
-    std::vector<Tracklet> allTracklets;
-    unsigned int firstDetId = -1;
-    unsigned int firstTrackletId = -1;
-
-  
-    linkTrackletsConfig myConfig;
-
-    std::vector<std::vector<double> > imgTimes(3);
-
-    imgTimes.at(0).push_back(5300);
-    imgTimes.at(0).push_back(5300.03);
-
-    imgTimes.at(1).push_back(5305);
-    imgTimes.at(1).push_back(5305.03);
-
-    imgTimes.at(2).push_back(5312);
-    imgTimes.at(2).push_back(5312.03);
-
-    // seed the random number generator with a known value;
-    // this way the test will be identical on each run.
-    srand(2); // srand(1);
-
-    for (unsigned int i = 0; i < 10; i++) {
-
-        // get 6 floating point numbers between 0 and 1.
-        std::vector<double> someRands;         
-        for (unsigned int j = 0; j < 6; j++) {
-            someRands.push_back( (double) rand() / RAND_MAX );
-        }
-        //generate a random permutation on this track.
-        expectedTracks.insert(generateTrack(20. + someRands[0] * 10., //location 
-                                            20. + someRands[1] * 10., //location
-                                            (someRands[2] - .1) * 2., //1 in 10 chance of retrograde, maxv 2
-                                            (someRands[3] - .5) * .5, // maxv .5 in dec 
-                                            (someRands[4]) * .0019, //max acc of .0019, always positive
-                                            (someRands[5]) * .0019, //same
-                                            imgTimes, 
-                                            allDets, allTracklets, 
-                                            firstDetId, firstTrackletId));
-    }
-
-    struct tm * timeinfo;
-    time_t rawtime;
-    
-    time ( &rawtime );
-    timeinfo = localtime ( &rawtime );                    
-    
-    std::cout << "Generated " << expectedTracks.size() << " tracks. Calling linkTracklets ";
-    std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
-
-
-
-    /**************************************************
-     * Distributed implementation specific
-     * -set up MPI environment
-     *************************************************/
-    
-    // Establish MPI-related variable values
-    int rank, numProcessors;
-    MPI_Comm_size(MPI_COMM_WORLD, &numProcessors); 
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank); 
-    
-    TrackSet foundTracks;
-
-    if( rank == 0 ){
-      //foundTracks = linkTracklets(allDets, allTracklets, myConfig, numProcessors);
-      linkTracklets(allDets, allTracklets, myConfig, numProcessors, foundTracks);
-      std::cerr << "FounTracks size is " << foundTracks.size() << std::endl;
-      BOOST_CHECK(expectedTracks.isSubsetOf(foundTracks));
-    }
-    else{
-      waitForTask(rank, allDets, allTracklets, myConfig);
-      }
-    /*
-    time ( &rawtime );
-    timeinfo = localtime ( &rawtime );                    
-    
-    std::cout << "got " << foundTracks.size() << " results, checking if they contain the true tracks ";
-    std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
-    */
-
-    // std::cout << " got tracks: \n";
-    // debugPrintTrackSet(foundTracks, allDets);
-    // std::cout << " expected tracks: \n";
-    // debugPrintTrackSet(expectedTracks, allDets);
-      
-}
-      
-      
-
-
-
-      /*****
-       * PASSED
-       *
 BOOST_AUTO_TEST_CASE( linkTracklets_5 )
 {
 
-  // " << expectedTracks.size() << " tracks, following a coherent pattern but randomly perturbed.
+    // " << expectedTracks.size() << " tracks, following a coherent pattern but randomly perturbed.
     TrackSet expectedTracks;
-    std::vector<Detection> allDets;
+    std::vector<MopsDetection> allDets;
     std::vector<Tracklet> allTracklets;
     unsigned int firstDetId = -1;
     unsigned int firstTrackletId = -1;
@@ -1278,58 +1021,245 @@ BOOST_AUTO_TEST_CASE( linkTracklets_5 )
     
     std::cout << "Generated " << expectedTracks.size() << " tracks. Calling linkTracklets ";
     std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
-     
-*/
-    /**************************************************
-     * Distributed implementation specific
-     * -set up MPI environment
-     *************************************************/
-    
-    // Establish MPI-related variable values
-    /*std::cerr << "Initalizing MPI." << std::endl;
-    int requestedLevel = MPI_THREAD_MULTIPLE;
-    int providedLevel;
-    MPI_Init_thread(0, 0, requestedLevel, &providedLevel);*/
-    
 
-      /*int rank, numProcessors;
-    MPI_Comm_size(MPI_COMM_WORLD, &numProcessors); 
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank); 
-    
-    TrackSet foundTracks;
+    TrackSet * foundTracks = linkTracklets(allDets, allTracklets, myConfig);
 
-    if( rank == 0 ){
-      foundTracks = linkTracklets(allDets, allTracklets, myConfig, numProcessors);
-      BOOST_CHECK(expectedTracks.isSubsetOf(foundTracks));
-    }
-    else{
-      waitForTask(rank, allDets, allTracklets, myConfig);
-      }*/
-    
-    /*int rc = MPI_Finalize();
-      std::cerr << "Finalized with return code " << rc << std::endl;
-    */
-    /*
     time ( &rawtime );
     timeinfo = localtime ( &rawtime );                    
     
-    std::cout << "got " << foundTracks.size() << " results, checking if they contain the true tracks ";
+    std::cout << "got " << foundTracks->size() << " results, checking if they contain the true tracks ";
     std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
-    */
-      /*
-}
-      
-      */
 
-      /*****
-       * PASSED
-       *
+    BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
+
+}
+
+
+
+
+
+BOOST_AUTO_TEST_CASE( linkTracklets_5_high_acc )
+{
+
+    // " << expectedTracks.size() << " tracks, following a coherent pattern but randomly perturbed.
+    TrackSet expectedTracks;
+    TrackSet implausibleTracks;
+    std::vector<MopsDetection> allDets;
+    std::vector<Tracklet> allTracklets;
+    unsigned int firstDetId = -1;
+    unsigned int firstTrackletId = -1;
+
+  
+    linkTrackletsConfig myConfig;
+    myConfig.leafSize=16;
+
+    myConfig.maxRAAccel = .02;
+    myConfig.maxDecAccel = .02;
+    
+    std::vector<std::vector<double> > imgTimes(3);
+
+    imgTimes.at(0).push_back(5300);
+    imgTimes.at(0).push_back(5300.01);
+
+    imgTimes.at(1).push_back(5315);
+    imgTimes.at(1).push_back(5315.01);
+
+    imgTimes.at(2).push_back(5330);
+    imgTimes.at(2).push_back(5330.01);
+
+
+    expectedTracks.insert(generateTrack(20., //location ra 
+                                        20., //location dec
+                                        .05, // v0 ra
+                                        .05, // v0 dec 
+                                        .0199, //ra acc
+                                        .0199, //dec acc
+                                        imgTimes, 
+                                        allDets, allTracklets, 
+                                        firstDetId, firstTrackletId));
+    
+    implausibleTracks.insert(generateTrack(10.,
+                                           10.,
+                                           .05,
+                                           .05,
+                                           .021,
+                                           .021,
+                                           imgTimes,
+                                           allDets, allTracklets,
+                                           firstDetId, firstTrackletId));
+
+    
+    TrackSet * foundTracks = linkTracklets(allDets, allTracklets, myConfig);
+
+    BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
+
+    BOOST_CHECK(!implausibleTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
+
+}
+
+
+
+
+
+BOOST_AUTO_TEST_CASE( linkTracklets_too_high_acc )
+{
+
+    // " << expectedTracks.size() << " tracks, following a coherent pattern but randomly perturbed.
+    TrackSet implausibleTracks;
+    std::vector<MopsDetection> allDets;
+    std::vector<Tracklet> allTracklets;
+    unsigned int firstDetId = -1;
+    unsigned int firstTrackletId = -1;
+
+  
+    linkTrackletsConfig myConfig;
+
+    myConfig.maxRAAccel = .02;
+    myConfig.maxDecAccel = .02;
+    
+    std::vector<std::vector<double> > imgTimes(3);
+
+    imgTimes.at(0).push_back(5300);
+    imgTimes.at(0).push_back(5300.01);
+
+    imgTimes.at(1).push_back(5315);
+    imgTimes.at(1).push_back(5315.01);
+
+    imgTimes.at(2).push_back(5330);
+    imgTimes.at(2).push_back(5330.01);
+
+
+    
+    implausibleTracks.insert(generateTrack(10.,
+                                           10.,
+                                           .05,
+                                           .05,
+                                           .021,
+                                           .021,
+                                           imgTimes,
+                                           allDets, allTracklets,
+                                           firstDetId, firstTrackletId));
+
+    
+    TrackSet * foundTracks = linkTracklets(allDets, allTracklets, myConfig);
+
+
+    BOOST_CHECK(!implausibleTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
+
+}
+
+
+
+
+
+BOOST_AUTO_TEST_CASE( linkTracklets_5_1_plus_high_acc )
+{
+
+    // " << expectedTracks.size() << " tracks, following a coherent pattern but randomly perturbed.
+    TrackSet expectedTracks;
+    std::vector<MopsDetection> allDets;
+    std::vector<Tracklet> allTracklets;
+    unsigned int firstDetId = -1;
+    unsigned int firstTrackletId = -1;
+
+  
+    linkTrackletsConfig myConfig;
+
+    std::vector<std::vector<double> > imgTimes(3);
+
+    imgTimes.at(0).push_back(5300);
+    imgTimes.at(0).push_back(5300.03);
+
+    imgTimes.at(1).push_back(5305);
+    imgTimes.at(1).push_back(5305.03);
+
+    imgTimes.at(2).push_back(5312);
+    imgTimes.at(2).push_back(5312.03);
+
+    myConfig.leafSize = 1;
+
+    // seed the random number generator with a known value;
+    // this way the test will be identical on each run.
+    srand(2);
+
+    for (unsigned int i = 0; i < 200; i++) {
+
+        // get 6 floating point numbers between 0 and 1.
+        std::vector<double> someRands;         
+        for (unsigned int j = 0; j < 6; j++) {
+            someRands.push_back( (double) rand() / RAND_MAX );
+        }
+        //generate a random permutation on this track.
+        expectedTracks.insert(generateTrack(20. + someRands[0] * 10., //location 
+                                            20. + someRands[1] * 10., //location
+                                            (someRands[2] - .1) * 2., //1 in 10 chance of retrograde, maxv 2
+                                            (someRands[3] - .5) * .5, // maxv .5 in dec 
+                                            (someRands[4]) * .0019, //max acc of .0019, always positive
+                                            (someRands[5]) * .0019, //same
+                                            imgTimes, 
+                                            allDets, allTracklets, 
+                                            firstDetId, firstTrackletId));
+
+    }
+
+    // add a fast mover, too
+    expectedTracks.insert(generateTrack(20., //location ra 
+                                        20., //location dec
+                                        .05, // v0 ra
+                                        .05, // v0 dec 
+                                        .0199, //ra acc
+                                        .0199, //dec acc
+                                        imgTimes, 
+                                        allDets, allTracklets, 
+                                        firstDetId, firstTrackletId));
+
+    // add a fast mover, too
+    expectedTracks.insert(generateTrack(20., //location ra 
+                                        20., //location dec
+                                        .05, // v0 ra
+                                        .05, // v0 dec 
+                                        -.0199, //ra acc
+                                        -.0199, //dec acc
+                                        imgTimes, 
+                                        allDets, allTracklets, 
+                                        firstDetId, firstTrackletId));
+
+    struct tm * timeinfo;
+    time_t rawtime;
+    
+    time ( &rawtime );
+    timeinfo = localtime ( &rawtime );                    
+    
+    std::cout << "Generated " << expectedTracks.size() << " tracks. Calling linkTracklets ";
+    std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
+
+    TrackSet * foundTracks = linkTracklets(allDets, allTracklets, myConfig);
+
+    time ( &rawtime );
+    timeinfo = localtime ( &rawtime );                    
+    
+    std::cout << "got " << foundTracks->size() << " results, checking if they contain the true tracks ";
+    std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
+
+    BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
+
+}
+
+
+
+
+
+
 BOOST_AUTO_TEST_CASE( linkTracklets_5_1 )
 {
 
     // " << expectedTracks.size() << " tracks, following a coherent pattern but randomly perturbed.
     TrackSet expectedTracks;
-    std::vector<Detection> allDets;
+    std::vector<MopsDetection> allDets;
     std::vector<Tracklet> allTracklets;
     unsigned int firstDetId = -1;
     unsigned int firstTrackletId = -1;
@@ -1380,47 +1310,29 @@ BOOST_AUTO_TEST_CASE( linkTracklets_5_1 )
     
     std::cout << "Generated " << expectedTracks.size() << " tracks. Calling linkTracklets ";
     std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
-*/
-    /**************************************************
-     * Distributed implementation specific
-     * -set up MPI environment
-     *************************************************/
-    
-    // Establish MPI-related variable values
-      /*int rank, numProcessors;
-    MPI_Comm_size(MPI_COMM_WORLD, &numProcessors); 
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank); 
-    
-    TrackSet foundTracks;
 
-    if( rank == 0 ){
-      foundTracks = linkTracklets(allDets, allTracklets, myConfig, numProcessors);
-      BOOST_CHECK(expectedTracks.isSubsetOf(foundTracks));
-    }
-    else{
-      waitForTask(rank, allDets, allTracklets, myConfig);
-      }*/
-    /*
+    TrackSet * foundTracks = linkTracklets(allDets, allTracklets, myConfig);
+
     time ( &rawtime );
     timeinfo = localtime ( &rawtime );                    
     
-    std::cout << "got " << foundTracks.size() << " results, checking if they contain the true tracks ";
+    std::cout << "got " << foundTracks->size() << " results, checking if they contain the true tracks ";
     std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
-    */
-      /*      }*/
+
+    BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
+
+}
 
 
 
 
-      /*****
-       * PASSED
-       *
 BOOST_AUTO_TEST_CASE( linkTracklets_5_2 )
 {
 
     // " << expectedTracks.size() << " tracks, following a coherent pattern but randomly perturbed.
     TrackSet expectedTracks;
-    std::vector<Detection> allDets;
+    std::vector<MopsDetection> allDets;
     std::vector<Tracklet> allTracklets;
     unsigned int firstDetId = -1;
     unsigned int firstTrackletId = -1;
@@ -1469,50 +1381,32 @@ BOOST_AUTO_TEST_CASE( linkTracklets_5_2 )
     time ( &rawtime );
     timeinfo = localtime ( &rawtime );                    
     
-    std::cout << "(5_2) Generated " << expectedTracks.size() << " tracks. Calling linkTracklets ";
+    std::cout << "Generated " << expectedTracks.size() << " tracks. Calling linkTracklets ";
     std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
-      */
-    /**************************************************
-     * Distributed implementation specific
-     * -set up MPI environment
-     *************************************************/
-    
-    // Establish MPI-related variable values
-      /*int rank, numProcessors;
-    MPI_Comm_size(MPI_COMM_WORLD, &numProcessors); 
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank); 
-    
-    TrackSet foundTracks;
 
-    if( rank == 0 ){
-      foundTracks = linkTracklets(allDets, allTracklets, myConfig, numProcessors);
-      BOOST_CHECK(expectedTracks.isSubsetOf(foundTracks));
-    }
-    else{
-      waitForTask(rank, allDets, allTracklets, myConfig);
-    }
-      */
-    /*
+    TrackSet * foundTracks = linkTracklets(allDets, allTracklets, myConfig);
+
     time ( &rawtime );
     timeinfo = localtime ( &rawtime );                    
     
-    std::cout << "got " << foundTracks.size() << " results, checking if they contain the true tracks ";
+    std::cout << "got " << foundTracks->size() << " results, checking if they contain the true tracks ";
     std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
-    */
-      /*       }*/
+
+    BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
+
+}
 
 
 
 
-      /*****
-       * PASSED
-       *
+
 BOOST_AUTO_TEST_CASE( linkTracklets_5_3 )
 {
 
-  // " << expectedTracks.size() << " tracks, following a coherent pattern but randomly perturbed.
+    // " << expectedTracks.size() << " tracks, following a coherent pattern but randomly perturbed.
     TrackSet expectedTracks;
-    std::vector<Detection> allDets;
+    std::vector<MopsDetection> allDets;
     std::vector<Tracklet> allTracklets;
     unsigned int firstDetId = -1;
     unsigned int firstTrackletId = -1;
@@ -1563,48 +1457,26 @@ BOOST_AUTO_TEST_CASE( linkTracklets_5_3 )
     
     std::cout << "Generated " << expectedTracks.size() << " tracks. Calling linkTracklets ";
     std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
-      */
-    /**************************************************
-     * Distributed implementation specific
-     * -set up MPI environment
-     *************************************************/
-    
-    // Establish MPI-related variable values
-      /*int rank, numProcessors;
-    MPI_Comm_size(MPI_COMM_WORLD, &numProcessors); 
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank); 
-    
-    TrackSet foundTracks;
 
-    if( rank == 0 ){
-      foundTracks = linkTracklets(allDets, allTracklets, myConfig, numProcessors);
-      BOOST_CHECK(expectedTracks.isSubsetOf(foundTracks));
-    }
-    else{
-      waitForTask(rank, allDets, allTracklets, myConfig);
-    }
-      */
-    /*
+    TrackSet * foundTracks = linkTracklets(allDets, allTracklets, myConfig);
+
     time ( &rawtime );
     timeinfo = localtime ( &rawtime );                    
     
-    std::cout << "got " << foundTracks.size() << " results, checking if they contain the true tracks ";
+    std::cout << "got " << foundTracks->size() << " results, checking if they contain the true tracks ";
     std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
-    */
 
-      /*       }*/
+    BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
 
+}
 
-
-      /*****
-       * PASSED -- TODO mpi_finalize hung
-       *
 BOOST_AUTO_TEST_CASE( linkTracklets_5_4 )
 {
 
     // " << expectedTracks.size() << " tracks, following a coherent pattern but randomly perturbed.
     TrackSet expectedTracks;
-    std::vector<Detection> allDets;
+    std::vector<MopsDetection> allDets;
     std::vector<Tracklet> allTracklets;
     unsigned int firstDetId = -1;
     unsigned int firstTrackletId = -1;
@@ -1655,48 +1527,31 @@ BOOST_AUTO_TEST_CASE( linkTracklets_5_4 )
     
     std::cout << "Generated " << expectedTracks.size() << " tracks. Calling linkTracklets ";
     std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
-      
-*/
-    /**************************************************
-     * Distributed implementation specific
-     * -set up MPI environment
-     *************************************************/
-    
-    // Establish MPI-related variable values
-      /*  int rank, numProcessors;
-    MPI_Comm_size(MPI_COMM_WORLD, &numProcessors); 
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank); 
-    
-    TrackSet foundTracks;
 
-    if( rank == 0 ){
-      foundTracks = linkTracklets(allDets, allTracklets, myConfig, numProcessors);
-      //BOOST_CHECK(expectedTracks.isSubsetOf(foundTracks));
-    }
-    else{
-      waitForTask(rank, allDets, allTracklets, myConfig);
-      }
-      */
-    /*
+    TrackSet * foundTracks = linkTracklets(allDets, allTracklets, myConfig);
+
     time ( &rawtime );
     timeinfo = localtime ( &rawtime );                    
     
-    std::cout << "got " << foundTracks.size() << " results, checking if they contain the true tracks ";
+    std::cout << "got " << foundTracks->size() << " results, checking if they contain the true tracks ";
     std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
-    */
-      /*}*/
+
+    BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
+
+}
 
 
 
-      /*****
-       * PASSED
-       *
-      BOOST_AUTO_TEST_CASE( linkTracklets_5_5 )
+
+
+
+BOOST_AUTO_TEST_CASE( linkTracklets_5_5 )
 {
 
     // " << expectedTracks.size() << " tracks, following a coherent pattern but randomly perturbed.
     TrackSet expectedTracks;
-    std::vector<Detection> allDets;
+    std::vector<MopsDetection> allDets;
     std::vector<Tracklet> allTracklets;
     unsigned int firstDetId = -1;
     unsigned int firstTrackletId = -1;
@@ -1718,9 +1573,9 @@ BOOST_AUTO_TEST_CASE( linkTracklets_5_4 )
     // seed the random number generator with a known value;
     // this way the test will be identical on each run.
     srand(6);
-    
-      for (unsigned int i = 0; i < 1200; i++) {
-      
+
+    for (unsigned int i = 0; i < 600; i++) {
+
         // get 6 floating point numbers between 0 and 1.
         std::vector<double> someRands;         
         for (unsigned int j = 0; j < 6; j++) {
@@ -1747,65 +1602,28 @@ BOOST_AUTO_TEST_CASE( linkTracklets_5_4 )
     
     std::cout << "Generated " << expectedTracks.size() << " tracks. Calling linkTracklets ";
     std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
-      */
-    /**************************************************
-     * Distributed implementation specific
-     * -set up MPI environment
-     *************************************************/
-    
-    // Establish MPI-related variable values
-    /*int rank, numProcessors;
-    MPI_Comm_size(MPI_COMM_WORLD, &numProcessors); 
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank); 
-    
-    TrackSet foundTracks;
-    if( rank == 0 ){
-      foundTracks = linkTracklets(allDets, allTracklets, myConfig, numProcessors);
-      BOOST_CHECK(expectedTracks.isSubsetOf(foundTracks));
-    }
-    else{
-      waitForTask(rank, allDets, allTracklets, myConfig);
-    }
-    */
-    /*
+
+    TrackSet * foundTracks = linkTracklets(allDets, allTracklets, myConfig);
+
     time ( &rawtime );
     timeinfo = localtime ( &rawtime );                    
     
-    std::cout << "got " << foundTracks.size() << " results, checking if they contain the true tracks ";
+    std::cout << "got " << foundTracks->size() << " results, checking if they contain the true tracks ";
     std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
-    */
-    /*}*/
 
+    BOOST_CHECK(expectedTracks.isSubsetOf(*foundTracks));
+    delete foundTracks;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-int mpi_stopper()
-{
-  std::cerr << "Finalizing MPI" << std::endl;
-  return MPI_Finalize();
 }
 
-
-BOOST_AUTO_TEST_CASE( stopMPI )
-{
-  std::cout << "checking MPI results" << std::endl;
-  BOOST_CHECK( mpi_stopper() == MPI_SUCCESS );
-}
 
 
 // TBD: check that tracks with too-high acceleration are correctly rejected, etc.
+
+
+
+
+
+
+
+}} // close lsst::mops

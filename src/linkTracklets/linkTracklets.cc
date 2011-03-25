@@ -8,6 +8,7 @@
 #include <map>
 #include <time.h>
 #include <algorithm>
+#include <sstream>
 
 #include "lsst/mops/rmsLineFit.h"
 #include "lsst/mops/daymops/linkTracklets/linkTracklets.h"
@@ -40,6 +41,13 @@
 #define POINT_RA_VELOCITY   2
 #define POINT_DEC_VELOCITY  3
 #define LEAF_SIZE 32
+
+
+#define uint unsigned int 
+
+namespace lsst {
+    namespace mops {
+
 
 
 /**************************************************
@@ -96,10 +104,6 @@ int rejectedOnVelocity, rejectedOnPosition, wereCompatible;
 
 
 
-#define uint unsigned int 
-
-namespace lsst {
-    namespace mops {
 
 
 
@@ -1915,6 +1919,152 @@ void distributeCurrentWorkload(std::vector<std::vector<workItemFile> > &assignme
   distributeWorkload(assignment);
 }
 
+
+
+
+
+
+
+//jmyers - added this function to increase readability of
+// doLinkingRecurse.  This is the code which was written by Matt to
+// add a work item, replacing our call to buildTracksAddToResults in
+// doLinkingRecurse
+
+void addWorkItem(const std::vector<MopsDetection> &allDetections,
+                 const std::vector<Tracklet> &allTracklets,
+                 linkTrackletsConfig searchConfig,
+                 TreeNodeAndTime &firstEndpoint,
+                 TreeNodeAndTime &secondEndpoint,
+                 std::vector<TreeNodeAndTime> &supportNodes,
+                 int numProcs, 
+                 std::map<ImageTime, TrackletTree > &trackletTimeToTreeMap,
+                 std::vector<std::vector<workItemFile> > &assignment)
+{
+
+                
+    /************************************************************
+     * Calculate the number of compatible endpoints in this set.
+     * This allows us to predict the amount of work required by
+     * this work item and distributed it accordingly.
+     ************************************************************/
+    int numCompatible = 0;
+                
+    std::vector<PointAndValue<unsigned int> >::const_iterator firstEndpointIter;
+    std::vector<PointAndValue<unsigned int> >::const_iterator secondEndpointIter;
+                
+    for (firstEndpointIter = firstEndpoint.myTree->getMyData()->begin();
+         firstEndpointIter != firstEndpoint.myTree->getMyData()->end();
+         firstEndpointIter++) {
+                    
+        for (secondEndpointIter = secondEndpoint.myTree->getMyData()->begin();
+             secondEndpointIter != secondEndpoint.myTree->getMyData()->end();
+             secondEndpointIter++) {
+
+            // jmyers - this should be identical to some of the code in 
+            // buildTracksAddToResults
+            // create a new track with these endpoints
+            Track newTrack;
+            
+            uint firstEndpointTrackletIndex = firstEndpointIter->getValue();
+            uint secondEndpointTrackletIndex = secondEndpointIter->getValue();
+            
+            newTrack.addTracklet(firstEndpointTrackletIndex, 
+                                 allTracklets.at(firstEndpointTrackletIndex),
+                                 allDetections);
+            
+            newTrack.addTracklet(secondEndpointTrackletIndex, 
+                                 allTracklets.at(secondEndpointTrackletIndex),
+                                 allDetections);
+            
+            newTrack.calculateBestFitQuadratic(allDetections);
+
+            if (endpointTrackletsAreCompatible(allDetections, 
+                                               newTrack,
+                                               searchConfig)) {
+		
+                ++numCompatible;
+                ++compatibleEndpointsFound;
+            }
+        }
+    }
+                
+
+    /****************************************************
+     * Write the information of the endpoints and their 
+     * support points to file, this is a work item
+     * as defined in the terminology.
+     ****************************************************/
+    workItemFile myItem;
+    myItem.endpoints.clear();
+                
+    //first item is first endpoint
+    unsigned int treeId = firstEndpoint.myTime.getImageId();
+    unsigned int nodeId = firstEndpoint.myTree->getId();
+    myItem.endpoints.push_back(std::make_pair(treeId, nodeId));
+
+    //second item is second endpoint
+    treeId = secondEndpoint.myTime.getImageId();
+    nodeId = secondEndpoint.myTree->getId();
+    myItem.endpoints.push_back(std::make_pair(treeId, nodeId));
+
+    //add all endpoints
+    for(unsigned int m=0; m < newSupportNodes.size(); ++m){
+        treeId = newSupportNodes.at(m).myTime.getImageId();
+        nodeId = newSupportNodes.at(m).myTree->getId();
+        myItem.endpoints.push_back(std::make_pair(treeId, nodeId));
+    }
+
+    //create workItemFile struct to go on list
+    myItem.numNodes = 2 + newSupportNodes.size();
+    myItem.numCompatibleEndpoints = numCompatible;
+    myItem.timeUnits = myItem.numNodes * myItem.numCompatibleEndpoints;
+    totalTimeUnits += myItem.timeUnits;
+
+    assignment.at(globalNextWorker).push_back(myItem);
+
+    ++globalNextWorker;
+    if(globalNextWorker >= (numProcs-1)){
+        globalNextWorker = 0;
+    }
+
+    ++totalWorkItems;
+
+    //distribute workload periodically
+    if(totalWorkItems >= MAX_WORK_ITEMS){
+
+        distributeCurrentWorkload(assignment);/*, allDetections, allTracklets, searchConfig, 
+                                                trackletTimeToTreeMap,
+                                                totalTimeUnits);*/
+
+        //update and reset assignment-specific variables
+        totalWorkItems = 0;
+        totalTimeUnits = 0;
+
+        //clear our our work item cache and start afresh
+        for(unsigned int i=0; i < assignment.size(); ++i){
+            assignment.at(i).clear();
+        }
+        //assignment.clear(); //MATT NEW ADD 12/16/10
+
+        //tell the workers that this round of work item distribution is complete and
+        //collect any tracks that were generated
+        threadArgs ta;
+        ta.numProcs = numProcs;
+        ta.sentinel = -2;
+        killProcs(ta);
+
+        //only do MAX_GENERATIONS generations for measuring purposes
+        std::cerr << "Generation " << numGenerations << std::endl;
+        if(numGenerations >= MAX_GENERATIONS){
+            return;
+        }
+        ++numGenerations;
+    }
+
+}
+
+
+
 /***************************************************************************
  ***************************************************************************
  **   END DISTRIBUTED LINKTRACKLETS FUNCTION DEFINITIONS
@@ -1941,6 +2091,25 @@ void distributeCurrentWorkload(std::vector<std::vector<workItemFile> > &assignme
 * all this code by jmyers and should be identical to that 
 * in trunk linkTracklets.cc
 * **********************************************************************/
+
+
+/*
+ * update position and velocity given acceleration over time.
+ */
+void modifyWithAcceleration(double &position, double &velocity, 
+                            double acceleration, double time)
+{
+    double start = std::clock();
+    // use good ol' displacement = vt + .5a(t^2) 
+    double newPosition = position + velocity*time 
+        + .5*acceleration*(time*time);
+    double newVelocity = velocity + acceleration*time;
+    position = newPosition;
+    velocity = newVelocity;
+    modifyWithAccelerationTime += timeSince(start);
+}
+
+
 
 
 /* the final parameter is modified; it will hold Detections associated
@@ -2575,13 +2744,353 @@ bool trackRmsIsSufficientlyLow(
 
 
 
+bool areAllLeaves(const std::vector<TreeNodeAndTime> &nodeArray) {
+    double start = std::clock();
+    bool allLeaves = true;
+    std::vector<TreeNodeAndTime>::const_iterator treeIter;
+    uint count = 0;
+    for (treeIter = nodeArray.begin(); 
+         (treeIter != nodeArray.end() && (allLeaves == true));
+         treeIter++) {
+        if (treeIter->myTree->isLeaf() == false) {
+            allLeaves = false;
+        }
+        count++;
+    }
+    areAllLeavesTime += timeSince(start);
+    return allLeaves;
+}
+
+
+
+
+
+
+
+bool supportTooWide(const TreeNodeAndTime& firstEndpoint, 
+                    const TreeNodeAndTime& secondEndpoint,
+                    const TreeNodeAndTime& supportNode) 
+{
+    /* odd-looking stuff with alpha based on test_and_add_support in
+     * Kubica's linker.c.  the idea is to weight the expected size of a
+     * node according to its proximity to either the first or last
+     * endpoint . */
+    double alpha = (supportNode.myTime.getMJD() - firstEndpoint.myTime.getMJD()) /
+        (secondEndpoint.myTime.getMJD() - firstEndpoint.myTime.getMJD());
+    
+    // check the width of the support node in all 4 axes; compare with
+    // width of
+    for (uint i = 0; i < 4; i++) {
+        double nodeWidth = supportNode.myTree->getUBounds()->at(i) - 
+            supportNode.myTree->getLBounds()->at(i);
+        double maxWidth = (1.0 - alpha) * 
+            (firstEndpoint.myTree->getUBounds()->at(i) - 
+             firstEndpoint.myTree->getLBounds()->at(i)) + 
+            alpha * (secondEndpoint.myTree->getUBounds()->at(i) - 
+                     secondEndpoint.myTree->getLBounds()->at(i));
+        
+        // this constant 4 is taken from Kubica's linker.c
+        // test_and_add_support.  Beware the magic number!
+        if (4.0 * nodeWidth > maxWidth) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+
+
+
+
+
+
+void splitSupportRecursively(const TreeNodeAndTime& firstEndpoint, 
+                             const TreeNodeAndTime& secondEndpoint, 
+                             bool requireLeaves,
+                             const TreeNodeAndTime &supportNode, 
+                             const linkTrackletsConfig &searchConfig, 
+                             double accMinRa, double accMaxRa,
+                             double accMinDec, double accMaxDec,
+                             std::vector<TreeNodeAndTime> &newSupportNodes)
+{
+
+    if ((firstEndpoint.myTime.getMJD() >= supportNode.myTime.getMJD()) || 
+        (supportNode.myTime.getMJD() > secondEndpoint.myTime.getMJD())) {
+        throw LSST_EXCEPT(BadParameterException, "splitSupportRecursively got impossibly-ordered endpoints/support");
+    }
+
+    
+    if (areMutuallyCompatible(firstEndpoint, supportNode,
+                              secondEndpoint, searchConfig, 
+                              accMinRa, accMaxRa,
+                              accMinDec, accMaxDec)) {
+
+        if (supportNode.myTree->isLeaf()) {
+            newSupportNodes.push_back(supportNode);
+        }
+
+        else if (requireLeaves) {
+            if (supportNode.myTree->hasLeftChild()) {
+                TreeNodeAndTime leftTat(
+                    supportNode.myTree->getLeftChild(), 
+                    supportNode.myTime); 
+                splitSupportRecursively(firstEndpoint, 
+                                        secondEndpoint, 
+                                        requireLeaves, 
+                                        leftTat,
+                                        searchConfig, 
+                                        accMinRa, accMaxRa,
+                                        accMinDec, accMaxDec,
+                                        newSupportNodes);
+            }
+            if (supportNode.myTree->hasRightChild()) {
+                TreeNodeAndTime rightTat(
+                    supportNode.myTree->getRightChild(), 
+                    supportNode.myTime);
+                splitSupportRecursively(firstEndpoint, 
+                                        secondEndpoint, 
+                                        requireLeaves, 
+                                        rightTat,
+                                        searchConfig, 
+                                        accMinRa, accMaxRa,
+                                        accMinDec, accMaxDec,
+                                        newSupportNodes);
+            }
+        }
+        
+        else {
+            // we don't require leaves in output, but check to see if
+            // we *should* split this node.  if not, add it to
+            // output. Otherwise, recurse on its children.
+
+            bool tooWide = supportTooWide(firstEndpoint, 
+                                          secondEndpoint, 
+                                          supportNode);
+            
+            if (tooWide) {
+                if (supportNode.myTree->hasLeftChild()) {
+                    TreeNodeAndTime leftTat(
+                        supportNode.myTree->getLeftChild(), 
+                        supportNode.myTime); 
+                    splitSupportRecursively(firstEndpoint, 
+                                            secondEndpoint, 
+                                            requireLeaves, 
+                                            leftTat,
+                                            searchConfig, 
+                                            accMinRa, accMaxRa,
+                                            accMinDec, accMaxDec,
+                                            newSupportNodes);
+                }
+                if (supportNode.myTree->hasRightChild()) {
+                    TreeNodeAndTime rightTat(
+                        supportNode.myTree->getRightChild(), 
+                        supportNode.myTime);
+                    splitSupportRecursively(firstEndpoint, 
+                                            secondEndpoint, 
+                                            requireLeaves, 
+                                            rightTat,
+                                            searchConfig, 
+                                            accMinRa, accMaxRa,
+                                            accMinDec, accMaxDec,
+                                            newSupportNodes);
+                }
+            }
+            else {
+                newSupportNodes.push_back(supportNode);
+            }
+        }
+    }
+}
+
+
+
+
+
+void filterAndSplitSupport(
+    const TreeNodeAndTime& firstEndpoint, 
+    const TreeNodeAndTime& secondEndpoint, 
+    const std::vector<TreeNodeAndTime> &supportNodes, 
+    const linkTrackletsConfig &searchConfig, 
+    double accMinRa, double accMaxRa, 
+    double accMinDec, double accMaxDec,
+    std::vector<TreeNodeAndTime> &newSupportNodes) 
+{
+
+    // if the endpoints are leaves, require that we get all leaves in
+    // the support nodes.
+    bool endpointsAreLeaves = 
+        firstEndpoint.myTree->isLeaf() && secondEndpoint.myTree->isLeaf();
+    
+    
+    for (uint i = 0; i < supportNodes.size(); i++) {
+        splitSupportRecursively(firstEndpoint, secondEndpoint, 
+                                endpointsAreLeaves, 
+                                supportNodes[i],
+                                searchConfig, 
+                                accMinRa, accMaxRa, accMinDec, accMaxDec,
+                                newSupportNodes);
+    }
+    
+    
+}
+
+
+
+
+
+
+
+double nodeWidth(TrackletTreeNode *node)
+{
+    double start = std::clock();
+    double width = 1;
+    for (uint i = 0; i < 4; i++) {
+        width *= node->getUBounds()->at(i) - node->getLBounds()->at(i);
+    }
+    nodeWidthTime += timeSince(start);
+    return width;    
+}
+
+
+
+
+
+/* 
+ * feb 17, 2011: update acc bounds using formulas reverse-engineered
+ * from Kubica.
+ */
+bool updateAccBoundsReturnValidity(const TreeNodeAndTime &firstEndpoint, 
+                                   const TreeNodeAndTime &secondEndpoint,
+                                   double &accMinRa, double &accMaxRa, 
+                                   double &accMinDec, double &accMaxDec)
+{
+    unsigned int axis;
+    double parentMin, parentMax;
+
+    double dt = secondEndpoint.myTime.getMJD() - 
+        firstEndpoint.myTime.getMJD();
+    double dt2 = 2./(dt*dt);
+    double dti = 1./(dt);
+
+    TrackletTreeNode* node1 = firstEndpoint.myTree;
+    TrackletTreeNode* node2 = secondEndpoint.myTree;
+
+    for (axis = 0; axis < 2; axis++) {
+        double node1maxV, node1minV, node1maxP, node1minP;
+        double node2maxV, node2minV, node2maxP, node2minP;
+        unsigned int pos, vel;
+        if (axis == 0) {
+            pos=POINT_RA;
+            vel=POINT_RA_VELOCITY;
+            parentMin = accMinRa;
+            parentMax = accMaxRa;
+        }
+        else {
+            pos=POINT_DEC;
+            vel=POINT_DEC_VELOCITY;
+            parentMin = accMinDec;
+            parentMax = accMaxDec;
+        }
+
+        // short-circuit right away if possible.
+        if (parentMax < parentMin) return false;
+
+        node1maxP = node1->getUBounds()->at(pos);
+        node1minP = node1->getLBounds()->at(pos);
+        node1maxV = node1->getUBounds()->at(vel);
+        node1minV = node1->getLBounds()->at(vel);
+        
+        node2maxP = node2->getUBounds()->at(pos);
+        node2minP = node2->getLBounds()->at(pos);
+        node2maxV = node2->getUBounds()->at(vel);
+        node2minV = node2->getLBounds()->at(vel);
+
+        
+        double newMinAcc, newMaxAcc;
+            
+        double tmpAcc;
+        std::vector<double> possibleAccs;
+        /* calculate min acceleration first. set it to the highest of
+         * the three values we could compute and the value previously
+         * assigned. */
+        possibleAccs.push_back(parentMin);
+            
+        tmpAcc = (node2minV - node1maxV) * dti;
+        possibleAccs.push_back(tmpAcc);
+            
+        tmpAcc = dt2 * (node2minP - node1maxP - node1maxV * dt);
+        possibleAccs.push_back(tmpAcc);
+            
+        // jmyers: this item shaky - no one seems to understand it...
+        tmpAcc = dt2 * (node1minP - node2maxP + node2minV * dt);
+        possibleAccs.push_back(tmpAcc);
+            
+        newMinAcc = *(std::max_element(possibleAccs.begin(), 
+                                       possibleAccs.end()));
+        possibleAccs.clear();
+            
+        // now calculate max acceleration and take the least of the
+        // possible values.
+        possibleAccs.push_back(parentMax);
+            
+        tmpAcc = (node2maxV - node1minV) * dti;
+        possibleAccs.push_back(tmpAcc);
+            
+        tmpAcc = dt2 * (node2maxP - node1minP - node1minV * dt);
+        possibleAccs.push_back(tmpAcc);
+            
+        // jmyers: this item shaky - no one seems to understand it...
+        tmpAcc = dt2 * (node1maxP - node2minP + node2maxV * dt);
+        possibleAccs.push_back(tmpAcc);
+            
+        newMaxAcc = *(std::min_element(possibleAccs.begin(), 
+                                       possibleAccs.end()));
+            
+        possibleAccs.clear();
+            
+        if (axis == 0) {
+            accMinRa = newMinAcc;
+            accMaxRa = newMaxAcc;
+        }
+        else {
+            accMinDec = newMinAcc;
+            accMaxDec = newMaxAcc;
+        }
+            
+        // short-circuit if possible
+        if (newMaxAcc < newMinAcc) return false;
+
+    }
+    // we know maxAcc > minAcc because we didn't short-circuit above.
+    return true;
+}
+
+
+
+
+unsigned int countImageTimes(const std::vector<TreeNodeAndTime> &nodes)
+{
+    std::set<unsigned int> imageTimes;
+    std::vector<TreeNodeAndTime>::const_iterator nIter;
+    for (nIter = nodes.begin(); nIter != nodes.end(); nIter++) {
+        imageTimes.insert(nIter->myTime.getImageId());
+    }
+    return imageTimes.size();
+}
+
+
+
+
+
+
 
 
 
 
 /***************************************************************************
  *                                                                         *
- *   LINKTRACKLETS WITH DISTRIBUTION LOGIC                                 *
+ *   LINKTRACKLETS FUNCTIONS WITH DISTRIBUTION LOGIC                       *
  *                                                                         *
  *   These segments a mixture of code by jmyers and mgcleveland.           *
  *   They should be functionally equivalent to the non-distributed         *
@@ -2593,158 +3102,177 @@ bool trackRmsIsSufficientlyLow(
 
 
 /*
- * this is called when all endpoint nodes (i.e. model nodes) and support nodes
- * are leaves.  model nodes and support nodes are expected to be mutually compatible.
+ * this is called when all endpoint nodes (i.e. model nodes) and
+ * support nodes are leaves.  model nodes and support nodes are
+ * expected to be mutually compatible.
  */
-unsigned int buildTracksAddToResults(const std::vector<MopsDetection> &allDetections,
-				     const std::vector<Tracklet> &allTracklets,
-				     linkTrackletsConfig searchConfig,
-				     TreeNodeAndTime &firstEndpoint,
-				     TreeNodeAndTime &secondEndpoint,
-				     const std::vector<treeIdNodeIdPair> &supportNodes,
-				     TrackSet & results,
-				     int &cacheSize, cachedNode *nodeCache,
-				     std::map<ImageTime, TrackletTree > &trackletTimeToTreeMap,
-				     const std::vector<std::vector<treeIdNodeIdPair> > &finalEndpointOrder,
-				     unsigned long long &pageFaults, unsigned int &myNumCompatible,
-				     unsigned int setNum)
+/* the original was a void but it appears matt is returning some value
+ * required for distribution logic. */
+unsigned int buildTracksAddToResults(
+    const std::vector<MopsDetection> &allDetections,
+    const std::vector<Tracklet> &allTracklets,
+    linkTrackletsConfig searchConfig,
+    TreeNodeAndTime &firstEndpoint,
+    TreeNodeAndTime &secondEndpoint,
+    const std::vector<treeIdNodeIdPair> &supportNodes,
+    TrackSet & results,
+
+    // the following are arguments needed for distribution work.
+    int &cacheSize, cachedNode *nodeCache,
+    std::map<ImageTime, TrackletTree > &trackletTimeToTreeMap,
+    const std::vector<std::vector<treeIdNodeIdPair> > &finalEndpointOrder,
+    unsigned long long &pageFaults, unsigned int &myNumCompatible,
+    unsigned int setNum)
 {
-  //sanity check
-  if ((firstEndpoint.myTree->isLeaf() == false) ||
-      (secondEndpoint.myTree->isLeaf() == false)) {
-    throw LSST_EXCEPT(ProgrammerErrorException, 
-		"buildTracksAddToResults got non-leaf nodes, must be a bug!");
-  }
+    double start = std::clock();
+    buildTracksAddToResultsVisits++;
 
-  //load support nodes from cache
-  std::vector<treeIdNodeIdPair>::const_iterator supportNodeIter;
-  std::vector<std::vector<unsigned int> > supportNodesFromCache;
-  unsigned int currPf = 0;
-  unsigned int count =0;
+    /* matt cleveland distribution setup */
+    //load support nodes from cache
+    std::vector<std::vector<unsigned int> > supportNodesFromCache;
+    unsigned int currPf = 0;
+    unsigned int count =0;
 
-  unsigned int nodeNum = 3; //start as first node offset
+    unsigned int nodeNum = 3; //start as first node offset
 
-  for (supportNodeIter = supportNodes.begin(); supportNodeIter != supportNodes.end();
-       supportNodeIter++) {
-    std::vector<unsigned int> dummy;
-    supportNodesFromCache.push_back(dummy);
-    treeIdNodeIdPair tini = *supportNodeIter;
-    int i = loadNodeFromCache(tini.treeId, tini.nodeId, cacheSize, 
-			      nodeCache, trackletTimeToTreeMap,
-			      finalEndpointOrder, pageFaults, currPf,
-			      setNum, nodeNum);
-    const std::vector<PointAndValue <unsigned int> > * curSupportNodeData;
-    if(!nodeCache[i].node.myTree->isLeaf()){
-      throw LSST_EXCEPT(BadParameterException,
+    std::vector<treeIdNodeIdPair>::const_iterator supportNodeIter;
+
+    for (supportNodeIter = supportNodes.begin(); supportNodeIter != supportNodes.end();
+         supportNodeIter++) {
+        std::vector<unsigned int> dummy;
+        supportNodesFromCache.push_back(dummy);
+        treeIdNodeIdPair tini = *supportNodeIter;
+        int i = loadNodeFromCache(tini.treeId, tini.nodeId, cacheSize, 
+                                  nodeCache, trackletTimeToTreeMap,
+                                  finalEndpointOrder, pageFaults, currPf,
+                                  setNum, nodeNum);
+        const std::vector<PointAndValue <unsigned int> > * curSupportNodeData;
+        if(!nodeCache[i].node.myTree->isLeaf()){
+            throw LSST_EXCEPT(BadParameterException,
 			std::string(__FUNCTION__) + 
-			std::string(": received non-leaf node as support node."));
+                              std::string(": received non-leaf node as support node."));
+        }
+        
+        std::vector<PointAndValue <unsigned int> >::const_iterator supportPointIter;
+        curSupportNodeData = nodeCache[i].node.myTree->getMyData(); 
+        for (supportPointIter  = curSupportNodeData->begin(); 
+             supportPointIter != curSupportNodeData->end();
+             supportPointIter++) {
+            //candidateTrackletIDs.push_back(supportPointIter->getValue());
+            supportNodesFromCache.at(count).push_back(supportPointIter->getValue());
+        }
+        ++count;
     }
     
-    std::vector<PointAndValue <unsigned int> >::const_iterator supportPointIter;
-    curSupportNodeData = nodeCache[i].node.myTree->getMyData(); 
-    for (supportPointIter  = curSupportNodeData->begin(); 
-	 supportPointIter != curSupportNodeData->end();
-	 supportPointIter++) {
-      //candidateTrackletIDs.push_back(supportPointIter->getValue());
-      supportNodesFromCache.at(count).push_back(supportPointIter->getValue());
+    /* begin standard jmyers logic like in trunk */
+    std::vector<PointAndValue<uint> >::const_iterator firstEndpointIter;
+    std::vector<PointAndValue<uint> >::const_iterator secondEndpointIter;
+    std::vector<PointAndValue <uint> >::const_iterator supportPointIter;
+
+    for (firstEndpointIter = firstEndpoint.myTree->getMyData()->begin();
+         firstEndpointIter != firstEndpoint.myTree->getMyData()->end();
+         firstEndpointIter++) {
+
+        for (secondEndpointIter = secondEndpoint.myTree->getMyData()->begin();
+             secondEndpointIter != secondEndpoint.myTree->getMyData()->end();
+             secondEndpointIter++) {
+
+            /* 
+             * figure out the rough quadratic track fitting the two endpoints.
+             * if error is too large, quit. Otherwise, choose support points
+             * from the support nodes, using best-fit first, and ignoring those
+             * too far off the line.  If we get enough points, return a track.
+             *
+             */
+            
+
+            // create a new track with these endpoints
+            Track newTrack;
+            
+            uint firstEndpointTrackletIndex = firstEndpointIter->getValue();
+            uint secondEndpointTrackletIndex = secondEndpointIter->getValue();
+            
+
+            
+            newTrack.addTracklet(firstEndpointTrackletIndex, 
+                                 allTracklets.at(firstEndpointTrackletIndex),
+                                 allDetections);
+            
+            newTrack.addTracklet(secondEndpointTrackletIndex, 
+                                 allTracklets.at(secondEndpointTrackletIndex),
+                                 allDetections);
+            
+            newTrack.calculateBestFitQuadratic(allDetections);
+
+            if (endpointTrackletsAreCompatible(allDetections, 
+                                               newTrack,
+                                               searchConfig)) {
+                
+                numCompatible++;
+                compatibleEndpointsFound++;
+                
+                std::vector<uint> candidateTrackletIds;
+                // put all support tracklet Ids in curSupportNodeData,
+                // then call addDetectionsCloseToPredictedPositions
+                for (supportNodeIter = supportNodes.begin(); 
+                     supportNodeIter != supportNodes.end();
+                     supportNodeIter++) {
+                    const std::vector<PointAndValue <uint> > * 
+                        curSupportNodeData;
+                    if (!supportNodeIter->myTree->isLeaf()) {
+                        throw LSST_EXCEPT(BadParameterException,
+                                          std::string(__FUNCTION__) + 
+                                          std::string(
+                         ": received non-leaf node as support node."));
+                    }
+                    curSupportNodeData = supportNodeIter->myTree->getMyData(); 
+                    for (supportPointIter  = curSupportNodeData->begin(); 
+                         supportPointIter != curSupportNodeData->end();
+                         supportPointIter++) {
+
+                        candidateTrackletIds.push_back(
+                            supportPointIter->getValue());
+                    }
+                }
+
+                // Add support points if they are within thresholds.
+                addDetectionsCloseToPredictedPositions(allDetections, 
+                                                       allTracklets, 
+                                                       candidateTrackletIds,
+                                                       newTrack, 
+                                                       searchConfig);
+
+                
+                // Final check to see if track meets requirements:
+                // first sufficient support, then RMS fitting error
+
+                if (trackHasSufficientSupport(allDetections, 
+                                              newTrack,
+                                              searchConfig)) {
+                    // recalculate best-fit quadratic and check if RMS
+                    // is sufficient
+                    newTrack.calculateBestFitQuadratic(allDetections);
+                    if (trackRmsIsSufficientlyLow(allDetections, 
+                                                  newTrack, 
+                                                  searchConfig)) {
+                        results.insert(newTrack);
+                    }
+                }
+
+                if ((RACE_TO_MAX_COMPATIBLE == true) && 
+                    (compatibleEndpointsFound >= MAX_COMPATIBLE_TO_FIND)) {
+                    debugPrintTimingInfo(results);
+                    exit(0);
+                }
+
+            }
+        }    
     }
-    ++count;
-  }
-  
-  //MATT THIS IS THE NEW THING 12/15/10 -- It removes the "dummy" from the above loop
-  //MATT REMOVED THIS ON 3/3/11 AND IT FIXED BROKEN UNIT TESTS
-  //supportNodesFromCache.erase(supportNodesFromCache.begin());
 
-  buildTracksAddToResultsVisits++;
+    buildTracksAddToResultsTime += timeSince(start);
   
-  std::vector<PointAndValue<unsigned int> >::const_iterator firstEndpointIter;
-  std::vector<PointAndValue<unsigned int> >::const_iterator secondEndpointIter;
-  
-  const std::vector<PointAndValue<unsigned int> > *firstEndpointData = firstEndpoint.myTree->getMyData();
-  const std::vector<PointAndValue<unsigned int> > *secondEndpointData = secondEndpoint.myTree->getMyData();
-
-  for (firstEndpointIter = firstEndpointData->begin();
-       firstEndpointIter != firstEndpointData->end();
-       firstEndpointIter++) {
-    for (secondEndpointIter = secondEndpointData->begin();
-	 secondEndpointIter != secondEndpointData->end();
-	 secondEndpointIter++) {
-
-      /* 
-       * figure out the rough quadratic track fitting the two endpoints.
-       * if error is too large, quit. Otherwise, choose support points
-       * from the support nodes, using best-fit first, and ignoring those
-       * too far off the line.  If we get enough points, return a track.
-       *
-       */
-      
-      double RAVelocity, DecVelocity, RAAcceleration, DecAcceleration;
-      double RAPosition0, DecPosition0;
-      double time0;
-      getBestFitVelocityAndAccelerationForTracklets(allDetections,
-						    allTracklets, 
-						    firstEndpointIter->getValue(),
-						    secondEndpointIter->getValue(),
-						    RAVelocity,RAAcceleration,RAPosition0,
-						    DecVelocity,DecAcceleration,DecPosition0,
-						    time0);
-
-      if (endpointTrackletsAreCompatible(allDetections, 
-					 allTracklets,
-					 firstEndpointIter->getValue(),
-					 secondEndpointIter->getValue(),
-					 RAVelocity,RAAcceleration,RAPosition0,
-					 DecVelocity,DecAcceleration,DecPosition0,
-					 time0,searchConfig)) {
-	
-	++myNumCompatible;
-	
-	// create a new track with these endpoints
-	Track newTrack;
-	std::vector<unsigned int> candidateTrackletIDs;
-	candidateTrackletIDs.push_back(firstEndpointIter->getValue() );
-	candidateTrackletIDs.push_back(secondEndpointIter->getValue());
-	addBestCompatibleTrackletsAndDetectionsToTrack(allDetections, allTracklets, candidateTrackletIDs, 
-						       RAVelocity, RAAcceleration, RAPosition0,
-						       DecVelocity, DecAcceleration, DecPosition0,
-						       time0,searchConfig,
-						       newTrack);
-	
-	candidateTrackletIDs.clear();
-        
-	/* add the best compatible support points */
-	
-	// put all support tracklet IDs in curSupportNodeData, then call
-	// addBestCompatibleTrackletsAndDetectionsToTrack
-	/*for (supportNodeIter = supportNodes.begin(); supportNodeIter != supportNodes.end();
-	  supportNodeIter++) {*/
-	for(unsigned int i = 0; i < supportNodesFromCache.size(); ++i){
-	  /*for (supportPointIter  = curSupportNodeData->begin(); 
-	       supportPointIter != curSupportNodeData->end();
-	       supportPointIter++) {*/
-	  for(unsigned int j = 0; j < supportNodesFromCache.at(i).size(); ++j){
-	    //candidateTrackletIDs.push_back(supportPointIter->getValue());
-	    candidateTrackletIDs.push_back(supportNodesFromCache.at(i).at(j));
-	  }
-	}
-	
-	addBestCompatibleTrackletsAndDetectionsToTrack(allDetections, allTracklets, candidateTrackletIDs,
-						       RAVelocity, RAAcceleration, RAPosition0,
-						       DecVelocity, DecAcceleration, DecPosition0, time0,
-						       searchConfig,
-						       newTrack);
-	
-	if (trackMeetsRequirements(allDetections, newTrack,  
-				   RAVelocity, RAAcceleration, RAPosition0, 
-				   DecVelocity, DecAcceleration, DecPosition0,
-				   time0,searchConfig)) {
-	  results.insert(newTrack);
-	}
-      }
-    }    
-  }
-  
-  return currPf;
+    /* this return added by mgcleveland (why?) */
+    return currPf;
 }
 
 
@@ -2760,397 +3288,253 @@ unsigned int buildTracksAddToResults(const std::vector<MopsDetection> &allDetect
 /*
  * this is, roughly, the algorithm presented in http://arxiv.org/abs/astro-ph/0703475v1:
  * 
- * Efficient intra- and inter-night linking of asteroid detections using kd-trees
+ * Efficient intra- and inter-night linking of asteroid detections
+ * using kd-trees
  * 
- * The "proper" version of the algorithm (as presented in psuedocode om the
- * document) is a little different; basically, he has us recurring only on
- * endpoints, and splitting support nodes repeatedly at each call, until they
- * are no longer "too wide".  Unfortunately, I found that neither my intuition
- * nor Kubica's implementation made clear the definition of "too wide".
+ * The "proper" version of the algorithm (as presented in psuedocode
+ * om the document) is a little different; basically, he has us
+ * recurring only on endpoints, and splitting support nodes repeatedly
+ * at each call, until they are no longer "too wide".  Unfortunately,
+ * I found that neither my intuition nor Kubica's implementation made
+ * clear the definition of "too wide".
  *
- * this implementation is more like the one Kubica did in his code. at every
- * step, we check all support nodes for compatibility, splitting each one. we
- * then split one model node and recurse. 
+ * this implementation is more like the one Kubica did in his code. at
+ * every step, we check all support nodes for compatibility, splitting
+ * each one. we then split one model node and recurse.
  */
-void doLinkingRecurse2(const std::vector<MopsDetection> &allDetections,
-                       const std::vector<Tracklet> &allTracklets,
-                       linkTrackletsConfig searchConfig,
-                       TreeNodeAndTime &firstEndpoint,
-                       TreeNodeAndTime &secondEndpoint,
-                       std::vector<TreeNodeAndTime> &supportNodes,
-                       int iterationsTillSplit,
-                       LTCache &rangeCache, 
-		       int numProcs, std::map<ImageTime, TrackletTree > &trackletTimeToTreeMap,
-		       std::vector<std::vector<workItemFile> > &assignment)
+void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
+                      const std::vector<Tracklet> &allTracklets,
+                      linkTrackletsConfig searchConfig,
+                      TreeNodeAndTime &firstEndpoint,
+                      TreeNodeAndTime &secondEndpoint,
+                      std::vector<TreeNodeAndTime> &supportNodes,
+                      double accMinRa, double accMaxRa, 
+                      double accMinDec, double accMaxDec,
+                      int iterationsTillSplit,
+                      /* these items added by matt cleveland to allow distribution */
+                      int numProcs, 
+                      std::map<ImageTime, TrackletTree > &trackletTimeToTreeMap,
+                      std::vector<std::vector<workItemFile> > &assignment)
 {
-  if ((RACE_TO_MAX_COMPATIBLE == true) && (compatibleEndpointsFound >= MAX_COMPATIBLE_TO_FIND)) {
-    return;
-  }
+
+    double start = std::clock();
+    firstEndpoint.myTree->addVisit();
+      
+    doLinkingRecurseVisits++;
   
-  doLinkingRecurseVisits++;
-  firstEndpoint.myTree->addVisit();
-  
-  if (areCompatible(firstEndpoint, secondEndpoint, searchConfig, rangeCache) == false)
-    {
-      // poor choice of model nodes (endpoint nodes)! give up.
-      return;
-    }
-  else 
+    bool isValid = updateAccBoundsReturnValidity(firstEndpoint, 
+                                                 secondEndpoint,
+                                                 accMinRa, accMaxRa, 
+                                                 accMinDec, accMaxDec); 
+
+    if (isValid)
     {
       
-      std::set<double> uniqueSupportMJDs;
-      std::vector<TreeNodeAndTime> newSupportNodes;
-      std::vector<TreeNodeAndTime>::iterator supportNodeIter;
+        std::set<double> uniqueSupportMJDs;
+        std::vector<TreeNodeAndTime> newSupportNodes;
+        std::vector<TreeNodeAndTime>::iterator supportNodeIter;
       
-      /* look through untested support nodes, find the ones that are compatible
-       * with the model nodes, add their children to newSupportNodes */
+        /* look through untested support nodes, find the ones that are
+         * compatible with the model nodes, add their children to
+         * newSupportNodes */
       
-      for (supportNodeIter  = supportNodes.begin();
-	   supportNodeIter != supportNodes.end();
-	   supportNodeIter++) {
-	
-	if (iterationsTillSplit <= 0) {
-	  bool firstEndpointCompatible;
-	  bool secondEndpointCompatible;
-	  
-	  firstEndpointCompatible =  areCompatible(firstEndpoint, *supportNodeIter, searchConfig, rangeCache);
-	  secondEndpointCompatible = areCompatible(secondEndpoint, *supportNodeIter, searchConfig, rangeCache);
-          
-	  if (firstEndpointCompatible && secondEndpointCompatible)
-	    {   
-	      if (supportNodeIter->myTree->isLeaf()) {
-		newSupportNodes.push_back(*supportNodeIter);
-		uniqueSupportMJDs.insert(supportNodeIter->myTime.getMJD());
-	      }
-	      else {
-		if (supportNodeIter->myTree->hasLeftChild()) {
-		  
-		  TreeNodeAndTime newTAT(supportNodeIter->myTree->getLeftChild(), supportNodeIter->myTime);
-		  /*
-		    unsigned int treeId = supportNodeIter->myTime.getImageId();
-		    unsigned int parentId = supportNodeIter->myTree->getId();
-		    unsigned int childId = newTAT.myTree->getId();
-		    parentTable[treeId][childId] = parentId;
-		  */
-		  newSupportNodes.push_back(newTAT);
-		  uniqueSupportMJDs.insert(supportNodeIter->myTime.getMJD());
-		}
-		if (supportNodeIter->myTree->hasRightChild()) {
-		  
-		  TreeNodeAndTime newTAT(supportNodeIter->myTree->getRightChild(), supportNodeIter->myTime);
-		  /*
-		    unsigned int treeId = firstEndpoint.myTime.getImageId();
-		    unsigned int parentId = firstEndpoint.myTree->getId();
-		    unsigned int childId = newTAT.myTree->getId();
-		    parentTable[treeId][childId] = parentId;
-		  */
-		  newSupportNodes.push_back(newTAT);
-		  uniqueSupportMJDs.insert(supportNodeIter->myTime.getMJD());
-		}
-	      }
-	    }
-	}
-	else {
-	  // iterationsTillSplit is non-zero; 
-	  // don't do any real work; just copy the previous support nodes. we'll do this
-	  // momentarily; but go ahead and add their support MJDs now.
-	  uniqueSupportMJDs.insert(supportNodeIter->myTime.getMJD());                
-	}
-      }
+        if ((iterationsTillSplit <= 0) || 
+            (firstEndpoint.myTree->isLeaf() && secondEndpoint.myTree->isLeaf())) {
+            
+            filterAndSplitSupport(firstEndpoint, secondEndpoint, 
+                                  supportNodes, searchConfig, 
+                                  accMinRa, accMaxRa, accMinDec, accMaxDec,
+                                  newSupportNodes);
+        }        
+        
+        if (iterationsTillSplit <= 0) {
+            iterationsTillSplit = ITERATIONS_PER_SPLIT;
+        }
+        else{
+            newSupportNodes = supportNodes;
+        }
+
+        unsigned int nUniqueMJDs = countImageTimes(newSupportNodes);
       
-      
-      if (iterationsTillSplit <= 0) {
-	iterationsTillSplit = ITERATIONS_PER_SPLIT;
-      }
-      else{
-	// we still need to get newSupportNodes set up. just use the old ones.
-	newSupportNodes = supportNodes;
-      }
-      
-      if (uniqueSupportMJDs.size() < searchConfig.minSupportTracklets) {
-	// we can't possibly have enough distinct support tracklets between endpoints
-	return; 
-      }
-      else 
+
+        // we get at least 2 unique nights from endpoints, and 4
+        // unique detections from endpoints.  add those in and see if
+        // we have sufficient support.
+        if (nUniqueMJDs + 2 >= searchConfig.minUniqueNights)
         {
-	  // we have enough model nodes, and enough support nodes.
-	  // if they are all leaves, then start building tracks.
-	  // if they are not leaves, split one of them and recurse.
-	  if (firstEndpoint.myTree->isLeaf() && secondEndpoint.myTree->isLeaf() &&
-	      areAllLeaves(newSupportNodes)) {
-	    // TBD: actually, we need to filter newSupportNodes one more time here, since 
-	    // we checked for compatibility, then split off the children. of course, buildTracksAddToResults won't 
-	    // be affected with regards to correctness, just performance. So it may not even be wise to add a
-	    // mostly-needless check.
-	    
-	    /**************************************************************
-	     **************************************************************
-	     **  DISTRIBUTED VERSION DOES NOT CALL buildTracksAddTResults
-	     **  DIRECTLY, IT CREATES A SET OF WORK ITEMS AND THEN 
-	     **  DISTRIBUTES THEM AFTER ANALYSIS
-	     **************************************************************
-	     **************************************************************/
-	    
-	    /************************************************************
-	     * Calculate the number of compatible endpoints in this set.
-	     * This allows us to predict the amount of work required by
-	     * this work item and distributed it accordingly.
-	     ************************************************************/
-	    double RAVelocity, DecVelocity, RAAcceleration, DecAcceleration;
-	    double RAPosition0, DecPosition0;
-	    double time0;
-	    int numCompatible = 0;
-	    
-	    std::vector<PointAndValue<unsigned int> >::const_iterator firstEndpointIter;
-	    std::vector<PointAndValue<unsigned int> >::const_iterator secondEndpointIter;
-	    
-	    for (firstEndpointIter = firstEndpoint.myTree->getMyData()->begin();
-		 firstEndpointIter != firstEndpoint.myTree->getMyData()->end();
-		 firstEndpointIter++) {
-	      
-	      for (secondEndpointIter = secondEndpoint.myTree->getMyData()->begin();
-		   secondEndpointIter != secondEndpoint.myTree->getMyData()->end();
-		   secondEndpointIter++) {
-		
-		getBestFitVelocityAndAccelerationForTracklets(allDetections,
-							      allTracklets, 
-							      firstEndpointIter->getValue(),
-							      secondEndpointIter->getValue(),
-							      RAVelocity,RAAcceleration,RAPosition0,
-							      DecVelocity,DecAcceleration,DecPosition0,
-							      time0);
-		
-		if (endpointTrackletsAreCompatible(allDetections, 
-						   allTracklets,
-						   firstEndpointIter->getValue(),
-						   secondEndpointIter->getValue(),
-						   RAVelocity,RAAcceleration,RAPosition0,
-						   DecVelocity,DecAcceleration,DecPosition0,
-						   time0,searchConfig)) {
-		  ++numCompatible;
-		  ++compatibleEndpointsFound;
-		}
-	      }
-	    }
-	    
-	    /****************************************************
-	     * Write the information of the endpoints and their 
-	     * support points to file, this is a work item
-	     * as defined in the terminology.
-	     ****************************************************/
-	    workItemFile myItem;
-	    myItem.endpoints.clear();
-	    
-	    //first item is first endpoint
-	    unsigned int treeId = firstEndpoint.myTime.getImageId();
-	    unsigned int nodeId = firstEndpoint.myTree->getId();
-	    myItem.endpoints.push_back(std::make_pair(treeId, nodeId));
-	    
-	    //second item is second endpoint
-	    treeId = secondEndpoint.myTime.getImageId();
-	    nodeId = secondEndpoint.myTree->getId();
-	    myItem.endpoints.push_back(std::make_pair(treeId, nodeId));
-	    
-	    //add all endpoints
-	    for(unsigned int m=0; m < newSupportNodes.size(); ++m){
-	      treeId = newSupportNodes.at(m).myTime.getImageId();
-	      nodeId = newSupportNodes.at(m).myTree->getId();
-	      myItem.endpoints.push_back(std::make_pair(treeId, nodeId));
-	    }
-	    
-	    //create workItemFile struct to go on list
-	    myItem.numNodes = 2 + newSupportNodes.size();
-	    myItem.numCompatibleEndpoints = numCompatible;
-	    myItem.timeUnits = myItem.numNodes * myItem.numCompatibleEndpoints;
-	    totalTimeUnits += myItem.timeUnits;
-	    
-	    assignment.at(globalNextWorker).push_back(myItem);
-	    
-	    ++globalNextWorker;
-	    if(globalNextWorker >= (numProcs-1)){
-	      globalNextWorker = 0;
-	    }
-	    
-	    ++totalWorkItems;
-	    
-	    //distribute workload periodically
-	    if(totalWorkItems >= MAX_WORK_ITEMS){
-	      
-	      distributeCurrentWorkload(assignment);/*, allDetections, allTracklets, searchConfig, 
-					trackletTimeToTreeMap,
-					totalTimeUnits);*/
+            // we have enough model nodes, and enough support nodes.
+            // if they are all leaves, then start building tracks.  if
+            // they are not leaves, split one of them and recurse.
 
-	      //update and reset assignment-specific variables
-	      totalWorkItems = 0;
-	      totalTimeUnits = 0;
+            if (firstEndpoint.myTree->isLeaf() && 
+                secondEndpoint.myTree->isLeaf()) {
+                
+                /**************************************************************
+                 **************************************************************
+                 **  DISTRIBUTED VERSION DOES NOT CALL buildTracksAddTResults
+                 **  DIRECTLY, IT CREATES A SET OF WORK ITEMS AND THEN 
+                 **  DISTRIBUTES THEM AFTER ANALYSIS
+                 **************************************************************
+                 **************************************************************/
 
-	      //clear our our work item cache and start afresh
-	      for(unsigned int i=0; i < assignment.size(); ++i){
-		assignment.at(i).clear();
-	      }
-	      //assignment.clear(); //MATT NEW ADD 12/16/10
-
-	      //tell the workers that this round of work item distribution is complete and
-	      //collect any tracks that were generated
-	      threadArgs ta;
-	      ta.numProcs = numProcs;
-	      ta.sentinel = -2;
-	      killProcs(ta);
-
-	      //only do MAX_GENERATIONS generations for measuring purposes
-	      std::cerr << "Generation " << numGenerations << std::endl;
-	      if(numGenerations >= MAX_GENERATIONS){
-		return;
-	      }
-	      ++numGenerations;
-	    }
-	    
-	    if ((RACE_TO_MAX_COMPATIBLE == true) && (compatibleEndpointsFound >= MAX_COMPATIBLE_TO_FIND)) {
-	      return;
-	    }
-	    
-	    /**************************************************
-	     **************************************************
-	     ** This is where buildTracksAddToResults is called
-	     ** in the sequential program. -- END DISTRIBUTED
-	     **************************************************
-	     **************************************************/
+                addWorkItem(allDetections, allTracklets, searchConfig,
+                            firstEndpoint, secondEndpoint, supportNodes,
+                            numProcs, trackletTimeToTreeMap, assignment);
+                
             }
             else  {
-               
-                iterationsTillSplit -= 1;
 
-                // find the "widest" node, where width is just the product
-                // of RA range, Dec range, RA velocity range, Dec velocity range.
-                // we will split that node and recurse.
+                // jmyers: all this remaining code should be identical
+                // to the sequential version except for the three
+                // added arguments to each doLinkingRecurse call.
+
+                iterationsTillSplit -= 1;
+                
+                // find the "widest" node, where width is just the
+                // product of RA range, Dec range, RA velocity range,
+                // Dec velocity range.  we will split that node and
+                // recurse.
                 
                 double firstEndpointWidth = nodeWidth(firstEndpoint.myTree);
                 double secondEndpointWidth = nodeWidth(secondEndpoint.myTree);
                 
-                // don't consider splitting endpoint nodes which are actually leaves! give them negative width to hack selection process.
+                // don't consider splitting endpoint nodes which are
+                // actually leaves! give them negative width to hack
+                // selection process.
                 if (firstEndpoint.myTree->isLeaf()) {
-		  firstEndpointWidth = -1;
+                    firstEndpointWidth = -1;
                 }
                 if (secondEndpoint.myTree->isLeaf()) {
-		  secondEndpointWidth = -1;
+                    secondEndpointWidth = -1;
                 }
-		
-                // choose the widest model node, split it and recurse!                                
-                if ( (areEqual(firstEndpointWidth, -1)) &&
-                     (areEqual(secondEndpointWidth, -1)) ) {
-		  // in this case, our endpoints are leaves, but not all our support nodes are.
-		  // just call this function again until they *are* all leaves.
-		  iterationsTillSplit = 0;
-		  doLinkingRecurse2(allDetections, allTracklets, searchConfig,
-				    firstEndpoint,secondEndpoint,
-				    newSupportNodes,
-				    iterationsTillSplit, rangeCache, 
-				    numProcs, trackletTimeToTreeMap, assignment);
-		  
-                }
-                else if (firstEndpointWidth >= secondEndpointWidth) {
-		  
-		  //"widest" node is first endpoint, recurse twice using its children
-		  // in its place.  
-                  
-		  if ((! firstEndpoint.myTree->hasLeftChild()) && (!firstEndpoint.myTree->hasRightChild())) {
-		    throw LSST_EXCEPT(ProgrammerErrorException, "Recursing in a leaf node (first endpoint), must be a bug!");
-		  }
-		  
-		  if (firstEndpoint.myTree->hasLeftChild())
-                    {
-		      TreeNodeAndTime newTAT(firstEndpoint.myTree->getLeftChild(), firstEndpoint.myTime);
-			      
-		      /**************************************************
-		       *MATT UPDATING FOR ADAPTIVE ALGORITHM
-		       **************************************************/
-		      /*unsigned int treeId = firstEndpoint.myTime.getImageId();
-			unsigned int parentId = firstEndpoint.myTree->getId();
-			unsigned int childId = newTAT.myTree->getId();
-			parentTable[treeId][childId] = parentId;
-		      */
-		      /* 
-		       * END
-		       **************************************************/
-		      doLinkingRecurse2(allDetections, allTracklets, searchConfig,
-					newTAT, secondEndpoint,
-					newSupportNodes,
-					iterationsTillSplit, rangeCache, 
-					numProcs, trackletTimeToTreeMap, assignment);
+ 
+                // choose the widest model node, split it and recurse!
+                if (firstEndpointWidth >= secondEndpointWidth) {
+
+                    //"widest" node is first endpoint, recurse twice
+                    // using its children in its place.
+                    
+                    if ((! firstEndpoint.myTree->hasLeftChild()) 
+                        && (!firstEndpoint.myTree->hasRightChild())) {
+                        throw LSST_EXCEPT(ProgrammerErrorException, 
+     "Recursing in a leaf node (first endpoint), must be a bug!");
                     }
-		  
-		  if (firstEndpoint.myTree->hasRightChild())
+
+                    if (firstEndpoint.myTree->hasLeftChild())
                     {
-		      TreeNodeAndTime newTAT(firstEndpoint.myTree->getRightChild(), firstEndpoint.myTime);
-			      
-		      /**************************************************
-		       *MATT UPDATING FOR ADAPTIVE ALGORITHM
-		       **************************************************/
-		      /*unsigned int treeId = firstEndpoint.myTime.getImageId();
-		      unsigned int parentId = firstEndpoint.myTree->getId();
-		      unsigned int childId = newTAT.myTree->getId();
-		      parentTable[treeId][childId] = parentId;
-		      */
-		      /* 
-		       * END
-		       **************************************************/
-		      doLinkingRecurse2(allDetections, allTracklets, searchConfig,
-					newTAT, secondEndpoint,
-					newSupportNodes,
-					iterationsTillSplit, rangeCache, 
-					numProcs, trackletTimeToTreeMap, assignment);
-		    }
+                        TreeNodeAndTime newTAT(
+                            firstEndpoint.myTree->getLeftChild(), 
+                            firstEndpoint.myTime);
+                        //doLinkingRecurseTime += timeSince(start);
+                        //std::cout << "Recursing on left child of
+                        //first endpoint.\n";
+                        doLinkingRecurse(allDetections, 
+                                         allTracklets, 
+                                         searchConfig,
+                                         newTAT,secondEndpoint,
+                                         newSupportNodes,
+                                         accMinRa,
+                                         accMaxRa,
+                                         accMinDec,
+                                         accMaxDec,
+                                         results, 
+                                         iterationsTillSplit,
+                                         numProcs,
+                                         trackletTimeToTreeMap,
+                                         assignment); 
+                        //std::cout << "Returned from recursion on
+                        //left child of first endpoint.\n";
+                    }
+                    
+                    if (firstEndpoint.myTree->hasRightChild())
+                    {
+                        TreeNodeAndTime newTAT(
+                            firstEndpoint.myTree->getRightChild(), 
+                            firstEndpoint.myTime);
+                        doLinkingRecurseTime += timeSince(start);
+                        //std::cout << "recursing on right child of
+                        //first endpoint..\n";
+                        doLinkingRecurse(allDetections, 
+                                         allTracklets, 
+                                         searchConfig,
+                                         newTAT,secondEndpoint,
+                                         newSupportNodes,
+                                         accMinRa,
+                                         accMaxRa,
+                                         accMinDec,
+                                         accMaxDec,
+                                         results, 
+                                         iterationsTillSplit,
+                                         numProcs,
+                                         trackletTimeToTreeMap,
+                                         assignment);  
+                        //std::cout << "Returned from recursion on
+                        //right child of first endpoint.\n";
+                    }
                 }
                 else {
-		  //"widest" node is second endpoint, recurse twice using its children
-		  // in its place
-                  
-		  if ((!secondEndpoint.myTree->hasLeftChild()) && (!secondEndpoint.myTree->hasRightChild())) {
-		    throw LSST_EXCEPT(ProgrammerErrorException, "Recursing in a leaf node (second endpoint), must be a bug!");
-		  }
-		  
-		  if (secondEndpoint.myTree->hasLeftChild())
-                    {
-		      TreeNodeAndTime newTAT(secondEndpoint.myTree->getLeftChild(), secondEndpoint.myTime);
-			      
-		      /**************************************************
-		       *MATT UPDATING FOR ADAPTIVE ALGORITHM
-		       **************************************************/
-		      /*unsigned int treeId = secondEndpoint.myTime.getImageId();
-			unsigned int parentId = secondEndpoint.myTree->getId();
-			unsigned int childId = newTAT.myTree->getId();
-			parentTable[treeId][childId] = parentId;
-		      */
-		      /* 
-		       * END
-		       **************************************************/
-		      doLinkingRecurse2(allDetections, allTracklets, searchConfig,
-					firstEndpoint,newTAT,
-					newSupportNodes,
-					iterationsTillSplit, rangeCache, 
-					numProcs, trackletTimeToTreeMap, assignment);
+                    //"widest" node is second endpoint, recurse twice
+                    // using its children in its place
+                    
+                    if ((!secondEndpoint.myTree->hasLeftChild()) 
+                        && (!secondEndpoint.myTree->hasRightChild())) {
+                        throw LSST_EXCEPT(ProgrammerErrorException, 
+            "Recursing in a leaf node (second endpoint), must be a bug!");
                     }
-		  
-		  if (secondEndpoint.myTree->hasRightChild())
+
+                    if (secondEndpoint.myTree->hasLeftChild())
                     {
-		      TreeNodeAndTime newTAT(secondEndpoint.myTree->getRightChild(), secondEndpoint.myTime);
-		      
-		      /**************************************************
-		       *MATT UPDATING FOR ADAPTIVE ALGORITHM
-		       **************************************************/
-		      /*unsigned int treeId = secondEndpoint.myTime.getImageId();
-			unsigned int parentId = secondEndpoint.myTree->getId();
-			unsigned int childId = newTAT.myTree->getId();
-			parentTable[treeId][childId] = parentId;
-		      */
-		      /* 
-		       * END
-		       **************************************************/
-		      doLinkingRecurse2(allDetections, allTracklets, searchConfig,
-					firstEndpoint,newTAT,
-					newSupportNodes,
-					iterationsTillSplit, rangeCache, 
-					numProcs, trackletTimeToTreeMap, assignment);
+                        TreeNodeAndTime newTAT(
+                            secondEndpoint.myTree->getLeftChild(), 
+                            secondEndpoint.myTime);
+                        doLinkingRecurseTime += timeSince(start);
+                        //std::cout << "Recursing on left child of
+                        //second endpoint.\n";
+                        doLinkingRecurse(allDetections, 
+                                         allTracklets, 
+                                         searchConfig,
+                                         firstEndpoint,
+                                         newTAT,
+                                         newSupportNodes,
+                                         accMinRa,
+                                         accMaxRa,
+                                         accMinDec,
+                                         accMaxDec,
+                                         results, 
+                                         iterationsTillSplit,
+                                         numProcs,
+                                         trackletTimeToTreeMap,
+                                         assignment);
+                        //std::cout << "Returned from recursion on
+                        //left child of second endpoint.\n";
+                    }
+                    
+                    if (secondEndpoint.myTree->hasRightChild())
+                    {
+                        TreeNodeAndTime newTAT(
+                            secondEndpoint.myTree->getRightChild(), 
+                            secondEndpoint.myTime);
+                        doLinkingRecurseTime += timeSince(start);
+                        //std::cout << "Recursing on right child of
+                        //second endpoint.\n";
+                        doLinkingRecurse(allDetections, 
+                                         allTracklets, 
+                                         searchConfig,
+                                         firstEndpoint,
+                                         newTAT,
+                                         newSupportNodes,
+                                         accMinRa,
+                                         accMaxRa,
+                                         accMinDec,
+                                         accMaxDec,
+                                         results, 
+                                         iterationsTillSplit,
+                                         numProcs,
+                                         trackletTimeToTreeMap,
+                                         assignment);
+                        //std::cout << "Returned from recursion on
+                        //right child of second endpoint.\n";
+                        
                     }
                 }
             }                        
@@ -3164,155 +3548,193 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
                std::vector<Tracklet> &allTracklets,
                linkTrackletsConfig searchConfig,
                std::map<ImageTime, TrackletTree > &trackletTimeToTreeMap,
-	       int numProcs, //std::vector<std::vector<int> > &assignment)
+               // the following arguments added by matt for distribution work
+	       int numProcs,
 	       std::vector<std::vector<workItemFile> > &assignment)
 
 {
-  /* for every pair of trees, using the set of every intermediate (temporally) tree as a
-   * set possible support nodes, call the recursive linker.
-   */ 
-  /*
-   * implementation detail: note that there is a difference between a KDTree
-   * and a KDTreeNode.  KDTrees are the "outer layer" and don't really hold
-   * data; KDTreeNodes are where the data lives.
-   * 
-   * In other programs, KDTreeNodes are hidden from the user, but
-   * linkTracklets will use them directly.
-   *
-   * In doLinking_recurse, we will only deal with KDTreeNodes. So in
-   * doLinking, we start the searching with the head (i.e. root) node of each
-   * tree.
-   */
-  bool DEBUG = false;
-  
-  bool limitedRun = false;
-  double limitedRunFirstEndpoint = 53738.190801;//53738.217607;///53738.266849;/////49616.273436000003;//   49616.249649999998 ;
-  double limitedRunSecondEndpoint = 53747.220188;//53747.208854;//53747.241076;//49623.023787999999 ;  //49623.023787999999 ;
-  
-  double iterationTime = std::clock();
-  int threshold = 1000;
-  
-  if (DEBUG) {
-    std:: cout << "all MJDs: ";
-    std::map<ImageTime, KDTree<unsigned int> >::const_iterator mapIter;
-    for (mapIter = trackletTimeToTreeMap.begin();
-	 mapIter != trackletTimeToTreeMap.end();
-	 mapIter++) {
-      std::cout << std::setprecision (10) << mapIter->first.getMJD() << " ";
-    }
-    std::cout << std::endl;
-  }
-  
-  std::map<ImageTime, KDTree<unsigned int> >::const_iterator firstEndpointIter;
-  for (firstEndpointIter = trackletTimeToTreeMap.begin(); 
-       firstEndpointIter != trackletTimeToTreeMap.end(); 
-       firstEndpointIter++)
+
+    /* for every pair of trees, using the set of every intermediate
+     * (temporally) tree as a set possible support nodes, call the
+     * recursive linker.
+     */ 
+    /*
+     * implementation detail: note that there is a difference between
+     * a KDTree` and a KDTreeNode.  KDTrees are the "outer layer" and
+     * don't really hold data; KDTreeNodes are where the data lives.
+     * 
+     * In other programs, KDTreeNodes are hidden from the user, but
+     * linkTracklets will use them directly.
+     *
+     * In doLinking_recurse, we will only deal with KDTreeNodes. So in
+     * doLinking, we start the searching with the head (i.e. root)
+     * node of each tree.
+     */
+    bool DEBUG = false;
+    unsigned int imagePairs = 0;
+
+    initDebugTimingInfo();
+
+    unsigned int numImages = trackletTimeToTreeMap.size();
+
+    std::map<ImageTime, TrackletTree >::const_iterator firstEndpointIter;
+
+    for (firstEndpointIter = trackletTimeToTreeMap.begin(); 
+         firstEndpointIter != trackletTimeToTreeMap.end(); 
+         firstEndpointIter++)
     {
-      std::map<ImageTime, KDTree<unsigned int> >::const_iterator secondEndpointIter;
-      std::map<ImageTime, KDTree<unsigned int> >::const_iterator afterFirstIter = firstEndpointIter;
-      afterFirstIter++;
-      
-      if ((!limitedRun) || (areEqual(firstEndpointIter->first.getMJD(), limitedRunFirstEndpoint))) {
-	
-	for (secondEndpointIter = afterFirstIter; 
-	     secondEndpointIter != trackletTimeToTreeMap.end(); 
-	     secondEndpointIter++)
-	  {
-	    /* if there is sufficient time between the first and second nodes, then try
-	       doing the recursive linking using intermediate times as support nodes.
-	    */
-	    int numAdded = 0;
-	    if ((!limitedRun) || 
-		(areEqual(secondEndpointIter->first.getMJD(), limitedRunSecondEndpoint))) {
+        std::map<ImageTime, TrackletTree >::const_iterator 
+            secondEndpointIter;
+        std::map<ImageTime, TrackletTree >::const_iterator 
+            afterFirstIter = firstEndpointIter;
+        afterFirstIter++;
+
+
+        /* check if the user wants us to look for tracks starting at this time */
+        if (( !searchConfig.restrictTrackStartTimes ) || 
+            (firstEndpointIter->first.getMJD() 
+             <= searchConfig.latestFirstEndpointTime)) {
+
+            for (secondEndpointIter = afterFirstIter; 
+                 secondEndpointIter != trackletTimeToTreeMap.end(); 
+                 secondEndpointIter++)
+            {
+                
+                /* check if the user wants us to look for tracks
+                 * ending at this time */
+                if ((!searchConfig.restrictTrackEndTimes) || 
+                    (secondEndpointIter->first.getMJD() 
+                     >= searchConfig.earliestLastEndpointTime)) {
+                
+                    /* if there is sufficient time between the first
+                       and second nodes, then try doing the recursive
+                       linking using intermediate times as support
+                       nodes.
+                    */
                     
-	      
-	      if (secondEndpointIter->first.getMJD() - firstEndpointIter->first.getMJD() 
-		  >= searchConfig.minEndpointTimeSeparation) {                
-		
-		if (DEBUG) {
-		  time_t rawtime;
-                  
-		  if (timeSince(iterationTime) > 5) {
-		    //debugPrintTimingInfo(results);
-		  }
-		  iterationTime = std::clock();
-		  struct tm * timeinfo;
-                  
-		  time ( &rawtime );
-		  timeinfo = localtime ( &rawtime );                    
-                  
-		  std::cout << " current wall-clock time is " << asctime (timeinfo) << std::endl;
-		  std::cout << "attempting linking between times " << std::setprecision(12)  
-			    << firstEndpointIter->first.getMJD() << " and " 
-			    << std::setprecision(12) << secondEndpointIter->first.getMJD() 
-			    << std::endl;
-		}
-		
-		// get all intermediate points as support nodes.
+                    if (secondEndpointIter->first.getMJD() 
+                        - firstEndpointIter->first.getMJD() 
+                        >= searchConfig.minEndpointTimeSeparation) {
+
+                        // get all intermediate points as support
+                        // nodes.
                 
-		/* note that std::maps are sorted by their key, which in this case
-		 * is time.  ergo between firstEndpointIter and secondEndpointIter
-		 * is *EVERY* tree (and ergo every tracklet) which happened between
-		 * the first endpoint's tracklets and the second endpoint's
-		 * tracklets.
-		 */
+                        /* note that std::maps are sorted by their
+                         * key, which in this case is time.  ergo
+                         * between firstEndpointIter and
+                         * secondEndpointIter is *EVERY* tree (and
+                         * ergo every tracklet) which happened between
+                         * the first endpoint's tracklets and the
+                         * second endpoint's tracklets.
+                         */
                 
-		std::vector<TreeNodeAndTime > supportPoints;
-		std::map<ImageTime, KDTree<unsigned int> >::const_iterator supportPointIter;
-		if (DEBUG) {
-		  //std::cout << "intermediate times: " ;
-		}
-		for (supportPointIter = afterFirstIter;
-		     supportPointIter != secondEndpointIter;
-		     supportPointIter++) {
-		  
-		  /* don't pass along second tracklets which are 'too close' to the endpoints; see
-		     linkTracklets.h for more comments */
-		  if ((fabs(supportPointIter->first.getMJD() - firstEndpointIter->first.getMJD()) > 
-		       searchConfig.minSupportToEndpointTimeSeparation) 
-		      && 
-		      (fabs(supportPointIter->first.getMJD() - secondEndpointIter->first.getMJD()) > 
-		       searchConfig.minSupportToEndpointTimeSeparation)
-		      && numAdded < threshold) {
-		    
-		    TreeNodeAndTime tmpTAT(supportPointIter->second.getRootNode(),
-					   supportPointIter->first);
-		    supportPoints.push_back(tmpTAT);
-		    ++numAdded;
-		    if (DEBUG) {
-		      //std::cout << std::setprecision(10) << tmpTAT.myTime << " ";
-		    }
-		  }
-		}
+                        std::vector<TreeNodeAndTime > supportPoints;
+                        std::map<ImageTime, TrackletTree >::const_iterator 
+                            supportPointIter;
+
+                        for (supportPointIter = afterFirstIter;
+                             supportPointIter != secondEndpointIter;
+                             supportPointIter++) {
+                    
+                            /* don't pass along second tracklets which
+                               are 'too close' to the endpoints; see
+                               linkTracklets.h for more comments */
+                            double firstToSup = supportPointIter->first.getMJD() 
+                                - firstEndpointIter->first.getMJD(); 
+                            double supToSecond =  secondEndpointIter->first.getMJD() 
+                                - supportPointIter->first.getMJD();
+                            if ((firstToSup > 
+                                 searchConfig.minSupportToEndpointTimeSeparation) 
+                                && 
+                                (supToSecond > 
+                                 searchConfig.minSupportToEndpointTimeSeparation)) 
+                            {
+                                
+                                TreeNodeAndTime tmpTAT(supportPointIter->second.getRootNode(),
+                                                       supportPointIter->first);
+                                supportPoints.push_back(tmpTAT);
+                            }
+                        }
                 
-		if (DEBUG) {std::cout << "\n";}
-		
-		TreeNodeAndTime firstEndpoint(firstEndpointIter->second.getRootNode(), 
-					      firstEndpointIter->first);
-		TreeNodeAndTime secondEndpoint(secondEndpointIter->second.getRootNode(),
-					       secondEndpointIter->first);
-		
-		//call the recursive linker with the endpoint nodes and support point nodes.
-		
-		// use a cache to avoid doing math in isCompatible!
-		// we use a new cache for each pair of endpoints, because
-		// isCompatible projects the location of the endpoint regions
-		// forward/backwards in time, so there will be 0 reuse between
-		// pairs of endpoint trees.
-		LTCache rangeCache(100000000);
-		//LTCache rangeCache(0);
-		if(numGenerations >= MAX_GENERATIONS){
-		  return;
-		}
-		doLinkingRecurse2(allDetections, allTracklets, searchConfig,
-				  firstEndpoint, secondEndpoint,
-				  supportPoints,
-				  2, rangeCache, 
-				  numProcs, trackletTimeToTreeMap, assignment);
-	      }
-	    }
-	  }
-      }
+                        if (DEBUG) {std::cout << "\n";}
+
+                        TreeNodeAndTime firstEndpoint(firstEndpointIter->second.getRootNode(), 
+                                                      firstEndpointIter->first);
+                        TreeNodeAndTime secondEndpoint(secondEndpointIter->second.getRootNode(),
+                                                       secondEndpointIter->first);
+                
+                        //call the recursive linker with the endpoint
+                        //nodes and support point nodes.
+
+                        // use a cache to avoid doing math in
+                        // isCompatible!  we use a new cache for each
+                        // pair of endpoints, because isCompatible
+                        // projects the location of the endpoint
+                        // regions forward/backwards in time, so there
+                        // will be 0 reuse between pairs of endpoint
+                        // trees.
+
+                        double iterationTime = std::clock();
+                        if (searchConfig.myVerbosity.printStatus) {
+                            std::cout << "Looking for tracks between images at times " 
+                                      << std::setprecision(12) 
+                                      << firstEndpointIter->first.getMJD() 
+                                      << " (image " << firstEndpointIter->first.getImageId() 
+                                      << " / " << numImages << ")"
+                                      << " and " 
+                                      << std::setprecision(12)
+                                      << secondEndpointIter->first.getMJD()
+                                      << " (image " 
+                                      << secondEndpointIter->first.getImageId() 
+                                      << " / " << numImages << ") "
+                                      << " (with " 
+                                      << supportPoints.size() << " support images).\n";
+                            struct tm * timeinfo;
+                            time_t rawtime;
+                            time ( &rawtime );
+                            timeinfo = localtime ( &rawtime );                    
+                            
+                            std::cout << " current wall-clock time is " 
+                                      << asctime (timeinfo);
+
+                        }
+                        imagePairs += 1;
+                        doLinkingRecurse(allDetections,
+                                         allTracklets, 
+                                         searchConfig,
+                                         firstEndpoint, 
+                                         secondEndpoint,
+                                         supportPoints,  
+                                         searchConfig.maxRAAccel*-1.,
+                                         searchConfig.maxRAAccel,
+                                         searchConfig.maxDecAccel*-1.,
+                                         searchConfig.maxDecAccel,
+                                         results, 
+                                         ITERATIONS_PER_SPLIT,
+                                         numProcs, 
+                                         trackletTimeToTreeMap,
+                                         assignment);
+
+                        if (searchConfig.myVerbosity.printStatus) {
+                            time_t rawtime;
+                            
+                            struct tm * timeinfo;
+                            std::cout << "That iteration took " 
+                                      << timeSince(iterationTime) << " seconds. "
+                                      << std::endl;
+                            std::cout << " so far, we have found " << 
+                                results.size() << " tracks.\n\n";
+                            time ( &rawtime );
+                            timeinfo = localtime ( &rawtime );                    
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if (searchConfig.myVerbosity.printVisitCounts) {
+        std::cout << "Found " << imagePairs << 
+            " valid start/end image pairs.\n";
     }
 }
 

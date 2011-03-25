@@ -91,6 +91,7 @@ bool   firstAssignment  = true;
  **************************************************/
 
 
+
 int doLinkingRecurseVisits = 0, buildTracksAddToResultsVisits = 0, compatibleEndpointsFound = 0;
 #define RACE_TO_MAX_COMPATIBLE false
 #define MAX_COMPATIBLE_TO_FIND 250000
@@ -121,79 +122,81 @@ double timeSince(clock_t priorEvent)
 
 
 
+
+
+
+/***************************************************************************
+ * HELPER CLASSES
+ * 
+ * These should be identical to those in sequential linkTracklets.
+ ***************************************************************************/
+
+
 /*
- * this class is only used as a key to the cache of TreeNode, img time T -> node
- * bounding box at time T. 
- *
- * note that KDTreeNodes have unique IDs *WITHIN THEIR TREE* but every tree will
- * contain a node with ID 1.
- *
+ ImageTime is a class for improving readability as well as adding
+ functionality. From now on we will be giving unique IDs to each image
+ time.
+
+ This is important since we now support the use of a cache which takes
+ a tree node ID and a time as a key, and you shouldn't use a
+ floating-point number as a key.
  */
-class GlobalNodeIdAndProjectionId {
+
+
+class ImageTime {
 public:
-    GlobalNodeIdAndProjectionId(unsigned int _treeNodeId, 
-                                unsigned int _treeImgTime, 
-                                unsigned int _projectionTime) {
-        treeNodeId = _treeNodeId;
-        imgId = _treeImgTime;
-        projectionId = _projectionTime;
+    ImageTime() {
+        MJD = -1; imgId = 0;
     }
-    GlobalNodeIdAndProjectionId() {
-        treeNodeId = 0;
-        imgId = 0;
+    ImageTime(double newMJD, uint newImageId) {
+        MJD = newMJD;
+        imgId = newImageId;
     }
-
-    void setImageId(unsigned int newId) {
-        imgId = newId;
+    ImageTime(const ImageTime &other) {
+        MJD = other.getMJD();
+        imgId = other.getImageId();
     }
-
-    void setTreeNodeId(unsigned int newId) {
-        treeNodeId = newId;
+    const double getMJD() const {
+        return MJD;
     }
-    void setProjectionId(unsigned int newId) {
-        projectionId = newId;
-    }
-
-    unsigned int getImageId() const {
+    const uint getImageId() const {
         return imgId;
     }
-    unsigned int getTreeNodeId() const {
-        return treeNodeId;
+    void setMJD(double m) {
+        MJD = m;
     }
-    unsigned int getProjectionId() const {
-        return projectionId;
+    void setImageId(uint i) {
+        imgId = i;
     }
-    
-    bool operator== (const GlobalNodeIdAndProjectionId &other) const {
-        return (other.getImageId() == imgId) && 
-            (other.getTreeNodeId() == treeNodeId) &&
-            (other.getProjectionId() == projectionId);
+    ImageTime & operator=(const ImageTime &rhs) {
+        MJD = rhs.getMJD();
+        imgId = rhs.getImageId();
+        return *this;
     }
-
-    bool operator< (const GlobalNodeIdAndProjectionId &other) const {
-        // sort first on start image ID, then on
-        // tree node ID, then on projection time ID.
-
-        if (imgId == other.getImageId()) {
-
-            if (treeNodeId == other.getTreeNodeId()) {
-
-                return (projectionId < other.getProjectionId());
-            }
-            else {
-                return (treeNodeId < other.getTreeNodeId());
-            }
-        }
-        else {
-            return (imgId < other.getImageId());
-        }
+    // NB: since IDs are assigned in order of image time, would it be
+    // faster if we did < based on imgId (int rather than double?)
+    bool operator< (const ImageTime &other) const {
+        return MJD < other.getMJD();
     }
 
 private:
-    unsigned int imgId;
-    unsigned int treeNodeId;
-    unsigned int projectionId;
+    double MJD;
+    uint imgId;
 };
+
+
+class TreeNodeAndTime {
+public:
+  TreeNodeAndTime(){
+  }
+  TreeNodeAndTime(lsst::mops::KDTreeNode<unsigned int> * tree, ImageTime i) {
+    myTree = tree;
+    myTime = i;
+  }
+  lsst::mops::KDTreeNode <unsigned int> * myTree;
+  ImageTime myTime;
+};
+
 
 
 
@@ -207,6 +210,88 @@ private:
  **    -MGC
  ***************************************************************************
  ***************************************************************************/
+
+
+/***************************************************************************
+ * This is the data that is stored in the node cache.  A node cache entry
+ * contains the unique identifiers for the TreeNodeAndTime object (treeId,
+ * nodeId) and the TreeNodeAndTime object itself.
+ ***************************************************************************/
+typedef struct cn{
+  unsigned int treeId, nodeId;
+  TreeNodeAndTime node;
+  bool inUse;
+  time_t timeStamp;
+} cachedNode;
+
+typedef struct ta{
+  int numProcs;
+  int sentinel;
+}threadArgs;
+
+/**************************************************
+ * This struct is used for keeping track of the
+ * work item and meta data about them, which
+ * will be used when the work is distributed.
+ **************************************************/
+typedef struct s{
+  std::vector<std::pair<unsigned int, unsigned int> > endpoints;
+  std::string fileName;
+  int numCompatibleEndpoints;
+  int numNodes;
+  unsigned long long timeUnits;
+}workItemFile;
+
+typedef struct treeIdNodeId{
+  unsigned int treeId;
+  unsigned int nodeId;
+}treeIdNodeIdPair;
+
+
+
+void waitForTask(int rank,
+		 const std::vector<lsst::mops::MopsDetection> &allDetections, //from MAIN
+		 std::vector<lsst::mops::Tracklet> &allTracklets, //from MAIN
+		 linkTrackletsConfig searchConfig  /*from MAIN*/);
+	
+
+
+
+/***************************************************************************
+ * DLT function prototypes
+ ***************************************************************************/
+void 
+distributeCurrentWorkload(std::vector<std::vector<workItemFile> > &assignment);
+
+void 
+*killProcs(threadArgs);
+
+int
+leastRecentlyUsed(cachedNode *nodeCache, int cacheSize);
+
+int 
+findFarthestNodeIndex(cachedNode *nodeCache, int cacheSize,
+		      const std::vector<std::vector<treeIdNodeIdPair> > &finalEndpointOrder,
+		      unsigned int setStart, unsigned int workItemStart);
+
+lsst::mops::KDTree<unsigned int> *
+findTreeById(const unsigned int id, 
+	     std::map<ImageTime, lsst::mops::KDTree<unsigned int> > &treeMap);
+
+ImageTime 
+findImageTimeForTree(const unsigned int id, 
+                     const std::map<ImageTime, lsst::mops::KDTree<unsigned int> > &treeMap);
+
+lsst::mops::KDTreeNode<unsigned int> *
+getNodeByIDAndTime(lsst::mops::KDTree<unsigned int> *myTree, unsigned int nodeId);
+
+int 
+loadNodeFromCache(unsigned int treeId, unsigned int nodeId, int &cacheSize, cachedNode *nodeCache,
+		  std::map<ImageTime, lsst::mops::KDTree <unsigned int> > &trackletTimeToTreeMap,
+		  const std::vector<std::vector<treeIdNodeIdPair> > &finalEndpointOrder,
+		  unsigned long long &pageFaults);
+
+
 
 /***************************************************
  * From http://www.parashift.com/c++-faq-lite/misc-technical-issues.html#faq-39.1

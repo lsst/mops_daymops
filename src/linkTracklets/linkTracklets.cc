@@ -9,6 +9,8 @@
 #include <time.h>
 #include <algorithm>
 #include <sstream>
+#include <limits>
+#include <limits.h>
 
 #include "lsst/mops/rmsLineFit.h"
 #include "lsst/mops/daymops/linkTracklets/linkTracklets.h"
@@ -189,27 +191,22 @@ class TreeNodeAndTime {
 public:
   TreeNodeAndTime(){
   }
-  TreeNodeAndTime(lsst::mops::KDTreeNode<unsigned int> * tree, ImageTime i) {
+  TreeNodeAndTime(lsst::mops::TrackletTreeNode * tree, ImageTime i) {
     myTree = tree;
     myTime = i;
   }
-  lsst::mops::KDTreeNode <unsigned int> * myTree;
+  lsst::mops::TrackletTreeNode * myTree;
   ImageTime myTime;
 };
 
 
 
 
-
-
-
-
-/***************************************************************************
- ***************************************************************************
- **  distributed linkTracklets helper functions
- **    -MGC
- ***************************************************************************
- ***************************************************************************/
+/**********************************************************************
+ * 
+ *  Helper structs from matt cleveland, used for distributed processing
+ *
+ ***********************************************************************/
 
 
 /***************************************************************************
@@ -249,6 +246,60 @@ typedef struct treeIdNodeId{
 
 
 
+
+
+
+/***************************************************************************
+ *
+ * Prototypes for standard linkTracklets functions - jmyers
+ * 
+ ***************************************************************************/
+
+void setTrackletVelocities(
+    const std::vector<MopsDetection> &allDetections,
+    std::vector<Tracklet> &queryTracklets);
+
+void makeTrackletTimeToTreeMap(
+    const std::vector<MopsDetection> &allDetections,
+    std::vector<Tracklet> &queryTracklets,
+    std::map<ImageTime, TrackletTree > &newMap,
+    const linkTrackletsConfig &myConf);
+
+unsigned int buildTracksAddToResults(
+    const std::vector<MopsDetection> &allDetections,
+    const std::vector<Tracklet> &allTracklets,
+    linkTrackletsConfig searchConfig,
+    TreeNodeAndTime &firstEndpoint,
+    TreeNodeAndTime &secondEndpoint,
+    const std::vector<treeIdNodeIdPair> &supportNodes,
+    TrackSet & results,
+    int &cacheSize, cachedNode *nodeCache,
+    std::map<ImageTime, TrackletTree > &trackletTimeToTreeMap,
+    const std::vector<std::vector<treeIdNodeIdPair> > &finalEndpointOrder,
+    unsigned long long &pageFaults, unsigned int &myNumCompatible,
+    unsigned int setNum);
+
+void recenterDetections(std::vector<MopsDetection> &allDetections, 
+                        const linkTrackletsConfig &searchConfig);
+
+
+bool endpointTrackletsAreCompatible(
+    const std::vector<MopsDetection> & allDetections, 
+    const Track &newTrack,
+    const linkTrackletsConfig &searchConfig);
+
+
+
+
+/***************************************************************************
+ ***************************************************************************
+ **  distributed linkTracklets helper functions
+ **    -MGC
+ ***************************************************************************
+ ***************************************************************************/
+
+
+
 void waitForTask(int rank,
 		 const std::vector<lsst::mops::MopsDetection> &allDetections, //from MAIN
 		 std::vector<lsst::mops::Tracklet> &allTracklets, //from MAIN
@@ -274,16 +325,16 @@ findFarthestNodeIndex(cachedNode *nodeCache, int cacheSize,
 		      const std::vector<std::vector<treeIdNodeIdPair> > &finalEndpointOrder,
 		      unsigned int setStart, unsigned int workItemStart);
 
-lsst::mops::KDTree<unsigned int> *
+lsst::mops::TrackletTree *
 findTreeById(const unsigned int id, 
-	     std::map<ImageTime, lsst::mops::KDTree<unsigned int> > &treeMap);
+	     std::map<ImageTime, lsst::mops::TrackletTree > &treeMap);
 
 ImageTime 
 findImageTimeForTree(const unsigned int id, 
-                     const std::map<ImageTime, lsst::mops::KDTree<unsigned int> > &treeMap);
+                     const std::map<ImageTime, lsst::mops::TrackletTree > &treeMap);
 
-lsst::mops::KDTreeNode<unsigned int> *
-getNodeByIDAndTime(lsst::mops::KDTree<unsigned int> *myTree, unsigned int nodeId);
+lsst::mops::TrackletTreeNode *
+getNodeByIDAndTime(lsst::mops::TrackletTree *myTree, unsigned int nodeId);
 
 int 
 loadNodeFromCache(unsigned int treeId, unsigned int nodeId, int &cacheSize, cachedNode *nodeCache,
@@ -581,11 +632,11 @@ int loadNodeFromCache(unsigned int treeId, unsigned int nodeId, int &cacheSize, 
   }
   
   //Get the tree and ImageTime for this image (tree) ID
-  KDTree<unsigned int> *myTree = findTreeById(treeId, trackletTimeToTreeMap);
+  TrackletTree *myTree = findTreeById(treeId, trackletTimeToTreeMap);
   ImageTime it = findImageTimeForTree(treeId, trackletTimeToTreeMap);
   
   //find this node in its tree
-  KDTreeNode<unsigned int> *treeNode = NULL;
+  TrackletTreeNode *treeNode = NULL;
   if( myTree != NULL ){
     treeNode = getNodeByIDAndTime(myTree, nodeId);
   }
@@ -635,13 +686,13 @@ int loadNodeFromCache(unsigned int treeId, unsigned int nodeId, int &cacheSize, 
 /***************************************************************************
  * Given an ImageTime id, find the corresponding tree and return it.
  ***************************************************************************/
-KDTree<unsigned int> *
+TrackletTree *
 findTreeById(const unsigned int id, 
-	     std::map<ImageTime, KDTree<unsigned int> > &treeMap)
+	     std::map<ImageTime, TrackletTree > &treeMap)
 {
-  KDTree<unsigned int> *retVal = NULL;
+  TrackletTree *retVal = NULL;
 
-  std::map<ImageTime, KDTree<unsigned int> >::iterator mapIter;
+  std::map<ImageTime, TrackletTree >::iterator mapIter;
   for(mapIter = treeMap.begin(); mapIter != treeMap.end(); mapIter++){
     ImageTime it = (*mapIter).first;
     if(it.getImageId() == id){
@@ -659,10 +710,10 @@ findTreeById(const unsigned int id,
  * return the ImageTime object.
  ***************************************************************************/
 ImageTime findImageTimeForTree(const unsigned int id, 
-			       const std::map<ImageTime, KDTree<unsigned int> > &treeMap)
+			       const std::map<ImageTime, TrackletTree > &treeMap)
 {
 
-  std::map<ImageTime, KDTree<unsigned int> >::const_iterator mapIter;
+  std::map<ImageTime, TrackletTree >::const_iterator mapIter;
   //MGC 1/30/11
   ImageTime it;
   for(mapIter = treeMap.begin(); mapIter != treeMap.end(); mapIter++){
@@ -678,13 +729,13 @@ ImageTime findImageTimeForTree(const unsigned int id,
 
 
 
-KDTreeNode<unsigned int> *
-getNodeByIDAndTime(KDTree<unsigned int> *myTree, unsigned int nodeId)
+TrackletTreeNode *
+getNodeByIDAndTime(TrackletTree *myTree, unsigned int nodeId)
 {
-  KDTreeNode<unsigned int> *retVal;
+  TrackletTreeNode *retVal;
 
   //search tree for nodeId
-  std::vector<KDTreeNode<unsigned int> *> nodeList;
+  std::vector<TrackletTreeNode *> nodeList;
   nodeList.clear();
   
   retVal = myTree->getRootNode();
@@ -742,6 +793,7 @@ void writeMyResults(std::string outFileName,
 
     //go through all Track's detections
     std::set<unsigned int>::const_iterator detIter;
+
     for (detIter = (*curTrack).componentDetectionIndices.begin();
 	 detIter != (*curTrack).componentDetectionIndices.end();
 	 detIter++) {
@@ -1517,7 +1569,7 @@ int findFarthestNodeIndex(cachedNode *nodeCache, int cacheSize,
  * They accept the data and process it in doLinkingRecurse2.
  ************************************************************/
 void waitForTask(int rank,
-		 const std::vector<MopsDetection> &allDetections,
+		 std::vector<MopsDetection> &allDetections,
 		 std::vector<Tracklet> &allTracklets, 
 		 linkTrackletsConfig searchConfig)
 {
@@ -1536,13 +1588,18 @@ void waitForTask(int rank,
   //number of elements in the cache
   int cacheSize = 0;
   
+
   //need to make the time/tree map so we can identify common Node IDs and 
   //therefore reduce master/slave communication to only those IDs that 
   //require linking
+
+  // jmyers: we now need to do recentering just like in the linkTracklets() function
+  recenterDetections(allDetections, searchConfig);
   setTrackletVelocities(allDetections, allTracklets);
 
   std::map<ImageTime, TrackletTree > trackletTimeToTreeMap;
-  makeTrackletTimeToTreeMap(allDetections, allTracklets, trackletTimeToTreeMap);
+  makeTrackletTimeToTreeMap(allDetections, allTracklets, 
+                            trackletTimeToTreeMap, searchConfig);
   std::cerr << timestamp() << "Worker " << rank << " made trees" << std::endl;
 
   //timing stuff
@@ -2020,7 +2077,7 @@ void addWorkItem(const std::vector<MopsDetection> &allDetections,
                  linkTrackletsConfig searchConfig,
                  TreeNodeAndTime &firstEndpoint,
                  TreeNodeAndTime &secondEndpoint,
-                 std::vector<TreeNodeAndTime> &supportNodes,
+                 std::vector<TreeNodeAndTime> &newSupportNodes,
                  int numProcs, 
                  std::map<ImageTime, TrackletTree > &trackletTimeToTreeMap,
                  std::vector<std::vector<workItemFile> > &assignment)
@@ -2184,14 +2241,12 @@ void addWorkItem(const std::vector<MopsDetection> &allDetections,
 void modifyWithAcceleration(double &position, double &velocity, 
                             double acceleration, double time)
 {
-    double start = std::clock();
     // use good ol' displacement = vt + .5a(t^2) 
     double newPosition = position + velocity*time 
         + .5*acceleration*(time*time);
     double newVelocity = velocity + acceleration*time;
     position = newPosition;
     velocity = newVelocity;
-    modifyWithAccelerationTime += timeSince(start);
 }
 
 
@@ -2830,7 +2885,6 @@ bool trackRmsIsSufficientlyLow(
 
 
 bool areAllLeaves(const std::vector<TreeNodeAndTime> &nodeArray) {
-    double start = std::clock();
     bool allLeaves = true;
     std::vector<TreeNodeAndTime>::const_iterator treeIter;
     uint count = 0;
@@ -2842,7 +2896,6 @@ bool areAllLeaves(const std::vector<TreeNodeAndTime> &nodeArray) {
         }
         count++;
     }
-    areAllLeavesTime += timeSince(start);
     return allLeaves;
 }
 
@@ -3028,12 +3081,10 @@ void filterAndSplitSupport(
 
 double nodeWidth(TrackletTreeNode *node)
 {
-    double start = std::clock();
     double width = 1;
     for (uint i = 0; i < 4; i++) {
         width *= node->getUBounds()->at(i) - node->getLBounds()->at(i);
     }
-    nodeWidthTime += timeSince(start);
     return width;    
 }
 
@@ -3209,8 +3260,6 @@ unsigned int buildTracksAddToResults(
     unsigned long long &pageFaults, unsigned int &myNumCompatible,
     unsigned int setNum)
 {
-    double start = std::clock();
-    buildTracksAddToResultsVisits++;
 
     /* matt cleveland distribution setup */
     //load support nodes from cache
@@ -3293,9 +3342,6 @@ unsigned int buildTracksAddToResults(
                                                newTrack,
                                                searchConfig)) {
                 
-                numCompatible++;
-                compatibleEndpointsFound++;
-                
                 std::vector<uint> candidateTrackletIds;
                 // put all support tracklet Ids in curSupportNodeData,
                 // then call addDetectionsCloseToPredictedPositions
@@ -3344,17 +3390,10 @@ unsigned int buildTracksAddToResults(
                     }
                 }
 
-                if ((RACE_TO_MAX_COMPATIBLE == true) && 
-                    (compatibleEndpointsFound >= MAX_COMPATIBLE_TO_FIND)) {
-                    debugPrintTimingInfo(results);
-                    exit(0);
-                }
-
             }
         }    
     }
 
-    buildTracksAddToResultsTime += timeSince(start);
   
     /* this return added by mgcleveland (why?) */
     return currPf;
@@ -3402,10 +3441,8 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                       std::vector<std::vector<workItemFile> > &assignment)
 {
 
-    double start = std::clock();
     firstEndpoint.myTree->addVisit();
       
-    doLinkingRecurseVisits++;
   
     bool isValid = updateAccBoundsReturnValidity(firstEndpoint, 
                                                  secondEndpoint,
@@ -3463,7 +3500,7 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                  **************************************************************/
 
                 addWorkItem(allDetections, allTracklets, searchConfig,
-                            firstEndpoint, secondEndpoint, supportNodes,
+                            firstEndpoint, secondEndpoint, newSupportNodes,
                             numProcs, trackletTimeToTreeMap, assignment);
                 
             }
@@ -3522,7 +3559,6 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                                          accMaxRa,
                                          accMinDec,
                                          accMaxDec,
-                                         results, 
                                          iterationsTillSplit,
                                          numProcs,
                                          trackletTimeToTreeMap,
@@ -3536,7 +3572,6 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                         TreeNodeAndTime newTAT(
                             firstEndpoint.myTree->getRightChild(), 
                             firstEndpoint.myTime);
-                        doLinkingRecurseTime += timeSince(start);
                         //std::cout << "recursing on right child of
                         //first endpoint..\n";
                         doLinkingRecurse(allDetections, 
@@ -3548,7 +3583,6 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                                          accMaxRa,
                                          accMinDec,
                                          accMaxDec,
-                                         results, 
                                          iterationsTillSplit,
                                          numProcs,
                                          trackletTimeToTreeMap,
@@ -3572,7 +3606,6 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                         TreeNodeAndTime newTAT(
                             secondEndpoint.myTree->getLeftChild(), 
                             secondEndpoint.myTime);
-                        doLinkingRecurseTime += timeSince(start);
                         //std::cout << "Recursing on left child of
                         //second endpoint.\n";
                         doLinkingRecurse(allDetections, 
@@ -3585,7 +3618,6 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                                          accMaxRa,
                                          accMinDec,
                                          accMaxDec,
-                                         results, 
                                          iterationsTillSplit,
                                          numProcs,
                                          trackletTimeToTreeMap,
@@ -3599,7 +3631,6 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                         TreeNodeAndTime newTAT(
                             secondEndpoint.myTree->getRightChild(), 
                             secondEndpoint.myTime);
-                        doLinkingRecurseTime += timeSince(start);
                         //std::cout << "Recursing on right child of
                         //second endpoint.\n";
                         doLinkingRecurse(allDetections, 
@@ -3612,7 +3643,6 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                                          accMaxRa,
                                          accMinDec,
                                          accMaxDec,
-                                         results, 
                                          iterationsTillSplit,
                                          numProcs,
                                          trackletTimeToTreeMap,
@@ -3657,8 +3687,6 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
      */
     bool DEBUG = false;
     unsigned int imagePairs = 0;
-
-    initDebugTimingInfo();
 
     unsigned int numImages = trackletTimeToTreeMap.size();
 
@@ -3794,7 +3822,6 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
                                          searchConfig.maxRAAccel,
                                          searchConfig.maxDecAccel*-1.,
                                          searchConfig.maxDecAccel,
-                                         results, 
                                          ITERATIONS_PER_SPLIT,
                                          numProcs, 
                                          trackletTimeToTreeMap,
@@ -3807,8 +3834,6 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
                             std::cout << "That iteration took " 
                                       << timeSince(iterationTime) << " seconds. "
                                       << std::endl;
-                            std::cout << " so far, we have found " << 
-                                results.size() << " tracks.\n\n";
                             time ( &rawtime );
                             timeinfo = localtime ( &rawtime );                    
                         }
@@ -3831,7 +3856,8 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
 
 TrackSet* linkTracklets(std::vector<MopsDetection> &allDetections,
                         std::vector<Tracklet> &queryTracklets,
-                        const linkTrackletsConfig &searchConfig) {
+                        const linkTrackletsConfig &searchConfig,
+                        uint numProcs) {
 
     /* system setup for distributed linkTracklets */
     srand(time(NULL));
@@ -3896,30 +3922,15 @@ TrackSet* linkTracklets(std::vector<MopsDetection> &allDetections,
         std::cout << "Doing the linking.\n";
     }
 
-    clock_t linkingStart = std::clock();
-
     doLinking(allDetections, 
               queryTracklets, 
               searchConfig, 
               trackletTimeToTreeMap, 
-              *toRet);
+              numProcs,
+              assignment);
     if (searchConfig.myVerbosity.printStatus) {
         std::cout << "Finished linking.\n";
-    }
-    if (searchConfig.myVerbosity.printVisitCounts) {
-        std::cout << "Made " << doLinkingRecurseVisits 
-                  << " calls to doLinkingRecurse.\n";
-        std::cout << "Made " << buildTracksAddToResultsVisits << 
-            " calls to buildTracksAddToResults.\n";
-        double linkingTime = timeSince(linkingStart);
-        std::cout << "Linking took " << linkingTime << " seconds.\n";
-        std::cout << " " << buildTracksAddToResultsTime 
-                  << " sec spent on terminal tracklet processing and " 
-                  << linkingTime - buildTracksAddToResultsTime
-                  << " sec on other processing.\n";
-        
-    }
-    
+    }    
   
 
 
@@ -3956,5 +3967,7 @@ TrackSet* linkTracklets(std::vector<MopsDetection> &allDetections,
 
     return toRet;
 
-}
+} 
+
+}}
 

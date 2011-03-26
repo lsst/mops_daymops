@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
   /*
    * Establish MPI-related variable values
    */
-  int rank, numProcessors;
+  unsigned int rank, numProcessors;
   MPI_Comm_size(MPI_COMM_WORLD, &numProcessors); //number of processors
   MPI_Comm_rank(MPI_COMM_WORLD, &rank); //my rank
 

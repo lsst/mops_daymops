@@ -85,6 +85,11 @@ public:
     */
     std::set<unsigned int> componentTrackletIndices;
     
+    /* TBD: make this private, as it is in sequential version. Matt's code
+       may or may not work nicely without direct access to this; give it some thought
+       and consider redesigning classes later.
+     */ 
+    std::set<unsigned int> componentDetectionIndices;
 
     Track & operator= (const Track &other);
 
@@ -107,7 +112,6 @@ public:
     }
 
 private:
-    std::set<unsigned int> componentDetectionIndices;
     std::set<unsigned int> componentDetectionDiaIds;
     std::vector<double> raFunc;
     std::vector<double> decFunc;

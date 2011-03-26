@@ -253,6 +253,14 @@ void modifyWithAcceleration(double &position, double &velocity,
                             double acceleration, double time);
 
 
+/************************************************************
+ * Slave processors wait for signals from master.
+ ************************************************************/
+void waitForTask(int rank,
+		 std::vector<MopsDetection> &allDetections,
+		 std::vector<Tracklet> &allTracklets, 
+		 linkTrackletsConfig searchConfig);
+
 
     }} // close lsst::mops
 

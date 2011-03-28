@@ -23,15 +23,16 @@ import os.path
 import MySQLdb as db
 import sys
 import glob
+import time
 
 import mopsDatabases
 
 # YOU ABSOLUTELY MUST SET THESE ARGUMENTS
 
-TRACKLETS_BY_OBSHIST_DIR="/workspace1/jmyers/nightlyDiasAstromErr/tracklets/collapsed/byObsHistId/"
+TRACKLETS_BY_OBSHIST_DIR="/workspace0/jmyers/unattributed_after_maxv0.5_mint0.01_15DayWindows/10kNoisePerImage/maxv2.0Tracklets/collapsed/byObsHist/"
 
 # place to put .miti files for input to c linkTracklets
-OUTPUT_LINKTRACKLETS_INFILE_DIR="/workspace0/jmyers/nightlyDiasAstromErr_linkTrackletsInfiles_maxv0.5_mint_0.01_15dayWindows_CandCPP/"
+OUTPUT_LINKTRACKLETS_INFILE_DIR="/workspace0/jmyers/unattributed_after_maxv0.5_mint0.01_15DayWindows/10kNoisePerImage/maxv2.0Tracklets/collapsed/linkTrackletsInFiles/"
 
 
 # place to put start_t_ranges for each linkTracklets input files
@@ -68,6 +69,7 @@ PRELOAD_DIAS=True
 
 
 WRITE_CPP_INFILES=True
+WRITE_C_INFILES=False
 
 class Detection(object):
     def __init__(self, diaId=None, ra=None, dec=None, mjd=None, mag=None, objId=None):
@@ -90,15 +92,20 @@ def fetchAllDiasFromDb(cursor):
     """ return a dictionary mapping diaId to diaSource, for all Dias
     in our data set."""
     toRet = {}
-    print "Fetching DiaSources from DB into memory..."
+    print "Fetching DiaSources from DB into memory, a few at a time..."
     s = """ SELECT diaSourceId, ra, decl, taiMidPoint, mag, ssmId FROM
             %s.%s; """ % (mopsDatabases.DIAS_DB, mopsDatabases.DIAS_TABLE)
     cursor.execute(s)
-    results = cursor.fetchall()
-    for row in results:
+    print "  got results from DB, converting them to Python objects..."
+    for row in cursor:
         [diaId, ra, dec, mjd, mag, objId] = row
         d = Detection(diaId=diaId, ra=ra, dec=dec, mjd=mjd, mag=mag, objId=objId)
         toRet[diaId] = d
+        numFetched = len(toRet)
+        if numFetched % 100000 == 0:
+            print "  Fetched ", numFetched, " dias so far "
+            print "  Time is ", time.ctime()
+            sys.stdout.flush()
 
     print "... Done fetching dias."
     return toRet
@@ -263,13 +270,14 @@ def writeDetsIdsFiles(detsOutFile, idsOutFile, allTrackletsFileNames, allDias, c
     the dtes file) for all tracklets in the data set."""
 
     # first figure out what diaIds need to be written.
-    allIds = []
+    allIds = set()
     for trackletsFileName in allTrackletsFileNames:
         trackletsFile = file(trackletsFileName, 'r')
         tletLine = trackletsFile.readline()
         while tletLine != "":
             ids = map(int, tletLine.split())
-            allIds += ids
+            for i in ids:
+                allIds.add(i)
             tletLine = trackletsFile.readline()
         trackletsFile.close()
 
@@ -297,8 +305,15 @@ def writeDetsIdsFiles(detsOutFile, idsOutFile, allTrackletsFileNames, allDias, c
             tletLine = trackletsFile.readline()
         trackletsFile.close()
 
-
-
+def countLines(openFile):
+    """ count lines in a file. read one line at a time to avoid memory
+    issues if the file is large"""
+    count = 0
+    line = openFile.readline()
+    while line != "":
+        count += 1
+        line = openFile.readline()
+    return count
 
 def writeOutputFiles(allDias, cursor, obsHistsThisDataSet, supportObsHists, obsHistToExpMjd, obsHistToFieldId):
 
@@ -307,36 +322,49 @@ def writeOutputFiles(allDias, cursor, obsHistsThisDataSet, supportObsHists, obsH
 
     basename = "image_%d_through_%d" % (obsHistsThisDataSet[0], obsHistsThisDataSet[-1])
 
-    print "Writing output file for ", basename
+    print "Writing output file for ", basename, " at ", time.ctime()
+    sys.stdout.flush()
 
-    mitiOutName = basename + ".miti"
-    mitiCheatSheetName = basename + ".miti.diaIds"
-    mitiOut = file(os.path.join(OUTPUT_LINKTRACKLETS_INFILE_DIR, mitiOutName),'w')
-    mitiCheatSheetFile = file(os.path.join(OUTPUT_LINKTRACKLETS_INFILE_DIR, mitiCheatSheetName),'w')
+    if WRITE_C_INFILES:
+        mitiOutName = basename + ".miti"
+        mitiCheatSheetName = basename + ".miti.diaIds"
+        mitiOut = file(os.path.join(OUTPUT_LINKTRACKLETS_INFILE_DIR, mitiOutName),'w')
+        mitiCheatSheetFile = file(os.path.join(OUTPUT_LINKTRACKLETS_INFILE_DIR, mitiCheatSheetName),'w')
 
-    curTrackletId = 0
-    obsHistToNumTlets = {}
-    for obsHist in obsHistsThisDataSet + supportObsHists:
-        trackletsFileName = OBSHIST_TO_TRACKLETS_FILE(obsHist)
-        trackletsFile = file(trackletsFileName, 'r')
-        tletsWritten = writeMitiTrackletsToOutFile(mitiOut, mitiCheatSheetFile, allDias, cursor, trackletsFile, curTrackletId)                
-        curTrackletId += tletsWritten
-        trackletsFile.close()
-        obsHistToNumTlets[obsHist] = tletsWritten
+        curTrackletId = 0
+        obsHistToNumTlets = {}
+        for obsHist in obsHistsThisDataSet + supportObsHists:
+            trackletsFileName = OBSHIST_TO_TRACKLETS_FILE(obsHist)
+            trackletsFile = file(trackletsFileName, 'r')
+            tletsWritten = writeMitiTrackletsToOutFile(mitiOut, mitiCheatSheetFile, allDias, cursor, trackletsFile, curTrackletId)                
+            curTrackletId += tletsWritten
+            trackletsFile.close()
+            obsHistToNumTlets[obsHist] = tletsWritten
 
-    mitiOut.close()
-    mitiCheatSheetFile.close()
+        mitiOut.close()
+        mitiCheatSheetFile.close()
 
-    # turns out C linkTracklets takes start_t_range as a time offset (in days) from the first image. 
-    startTRangeOut = os.path.join(OUTPUT_START_T_RANGE_FILES_DIR, basename + ".start_t_range")
-    startTRangeOutFile = file(startTRangeOut,'w')
-    startTRangeOutFile.write("%f"%(obsHistToExpMjd[obsHistsThisDataSet[-1]] - obsHistToExpMjd[obsHistsThisDataSet[0]] + EPSILON))
-    startTRangeOutFile.close()
-    
-    
+        # turns out C linkTracklets takes start_t_range as a time offset (in days) from the first image. 
+        startTRangeOut = os.path.join(OUTPUT_START_T_RANGE_FILES_DIR, basename + ".start_t_range")
+        startTRangeOutFile = file(startTRangeOut,'w')
+        startTRangeOutFile.write("%f"%(obsHistToExpMjd[obsHistsThisDataSet[-1]] - obsHistToExpMjd[obsHistsThisDataSet[0]] + EPSILON))
+        startTRangeOutFile.close()
+    # end WRITE_C_INFILES
+    else:
+        # if not writing C files, we still need to count the number of
+        # tracklets per image for our stats file.
+        
+        obsHistToNumTlets = {}
+        for obsHist in obsHistsThisDataSet + supportObsHists:
+            trackletsFileName = OBSHIST_TO_TRACKLETS_FILE(obsHist)
+            trackletsFile = file(trackletsFileName, 'r')
+            tlets = countLines(trackletsFile)
+            trackletsFile.close()
+            obsHistToNumTlets[obsHist] = tlets
+
 
     if WRITE_CPP_INFILES:
-        # new: write C++ style outputs as well.
+        # new: write C++ style outputs
         allTrackletsFiles = []
         for obsHist in obsHistsThisDataSet + supportObsHists:
             trackletsFileName = OBSHIST_TO_TRACKLETS_FILE(obsHist)
@@ -375,10 +403,25 @@ def writeOutputFiles(allDias, cursor, obsHistsThisDataSet, supportObsHists, obsH
                 statsFile.write("%d %d %2.10f %d\n" % (obsHist, obsHistToFieldId[obsHist], obsHistToExpMjd[obsHist], obsHistToNumTlets[obsHist]))
         statsFile.close()
 
-    print "finished writing output file for ", basename
+    print "finished writing output file for ", basename, " at ", time.ctime()
+    sys.stdout.flush()
                                                     
 
 
 if __name__=="__main__":
-    dbcurs = mopsDatabases.getCursor()
+    print "Reading tracklets from ", TRACKLETS_BY_OBSHIST_DIR
+    print "Writing linkTracklets infiles to ", OUTPUT_LINKTRACKLETS_INFILE_DIR
+    print "Reading diaSources from: ", mopsDatabases.DIAS_DB , ".", mopsDatabases.DIAS_TABLE
+    print "Reading image info from: ", mopsDatabases.OPSIM_DB , ".", mopsDatabases.OPSIM_TABLE
+    print "Writing C-style MITI files: ", WRITE_C_INFILES
+    print "Writing C++ style dets/ids files: ", WRITE_CPP_INFILES
+    print "Preloading DiaSources into memory: ", PRELOAD_DIAS
+    sys.stdout.flush()
+    # SSCursor works much better for massive reads. It has a really ugly interface, though, which
+    # doesn't work with the non-PRELOAD_DIAS code.
+    if PRELOAD_DIAS:
+        dbcurs = mopsDatabases.getCursor(useSSCursor=True)
+    else:
+        dbcurs = mopsDatabases.getCursor(useSSCursor=False)        
     makeLinkTrackletsInfiles(dbcurs)
+    print "DONE."

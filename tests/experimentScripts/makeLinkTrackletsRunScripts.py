@@ -16,15 +16,17 @@ CPP_OUTF_FOR_INFILE=lambda inf: os.path.basename(inf[:-4] + "cpp.cmd.sh")
 BASENAME_FOR_INFILE=lambda inf: os.path.basename(inf[:-5])
 OUTF_FOR_INFILE=lambda inf: os.path.basename(inf[:-4] + "c.cmd.sh")
 
+VTREE_THRESH=.0004
 
-def writeRunScript(infile, startTRangeFile):
+
+def writeRunScript(infile, startTRangeFile, vtree_thresh):
     outf = file(OUTF_FOR_INFILE(infile),'w')
     outS = """#!/usr/bin/bash
 
 
 BN=""" + BASENAME_FOR_INFILE(infile) + """
 
-CMD="$AUTON_DIR/linkTracklets_modified/linkTracklets_modified file ../$BN.miti indicesfile $BN.c.tracks.byIndices start_t_range `cat ../$BN.start_t_range`   acc_r 0.02 acc_d 0.02 fit_thresh  0.000000250000 min_sup 3 min_obs 6 plate_width .00000001"
+CMD="$AUTON_DIR/linkTracklets_modified/linkTracklets_modified file ../$BN.miti indicesfile $BN.c.tracks.byIndices start_t_range `cat ../$BN.start_t_range`   acc_r 0.02 acc_d 0.02 fit_thresh  0.000000250000 min_sup 3 min_obs 6 plate_width .00000001 vtree_thresh """ + str(vtree_thresh) + """ "
 
 echo Running: $CMD
 
@@ -34,7 +36,7 @@ echo Running: $CMD
     outf.close()
 
 
-def writeCppRunScript(infile, startTRangeFile):
+def writeCppRunScript(infile, startTRangeFile, vtree_thresh):
     outf = file(CPP_OUTF_FOR_INFILE(infile),'w')
     dets = CPP_DETS_FOR_INFILE(infile)
     ids = CPP_IDS_FOR_INFILE(infile)
@@ -43,7 +45,7 @@ def writeCppRunScript(infile, startTRangeFile):
     timeFile = BASENAME_FOR_INFILE(infile) + ".cpp.runtime"
     logFile = BASENAME_FOR_INFILE(infile) + ".cpp.runlog"
 
-    args = "-d " + dets + " -t " + ids + " -o " + tracks + " -F `cat " + startRange + "`"
+    args = "-d " + dets + " -t " + ids + " -o " + tracks + " -F `cat " + startRange + "`" + " -e " + str(vtree_thresh)
 
     outS = """#!/usr/bin/bash
 
@@ -64,5 +66,5 @@ if __name__=="__main__":
         startTRangeFile = START_T_RANGE_FOR_INFILE(infile)
         print startTRangeFile
         
-        writeRunScript(infile, startTRangeFile)
-        writeCppRunScript(infile, startTRangeFile)
+        writeRunScript(infile, startTRangeFile, VTREE_THRESH)
+        writeCppRunScript(infile, startTRangeFile, VTREE_THRESH)

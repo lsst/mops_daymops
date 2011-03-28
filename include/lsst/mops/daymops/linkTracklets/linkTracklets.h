@@ -235,10 +235,15 @@ public:
 
 /* queryTracklets are non-const because we set their velocityRA and
    velocityDec fields.  otherwise queryTracklets will not be
-   changed. Detections will be recentered, though.*/
+   changed. Detections will be recentered, though.
+   
+   distributed version takes an extra argument, numProcs, and expects
+   a set up MPI environment.
+*/
 TrackSet* linkTracklets(std::vector<MopsDetection> &allDetections,
                         std::vector<Tracklet> &queryTracklets,
-                        const linkTrackletsConfig &searchConfig);
+                        const linkTrackletsConfig &searchConfig,
+                        unsigned int numProcs);
 
 
 

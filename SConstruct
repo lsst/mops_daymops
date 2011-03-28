@@ -20,10 +20,10 @@ env = scons.makeEnv("mops_daymops",
                     #["pex_policy", "lsst/pex/policy.h", "pex_policy:C++"],
                     #["daf_persistence", "lsst/daf/persistence.h", "daf_persistence:C++"],
                     ["python", "Python.h"],
-                    ["mpich2", "mpi.h"]
+                    ["mpich2", "mpi.h", "mpich:C++"]
                     ])
 
-env.libs["mops_daymops"] += env.getlibs("boost pex_exceptions gsl python")
+env.libs["mops_daymops"] += env.getlibs("boost pex_exceptions gsl python mpich2")
 
 env['IgnoreFiles'] = r"(~$|\.pyc$|^\.svn$|\.o$)"
 

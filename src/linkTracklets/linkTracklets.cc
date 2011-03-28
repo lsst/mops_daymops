@@ -2088,6 +2088,13 @@ void addWorkItem(const std::vector<MopsDetection> &allDetections,
      * Calculate the number of compatible endpoints in this set.
      * This allows us to predict the amount of work required by
      * this work item and distributed it accordingly.
+     * 
+     * this should be identical to the double-for loop and endpoint
+     * compatibility check present in buildTracksAddToResults, but
+     * rather than adding support points and potentially building a
+     * real track, we actually just COUNT the number of compatible
+     * endpoint tracklet pairs. This is used by Matt's code to come up
+     * with a good distribution of workload.
      ************************************************************/
     int numCompatible = 0;
                 
@@ -2102,9 +2109,6 @@ void addWorkItem(const std::vector<MopsDetection> &allDetections,
              secondEndpointIter != secondEndpoint.myTree->getMyData()->end();
              secondEndpointIter++) {
 
-            // jmyers - this should be identical to some of the code in 
-            // buildTracksAddToResults
-            // create a new track with these endpoints
             Track newTrack;
             
             uint firstEndpointTrackletIndex = firstEndpointIter->getValue();
@@ -3250,7 +3254,7 @@ unsigned int buildTracksAddToResults(
     linkTrackletsConfig searchConfig,
     TreeNodeAndTime &firstEndpoint,
     TreeNodeAndTime &secondEndpoint,
-    const std::vector<treeIdNodeIdPair> &supportNodes,
+    const std::vector<treeIdNodeIdPair> &supportNodeIds,
     TrackSet & results,
 
     // the following are arguments needed for distribution work.
@@ -3263,19 +3267,20 @@ unsigned int buildTracksAddToResults(
 
     /* matt cleveland distribution setup */
     //load support nodes from cache
-    std::vector<std::vector<unsigned int> > supportNodesFromCache;
+    std::vector<std::vector<unsigned int> > supportNodes;
     unsigned int currPf = 0;
     unsigned int count =0;
 
     unsigned int nodeNum = 3; //start as first node offset
 
-    std::vector<treeIdNodeIdPair>::const_iterator supportNodeIter;
+    std::vector<treeIdNodeIdPair>::const_iterator supportIdIter;
+    std::vector<PointAndValue <uint> >::const_iterator supportPointIter;
 
-    for (supportNodeIter = supportNodes.begin(); supportNodeIter != supportNodes.end();
-         supportNodeIter++) {
+    for (supportIdIter = supportNodeIds.begin(); supportIdIter != supportNodeIds.end();
+         supportIdIter++) {
         std::vector<unsigned int> dummy;
-        supportNodesFromCache.push_back(dummy);
-        treeIdNodeIdPair tini = *supportNodeIter;
+        supportNodes.push_back(dummy);
+        treeIdNodeIdPair tini = *supportIdIter;
         int i = loadNodeFromCache(tini.treeId, tini.nodeId, cacheSize, 
                                   nodeCache, trackletTimeToTreeMap,
                                   finalEndpointOrder, pageFaults, currPf,
@@ -3287,22 +3292,30 @@ unsigned int buildTracksAddToResults(
                               std::string(": received non-leaf node as support node."));
         }
         
-        std::vector<PointAndValue <unsigned int> >::const_iterator supportPointIter;
         curSupportNodeData = nodeCache[i].node.myTree->getMyData(); 
         for (supportPointIter  = curSupportNodeData->begin(); 
              supportPointIter != curSupportNodeData->end();
              supportPointIter++) {
             //candidateTrackletIDs.push_back(supportPointIter->getValue());
-            supportNodesFromCache.at(count).push_back(supportPointIter->getValue());
+            supportNodes.at(count).push_back(supportPointIter->getValue());
         }
         ++count;
     }
     
-    /* begin standard jmyers logic like in trunk */
+    /* count number of valid endpoint tracklet pairings present at
+     * this combination of endpoint nodes.  
+     *
+     * begin standard jmyers logic like in trunk. However, the new
+     * supportNodes is actually a vector of vectors of uints (the
+     * uints being tracklet IDs), not a vector of vectors of
+     * PointAndValues.  So this code is a little different from the
+     * trunk version. */
+
     std::vector<PointAndValue<uint> >::const_iterator firstEndpointIter;
     std::vector<PointAndValue<uint> >::const_iterator secondEndpointIter;
-    std::vector<PointAndValue <uint> >::const_iterator supportPointIter;
-
+    std::vector<std::vector <uint> >::const_iterator supportNodeIter;
+    //std::vector<PointAndValue <uint> >::const_iterator supportPointIter;
+    
     for (firstEndpointIter = firstEndpoint.myTree->getMyData()->begin();
          firstEndpointIter != firstEndpoint.myTree->getMyData()->end();
          firstEndpointIter++) {
@@ -3348,21 +3361,14 @@ unsigned int buildTracksAddToResults(
                 for (supportNodeIter = supportNodes.begin(); 
                      supportNodeIter != supportNodes.end();
                      supportNodeIter++) {
-                    const std::vector<PointAndValue <uint> > * 
-                        curSupportNodeData;
-                    if (!supportNodeIter->myTree->isLeaf()) {
-                        throw LSST_EXCEPT(BadParameterException,
-                                          std::string(__FUNCTION__) + 
-                                          std::string(
-                         ": received non-leaf node as support node."));
-                    }
-                    curSupportNodeData = supportNodeIter->myTree->getMyData(); 
-                    for (supportPointIter  = curSupportNodeData->begin(); 
-                         supportPointIter != curSupportNodeData->end();
-                         supportPointIter++) {
+                    const std::vector<uint> *curSupportNodeData;
+                    curSupportNodeData = &(*supportNodeIter);
+                    std::vector<uint>::const_iterator trackletId; 
+                    for (trackletId  = curSupportNodeData->begin(); 
+                         trackletId != curSupportNodeData->end();
+                         trackletId++) {
 
-                        candidateTrackletIds.push_back(
-                            supportPointIter->getValue());
+                        candidateTrackletIds.push_back(*trackletId);
                     }
                 }
 

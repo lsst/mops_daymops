@@ -53,6 +53,7 @@ int main(int argc, char* argv[])
   //to the slave nodes, which are all waiting in doLinkingRecurse2
   //processor one is the only one to read data and process arguments
 
+
      lsst::mops::linkTrackletsConfig searchConfig; 
 
      /* 

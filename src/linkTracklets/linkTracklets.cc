@@ -70,7 +70,7 @@ pthread_t         thread;
 //used by workers to track their total cache statistics
 unsigned long int globalCacheHits = 0, globalCacheMisses = 0;
 
-#define MAX_WORK_ITEMS        256     /* number of work items per distribution batch */
+#define MAX_WORK_ITEMS        10000     /* number of work items per distribution batch */
 
 #define MPI_NODE_COMM_TAG     9999   /* MPI tage for node communication */
 #define MPI_COLLECT_TAG       6969   /* MPI tag for track collection */
@@ -83,7 +83,7 @@ unsigned long int globalCacheHits = 0, globalCacheMisses = 0;
 #define SIMULATE_DISK_ACCESS  0      /* read random data from disk to simulate IO */
 #define DO_LRU                0      /* perform least recently used cache replacment algorithm */
 #define DO_ANNEALING          1      /* perform simulated annealing or not */
-#define DO_OPRA               0      /* perform optimal page replacement algorithm for node cache loading */
+#define DO_OPRA               1      /* perform optimal page replacement algorithm for node cache loading */
 #define DO_OPRA_PREP          0      /* perform the optimal page replacement algorithm
 					work item ordering loop or no */
 
@@ -727,6 +727,18 @@ void writeMyResults(std::string outFileName,
 		    const std::vector<Tracklet> &allTracklets,
 		    TrackSet &toRet, unsigned long long nextNo)
 {
+
+  // create the output directory for this worker, if it doesn't exist
+  if (nextNo == 0) {
+    std::string newPath = "results/" + outFileName;
+    std::cerr << "Making directory " << outFileName;
+    int rc = mkdir(newPath.c_str(), 0777);
+    if (rc) {
+      std::cerr << "Failed to create " + newPath + " directory with " << rc << std::endl;
+      exit(rc);
+    }
+  }
+
   std::ofstream outFile;
 
   //go through all Tracks
@@ -1218,8 +1230,8 @@ void determineWorkItemSets(std::vector<std::vector<workItemFile> > &assignment)
 
       //this is the new best set assignment
       if( trialCost < bestCost ){
-	std::cerr << timestamp() << "updating best work item set assignment in SA. Trial cost is " 
-		  << trialCost << " bestCost is " << bestCost << std::endl;
+      /* 	std::cerr << timestamp() << "updating best work item set assignment in SA. Trial cost is " 
+                << trialCost << " bestCost is " << bestCost << std::endl; */
 	bestCost = trialCost;
 	
 	//clear the current best 
@@ -1378,9 +1390,9 @@ void distributeWorkload(std::vector<std::vector<workItemFile> > &workItemSets)
   //just for debug
   for(unsigned int i=1; i <= numProcs; ++i){
     std::string myTime("Processor ");
-    myTime = timestamp() + myTime + stringify(i) + " got " + stringify(workUnitsList[(i-1)]) 
-      + " time units and " + stringify(workItemSets.at((i-1)).size()) + " total work items.\n";
-    std::cerr << myTime;
+    /* myTime = timestamp() + myTime + stringify(i) + " got " + stringify(workUnitsList[(i-1)]) 
+       + " time units and " + stringify(workItemSets.at((i-1)).size()) + " total work items.\n"; 
+       std::cerr << myTime; */
   }
 
   //this thread waits to hear back from the workers that they have completed
@@ -1584,7 +1596,7 @@ void waitForTask(int rank,
     MPI_Recv(&numEndpoints, 1, MPI_INT, 0/*MPI_ANY_SOURCE*/,
 	     /* MPI_NODE_COMM_TAG*/MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
-    std::cerr << timestamp() << "Worker " << rank << " got " << numEndpoints << " endpoints" << std::endl;
+    /* std::cerr << timestamp() << "Worker " << rank << " got " << numEndpoints << " endpoints" << std::endl; */
 
     /***************************************************************************
      * numEndpoints == -1 is master node's signal to stop working
@@ -1592,7 +1604,7 @@ void waitForTask(int rank,
      * numEndpoints == 0 is an empty work item set assignment
      ***************************************************************************/
     if (numEndpoints == 0 || numEndpoints == -1 || numEndpoints == -2) {
-      std::cerr << timestamp() << "Worker " << rank << " got " << numEndpoints << " endpoints" << std::endl;
+        /* std::cerr << timestamp() << "Worker " << rank << " got " << numEndpoints << " endpoints" << std::endl; */
       double start = std::clock();
 
       /**************************************************
@@ -2041,13 +2053,6 @@ void addWorkItem(const std::vector<MopsDetection> &allDetections,
      * Calculate the number of compatible endpoints in this set.
      * This allows us to predict the amount of work required by
      * this work item and distributed it accordingly.
-     * 
-     * this should be identical to the double-for loop and endpoint
-     * compatibility check present in buildTracksAddToResults, but
-     * rather than adding support points and potentially building a
-     * real track, we actually just COUNT the number of compatible
-     * endpoint tracklet pairs. This is used by Matt's code to come up
-     * with a good distribution of workload.
      ************************************************************/
     int numCompatible = 0;
                 
@@ -2062,6 +2067,9 @@ void addWorkItem(const std::vector<MopsDetection> &allDetections,
              secondEndpointIter != secondEndpoint.myTree->getMyData()->end();
              secondEndpointIter++) {
 
+            // jmyers - this should be identical to some of the code in 
+            // buildTracksAddToResults
+            // create a new track with these endpoints
             Track newTrack;
             
             uint firstEndpointTrackletIndex = firstEndpointIter->getValue();
@@ -3207,7 +3215,7 @@ unsigned int buildTracksAddToResults(
     linkTrackletsConfig searchConfig,
     TreeNodeAndTime &firstEndpoint,
     TreeNodeAndTime &secondEndpoint,
-    const std::vector<treeIdNodeIdPair> &supportNodeIds,
+    const std::vector<treeIdNodeIdPair> &supportNodes,
     TrackSet & results,
 
     // the following are arguments needed for distribution work.
@@ -3220,20 +3228,19 @@ unsigned int buildTracksAddToResults(
 
     /* matt cleveland distribution setup */
     //load support nodes from cache
-    std::vector<std::vector<unsigned int> > supportNodes;
+    std::vector<std::vector<unsigned int> > supportNodesFromCache;
     unsigned int currPf = 0;
     unsigned int count =0;
 
     unsigned int nodeNum = 3; //start as first node offset
 
-    std::vector<treeIdNodeIdPair>::const_iterator supportIdIter;
-    std::vector<PointAndValue <uint> >::const_iterator supportPointIter;
+    std::vector<treeIdNodeIdPair>::const_iterator supportNodeIter;
 
-    for (supportIdIter = supportNodeIds.begin(); supportIdIter != supportNodeIds.end();
-         supportIdIter++) {
+    for (supportNodeIter = supportNodes.begin(); supportNodeIter != supportNodes.end();
+         supportNodeIter++) {
         std::vector<unsigned int> dummy;
-        supportNodes.push_back(dummy);
-        treeIdNodeIdPair tini = *supportIdIter;
+        supportNodesFromCache.push_back(dummy);
+        treeIdNodeIdPair tini = *supportNodeIter;
         int i = loadNodeFromCache(tini.treeId, tini.nodeId, cacheSize, 
                                   nodeCache, trackletTimeToTreeMap,
                                   finalEndpointOrder, pageFaults, currPf,
@@ -3245,30 +3252,22 @@ unsigned int buildTracksAddToResults(
                               std::string(": received non-leaf node as support node."));
         }
         
+        std::vector<PointAndValue <unsigned int> >::const_iterator supportPointIter;
         curSupportNodeData = nodeCache[i].node.myTree->getMyData(); 
         for (supportPointIter  = curSupportNodeData->begin(); 
              supportPointIter != curSupportNodeData->end();
              supportPointIter++) {
             //candidateTrackletIDs.push_back(supportPointIter->getValue());
-            supportNodes.at(count).push_back(supportPointIter->getValue());
+            supportNodesFromCache.at(count).push_back(supportPointIter->getValue());
         }
         ++count;
     }
     
-    /* count number of valid endpoint tracklet pairings present at
-     * this combination of endpoint nodes.  
-     *
-     * begin standard jmyers logic like in trunk. However, the new
-     * supportNodes is actually a vector of vectors of uints (the
-     * uints being tracklet IDs), not a vector of vectors of
-     * PointAndValues.  So this code is a little different from the
-     * trunk version. */
-
+    /* begin standard jmyers logic like in trunk */
     std::vector<PointAndValue<uint> >::const_iterator firstEndpointIter;
     std::vector<PointAndValue<uint> >::const_iterator secondEndpointIter;
-    std::vector<std::vector <uint> >::const_iterator supportNodeIter;
-    //std::vector<PointAndValue <uint> >::const_iterator supportPointIter;
-    
+    std::vector<PointAndValue <uint> >::const_iterator supportPointIter;
+
     for (firstEndpointIter = firstEndpoint.myTree->getMyData()->begin();
          firstEndpointIter != firstEndpoint.myTree->getMyData()->end();
          firstEndpointIter++) {
@@ -3319,15 +3318,34 @@ unsigned int buildTracksAddToResults(
                 for (supportNodeIter = supportNodes.begin(); 
                      supportNodeIter != supportNodes.end();
                      supportNodeIter++) {
-                    const std::vector<uint> *curSupportNodeData;
-                    curSupportNodeData = &(*supportNodeIter);
-                    std::vector<uint>::const_iterator trackletId; 
-                    for (trackletId  = curSupportNodeData->begin(); 
-                         trackletId != curSupportNodeData->end();
-                         trackletId++) {
+                    const std::vector<PointAndValue <uint> > * 
+                        curSupportNodeData;
+		    
+		    // mgc 3/26/11 -- get the tracklettree/node for this treeIdNodeId
+		    trackletTree = findTreeById(supportNodeIter->treeId, trackletTimeToTreeMap);
+		    
+		    if (trackletTree != NULL) {
+		      treeNode  = getNodeByIDAndTime(trackletTree, supportNodeIter->nodeId);
 
-                        candidateTrackletIds.push_back(*trackletId);
-                    }
+		      if (treeNode != NULL) {
+		      
+			if (!treeNode->isLeaf()) { // end mgc
+			  throw LSST_EXCEPT(BadParameterException,
+					    std::string(__FUNCTION__) + 
+					    std::string(
+							": received non-leaf node as support node."));
+			}
+			//curSupportNodeData = supportNodeIter->myTree->getMyData(); 
+			curSupportNodeData = treeNode->getMyData(); //mgc
+			for (supportPointIter  = curSupportNodeData->begin(); 
+			     supportPointIter != curSupportNodeData->end();
+			     supportPointIter++) {
+			  
+			  candidateTrackletIds.push_back(
+							 supportPointIter->getValue());
+			}
+		      }
+		    }
                 }
 
                 // Add support points if they are within thresholds.
@@ -3822,6 +3840,11 @@ TrackSet* linkTracklets(std::vector<MopsDetection> &allDetections,
                         std::vector<Tracklet> &queryTracklets,
                         const linkTrackletsConfig &searchConfig,
                         uint numProcs) {
+
+  std::string resultsDir("results");
+  //boost::filesystem::remove_all(resultsDir);
+  // make the directory in which worker procesors write their result Tracks
+  mkdir(resultsDir.c_str(), 0777);
 
     /* system setup for distributed linkTracklets */
     srand(time(NULL));

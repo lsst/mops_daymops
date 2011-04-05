@@ -93,7 +93,9 @@ public:
             // Now with "sparse" KD-Trees it appears that leaf node
             // size 1 is best (see my spreadsheet on Google docs -
             // jmyers)
-            leafSize=1;
+            
+            // for distributed linkTracklets tests show 16 is good...
+            leafSize=16;
 
             restrictTrackStartTimes = false;
             latestFirstEndpointTime = -1;

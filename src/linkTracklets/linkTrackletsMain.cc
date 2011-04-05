@@ -66,6 +66,11 @@ int main(int argc, char* argv[])
   double dif;
   std::string outputFileName = "";
   lsst::mops::linkTrackletsConfig searchConfig; 
+
+  searchConfig.myVerbosity.printStatus = true;
+  searchConfig.myVerbosity.printVisitCounts = true;
+  searchConfig.myVerbosity.printTimesByCategory = true;
+  searchConfig.myVerbosity.printBoundsInfo = true;
   
      std::string helpString = 
 	  std::string("Usage: linkTracklets -d <detections file> -t <tracklets file> -o <output (tracks) file>") + std::string("\n") +

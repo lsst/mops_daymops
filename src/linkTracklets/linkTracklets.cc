@@ -3,6 +3,8 @@
 
 #include "mpi.h"
 // time headers needed for benchmarking performance
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <ctime>
 #include <iomanip>
 #include <map>
@@ -47,6 +49,7 @@
 
 #define uint unsigned int 
 
+/* open namespaces */
 namespace lsst {
     namespace mops {
 
@@ -61,19 +64,20 @@ unsigned int numGenerations  = 0;
 unsigned long int totalWorkItems  = 0;
 unsigned long int totalTimeUnits  = 0;
 unsigned long int globalCacheSize = 0;
-TrackSet          toRet;
+TrackSet        * toRet;
 pthread_t         thread;
 
 //used by workers to track their total cache statistics
 unsigned long int globalCacheHits = 0, globalCacheMisses = 0;
 
-#define MAX_WORK_ITEMS        64     /* number of work items per distribution batch */
+#define MAX_WORK_ITEMS        256     /* number of work items per distribution batch */
 
+#define MPI_NODE_COMM_TAG     9999   /* MPI tage for node communication */
 #define MPI_COLLECT_TAG       6969   /* MPI tag for track collection */
 #define MPI_ANNEAL_TAG        4242   /* MPI tag for annealing trigger */
 
 #define CACHE_SIZE            64     /* size of node cache on worker processors */
-#define MAX_GENERATIONS       10     /* number of work item generations to complete */
+#define MAX_GENERATIONS       10000  /* number of work item generations to complete */
 #define WRITE_RESULTS_TO_DISK 1      /* workers write tracks to disk or return them */
 
 #define SIMULATE_DISK_ACCESS  0      /* read random data from disk to simulate IO */
@@ -100,14 +104,6 @@ int doLinkingRecurseVisits = 0, buildTracksAddToResultsVisits = 0, compatibleEnd
 
 int rejectedOnVelocity, rejectedOnPosition, wereCompatible;
 
-//namespace ctExcept = collapseTracklets::exceptions;
-
-
-
-
-
-
-
 
 
 // THESE ARE FOR DEBUGGING ONLY
@@ -120,9 +116,6 @@ double timeSince(clock_t priorEvent)
 {
      return ( std::clock() - priorEvent ) / (double)CLOCKS_PER_SEC;
 }
-
-
-
 
 
 
@@ -214,35 +207,41 @@ public:
  * contains the unique identifiers for the TreeNodeAndTime object (treeId,
  * nodeId) and the TreeNodeAndTime object itself.
  ***************************************************************************/
-typedef struct cn{
+typedef struct {
   unsigned int treeId, nodeId;
   TreeNodeAndTime node;
   bool inUse;
   time_t timeStamp;
-} cachedNode;
+} cachedTreeNode;
 
-typedef struct ta{
+/*******************************************************************************
+ * This struct holds the arguments sent to the killProcs function.  The sentinel
+ * value indicates to the workers what action they should take after processing
+ * their current work item set.
+ *******************************************************************************/
+typedef struct {
   int numProcs;
   int sentinel;
-}threadArgs;
+} killSentinel;
 
-/**************************************************
- * This struct is used for keeping track of the
- * work item and meta data about them, which
- * will be used when the work is distributed.
- **************************************************/
-typedef struct s{
+/******************************************************************************
+ * This struct is used for keeping track of a work item and meta data about it, 
+ * which is used when the work items are distributed.
+ ******************************************************************************/
+typedef struct {
   std::vector<std::pair<unsigned int, unsigned int> > endpoints;
-  std::string fileName;
   int numCompatibleEndpoints;
   int numNodes;
   unsigned long long timeUnits;
-}workItemFile;
+} workItemFile;
 
-typedef struct treeIdNodeId{
+/*******************************************************************************
+ * An index specifying a tree, by its ID, and a node in that tree, by its ID
+ *******************************************************************************/
+typedef struct {
   unsigned int treeId;
   unsigned int nodeId;
-}treeIdNodeIdPair;
+} treeIdNodeIdPair;
 
 
 
@@ -273,7 +272,7 @@ unsigned int buildTracksAddToResults(
     TreeNodeAndTime &secondEndpoint,
     const std::vector<treeIdNodeIdPair> &supportNodes,
     TrackSet & results,
-    int &cacheSize, cachedNode *nodeCache,
+    int &cacheSize, cachedTreeNode *nodeCache,
     std::map<ImageTime, TrackletTree > &trackletTimeToTreeMap,
     const std::vector<std::vector<treeIdNodeIdPair> > &finalEndpointOrder,
     unsigned long long &pageFaults, unsigned int &myNumCompatible,
@@ -315,13 +314,13 @@ void
 distributeCurrentWorkload(std::vector<std::vector<workItemFile> > &assignment);
 
 void 
-*killProcs(threadArgs);
+*killProcs(killSentinel, const std::vector<MopsDetection> & allDets);
 
 int
-leastRecentlyUsed(cachedNode *nodeCache, int cacheSize);
+leastRecentlyUsed(cachedTreeNode *nodeCache, int cacheSize);
 
 int 
-findFarthestNodeIndex(cachedNode *nodeCache, int cacheSize,
+findFarthestNodeIndex(cachedTreeNode *nodeCache, int cacheSize,
 		      const std::vector<std::vector<treeIdNodeIdPair> > &finalEndpointOrder,
 		      unsigned int setStart, unsigned int workItemStart);
 
@@ -337,71 +336,21 @@ lsst::mops::TrackletTreeNode *
 getNodeByIDAndTime(lsst::mops::TrackletTree *myTree, unsigned int nodeId);
 
 int 
-loadNodeFromCache(unsigned int treeId, unsigned int nodeId, int &cacheSize, cachedNode *nodeCache,
+loadNodeFromCache(unsigned int treeId, unsigned int nodeId, int &cacheSize, cachedTreeNode *nodeCache,
 		  std::map<ImageTime, lsst::mops::KDTree <unsigned int> > &trackletTimeToTreeMap,
 		  const std::vector<std::vector<treeIdNodeIdPair> > &finalEndpointOrder,
 		  unsigned long long &pageFaults);
 
 
-
 /***************************************************
  * From http://www.parashift.com/c++-faq-lite/misc-technical-issues.html#faq-39.1
  ***************************************************/
-std::string stringify(int x)
-{
-  std::ostringstream o;
-  o << x;
-  return o.str();
-} 
-
 std::string stringify(size_t x)
 {
   std::ostringstream o;
   o << x;
   return o.str();
 }
-
-/***************************************************
- * From http://www.parashift.com/c++-faq-lite/misc-technical-issues.html#faq-39.1
- ***************************************************/
-std::string stringify(unsigned int x)
-{
-  std::ostringstream o;
-  o << x;
-  return o.str();
-} 
-
-/***************************************************
- * From http://www.parashift.com/c++-faq-lite/misc-technical-issues.html#faq-39.1
- ***************************************************/
-std::string stringify(long int x)
-{
-  std::ostringstream o;
-  o << x;
-  return o.str();
-} 
-
-
-/***************************************************
- * From http://www.parashift.com/c++-faq-lite/misc-technical-issues.html#faq-39.1
- ***************************************************/
-std::string stringify(unsigned long long x)
-{
-  std::ostringstream o;
-  o << x;
-  return o.str();
-} 
-
-
-/***************************************************
- * From http://www.parashift.com/c++-faq-lite/misc-technical-issues.html#faq-39.1
- ***************************************************/
-std::string stringify(double x)
-{
-  std::ostringstream o;
-  o << x;
-  return o.str();
-} 
 
 /**************************************************
  * From http://www.parashift.com/c++-faq-lite/misc-technical-issues.html#faq-39.2
@@ -473,7 +422,7 @@ std::string timestamp()
 
 
 
-void printCacheAndWorkItems(cachedNode *nodeCache,
+void printCacheAndWorkItems(cachedTreeNode *nodeCache,
 			    const std::vector<std::vector<treeIdNodeIdPair> > &finalEndpointOrder,
 			    int e1, int e2, int index)
 {
@@ -568,7 +517,7 @@ readNodeFromDisk(TrackletTreeNode *treeNode)
  * load it into the cache using the optimal page replacement algorithm.
  *   -MGC
  ***************************************************************************/
-int loadNodeFromCache(unsigned int treeId, unsigned int nodeId, int &cacheSize, cachedNode *nodeCache,
+int loadNodeFromCache(unsigned int treeId, unsigned int nodeId, int &cacheSize, cachedTreeNode *nodeCache,
 		      std::map<ImageTime, TrackletTree > &trackletTimeToTreeMap,
 		      //const std::vector<std::vector<int> > &finalEndpointOrder,
 		      const std::vector<std::vector<treeIdNodeIdPair> > &finalEndpointOrder,
@@ -819,66 +768,62 @@ void writeMyResults(std::string outFileName,
  * collect all Tracks generated by slaves
  **************************************************/
 //TrackSet collectTrackResults(int numProcs)
-void collectTrackResults(long numProcs)
+void collectTrackResults(long numProcs, const std::vector<MopsDetection> & allDets)
 {
   MPI_Status status;
 
   int _from;
-  std::cerr << timestamp() << "Master entering collectTracks" << std::endl;
   for(_from = 1; _from < numProcs; ++_from){
 
     //determine number of tracks to expect
     unsigned int numTracks;
-    std::cerr << timestamp() << "Master waiting on worker " << _from << std::endl;
-    MPI_Recv(&numTracks, 1, MPI_INT, _from, MPI_COLLECT_TAG /*MPI_ANY_TAG*/, MPI_COMM_WORLD, &status); //matt changed from collect tag to any tag 3/3/11
-    std::cerr << timestamp() << "Expecting " << numTracks << " tracks from the worker " << _from << "." << std::endl;
-    
-    for(int i=0; i < numTracks; ++i){
-      
-      //receive tracklet indices
-      int numTracklets;
-      MPI_Recv(&numTracklets, 1, MPI_INT, _from, MPI_COLLECT_TAG, MPI_COMM_WORLD, &status);
-      
-      int trackletIndices[numTracklets];
-      MPI_Recv(&trackletIndices, numTracklets, MPI_INT, _from, MPI_COLLECT_TAG, MPI_COMM_WORLD, &status);
-      
-      std::string temp = timestamp() + "Master got " + stringify(numTracklets) + " tracklets from worker " 
-	+ stringify(_from) + ": ";
-      std::set<unsigned int> tSet;
-      for(int k=0; k < numTracklets; ++k){
-	temp +=  stringify(trackletIndices[k]) + ", ";
-	tSet.insert(trackletIndices[k]);
-      }
-      std::cerr << temp << std::endl;
-      
-      //receive detection indices
-      int numDetections;
-      MPI_Recv(&numDetections, 1, MPI_INT, _from, MPI_COLLECT_TAG, MPI_COMM_WORLD, &status);    
-      
-      int detectionIndices[numDetections];
-      MPI_Recv(&detectionIndices, numDetections, MPI_INT, _from, MPI_COLLECT_TAG, MPI_COMM_WORLD, &status);
-      
-      temp = "";
-      temp = timestamp() + "Master got " + stringify(numDetections) 
-	+ " detections from worker " + stringify(_from) + ": ";
+    MPI_Recv(&numTracks, 1, MPI_INT, _from, MPI_COLLECT_TAG, MPI_COMM_WORLD, &status); 
 
-      std::set<unsigned int> dSet;
-      for(int k=0; k < numDetections; ++k){
-	temp += stringify(detectionIndices[k]) + ", ";
-	dSet.insert(detectionIndices[k]);
-      }
-      std::cerr << temp << std::endl;
+    if (numTracks > 0) {
+      for(unsigned int i=0; i < numTracks; ++i){
+	
+	//receive tracklet indices
+	int numTracklets;
+	MPI_Recv(&numTracklets, 1, MPI_INT, _from, MPI_COLLECT_TAG, MPI_COMM_WORLD, &status);
+	
+	int trackletIndices[numTracklets];
+	MPI_Recv(&trackletIndices, numTracklets, MPI_INT, _from, MPI_COLLECT_TAG, MPI_COMM_WORLD, &status);
 
-      //add the new track to our return set
-      Track *thisTrack = new Track();
-      thisTrack->componentTrackletIndices = tSet;
-      thisTrack->componentDetectionIndices = dSet;
+	std::set<unsigned int> tSet;
+	for(int k=0; k < numTracklets; ++k){
+	  tSet.insert(trackletIndices[k]);
+	}
+	
+	//receive detection indices
+	int numDetections;
+	MPI_Recv(&numDetections, 1, MPI_INT, _from, MPI_COLLECT_TAG, MPI_COMM_WORLD, &status);    
       
-      toRet.insert((*thisTrack));
+	int detectionIndices[numDetections];
+	MPI_Recv(&detectionIndices, numDetections, MPI_INT, _from, MPI_COLLECT_TAG, MPI_COMM_WORLD, &status);
+	
+	std::set<unsigned int> dSet;
+	for(int k=0; k < numDetections; ++k){
+	  dSet.insert(detectionIndices[k]);
+	}
+	
+	//add the new track to our return set
+	Track thisTrack;
+	
+	thisTrack.componentTrackletIndices  = tSet;
+	
+	std::set<unsigned int>::const_iterator detIter;
+	for (detIter  = dSet.begin();
+	     detIter != dSet.end();
+	     detIter++){
+	  thisTrack.addDetection(*detIter, allDets);
+	}
+	
+	toRet->insert(thisTrack);
+      }
     }
   }
-  std::cerr << timestamp() << "Master exiting collectTracks" << std::endl;
-  stopAnnealing = true; //matt added 3/3/11
+  std::cerr << timestamp() << "Master exiting collectTracks with toRet size " << toRet->size() << std::endl;
+  //stopAnnealing = true; //matt added 3/3/11  4/1/11
 }
 
 
@@ -1337,6 +1282,9 @@ void determineWorkItemSets(std::vector<std::vector<workItemFile> > &assignment)
   stopAnnealing = false;
 }
 
+struct annealArg {
+  int numProcs;
+};
 
 
 /***************************************************************************
@@ -1346,18 +1294,20 @@ void determineWorkItemSets(std::vector<std::vector<workItemFile> > &assignment)
  ****************************************************************************/
 void *annealingSentinel(void *arg)
 {
-  int *numProcs = (int*)arg;
-  MPI_Status status;
+  struct annealArg * sArg = (annealArg *)arg;
+  int np = sArg->numProcs;
 
-  std::cerr << timestamp() << "Master triggering annealing barrier" << std::endl;
+  std::cerr << timestamp() << "Master triggering annealing barrier, waiting on numworkers " << np << std::endl;
   MPI_Barrier(MPI_COMM_WORLD);
-
-  //set the global annealing sentinel
-  stopAnnealing = true;
 
   //detach this thread so its resources are freed upon completion
   pthread_detach(pthread_self());
 
+  //set the global annealing sentinel
+  stopAnnealing = true;
+
+  std::cerr << timestamp() << "Annealing thread is dying" << std::endl;
+  
   return NULL;
 }
 
@@ -1384,7 +1334,7 @@ void distributeWorkload(std::vector<std::vector<workItemFile> > &workItemSets)
     //should expect zero items
     if(workItemSets.at(i).size() == 0){
       int numEndpoints = 0;
-      MPI_Send(&numEndpoints, 1, MPI_INT, (i+1), i, MPI_COMM_WORLD);
+      MPI_Send(&numEndpoints, 1, MPI_INT, (i+1), /*MPI_NODE_COMM_TAG*/i, MPI_COMM_WORLD);
     }
     else{
       for(unsigned int j=0; j < workItemSets.at(i).size(); ++j){
@@ -1395,7 +1345,7 @@ void distributeWorkload(std::vector<std::vector<workItemFile> > &workItemSets)
 	unsigned int numEndpoints = workItem.endpoints.size();
 
 	//send to (i+1), i starts at 0 but proc 0 doesn't process work items
-	MPI_Send(&numEndpoints, 1, MPI_INT, (i+1), j, MPI_COMM_WORLD);
+	MPI_Send(&numEndpoints, 1, MPI_INT, (i+1), /*MPI_NODE_COMM_TAG*/j, MPI_COMM_WORLD);
 	
 	//keep track of predicted time required at each processor
 	workUnitsList[i] += workItem.timeUnits;
@@ -1419,7 +1369,7 @@ void distributeWorkload(std::vector<std::vector<workItemFile> > &workItemSets)
 	} 
 	
 	//send to (i+1), i starts at 0 but proc 0 doesn't process work items
-	MPI_Send(&sendBuffer, bufferSize, MPI_INT, (i+1), j, MPI_COMM_WORLD);
+	MPI_Send(&sendBuffer, bufferSize, MPI_INT, (i+1), /*MPI_NODE_COMM_TAG*/j, MPI_COMM_WORLD);
       }
     }
   } /* end file transmission */
@@ -1435,7 +1385,10 @@ void distributeWorkload(std::vector<std::vector<workItemFile> > &workItemSets)
 
   //this thread waits to hear back from the workers that they have completed
   //processing on the work items they were assigned
-  int rc = pthread_create(&thread, NULL, annealingSentinel, (void*)numProcs);
+  struct annealArg arg;
+  arg.numProcs = numProcs;
+  int rc = pthread_create(&thread, NULL, annealingSentinel, (void*)&arg);
+  std::cerr << timestamp() << "Master creating thread with numProcs: " << arg.numProcs << std::endl;
   if(rc){
     std::cerr << "pthread_create return code is" << rc << ", aborting." << std::endl;
     exit(rc);
@@ -1447,7 +1400,7 @@ void distributeWorkload(std::vector<std::vector<workItemFile> > &workItemSets)
 /**********************************************************************
  * Tell all the slave nodes they can stop working.
  **********************************************************************/
-void *killProcs(threadArgs ta)
+void *killProcs(killSentinel ta, const std::vector<MopsDetection> & allDets)
 {
   int _sentinel = ta.sentinel;
   
@@ -1457,7 +1410,7 @@ void *killProcs(threadArgs ta)
 
   //collect results and add to return vector if workers not writing to disk
   if(!WRITE_RESULTS_TO_DISK){
-    collectTrackResults(ta.numProcs);
+    collectTrackResults(ta.numProcs, allDets);
   }
 
   return NULL;
@@ -1468,7 +1421,7 @@ void *killProcs(threadArgs ta)
 /***************************************************************************
  * Find timestamp with smallest value
  ***************************************************************************/
-int leastRecentlyUsed(cachedNode *nodeCache, int cacheSize)
+int leastRecentlyUsed(cachedTreeNode *nodeCache, int cacheSize)
 {
   int LRU = -1;
   
@@ -1494,7 +1447,7 @@ int leastRecentlyUsed(cachedNode *nodeCache, int cacheSize)
  * the future.  If a cached node is found that is never used again, there
  * is no need to check any more nodes.
  ***************************************************************************/
-int findFarthestNodeIndex(cachedNode *nodeCache, int cacheSize,
+int findFarthestNodeIndex(cachedTreeNode *nodeCache, int cacheSize,
 			  const std::vector<std::vector<treeIdNodeIdPair> > &finalEndpointOrder,
 			  unsigned int setStart, unsigned int nodeStart)
 {
@@ -1577,7 +1530,7 @@ void waitForTask(int rank,
   TrackSet myTracks;
 
   //this is THE node cache, declare and initialize it
-  cachedNode nodeCache[CACHE_SIZE];
+  cachedTreeNode nodeCache[CACHE_SIZE];
   for(unsigned int i=0; i < CACHE_SIZE; ++i){
     nodeCache[i].nodeId = -1;
     nodeCache[i].treeId = -1;
@@ -1628,7 +1581,8 @@ void waitForTask(int rank,
 
     //receive number of TATs in this work item
     int numEndpoints;
-    MPI_Recv(&numEndpoints, 1, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+    MPI_Recv(&numEndpoints, 1, MPI_INT, 0/*MPI_ANY_SOURCE*/,
+	     /* MPI_NODE_COMM_TAG*/MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
     std::cerr << timestamp() << "Worker " << rank << " got " << numEndpoints << " endpoints" << std::endl;
 
@@ -1637,8 +1591,8 @@ void waitForTask(int rank,
      * numEndpoints == -2 indicates a work item set assignment is complete
      * numEndpoints == 0 is an empty work item set assignment
      ***************************************************************************/
-    if( numEndpoints == 0 || numEndpoints == -1 || numEndpoints == -2 ){
-
+    if (numEndpoints == 0 || numEndpoints == -1 || numEndpoints == -2) {
+      std::cerr << timestamp() << "Worker " << rank << " got " << numEndpoints << " endpoints" << std::endl;
       double start = std::clock();
 
       /**************************************************
@@ -1655,11 +1609,11 @@ void waitForTask(int rank,
      
       //if no endpoints are received, skip the track extraction logic and signal
       //the master that we are finished
-      if( allEndpoints.empty() || numEndpoints == 0 ){
+      if (allEndpoints.empty() || numEndpoints == 0) {
 	
 	//this empty endpoint set happens to be the last work item set assignment
 	//corner case discovered in testing
-	if(numEndpoints == -1 || stopAnnealing){  //TODO WHAT IS THIS SECOND CONDITION HERE FOR?
+	if(numEndpoints == -1){// || stopAnnealing){  //TODO WHAT IS THIS SECOND CONDITION HERE FOR?
 	  outFile.close();
 
 	  //matt added this on 3/6/11
@@ -1668,14 +1622,16 @@ void waitForTask(int rank,
 	    std::cerr << timestamp() << "Worker " << rank << " sending termination signal to master" << std::endl;
 	    MPI_Send(&writing, 1, MPI_INT, 0, MPI_COLLECT_TAG, MPI_COMM_WORLD);
 	  }
+	  std::cerr << timestamp() << "Worker " << rank << " triggering early barrier" << std::endl;
 
 	  MPI_Barrier(MPI_COMM_WORLD); //matt 3/6/11
+	  std::cerr << timestamp() << "Worker " << rank << " has passed the early trigger barrier" << std::endl;
 	  break;
 	}
 	else{
 	  //tell the master we are finished and ready for next assignment
-	  std::cerr << timestamp() << "Worker " << rank << " waiting on barrier" << std::endl;
-	  MPI_Barrier(MPI_COMM_WORLD); //matt 3/6/11
+	  std::cerr << timestamp() << "Worker " << rank << " waiting on barrier at line " << __LINE__ << std::endl;
+	  //MPI_Barrier(MPI_COMM_WORLD); //matt 3/6/11 LOOK AT THIS 3/30/11
 	  continue;
 	}
       }
@@ -1684,7 +1640,7 @@ void waitForTask(int rank,
 
       //use allEndpoints to iterate through the work items and 
       //sort them accordingly
-      double opra_1_end;
+      double opra_1_end = std::clock();
       if(DO_OPRA_PREP){
 	double opra_1_start = std::clock();
 
@@ -1892,16 +1848,16 @@ void waitForTask(int rank,
 	//inform the master how many Tracks to expect
 	std::cerr << timestamp() << "worker " << rank << " responding to master with " << resultSetSize << " tracks" << std::endl;
 	MPI_Ssend(&resultSetSize, 1, MPI_INT, 0, MPI_COLLECT_TAG, MPI_COMM_WORLD); 
-	
+
 	//set Track data, if it exists
 	if(resultSetSize > 0){
-	  
+
 	  //send data from each Track individually
 	  std::set<Track>::iterator trackIter;
 
 	  for(trackIter = myTracks.componentTracks.begin(); trackIter != myTracks.componentTracks.end(); trackIter++){
 	    Track thisTrack = *trackIter;
-
+	    
 	    //send this track's componenttrackletindices
 	    std::set<unsigned int>::iterator cIt;
 	    int numComponents = thisTrack.componentTrackletIndices.size();
@@ -1914,6 +1870,7 @@ void waitForTask(int rank,
 	      componentTrackletIndices[count] = (int)*cIt; ++count;
 	    }
 	    
+
 	    MPI_Send(&numComponents, 1, MPI_INT, 0, MPI_COLLECT_TAG, MPI_COMM_WORLD);
 	    MPI_Send(&componentTrackletIndices, numComponents, MPI_INT, 0, MPI_COLLECT_TAG, MPI_COMM_WORLD);
 
@@ -1922,6 +1879,7 @@ void waitForTask(int rank,
 	    int numDetections = thisTrack.componentDetectionIndices.size();
 	    int componentDetectionIndices[numDetections];
 	    count = 0;
+
 	    for(dIt = thisTrack.componentDetectionIndices.begin();
 		dIt != thisTrack.componentDetectionIndices.end();
 		dIt++){
@@ -1932,11 +1890,6 @@ void waitForTask(int rank,
 	    MPI_Send(&componentDetectionIndices, numDetections, MPI_INT, 0, MPI_COLLECT_TAG, MPI_COMM_WORLD);
 	  }
 	}
-	
-	//tell the master that I'm quitting
-	int signal = -1;
-	std::cerr << timestamp() << " worker " << rank << " signaling master it has completed the set assignment" << std::endl;
-	MPI_Send(&signal, 1, MPI_INT, 0, MPI_COLLECT_TAG, MPI_COMM_WORLD);
       }
 
       //tell the master we are finished and ready for next assignment
@@ -1976,7 +1929,7 @@ void waitForTask(int rank,
       int bufferSize = numEndpoints * 2;
       int indexBuffer[bufferSize];
       
-      MPI_Recv(&indexBuffer, bufferSize, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+      MPI_Recv(&indexBuffer, bufferSize, MPI_INT, 0, /*MPI_NODE_COMM_TAG*/MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
       //update the list of endpoints
       std::vector<treeIdNodeIdPair> temp;
@@ -2194,10 +2147,10 @@ void addWorkItem(const std::vector<MopsDetection> &allDetections,
 
         //tell the workers that this round of work item distribution is complete and
         //collect any tracks that were generated
-        threadArgs ta;
+        killSentinel ta;
         ta.numProcs = numProcs;
         ta.sentinel = -2;
-        killProcs(ta);
+        killProcs(ta, allDetections);
 
         //only do MAX_GENERATIONS generations for measuring purposes
         std::cerr << "Generation " << numGenerations << std::endl;
@@ -3258,7 +3211,7 @@ unsigned int buildTracksAddToResults(
     TrackSet & results,
 
     // the following are arguments needed for distribution work.
-    int &cacheSize, cachedNode *nodeCache,
+    int &cacheSize, cachedTreeNode *nodeCache,
     std::map<ImageTime, TrackletTree > &trackletTimeToTreeMap,
     const std::vector<std::vector<treeIdNodeIdPair> > &finalEndpointOrder,
     unsigned long long &pageFaults, unsigned int &myNumCompatible,
@@ -3354,7 +3307,12 @@ unsigned int buildTracksAddToResults(
             if (endpointTrackletsAreCompatible(allDetections, 
                                                newTrack,
                                                searchConfig)) {
-                
+	      // vars for treIdNodeId ==> TrackletTreeNode * conversion
+	      // mgc 3/26/11
+	      lsst::mops::TrackletTree     * trackletTree;
+	      lsst::mops::TrackletTreeNode * treeNode;
+	      // end mgc
+
                 std::vector<uint> candidateTrackletIds;
                 // put all support tracklet Ids in curSupportNodeData,
                 // then call addDetectionsCloseToPredictedPositions
@@ -3568,7 +3526,7 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                                          iterationsTillSplit,
                                          numProcs,
                                          trackletTimeToTreeMap,
-                                         assignment); 
+                                         assignment);
                         //std::cout << "Returned from recursion on
                         //left child of first endpoint.\n";
                     }
@@ -3592,7 +3550,8 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                                          iterationsTillSplit,
                                          numProcs,
                                          trackletTimeToTreeMap,
-                                         assignment);  
+                                         assignment);
+					 
                         //std::cout << "Returned from recursion on
                         //right child of first endpoint.\n";
                     }
@@ -3672,7 +3631,6 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
                // the following arguments added by matt for distribution work
 	       int numProcs,
 	       std::vector<std::vector<workItemFile> > &assignment)
-
 {
 
     /* for every pair of trees, using the set of every intermediate
@@ -3870,15 +3828,12 @@ TrackSet* linkTracklets(std::vector<MopsDetection> &allDetections,
     //work item set assignment creation
     std::vector<std::vector<workItemFile> > assignment;
     std::vector<workItemFile> dummyVector;
-    for(int i=1; i < numProcs; ++i){
+    for(uint i=1; i < numProcs; ++i){
         assignment.push_back(dummyVector);
     }
     /* end distributed linkTracklets setup */
-
-
-
     
-    TrackSet * toRet;
+    //TrackSet * toRet;
     if (searchConfig.outputMethod == RETURN_TRACKS) {
         toRet = new TrackSet();
     }
@@ -3953,10 +3908,10 @@ TrackSet* linkTracklets(std::vector<MopsDetection> &allDetections,
     }
     
     std::cerr << timestamp() << "Killing final procs" << std::endl;
-    threadArgs ta;
+    killSentinel ta;
     ta.numProcs = numProcs;
     ta.sentinel = -1;
-    killProcs(ta);
+    killProcs(ta, allDetections);
     std::cerr << timestamp() << "Final procs killed" << std::endl;
     
     //wait for all threads to clear
@@ -3966,14 +3921,11 @@ TrackSet* linkTracklets(std::vector<MopsDetection> &allDetections,
             SLEEP_SECS << " seconds." << std::endl;
         sleep(SLEEP_SECS);
     }
-    std::cerr << timestamp() << "Master returning" << std::endl;
+    std::cerr << timestamp() << "Master returning with toRet size " << toRet->size() << std::endl;
     /* end cleanup stuff for distributed linkTracklets */
 
-
-
     return toRet;
+}
 
-} 
-
-}}
+}} /* close namespaces */
 

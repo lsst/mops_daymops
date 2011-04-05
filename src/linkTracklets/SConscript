@@ -21,6 +21,8 @@ TrackletTreeNode = env.StaticLibrary('TrackletTreeNode',
 TrackletTree = env.StaticLibrary('TrackletTree',
                                  'TrackletTree.cc')
 
+env['CXX'] = 'mpicxx'
+
 env.Library('../../lib/linkTracklets', 
             ['linkTracklets.cc']             
             + common_libs + [TrackletTreeNode, TrackletTree], 

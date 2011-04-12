@@ -174,7 +174,20 @@ void MopsDetection::calculateTopoCorr(double obsLat, double obsLong) {
     slaCc2s(rhoTopo, &raTopo, &decTopo);
 
     double deltaRa = raTopo - raRad;
+
+    // make sure result is in right quadrant
+
+    if (deltaRa < -DPIBY2) {
+        deltaRa += D2PI;
+    } else if (deltaRa > DPIBY2) {
+        deltaRa -= D2PI;
+    }
+
     RaTopoCorr = deltaRa*DR2D;
+
+#ifdef DEBUG
+    std::cerr << "topo_corr (arcsec): " << 3600.0*RaTopoCorr << '\n';
+#endif
     
 }
 

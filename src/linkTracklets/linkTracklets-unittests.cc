@@ -193,6 +193,7 @@ Track generateTrack(double ra0, double dec0, double raV, double decV,
 void addDetectionAt(double MJD, double RA, double dec,  std::vector<MopsDetection> &detVec)
 {
     MopsDetection tmpDet(detVec.size(), MJD, RA, dec);
+    tmpDet.calculateTopoCorr( -30.169, -70.804);
     detVec.push_back(tmpDet);
 }
 

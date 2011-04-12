@@ -45,11 +45,16 @@ public:
     double getEpochMJD() const ;
     double getRA() const ;
     double getDec() const ;
+    double getRaErr() const ;
+    double getDecErr() const ;
 
     void setID(long int newId);
     void setEpochMJD(double newMjd);
     void setRA(double newRa);
     void setDec(double newDec);
+    void setRaErr(double RaErr);
+    void setDecErr(double DecErr);
+    void calculateTopoCorr(double obsLat, double obsLong);
 
 private:
 
@@ -57,6 +62,9 @@ private:
     double MJD;
     double RA;
     double dec;
+    double RaErr;
+    double DecErr;
+    double RaTopoCorr;
 };
 
 }} // close namespace lsst::mops

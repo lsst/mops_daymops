@@ -106,6 +106,14 @@ public:
             outputMethod = RETURN_TRACKS;
             outputFile = "";
             outputBufferSize = 0;
+
+            // observatory latitude and (East) longitude, in degrees
+            obsLat = -30.169;
+            obsLong = -70.804;
+
+            // default astrometric error, in degrees
+            defaultAstromErr = 0.1 / 3600;
+
             
         }
 
@@ -225,6 +233,15 @@ public:
 
     linkTrackletsVerbositySettings myVerbosity;
 
+    // latitude and East longitude of observatory site in degrees.
+    // Needed for calculating topocentric corrections
+
+    double obsLat;
+    double obsLong;
+
+    // default astrometric error assumed for MopsDetections, in degrees
+
+    double defaultAstromErr;
 };
 
 
@@ -253,6 +270,10 @@ void modifyWithAcceleration(double &position, double &velocity,
                             double acceleration, double time);
 
 
+
+// calcuate the topocentric corrections in RA for a vector of MopsDetections
+void calculateTopoCorr(std::vector<MopsDetection> &allDetections,
+                       const linkTrackletsConfig &searchConfig);
 
     }} // close lsst::mops
 

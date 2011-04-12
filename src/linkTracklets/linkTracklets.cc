@@ -2142,6 +2142,21 @@ TrackSet* linkTracklets(std::vector<MopsDetection> &allDetections,
 }
 
 
+void calculateTopoCorr(std::vector<MopsDetection> &allDetections,
+                       const linkTrackletsConfig &searchConfig) {
+    double obsLat = searchConfig.obsLat;
+    double obsLong = searchConfig.obsLong;
+
+    std::vector<MopsDetection>::iterator detIter;
+    
+    for (detIter = allDetections.begin();
+         detIter != allDetections.end();
+         detIter++) {
+        detIter->calculateTopoCorr(obsLat, obsLong);
+    }
+
+
+}
 
 
 

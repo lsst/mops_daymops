@@ -146,7 +146,10 @@ int main(int argc, char* argv[])
      if(PRINT_TIMING_INFO) {     
 	  last = std::clock();
      }
-     populateDetVectorFromFile(detectionsFileName, allDets);
+     
+     const double astromErr =  searchConfig.defaultAstromErr;
+     populateDetVectorFromFile(detectionsFileName, allDets, astromErr);
+     calculateTopoCorr(allDets, searchConfig);
      populatePairsVectorFromFile(trackletsFileName, allTracklets);
 
      if(PRINT_TIMING_INFO) {     	  

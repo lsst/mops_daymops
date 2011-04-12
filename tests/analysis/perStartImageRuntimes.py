@@ -16,6 +16,8 @@ Looking for tracks between images at times 49543.427347999997 (image 0 / 63) and
 That iteration took 0.000000000000 seconds. 
  so far, we have found 0 tracks.
 
+
+New version also returns number of tracks found per start image.
 """
 
 
@@ -67,15 +69,18 @@ def obsHistFromStartTime(knownImages, startTime, curs):
 
 
 
-def getPerStartImageRuntimes(runlog, curs):
+def getPerStartImageRuntimesAndTrackCounts(runlog, curs):
     """ reads runlog (an open file), consults DB via cursor, and
     returns a dict from obsHistId -> total runtime processing each
     first endpoint image seen."""
-    stats = {}
-
+    runtimeStats = {}
+    trackCountStats = {}
+    
     curStartImageTime = None
     line = runlog.readline()
     knownImages = {}
+    tracksSoFar = 0
+    
     while line != "":
         items = line.split()
         if len(items) > 1:
@@ -88,14 +93,25 @@ def getPerStartImageRuntimes(runlog, curs):
                 obsHist = obsHistFromStartTime(knownImages, 
                                                curStartImageTime,
                                                curs)
-                increment(stats, obsHist, runtime)            
+                increment(runtimeStats, obsHist, runtime)
+            if items[0:2] == ["so", "far"]:
+                tracksFound = int(items[5])
+                dTracks = tracksFound - tracksSoFar
+                tracksSoFar = tracksFound
+                obsHist = obsHistFromStartTime(knownImages, 
+                                               curStartImageTime,
+                                               curs)                
+                increment(trackCountStats, obsHist, runtime)
+                
         line = runlog.readline()
     return stats
 
-def writeStats(stats, outfile):
+
+
+def writeStats(stats1, stats2, outfile):
     """ write stats to outfile."""
-    for obsHist in stats.keys():
-        outfile.write("%d %10f\n" % (obsHist, stats[obsHist]))
+    for obsHist in stats1.keys():
+        outfile.write("%d %10f %d\n" % (obsHist, stats1[obsHist], stats2[obsHist]))
 
 
 
@@ -106,7 +122,7 @@ if __name__=="__main__":
     runlog = file(sys.argv[1],'r')
     outfile = file(sys.argv[2],'w')
 
-    stats = getPerStartImageRuntimes(runlog, curs)
+    runtimeStats, trackCountStats = getPerStartImageRuntimesAndTrackCounts(runlog, curs)
 
-    writeStats(stats, outfile)
+    writeStats(runtimeStats, trackCountStats, outfile)
     

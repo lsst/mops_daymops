@@ -23,7 +23,7 @@ echo "LOAD DATA INFILE '$PWD/dias_pt1_nodeep.short.astromErr' INTO TABLE
 
 
 # findTracklets
-python  /home/jmyers/sandbox/daymops_trunk/tests/experimentScripts/splitByNight.py dias_pt1_nodeep.short.astromErr
+python  $MOPS_HACKS/splitByNight.py dias_pt1_nodeep.short.astromErr
 
 mkdir tracklets
 
@@ -59,9 +59,9 @@ mkdir linkTrackletsInfiles
 # edit makeLinkTrackletsInput_byImages.py so that it knows where to
 # look for your byObsHistId directory, and your linkTrackletsInfiles
 # directory.  These are set by constants at the top of the file.
-emacs $MOPS_HACKS/makeLinkTrackletsInfiles_byObsHist.py
+emacs $MOPS_HACKS/makeLinkTrackletsInfiles_byImages.py
 
-python $MOPS_HACKS/makeLinkTrackletsInfiles_byObsHist.py
+python $MOPS_HACKS/makeLinkTrackletsInfiles_byImages.py
 
 cd linkTrackletsInfiles
 
@@ -76,7 +76,7 @@ python makeLinkTrackletsRunScripts.py
 # RUNNING LINKTRACKLETS #
 #########################
 
-for LINKTRACKLETS_RUN_CMD in *.cmd.sh
+for LINKTRACKLETS_RUN_CMD in *.cpp.cmd.sh
 do
    bash $LINKTRACKLETS_RUN_CMD
 done

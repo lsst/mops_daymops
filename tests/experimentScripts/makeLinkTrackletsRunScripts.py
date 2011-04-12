@@ -66,5 +66,5 @@ if __name__=="__main__":
         startTRangeFile = START_T_RANGE_FOR_INFILE(infile)
         print startTRangeFile
         
-        writeRunScript(infile, startTRangeFile, VTREE_THRESH)
+        #writeRunScript(infile, startTRangeFile, VTREE_THRESH)
         writeCppRunScript(infile, startTRangeFile, VTREE_THRESH)

@@ -32,7 +32,7 @@ public:
     MopsDetection();
 
     //create a "lightweight" detection.
-    MopsDetection(long int ID, double epochMJD, double RA, double Dec);
+    MopsDetection(long int ID, double epochMJD, double RA, double Dec, double RaErr=0, double DecErr=0);
     
     // the MITI format holds lots more data than ID, MJD, Ra, and Dec.  
     // We don't store those items, though!
@@ -47,6 +47,7 @@ public:
     double getDec() const ;
     double getRaErr() const ;
     double getDecErr() const ;
+    double getRaTopoCorr() const ;
 
     void setID(long int newId);
     void setEpochMJD(double newMjd);

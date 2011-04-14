@@ -8,6 +8,8 @@
 
 #include <set>
 #include <vector>
+#include <Eigen/Dense>
+#include "gsl/gsl_cdf.h"
 
 #include "MopsDetection.h"
 #include "Tracklet.h"
@@ -109,12 +111,13 @@ public:
 private:
     std::set<unsigned int> componentDetectionIndices;
     std::set<unsigned int> componentDetectionDiaIds;
-    std::vector<double> raFunc;
-    std::vector<double> decFunc;
+    Eigen::VectorXf raFunc;
+    Eigen::VectorXf decFunc;
+    double chisqRa;
+    double chisqDec;
+    double probChisqRa;
+    double probChisqDec;
     double epoch;
-    void  bestFit1d(std::vector<double> &X,
-                    const std::vector<double> &time,
-                    std::vector<double> & res);
 };
 
 }} // close lsst::mops namespace

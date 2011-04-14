@@ -148,6 +148,7 @@ int main(int argc, char* argv[])
      }
      
      const double astromErr =  searchConfig.defaultAstromErr;
+     std::cerr << "Using defaultAstromErr " << astromErr << '\n';
      populateDetVectorFromFile(detectionsFileName, allDets, astromErr);
      calculateTopoCorr(allDets, searchConfig);
      populatePairsVectorFromFile(trackletsFileName, allTracklets);

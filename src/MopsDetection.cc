@@ -25,12 +25,14 @@ MopsDetection::MopsDetection()
 }
 
 
-MopsDetection::MopsDetection(long int ID, double epochMJD, double RA, double Dec) 
+        MopsDetection::MopsDetection(long int ID, double epochMJD, double RA, double Dec, double RaErr, double DecErr) 
 {
     this->ID = ID;
     MJD = epochMJD;
     this->RA = RA;
     this->dec = Dec;
+    this->RaErr = RaErr;
+    this->DecErr = DecErr;
 }
 
 
@@ -99,6 +101,11 @@ double MopsDetection::getRaErr()  const
 double MopsDetection::getDecErr()  const 
 {
     return DecErr;
+}
+
+double MopsDetection::getRaTopoCorr()  const 
+{
+    return RaTopoCorr ;
 }
 
 

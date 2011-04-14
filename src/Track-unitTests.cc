@@ -275,7 +275,7 @@ BOOST_AUTO_TEST_CASE (trackSet_3) {
 // helper function for creating sets of detections
 void addDetectionAt(double MJD, double RA, double dec,  std::vector<MopsDetection> &detVec)
 {
-    MopsDetection tmpDet(detVec.size(), MJD, RA, dec);
+    MopsDetection tmpDet(detVec.size(), MJD, RA, dec, 2.8e-5, 2.8e-5);
     detVec.push_back(tmpDet);
 }
 

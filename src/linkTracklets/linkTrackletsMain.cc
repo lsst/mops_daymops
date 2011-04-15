@@ -1,3 +1,4 @@
+// -*- LSST-C++ -*-
 #include <boost/lexical_cast.hpp>
 #include <stdlib.h>
 #include <string>

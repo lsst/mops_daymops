@@ -1118,28 +1118,12 @@ bool trackRmsIsSufficientlyLow(
     const linkTrackletsConfig &searchConfig)
 {
 
-    double netSqError = 0.;
-    std::set<uint> trackDets = newTrack.getComponentDetectionIndices();
+    bool ok = newTrack.getProbChisqRa() > searchConfig.trackMinProbChisq &&
+        newTrack.getProbChisqDec() > searchConfig.trackMinProbChisq;
 
-    std::set<uint>::const_iterator detIter;
-    for (detIter = trackDets.begin(); 
-         detIter != trackDets.end(); 
-         detIter++) {
-        const MopsDetection thisDet = allDetections.at(*detIter);
-        double predictedRa, predictedDec;
-        newTrack.predictLocationAtTime(thisDet.getEpochMJD(), 
-                                       predictedRa, 
-                                       predictedDec);
-        double dist = angularDistanceRADec_deg(thisDet.getRA(), 
-                                               thisDet.getDec(), 
-                                               predictedRa, 
-                                               predictedDec);
-        netSqError += dist*dist;
-    }
+    std::cerr << "trackRms: " << ok << '\n';
 
-    double rmsError = sqrt(netSqError / trackDets.size());
-
-    return (rmsError < searchConfig.trackMaxRms);
+    return ok;
 }
 
 

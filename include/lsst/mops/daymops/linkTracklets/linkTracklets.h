@@ -112,7 +112,10 @@ public:
             obsLong = -70.804;
 
             // default astrometric error, in degrees
-            defaultAstromErr = 0.1 / 3600;
+            defaultAstromErr = 0.5 / 3600;
+
+            // min prob(Chisq) of the fit of model to track points to consider a candidate track further
+            trackMinProbChisq = 0.001;
 
             
         }
@@ -242,6 +245,8 @@ public:
     // default astrometric error assumed for MopsDetections, in degrees
 
     double defaultAstromErr;
+
+    double trackMinProbChisq;
 };
 
 

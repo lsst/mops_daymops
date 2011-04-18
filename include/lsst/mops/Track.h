@@ -66,6 +66,9 @@ public:
 
     const std::set<unsigned int> getComponentDetectionDiaIds() const;
 
+    double getProbChisqRa() const { return probChisqRa; }
+    double getProbChisqDec() const { return probChisqDec; }
+
     /* until this function is called, initial position, velocity and
        acceleration for the track are NOT SET.  the USER is responsible for
        calling before using predictLocationAtTime() or getBestFitQuadratic().
@@ -111,8 +114,8 @@ public:
 private:
     std::set<unsigned int> componentDetectionIndices;
     std::set<unsigned int> componentDetectionDiaIds;
-    Eigen::VectorXf raFunc;
-    Eigen::VectorXf decFunc;
+    Eigen::VectorXd raFunc;
+    Eigen::VectorXd decFunc;
     double chisqRa;
     double chisqDec;
     double probChisqRa;

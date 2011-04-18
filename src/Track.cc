@@ -75,18 +75,26 @@ void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets)
 // A is a matrix with one row per MopsDetection, with the values of the fitting
 // functions at the time of that detection.
 
-    Eigen::MatrixXf raA(trackLen, 5);
-    Eigen::MatrixXf decA(trackLen, 3);
+    int raFuncLen;
+    if (trackLen >= 5) {
+	 raFuncLen = 5;
+    } else {
+	 raFuncLen = 3;
+    }
+
+    Eigen::MatrixXd raA(trackLen, raFuncLen);
+    Eigen::VectorXd raCorr(trackLen);
+    Eigen::MatrixXd decA(trackLen, 3);
 
 // b is a vector with the measured values, either ra or dec, for each MopsDetection
 
-    Eigen::VectorXf raB(trackLen);
-    Eigen::VectorXf decB(trackLen);
+    Eigen::VectorXd raB(trackLen);
+    Eigen::VectorXd decB(trackLen);
 
 // vectors of measurement errors
 
-    Eigen::VectorXf raE(trackLen);
-    Eigen::VectorXf decE(trackLen);
+    Eigen::VectorXd raE(trackLen);
+    Eigen::VectorXd decE(trackLen);
 
 
     int i = 0;
@@ -96,23 +104,18 @@ void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets)
 	double t = curDet->getEpochMJD();
 	double ra = curDet->getRA();
 	double dec = curDet->getDec();
-	double raCorr = curDet->getRaTopoCorr();
+	double raTopoCorr = curDet->getRaTopoCorr();
 	double raErr = curDet->getRaErr();
 	double decErr = curDet->getDecErr();
 	
-	double t2 = t*t;
-	double t3 = t2*t;
-
 	raA(i, 0) = 1.0;
 	raA(i, 1) = t;
-	raA(i, 2) = t2;
-	raA(i, 3) = t3;
-	raA(i, 4) = raCorr;
+	if (raFuncLen==5) {
+	     raCorr(i) = raTopoCorr;
+	}
 	raB(i) = ra;
 
 	decA(i, 0) = 1.0;
-	decA(i, 1) = t;
-	decA(i, 2) = t2;
 	decB(i) = dec;
 
 	raE(i) = raErr;
@@ -120,9 +123,23 @@ void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets)
 
     }
 
-// demean the raCorr column, to avoid degeneracy with the constant term in the fit
+// demean t, to reduce condition number.  Member 'epoch' is mean(t) - should rename
 
-    raA.col(4).array() -= raA.col(4).mean();
+    epoch = raA.col(1).mean();
+    raA.col(1).array() -= epoch;
+    decA.col(1) = raA.col(1);
+
+// calculate needed powers of t
+
+    raA.col(2).array() = raA.col(1).array() * raA.col(1).array();
+    decA.col(2) = raA.col(2);
+
+// demean the raCorr column, if used, to avoid degeneracy with the constant term in the fit
+
+    if (raFuncLen==5) {
+	raA.col(3).array() = raA.col(2).array() * raA.col(1).array(); 
+	raA.col(4).array() = raCorr.array() - raCorr.array().mean();
+    }
 
 // Solve in a least squares sense, raA * raFunc = raB, and similarly for dec
 // raX and decX should be members of Track
@@ -133,38 +150,65 @@ void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets)
 
 // Calculate the residuals
 
-    Eigen::VectorXf raResid = raB - raA * raFunc;
-    Eigen::VectorXf raWtResid = raResid.array() / raE.array();
+    Eigen::VectorXd raResid = raB - raA * raFunc;
+    Eigen::VectorXd raWtResid = raResid.array() / raE.array();
     chisqRa = raWtResid.dot(raWtResid);
 
-    Eigen::VectorXf decResid = decB - decA * decFunc;
-    Eigen::VectorXf decWtResid = decResid.array() / decE.array();
+    Eigen::VectorXd decResid = decB - decA * decFunc;
+    Eigen::VectorXd decWtResid = decResid.array() / decE.array();
     chisqDec = decWtResid.dot(decWtResid);
 
 // Calculate the prob(chisq), which will be the quality measure of the fit
 // NEED to be more careful with # of degrees of freedom
 
-    probChisqRa = gsl_cdf_chisq_P(chisqRa, trackLen - 4);
-    probChisqDec = gsl_cdf_chisq_P(chisqDec, trackLen - 2);
+    probChisqRa = gsl_cdf_chisq_Q(chisqRa, trackLen);
+    probChisqDec = gsl_cdf_chisq_Q(chisqDec, trackLen);
 
-    std::cerr << "raB: \n" << raB << '\n';
-    std::cerr << "raE: \n" << raE << '\n';
-    std::cerr << "raA: \n" << raA << '\n';
-    std::cerr << "raFunc: \n" << raFunc << '\n';
-    std::cerr << "raResid: \n" << raResid << '\n';
-    std::cerr << "ra: chisq prob dof " << chisqRa << " " << probChisqRa << " " << trackLen - 4 << '\n';
-
+    if (raFuncLen==5) {
+	      std::cerr << "raB: \n" << raB << '\n';
+	      std::cerr << "raE: \n" << raE << '\n';
+	      std::cerr << "raA: \n" << raA << '\n';
+	      std::cerr << "raSVD: \n" << raA.jacobiSvd().singularValues() << '\n';
+	      std::cerr << "raFunc: \n" << raFunc << '\n';
+	      std::cerr << "raResid: \n" << raResid << '\n';
+	      std::cerr << "ra: chisq prob dof " << chisqRa << " " << probChisqRa << " " << trackLen << '\n';
+	      std::cerr << "decB: \n" << decB << '\n';
+	      std::cerr << "decE: \n" << decE << '\n';
+	      std::cerr << "decA: \n" << decA << '\n';
+	      std::cerr << "decSVD: \n" << decA.jacobiSvd().singularValues() << '\n';
+	      std::cerr << "decFunc: \n" << decFunc << '\n';
+	      std::cerr << "decResid: \n" << decResid << '\n';
+	      std::cerr << "dec: chisq prob dof " << chisqDec << " " << probChisqDec << " " << trackLen << '\n';
+	 }
 }
 
 
 
 void Track::predictLocationAtTime(const double mjd, double &ra, double &dec) const
 {
-/*
-    double t = mjd - epoch;
-    ra = raFunc.at(0) + raFunc.at(1) * t + .5 * raFunc.at(2) * t * t;
-    dec = decFunc.at(0) + decFunc.at(1) * t + .5 * decFunc.at(2) * t * t;
+/* 
+   Want to avoid recalculating topocentric correction.  Can't just ignore it, unless 
+   we're willing to run with much larger trackAdditionThreshold.  So, need to interpolate 
+   it.
 */
+
+// could make a MopsDetection with input epoch, calculate an approx ra/dec, call CalcTopoCorr()
+
+// JUST QUADRATIC for the moment
+
+
+    double t = mjd - epoch;
+
+    Eigen::Vector3d tPowers(1.0, t, t*t);
+    ra = raFunc.dot(tPowers);
+    dec = decFunc.dot(tPowers);
+#ifdef DEBUG
+    std::cerr << "tPowers: \n" << tPowers << '\n';
+    std::cerr << "raFunc: \n" << raFunc << '\n';
+    std::cerr << "ra: " << ra << '\n';
+    std::cerr << "decFunc: \n" << decFunc << '\n';
+    std::cerr << "dec: " << dec << '\n';
+#endif
 }
 
 
@@ -172,15 +216,15 @@ void Track::predictLocationAtTime(const double mjd, double &ra, double &dec) con
 void Track::getBestFitQuadratic(double &epoch, double &ra0, double &raV, double &raAcc,
                                 double &dec0, double &decV, double &decAcc) const
 {
-/*
+
     epoch = this->epoch;
-    ra0 = raFunc.at(0);
-    raV = raFunc.at(1);
-    raAcc = raFunc.at(2);
-    dec0 = decFunc.at(0);
-    decV = decFunc.at(1);
-    decAcc = decFunc.at(2);
-*/
+    ra0 = raFunc(0);
+    raV = raFunc(1);
+    raAcc = raFunc(2);
+    dec0 = decFunc(0);
+    decV = decFunc(1);
+    decAcc = decFunc(2);
+
 }
 
 

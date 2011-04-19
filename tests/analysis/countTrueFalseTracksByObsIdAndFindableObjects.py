@@ -61,7 +61,7 @@ import sys
 
 FALSE_DIA_SSM_ID="-1" # the ssmId of a DiaSource which is attributable to non-asteroid sources
 
-PRELOAD_DIAS_FROM_FILE=True
+PRELOAD_DIAS_FROM_FILE=False
 
 if not PRELOAD_DIAS_FROM_FILE:
     import MySQLdb as db
@@ -71,7 +71,7 @@ if not PRELOAD_DIAS_FROM_FILE:
     OPSIM_TABLE="output_opsim3_61"
     
     DIAS_DB="mops_noDeepAstromError"
-    DIAS_TABLE="fullerDiaSource"
+    DIAS_TABLE="diaSources_quarterDensityMoreRandom"
     
     DB_USER="jmyers"
     DB_PASS="jmyers"

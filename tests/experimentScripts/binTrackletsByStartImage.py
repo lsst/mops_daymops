@@ -10,6 +10,10 @@ This script uses the DB to look up the obsHistId of the first
 detection in each tracklet, and dump the tracklet to a file with that
 obsHistId.
 
+This version makes two passes through the file, one to find all neede
+diaSources, then one to do the actual binning.  After the first pass
+all needed dias are requested from the DB.  This is in the hopes that
+reducing the number of DB accesses may speed things up.
 
 RATIONALE:
 
@@ -29,38 +33,64 @@ USAGE:
 import sys
 import os.path
 import MySQLdb as db
-import time
 import mopsDatabases
+import time
 
 OUT_TRACKLETS_SUFFIX=".tracklets.byDiaId"
 
 
+def getAllDiasInFile(inTracklets):
+    """ return a set of all diaSources present in tracklets file. """
+    line = inTracklets.readline()
+    allDias = set()
+    while line != "":
+        dias = map(int, line.split())
+        for d in dias:
+            allDias.add(d)
+        line = inTracklets.readline()
+    return allDias
 
-def firstObsHistForDias(dias, dbCurs):
-    s = """ SELECT ops.obsHistId, ops.expMjd 
+
+
+def getDiaTimesAndImages(dias, dbCurs, diasDb, diasTable):
+    s = """ SELECT diaSourceId, taiMidPoint, opSimId 
             FROM  
-              %s.%s AS ops
-            JOIN
-              %s.%s as dias 
-            ON 
-             dias.opSimId=ops.obsHistId""" \
-        % (mopsDatabases.OPSIM_DB, mopsDatabases.OPSIM_TABLE, \
-               mopsDatabases.DIAS_DB, mopsDatabases.DIAS_TABLE)
+              %s.%s""" \
+        % (diasDb, diasTable)
         
-    s += """  WHERE dias.diaSourceId IN ( """ 
-    for i in range(len(dias)):
-        s += str(dias[i])
-        if i < len(dias) -1 :
-            s+= ","
-
-    s += """)
-            GROUP BY ops.expMjd 
-            ORDER BY ops.expMjd
-            ;"""
+    s += """  WHERE diaSourceId IN ( """ 
+    first = True
+    for d in dias:
+        if not first :
+            s+= ", "
+        first = False
+        s += str(d)
+    s += " );"
     dbCurs.execute(s)
     res = dbCurs.fetchall()
-    # we get the earliest (by date) image first, and the first column is obsHistId.
-    return res[0][0]
+    # build a dict mapping from diaSourceId to obs time and obsHistId
+    toRet = {}
+    for r in res:
+        toRet[r[0]] = [r[1], r[2]]
+    return toRet
+
+
+
+def firstObsHistForDias(dias, diasDict):
+    """ return the obsHistId of the earliest image represented in the track(let)."""
+
+    if (len(dias)) < 1:
+        raise Exception("We need at least one diaSource in arguments.")
+
+    #diasDict maps from diaSourceId -> [obsTime, obsHistId]
+    earliestTime, earliestObsHist = diasDict[dias[0]]
+    for dia in dias[1:]:
+        thisTime, thisObsHist = diasDict[dia]
+        if thisTime < earliestTime:
+            earliestTime = thisTime
+            earliestObsHist = thisObsHist
+
+    return earliestObsHist
 
 
 
@@ -80,13 +110,13 @@ def getFileForObsHist(obsHist, outDirectory, obsHistToFile):
 
 
 
-def writeTrackletsToPerObsHistFiles(inTracklets, outDirectory, dbCurs):
+def writeTrackletsToPerObsHistFiles(inTracklets, outDirectory, diasDict):
     tletLine = inTracklets.readline()
     obsHistToFile = {}
 
     while tletLine != "":
         dias = map(int, tletLine.split())
-        obsHist = firstObsHistForDias(dias, dbCurs)
+        obsHist = firstObsHistForDias(dias, diasDict)
 
         outFile = getFileForObsHist(obsHist, outDirectory, obsHistToFile)
         outFile.write("%s\n" % (tletLine.strip()))
@@ -100,9 +130,28 @@ def writeTrackletsToPerObsHistFiles(inTracklets, outDirectory, dbCurs):
 
 
 if __name__=="__main__":
+    print "Reading tracklets from ", sys.argv[1]
+    print "Writing output to the directory ", sys.argv[2]
+    diasDb = sys.argv[3]
+    diasTable = sys.argv[4]
+    print "Reading diaSources from DB ", diasDb, ".", diasTable
     inTracklets = file(sys.argv[1],'r')
     outDirectory = sys.argv[2]
     curs = mopsDatabases.getCursor()
-    print "Starting to sort tracklets at ", time.ctime()
-    writeTrackletsToPerObsHistFiles(inTracklets, outDirectory, curs)
+    # get all dias in file
+    print "Finding all dias in file at ", time.ctime()
+    allDias = getAllDiasInFile(inTracklets)
+    print "Found ", len(allDias), " dias referenced in file. "
+    if (len(allDias)) > 0:
+        # fetch those dias from DB.
+        print "Fetching needed dias from DB at ", time.ctime()
+        diaDict = getDiaTimesAndImages(allDias, curs, diasDb, diasTable)
+        print "Read ", len(diaDict.keys()), " dias from DB."
+        # return to beginning of file
+        inTracklets.seek(0)
+        print "Starting to sort tracklets at ", time.ctime()
+        writeTrackletsToPerObsHistFiles(inTracklets, outDirectory, diaDict)
+    else: 
+        print "No processing required due to empty infile."
     print "DONE writing output files at ", time.ctime()
+    print ""

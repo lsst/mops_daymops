@@ -68,6 +68,7 @@ public:
 
     double getProbChisqRa() const { return probChisqRa; }
     double getProbChisqDec() const { return probChisqDec; }
+    double getFitRange() const;
 
     /* until this function is called, initial position, velocity and
        acceleration for the track are NOT SET.  the USER is responsible for

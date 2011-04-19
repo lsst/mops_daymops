@@ -159,7 +159,6 @@ void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets)
     chisqDec = decWtResid.dot(decWtResid);
 
 // Calculate the prob(chisq), which will be the quality measure of the fit
-// NEED to be more careful with # of degrees of freedom
 
     probChisqRa = gsl_cdf_chisq_Q(chisqRa, trackLen);
     probChisqDec = gsl_cdf_chisq_Q(chisqDec, trackLen);
@@ -227,7 +226,14 @@ void Track::getBestFitQuadratic(double &epoch, double &ra0, double &raV, double 
 
 }
 
-
+double Track::getFitRange() const {
+     if (raFunc.size() == 5) {
+	  return raFunc(4);
+	  }
+     else {
+	  return 0;
+     }
+}
 
 
 }};

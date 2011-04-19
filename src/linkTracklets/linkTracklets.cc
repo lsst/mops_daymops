@@ -14,6 +14,7 @@
 #include "lsst/mops/KDTree.h"
 #include "lsst/mops/daymops/linkTracklets/TrackletTree.h"
 
+#define USEDECPROB
 
 
 /* taking a queue from Kubica, it's only once per ITERATIONS_PER_SPLIT
@@ -1118,9 +1119,14 @@ bool trackRmsIsSufficientlyLow(
     const linkTrackletsConfig &searchConfig)
 {
 
+#ifdef USEDECPROB
     bool ok = newTrack.getProbChisqRa() > searchConfig.trackMinProbChisq &&
-        newTrack.getProbChisqDec() > searchConfig.trackMinProbChisq;
-
+        newTrack.getProbChisqDec() > searchConfig.trackMinProbChisq &&
+        newTrack.getFitRange() <= 0.0;
+#else
+    bool ok = newTrack.getProbChisqRa() > searchConfig.trackMinProbChisq &&
+        newTrack.getFitRange() <= 0.0;
+#endif
     std::cerr << "trackRms: " << ok << '\n';
 
     return ok;

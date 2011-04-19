@@ -8,6 +8,7 @@
 #include "slalib.h"
 #include "slamac.h"
 
+#undef DEBUG
 
 /*
  * jmyers 7/29/08
@@ -193,7 +194,7 @@ void MopsDetection::calculateTopoCorr(double obsLat, double obsLong) {
     RaTopoCorr = deltaRa*DR2D;
 
 #ifdef DEBUG
-    std::cerr << "topo_corr (arcsec): " << 3600.0*RaTopoCorr << '\n';
+    std::cerr << "topo_corr: " << MJD << ' ' << RA << ' ' << localAppSidTime << ' ' << RaTopoCorr << '\n';
 #endif
     
 }

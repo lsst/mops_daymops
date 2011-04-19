@@ -200,7 +200,7 @@ void Track::predictLocationAtTime(const double mjd, double &ra, double &dec) con
     double t = mjd - epoch;
 
     Eigen::Vector3d tPowers(1.0, t, t*t);
-    ra = raFunc.dot(tPowers);
+    ra = raFunc.head(3).dot(tPowers);
     dec = decFunc.dot(tPowers);
 #ifdef DEBUG
     std::cerr << "tPowers: \n" << tPowers << '\n';

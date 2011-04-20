@@ -61,7 +61,7 @@ import sys
 
 FALSE_DIA_SSM_ID="-1" # the ssmId of a DiaSource which is attributable to non-asteroid sources
 
-PRELOAD_DIAS_FROM_FILE=False
+PRELOAD_DIAS_FROM_FILE=True
 
 if not PRELOAD_DIAS_FROM_FILE:
     import MySQLdb as db
@@ -69,9 +69,6 @@ if not PRELOAD_DIAS_FROM_FILE:
 
     OPSIM_DB="opsim_3_61"
     OPSIM_TABLE="output_opsim3_61"
-    
-    DIAS_DB="mops_noDeepAstromError"
-    DIAS_TABLE="diaSources_quarterDensityMoreRandom"
     
     DB_USER="jmyers"
     DB_PASS="jmyers"
@@ -86,7 +83,7 @@ def readDias(diasDataFile):
     idToDias = {}
     line = diasDataFile.readline()
     while line != "":
-        [diaId, expMjd, ssmId, obsHistId] = line.split()
+        [diaId, obsHistId, ssmId, ra, decl, expMjd, mag, SNR] = line.split()
         diaId = int(diaId)
         expMjd = float(expMjd)
         obsHistId = int(obsHistId)
@@ -103,9 +100,9 @@ def lookUpDias(diasLookupTool, diaIds):
     if PRELOAD_DIAS_FROM_FILE:
         return map(lambda x: diasLookupTool[x], diaIds)
     else:
-        cursor = diasLookupTool
+        [cursor, diasDb, diasTable] = diasLookupTool
         sql = """ SELECT diaSourceId, taiMidPoint, ssmId, opSimId FROM %s.%s 
-                 WHERE diaSourceId IN (""" % (DIAS_DB, DIAS_TABLE)
+                 WHERE diaSourceId IN (""" % (diasDb, diasTable)
         first = True;
         for dia in diaIds:
             if not first:
@@ -234,9 +231,10 @@ if __name__=="__main__":
 
     # if preloading dias, diasLookupTool is a dict of data read from a
     # file.  if not, diasLookupTool will be a database connection.
-    # Reading from a dict is MUCH, MUCH faster (1000x) than making
-    # many DB queries.  However, it does impose a few minutes of
-    # start-up overhead.
+    # Reading from a dict is MUCH, MUCH faster (~1000x per track) than
+    # making many DB queries.  However, it does impose a few minutes
+    # of start-up overhead. Plus, you have to build the file from one
+    # massive DB query.
 
     if PRELOAD_DIAS_FROM_FILE:
         if len(sys.argv) != 3:
@@ -250,13 +248,15 @@ if __name__=="__main__":
         diasLookupTool = readDias(diasDataFile)
     else:
 
-        if len(sys.argv) != 2:
-            print "USAGE: ", sys.argv[0], " tracksGlob"
+        if len(sys.argv) != 4:
+            print "USAGE: ", sys.argv[0], " tracksGlob diasDb diasTable"
             sys.exit(1)
 
         tracksGlobPattern = sys.argv[1]
+        diasDb = sys.argv[3]
+        diasTable = sys.argv[4]
         conn = db.connect(user=DB_USER, passwd=DB_PASS, host=DB_HOST)
-        diasLookupTool = conn.cursor()
+        diasLookupTool = [conn.cursor(), diasDb, diasTable]
 
     tracksGlob = glob.glob(tracksGlobPattern)
 

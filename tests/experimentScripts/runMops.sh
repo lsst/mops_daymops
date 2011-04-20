@@ -6,7 +6,8 @@
 
 set -e
 
-DIAS_FILE="$1"
+DIAS_FILE=`readlink -f "${1}" `
+#DIAS_FILE="$1"
 # we expect DIAS_DB NOT exist already.
 DIAS_DB="$2"
 # DIAS_TABLE should NOT exist already.
@@ -55,7 +56,7 @@ SQL="mysql -h $DB_HOST -u $DB_USER -p$DB_PASS"
 
 echo "CREATE DATABASE $DIAS_DB; USE $DIAS_DB; `cat $MOPS_HACKS/fullerDiaSource.sql`;" | $SQL
 echo "CREATE TABLE $DIAS_TABLE LIKE fullerDiaSource;" | $SQL $DIAS_DB
-echo "LOAD DATA INFILE '$PWD/$DIAS_FILE' INTO TABLE 
+echo "LOAD DATA INFILE '$DIAS_FILE' INTO TABLE 
       $DIAS_TABLE FIELDS TERMINATED BY ' '" | $SQL $DIAS_DB
 
 python  $MOPS_HACKS/splitByNight.py $DIAS_FILE
@@ -87,7 +88,11 @@ mkdir tracks
 cd tracks
 python $MOPS_HACKS/makeLinkTrackletsRunScripts.py
 
-for LINKTRACKLETS_RUN_CMD in *.cpp.cmd.sh
+for CMD in *.cpp.cmd.sh
 do
-   bash $LINKTRACKLETS_RUN_CMD
+   bash $CMD
 done
+
+# grade the tracks we got out 
+python $MOPS_HACKS/../analysis/countTrueFalseTracksByObsIdAndFindableObjects.py $DIAS_FILE \*.tracks 
+

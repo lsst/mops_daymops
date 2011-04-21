@@ -718,6 +718,135 @@ void modifyWithAcceleration(double &position, double &velocity,
 
 
 
+/* 
+ * feb 17, 2011: update acc bounds using formulas reverse-engineered
+ * from Kubica.
+ */
+bool updateAccBoundsReturnValidity(const TreeNodeAndTime &firstEndpoint, 
+                                   const TreeNodeAndTime &secondEndpoint,
+                                   double &aMinRa, double &aMaxRa, 
+                                   double &aMinDec, double &aMaxDec)
+{
+
+    double dt = secondEndpoint.myTime.getMJD() - 
+        firstEndpoint.myTime.getMJD();
+    double dt2 = 2./(dt*dt);
+    double dti = 1./(dt);
+
+    TrackletTreeNode* A = firstEndpoint.myTree;
+    TrackletTreeNode* B = secondEndpoint.myTree;
+
+    double AmaxVRa, AminVRa, AmaxPRa, AminPRa;
+    double BmaxVRa, BminVRa, BmaxPRa, BminPRa;
+    double AmaxVDec, AminVDec, AmaxPDec, AminPDec;
+    double BmaxVDec, BminVDec, BmaxPDec, BminPDec;
+
+    // short-circuit right away if possible.
+    if ((aMaxRa < aMinRa) || (aMaxDec < aMinDec)) {
+        return false;
+    }
+
+    AmaxPRa = A->getUBounds()->at(POINT_RA);
+    AminPRa = A->getLBounds()->at(POINT_RA);
+    AmaxVRa = A->getUBounds()->at(POINT_RA_VELOCITY);
+    AminVRa = A->getLBounds()->at(POINT_RA_VELOCITY);
+    
+    BmaxPRa = B->getUBounds()->at(POINT_RA);
+    BminPRa = B->getLBounds()->at(POINT_RA);
+    BmaxVRa = B->getUBounds()->at(POINT_RA_VELOCITY);
+    BminVRa = B->getLBounds()->at(POINT_RA_VELOCITY);
+
+    AmaxPDec = A->getUBounds()->at(POINT_DEC);
+    AminPDec = A->getLBounds()->at(POINT_DEC);
+    AmaxVDec = A->getUBounds()->at(POINT_DEC_VELOCITY);
+    AminVDec = A->getLBounds()->at(POINT_DEC_VELOCITY);
+    
+    BmaxPDec = B->getUBounds()->at(POINT_DEC);
+    BminPDec = B->getLBounds()->at(POINT_DEC);
+    BmaxVDec = B->getUBounds()->at(POINT_DEC_VELOCITY);
+    BminVDec = B->getLBounds()->at(POINT_DEC_VELOCITY);
+
+    
+    double tmpAcc;
+    // max using vel test
+    tmpAcc = (BmaxVRa - AminVRa) * dti;
+    if (tmpAcc < aMaxRa) {
+        aMaxRa = tmpAcc;
+    }
+    tmpAcc = (BmaxVDec - AminVDec) * dti;
+    if (tmpAcc < aMaxDec) {
+        aMaxDec = tmpAcc;
+    }
+    // min using velocity test
+    tmpAcc = (BminVRa - AmaxVRa) * dti;
+    if (tmpAcc > aMinRa) {
+        aMinRa = tmpAcc;
+    }
+    tmpAcc = (BminVDec - AmaxVDec) * dti;
+    if (tmpAcc > aMinDec) {
+        aMinDec = tmpAcc;
+    }
+    // short circuit if possible
+    if ((aMinRa > aMaxRa) || (aMinDec > aMaxDec)) {
+        return false;
+    }
+
+
+    // max using pos/vel test 1
+    tmpAcc = dt2 * (AmaxPRa - BminPRa + BmaxVRa * dt);
+    if (tmpAcc < aMaxRa) {
+        aMaxRa = tmpAcc;
+    }
+    tmpAcc = dt2 * (AmaxPDec - BminPDec + BmaxVDec * dt);
+    if (tmpAcc < aMaxDec) {
+        aMaxDec = tmpAcc;
+    }
+    // min using pos/vel test 1
+    tmpAcc = dt2*(BminPRa - AmaxPRa - AmaxVRa * dt);
+    if (tmpAcc > aMinRa) {
+        aMinRa = tmpAcc;
+    }
+    tmpAcc = dt2*(BminPDec - AmaxPDec - AmaxVDec * dt);
+    if (tmpAcc > aMinDec) {
+        aMinDec = tmpAcc;
+    }
+    // short circuit if possible
+    if ((aMinRa > aMaxRa) || (aMinDec > aMaxDec)) {
+        return false;
+    }
+
+
+    // max using pos/vel test 2
+    tmpAcc = dt2 * (BmaxPRa - AminPRa - AminVRa * dt);
+    if (tmpAcc < aMaxRa) {
+        aMaxRa = tmpAcc;
+    }
+    tmpAcc = dt2 * (BmaxPDec - AminPDec - AminVDec * dt);
+    if (tmpAcc < aMaxDec) {
+        aMaxDec = tmpAcc;
+    }
+    // min using pos/vel test 2
+    tmpAcc = dt2*(AminPRa - BmaxPRa + BminVRa * dt);
+    if (tmpAcc > aMinRa) {
+        aMinRa = tmpAcc;
+    }
+    tmpAcc = dt2*(AminPDec - BmaxPDec + BminVDec * dt);
+    if (tmpAcc > aMinDec) {
+        aMinDec = tmpAcc;
+    }
+    // short circuit if possible
+    if ((aMinRa > aMaxRa) || (aMinDec > aMaxDec)) {
+        return false;
+    }
+    
+    
+    // we know maxAcc > minAcc because we didn't short-circuit above.
+    return true;
+}
+
+
+
+
 
 
 /*
@@ -734,142 +863,17 @@ bool areMutuallyCompatible(const TreeNodeAndTime &firstNode,
                            double &aMinDec, double &aMaxDec)
 {
 
-    for (uint whichPair = 0; whichPair < 2; whichPair++) {
-        const TrackletTreeNode * A;
-        const TrackletTreeNode * B;
-        double aTime;
-        double bTime;
+    bool firstPairCompat = 
+        updateAccBoundsReturnValidity(firstNode, secondNode, 
+                                      aMinRa, aMaxRa, aMinDec, aMaxDec);
+    if (!firstPairCompat) 
+        return false;
 
-        if (whichPair == 0) {
-            A = firstNode.myTree;
-            aTime = firstNode.myTime.getMJD();
-            B = secondNode.myTree;
-            bTime = secondNode.myTime.getMJD();            
-        }
-        else {
-            A = secondNode.myTree;
-            aTime = secondNode.myTime.getMJD();
-            B = thirdNode.myTree;
-            bTime = thirdNode.myTime.getMJD();
-        }
-    
-
-        double dt = bTime - aTime;
-        double dt2 = 2.0 / (dt * dt);
-        double dti = 1.0/dt;
-        
-        
-        if ((aMaxRa < aMinRa) || 
-            (aMaxDec < aMinDec)) {
-            return false;
-        }
-
-        double AmaxVRa, AminVRa, AmaxPRa, AminPRa;
-        double BmaxVRa, BminVRa, BmaxPRa, BminPRa;
-        double AmaxVDec, AminVDec, AmaxPDec, AminPDec;
-        double BmaxVDec, BminVDec, BmaxPDec, BminPDec;
-
-        AmaxPRa = A->getUBounds()->at(POINT_RA);
-        AminPRa = A->getLBounds()->at(POINT_RA);
-        AmaxVRa = A->getUBounds()->at(POINT_RA_VELOCITY);
-        AminVRa = A->getLBounds()->at(POINT_RA_VELOCITY);
-        
-        BmaxPRa = B->getUBounds()->at(POINT_RA);
-        BminPRa = B->getLBounds()->at(POINT_RA);
-        BmaxVRa = B->getUBounds()->at(POINT_RA_VELOCITY);
-        BminVRa = B->getLBounds()->at(POINT_RA_VELOCITY);
-
-        AmaxPDec = A->getUBounds()->at(POINT_DEC);
-        AminPDec = A->getLBounds()->at(POINT_DEC);
-        AmaxVDec = A->getUBounds()->at(POINT_DEC_VELOCITY);
-        AminVDec = A->getLBounds()->at(POINT_DEC_VELOCITY);
-        
-        BmaxPDec = B->getUBounds()->at(POINT_DEC);
-        BminPDec = B->getLBounds()->at(POINT_DEC);
-        BmaxVDec = B->getUBounds()->at(POINT_DEC_VELOCITY);
-        BminVDec = B->getLBounds()->at(POINT_DEC_VELOCITY);
-        
-                
-        double tmpAcc;
-                
-
-        // max using vel test
-        tmpAcc = (BmaxVRa - AminVRa) * dti;
-        if (tmpAcc < aMaxRa) {
-            aMaxRa = tmpAcc;
-        }
-        tmpAcc = (BmaxVDec - AminVDec) * dti;
-        if (tmpAcc < aMaxDec) {
-            aMaxDec = tmpAcc;
-        }
-        // min using velocity test
-        tmpAcc = (BminVRa - AmaxVRa) * dti;
-        if (tmpAcc > aMinRa) {
-            aMinRa = tmpAcc;
-        }
-        tmpAcc = (BminVDec - AmaxVDec) * dti;
-        if (tmpAcc > aMinDec) {
-            aMinDec = tmpAcc;
-        }
-        // short circuit if possible
-        if ((aMinRa > aMaxRa) || (aMinDec > aMaxDec)) {
-            return false;
-        }
-
-
-        // max using pos/vel test 1
-        tmpAcc = dt2 * (AmaxPRa - BminPRa + BmaxVRa * dt);
-        if (tmpAcc < aMaxRa) {
-            aMaxRa = tmpAcc;
-        }
-        tmpAcc = dt2 * (AmaxPDec - BminPDec + BmaxVDec * dt);
-        if (tmpAcc < aMaxDec) {
-            aMaxDec = tmpAcc;
-        }
-        // min using pos/vel test 1
-        tmpAcc = dt2*(BminPRa - AmaxPRa - AmaxVRa * dt);
-        if (tmpAcc > aMinRa) {
-            aMinRa = tmpAcc;
-        }
-        tmpAcc = dt2*(BminPDec - AmaxPDec - AmaxVDec * dt);
-        if (tmpAcc > aMinDec) {
-            aMinDec = tmpAcc;
-        }
-        // short circuit if possible
-        if ((aMinRa > aMaxRa) || (aMinDec > aMaxDec)) {
-            return false;
-        }
-
-
-        // max using pos/vel test 2
-        tmpAcc = dt2 * (BmaxPRa - AminPRa - AminVRa * dt);
-        if (tmpAcc < aMaxRa) {
-            aMaxRa = tmpAcc;
-        }
-        tmpAcc = dt2 * (BmaxPDec - AminPDec - AminVDec * dt);
-        if (tmpAcc < aMaxDec) {
-            aMaxDec = tmpAcc;
-        }
-        // min using pos/vel test 2
-        tmpAcc = dt2*(AminPRa - BmaxPRa + BminVRa * dt);
-        if (tmpAcc > aMinRa) {
-            aMinRa = tmpAcc;
-        }
-        tmpAcc = dt2*(AminPDec - BmaxPDec + BminVDec * dt);
-        if (tmpAcc > aMinDec) {
-            aMinDec = tmpAcc;
-        }
-        // short circuit if possible
-        if ((aMinRa > aMaxRa) || (aMinDec > aMaxDec)) {
-            return false;
-        }
-    }
-    
-    // we didn't short circuit so it must be valid. return true.
-    return true;
-
+    bool secondPairCompat = 
+        updateAccBoundsReturnValidity(secondNode, thirdNode, 
+                                      aMinRa, aMaxRa, aMinDec, aMaxDec);
+    return secondPairCompat;
 }
-
 
 
 
@@ -1523,131 +1527,6 @@ double nodeWidth(TrackletTreeNode *node)
 
 
 
-/* 
- * feb 17, 2011: update acc bounds using formulas reverse-engineered
- * from Kubica.
- */
-bool updateAccBoundsReturnValidity(const TreeNodeAndTime &firstEndpoint, 
-                                   const TreeNodeAndTime &secondEndpoint,
-                                   double &aMinRa, double &aMaxRa, 
-                                   double &aMinDec, double &aMaxDec)
-{
-
-    double dt = secondEndpoint.myTime.getMJD() - 
-        firstEndpoint.myTime.getMJD();
-    double dt2 = 2./(dt*dt);
-    double dti = 1./(dt);
-
-    TrackletTreeNode* A = firstEndpoint.myTree;
-    TrackletTreeNode* B = secondEndpoint.myTree;
-
-    double AmaxVRa, AminVRa, AmaxPRa, AminPRa;
-    double BmaxVRa, BminVRa, BmaxPRa, BminPRa;
-    double AmaxVDec, AminVDec, AmaxPDec, AminPDec;
-    double BmaxVDec, BminVDec, BmaxPDec, BminPDec;
-
-    // short-circuit right away if possible.
-    if ((aMaxRa < aMinRa) || (aMaxDec < aMinDec)) {
-        return false;
-    }
-
-    AmaxPRa = A->getUBounds()->at(POINT_RA);
-    AminPRa = A->getLBounds()->at(POINT_RA);
-    AmaxVRa = A->getUBounds()->at(POINT_RA_VELOCITY);
-    AminVRa = A->getLBounds()->at(POINT_RA_VELOCITY);
-    
-    BmaxPRa = B->getUBounds()->at(POINT_RA);
-    BminPRa = B->getLBounds()->at(POINT_RA);
-    BmaxVRa = B->getUBounds()->at(POINT_RA_VELOCITY);
-    BminVRa = B->getLBounds()->at(POINT_RA_VELOCITY);
-
-    AmaxPDec = A->getUBounds()->at(POINT_DEC);
-    AminPDec = A->getLBounds()->at(POINT_DEC);
-    AmaxVDec = A->getUBounds()->at(POINT_DEC_VELOCITY);
-    AminVDec = A->getLBounds()->at(POINT_DEC_VELOCITY);
-    
-    BmaxPDec = B->getUBounds()->at(POINT_DEC);
-    BminPDec = B->getLBounds()->at(POINT_DEC);
-    BmaxVDec = B->getUBounds()->at(POINT_DEC_VELOCITY);
-    BminVDec = B->getLBounds()->at(POINT_DEC_VELOCITY);
-
-    
-    double tmpAcc;
-    // max using vel test
-    tmpAcc = (BmaxVRa - AminVRa) * dti;
-    if (tmpAcc < aMaxRa) {
-        aMaxRa = tmpAcc;
-    }
-    tmpAcc = (BmaxVDec - AminVDec) * dti;
-    if (tmpAcc < aMaxDec) {
-        aMaxDec = tmpAcc;
-    }
-    // min using velocity test
-    tmpAcc = (BminVRa - AmaxVRa) * dti;
-    if (tmpAcc > aMinRa) {
-        aMinRa = tmpAcc;
-    }
-    tmpAcc = (BminVDec - AmaxVDec) * dti;
-    if (tmpAcc > aMinDec) {
-        aMinDec = tmpAcc;
-    }
-    // short circuit if possible
-    if ((aMinRa > aMaxRa) || (aMinDec > aMaxDec)) {
-        return false;
-    }
-
-
-    // max using pos/vel test 1
-    tmpAcc = dt2 * (AmaxPRa - BminPRa + BmaxVRa * dt);
-    if (tmpAcc < aMaxRa) {
-        aMaxRa = tmpAcc;
-    }
-    tmpAcc = dt2 * (AmaxPDec - BminPDec + BmaxVDec * dt);
-    if (tmpAcc < aMaxDec) {
-        aMaxDec = tmpAcc;
-    }
-    // min using pos/vel test 1
-    tmpAcc = dt2*(BminPRa - AmaxPRa - AmaxVRa * dt);
-    if (tmpAcc > aMinRa) {
-        aMinRa = tmpAcc;
-    }
-    tmpAcc = dt2*(BminPDec - AmaxPDec - AmaxVDec * dt);
-    if (tmpAcc > aMinDec) {
-        aMinDec = tmpAcc;
-    }
-    // short circuit if possible
-    if ((aMinRa > aMaxRa) || (aMinDec > aMaxDec)) {
-        return false;
-    }
-
-
-    // max using pos/vel test 2
-    tmpAcc = dt2 * (BmaxPRa - AminPRa - AminVRa * dt);
-    if (tmpAcc < aMaxRa) {
-        aMaxRa = tmpAcc;
-    }
-    tmpAcc = dt2 * (BmaxPDec - AminPDec - AminVDec * dt);
-    if (tmpAcc < aMaxDec) {
-        aMaxDec = tmpAcc;
-    }
-    // min using pos/vel test 2
-    tmpAcc = dt2*(AminPRa - BmaxPRa + BminVRa * dt);
-    if (tmpAcc > aMinRa) {
-        aMinRa = tmpAcc;
-    }
-    tmpAcc = dt2*(AminPDec - BmaxPDec + BminVDec * dt);
-    if (tmpAcc > aMinDec) {
-        aMinDec = tmpAcc;
-    }
-    // short circuit if possible
-    if ((aMinRa > aMaxRa) || (aMinDec > aMaxDec)) {
-        return false;
-    }
-    
-    
-    // we know maxAcc > minAcc because we didn't short-circuit above.
-    return true;
-}
 
 
 

@@ -130,6 +130,11 @@ int main(int argc, char* argv[])
 	  opt = getopt_long( argc, argv, optString, longOpts, &longIndex );
      }
 
+// Set static obsLat and obsLong in MopsDetection
+
+     lsst::mops::MopsDetection::obsLat = searchConfig.obsLat;
+     lsst::mops::MopsDetection::obsLong = searchConfig.obsLong;
+
      if ((detectionsFileName == "") || (trackletsFileName == "")) {
 	  std::cerr << helpString << std::endl;
 	  return 1;

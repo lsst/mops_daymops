@@ -191,16 +191,20 @@ void Track::predictLocationAtTime(const double mjd, double &ra, double &dec) con
    it.
 */
 
-// could make a MopsDetection with input epoch, calculate an approx ra/dec, call CalcTopoCorr()
-
-// JUST QUADRATIC for the moment
-
-
     double t = mjd - epoch;
 
     Eigen::Vector3d tPowers(1.0, t, t*t);
     ra = raFunc.head(3).dot(tPowers);
     dec = decFunc.dot(tPowers);
+
+    if (raFunc.size() == 5) {
+	 MopsDetection tmpDet(0, mjd, ra, dec);
+	 tmpDet.calculateTopoCorr();  
+	 double raTopoCorr = tmpDet.getRaTopoCorr();
+	 Eigen::Vector4d tPowersCubic(1.0, t, t*t, t*t*t);
+	 ra = raFunc.head(4).dot(tPowersCubic) + raFunc(4)*raTopoCorr;
+    }
+
 #ifdef DEBUG
     std::cerr << "tPowers: \n" << tPowers << '\n';
     std::cerr << "raFunc: \n" << raFunc << '\n';
@@ -219,10 +223,10 @@ void Track::getBestFitQuadratic(double &epoch, double &ra0, double &raV, double 
     epoch = this->epoch;
     ra0 = raFunc(0);
     raV = raFunc(1);
-    raAcc = raFunc(2);
+    raAcc = 2.0*raFunc(2);
     dec0 = decFunc(0);
     decV = decFunc(1);
-    decAcc = decFunc(2);
+    decAcc = 2.0*decFunc(2);
 
 }
 

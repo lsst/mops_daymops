@@ -18,6 +18,9 @@
 namespace lsst {
     namespace mops {
 
+double MopsDetection::obsLat;
+double MopsDetection::obsLong;
+
 MopsDetection::MopsDetection()
 {
     RA = -380;
@@ -151,7 +154,7 @@ void MopsDetection::fromMITIString(std::string mitiString) {
 }
 
 
-void MopsDetection::calculateTopoCorr(double obsLat, double obsLong) {
+void MopsDetection::calculateTopoCorr() {
 
     double obsLatRad, obsLongRad;
 

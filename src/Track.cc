@@ -163,6 +163,7 @@ void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets)
     probChisqRa = gsl_cdf_chisq_Q(chisqRa, trackLen);
     probChisqDec = gsl_cdf_chisq_Q(chisqDec, trackLen);
 
+#ifdef DEBUG
     if (raFuncLen==5) {
 	      std::cerr << "raB: \n" << raB << '\n';
 	      std::cerr << "raE: \n" << raE << '\n';
@@ -179,6 +180,7 @@ void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets)
 	      std::cerr << "decResid: \n" << decResid << '\n';
 	      std::cerr << "dec: chisq prob dof " << chisqDec << " " << probChisqDec << " " << trackLen << '\n';
 	 }
+#endif
 }
 
 
@@ -186,9 +188,8 @@ void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets)
 void Track::predictLocationAtTime(const double mjd, double &ra, double &dec) const
 {
 /* 
-   Want to avoid recalculating topocentric correction.  Can't just ignore it, unless 
-   we're willing to run with much larger trackAdditionThreshold.  So, need to interpolate 
-   it.
+   Note use of first guess at ra, used for calculating topocentric correction if needed.
+   Then, final ra uses the whole formalism.
 */
 
     double t = mjd - epoch;

@@ -29,7 +29,7 @@ MopsDetection::MopsDetection()
 }
 
 
-        MopsDetection::MopsDetection(long int ID, double epochMJD, double RA, double Dec, double RaErr, double DecErr) 
+MopsDetection::MopsDetection(long int ID, double epochMJD, double RA, double Dec, double RaErr, double DecErr) 
 {
     this->ID = ID;
     MJD = epochMJD;
@@ -72,7 +72,12 @@ void MopsDetection::setDecErr(double newDecErr)
 {
     DecErr = newDecErr;
 }
-        
+ 
+void MopsDetection::setObservatoryLocation(double lat, double longitude)
+{
+    obsLat = lat;
+    obsLong = longitude;
+}
 
 long int MopsDetection::getID() const 
 {

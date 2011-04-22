@@ -28,9 +28,6 @@ namespace mops {
 class MopsDetection {
 public:
 
-    static double obsLat;
-    static double obsLong;
-
     //create an empty detection
     MopsDetection();
 
@@ -60,7 +57,12 @@ public:
     void setDecErr(double DecErr);
     void calculateTopoCorr();
 
+    static void setObservatoryLocation(double obsLat, double obsLong);
+
 private:
+
+    static double obsLat;
+    static double obsLong;
 
     long int ID;
     double MJD;

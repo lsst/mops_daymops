@@ -14,8 +14,6 @@
 #include "lsst/mops/KDTree.h"
 #include "lsst/mops/daymops/linkTracklets/TrackletTree.h"
 
-#define USEDECPROB
-
 
 /* taking a queue from Kubica, it's only once per ITERATIONS_PER_SPLIT
  * calls to doLinkingRecurse that we actually split the (non-leaf)
@@ -47,7 +45,7 @@ pretty good).  Will make searching INSANELY slow.
 #define uint unsigned int 
 
 namespace lsst {
-    namespace mops {
+   namespace mops {
 
 
 
@@ -1109,25 +1107,23 @@ bool trackHasSufficientSupport(const std::vector<MopsDetection> &allDetections,
 
 
 /* 
- * Calculate track RMS. Trust that the best fit quadratic has been
- * calculated since the last addition of a detection and thus is up to
- * date.  Return true iff RMS < searchConfig.maxTrackRms.
- */ 
+ * The name no longer reflects exactly what this does.  It decides
+ * whether the quality of the fit of the track model to the detections
+ * is sufficiently good.   This is based on a combination of prob(chisq)
+ * and the requirement of a physical range fit from the topocentric corrections.
+ * Due to the definition of the fit function, a physical range value here is
+ * NEGATIVE.  If a range was not fit, it will be zero.
+ */
+ 
 bool trackRmsIsSufficientlyLow(
     const std::vector<MopsDetection> &allDetections,
     const Track &newTrack, 
     const linkTrackletsConfig &searchConfig)
 {
 
-#ifdef USEDECPROB
     bool ok = newTrack.getProbChisqRa() > searchConfig.trackMinProbChisq &&
         newTrack.getProbChisqDec() > searchConfig.trackMinProbChisq &&
         newTrack.getFitRange() <= 0.0;
-#else
-    bool ok = newTrack.getProbChisqRa() > searchConfig.trackMinProbChisq &&
-        newTrack.getFitRange() <= 0.0;
-#endif
-    std::cerr << "trackRms: " << ok << '\n';
 
     return ok;
 }

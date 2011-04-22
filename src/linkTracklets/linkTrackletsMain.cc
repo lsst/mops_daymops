@@ -132,8 +132,7 @@ int main(int argc, char* argv[])
 
 // Set static obsLat and obsLong in MopsDetection
 
-     lsst::mops::MopsDetection::obsLat = searchConfig.obsLat;
-     lsst::mops::MopsDetection::obsLong = searchConfig.obsLong;
+     lsst::mops::MopsDetection::setObservatoryLocation(searchConfig.obsLat, searchConfig.obsLong);
 
      if ((detectionsFileName == "") || (trackletsFileName == "")) {
 	  std::cerr << helpString << std::endl;

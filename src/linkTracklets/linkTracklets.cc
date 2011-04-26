@@ -768,76 +768,86 @@ bool updateAccBoundsReturnValidity(const TreeNodeAndTime &firstEndpoint,
 
     
     double tmpAcc;
-    // max using vel test
+    // vel test, RA
     tmpAcc = (BmaxVRa - AminVRa) * dti;
     if (tmpAcc < aMaxRa) {
         aMaxRa = tmpAcc;
     }
-    tmpAcc = (BmaxVDec - AminVDec) * dti;
-    if (tmpAcc < aMaxDec) {
-        aMaxDec = tmpAcc;
-    }
-    // min using velocity test
     tmpAcc = (BminVRa - AmaxVRa) * dti;
     if (tmpAcc > aMinRa) {
         aMinRa = tmpAcc;
+    }
+    if (aMinRa > aMaxRa) {
+        return false;
+    }
+
+    // vel test, Dec
+    tmpAcc = (BmaxVDec - AminVDec) * dti;
+    if (tmpAcc < aMaxDec) {
+        aMaxDec = tmpAcc;
     }
     tmpAcc = (BminVDec - AmaxVDec) * dti;
     if (tmpAcc > aMinDec) {
         aMinDec = tmpAcc;
     }
-    // short circuit if possible
-    if ((aMinRa > aMaxRa) || (aMinDec > aMaxDec)) {
+    if (aMinDec > aMaxDec) {
         return false;
     }
 
 
-    // max using pos/vel test 1
+    // RA pos/vel test 1
     tmpAcc = dt2 * (AmaxPRa - BminPRa + BmaxVRa * dt);
     if (tmpAcc < aMaxRa) {
         aMaxRa = tmpAcc;
     }
-    tmpAcc = dt2 * (AmaxPDec - BminPDec + BmaxVDec * dt);
-    if (tmpAcc < aMaxDec) {
-        aMaxDec = tmpAcc;
-    }
-    // min using pos/vel test 1
     tmpAcc = dt2*(BminPRa - AmaxPRa - AmaxVRa * dt);
     if (tmpAcc > aMinRa) {
         aMinRa = tmpAcc;
+    }
+    if (aMinRa > aMaxRa) {
+        return false;
+    }
+
+    // Dec pos/vel test 1
+    tmpAcc = dt2 * (AmaxPDec - BminPDec + BmaxVDec * dt);
+    if (tmpAcc < aMaxDec) {
+        aMaxDec = tmpAcc;
     }
     tmpAcc = dt2*(BminPDec - AmaxPDec - AmaxVDec * dt);
     if (tmpAcc > aMinDec) {
         aMinDec = tmpAcc;
     }
-    // short circuit if possible
-    if ((aMinRa > aMaxRa) || (aMinDec > aMaxDec)) {
+    if (aMinDec > aMaxDec) {
         return false;
     }
 
 
-    // max using pos/vel test 2
+    // RA using pos/vel test 2
     tmpAcc = dt2 * (BmaxPRa - AminPRa - AminVRa * dt);
     if (tmpAcc < aMaxRa) {
         aMaxRa = tmpAcc;
     }
-    tmpAcc = dt2 * (BmaxPDec - AminPDec - AminVDec * dt);
-    if (tmpAcc < aMaxDec) {
-        aMaxDec = tmpAcc;
-    }
-    // min using pos/vel test 2
     tmpAcc = dt2*(AminPRa - BmaxPRa + BminVRa * dt);
     if (tmpAcc > aMinRa) {
         aMinRa = tmpAcc;
+    }
+    if (aMinRa > aMaxRa) {
+        return false;
+    }
+
+    // Dec using pos/vel test 2
+    tmpAcc = dt2 * (BmaxPDec - AminPDec - AminVDec * dt);
+    if (tmpAcc < aMaxDec) {
+        aMaxDec = tmpAcc;
     }
     tmpAcc = dt2*(AminPDec - BmaxPDec + BminVDec * dt);
     if (tmpAcc > aMinDec) {
         aMinDec = tmpAcc;
     }
-    // short circuit if possible
-    if ((aMinRa > aMaxRa) || (aMinDec > aMaxDec)) {
+    if (aMinDec > aMaxDec) {
         return false;
     }
+
     
     
     // we know maxAcc > minAcc because we didn't short-circuit above.

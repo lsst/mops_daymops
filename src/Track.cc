@@ -4,6 +4,8 @@
 #include "lsst/mops/Track.h"
 #include "lsst/mops/Exceptions.h"
 
+#undef DEBUG
+
 namespace lsst { namespace mops {
 
 Track::Track()
@@ -68,7 +70,8 @@ Track & Track::operator= (const Track &other) {
 
 
 
-void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets)
+void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets, 
+	       const bool useFullRaFit)
 {
     int trackLen = componentDetectionIndices.size();
 
@@ -76,7 +79,7 @@ void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets)
 // functions at the time of that detection.
 
     int raFuncLen;
-    if (trackLen >= 5) {
+    if (useFullRaFit && trackLen >= 7) {
 	 raFuncLen = 5;
     } else {
 	 raFuncLen = 3;
@@ -164,22 +167,20 @@ void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets)
     probChisqDec = gsl_cdf_chisq_Q(chisqDec, trackLen);
 
 #ifdef DEBUG
-    if (raFuncLen==5) {
-	      std::cerr << "raB: \n" << raB << '\n';
-	      std::cerr << "raE: \n" << raE << '\n';
-	      std::cerr << "raA: \n" << raA << '\n';
-	      std::cerr << "raSVD: \n" << raA.jacobiSvd().singularValues() << '\n';
-	      std::cerr << "raFunc: \n" << raFunc << '\n';
-	      std::cerr << "raResid: \n" << raResid << '\n';
-	      std::cerr << "ra: chisq prob dof " << chisqRa << " " << probChisqRa << " " << trackLen << '\n';
-	      std::cerr << "decB: \n" << decB << '\n';
-	      std::cerr << "decE: \n" << decE << '\n';
-	      std::cerr << "decA: \n" << decA << '\n';
-	      std::cerr << "decSVD: \n" << decA.jacobiSvd().singularValues() << '\n';
-	      std::cerr << "decFunc: \n" << decFunc << '\n';
-	      std::cerr << "decResid: \n" << decResid << '\n';
-	      std::cerr << "dec: chisq prob dof " << chisqDec << " " << probChisqDec << " " << trackLen << '\n';
-	 }
+	      std::cout << "raB: \n" << raB << '\n';
+	      std::cout << "raE: \n" << raE << '\n';
+	      std::cout << "raA: \n" << raA << '\n';
+	      std::cout << "raSVD: \n" << raA.jacobiSvd().singularValues() << '\n';
+	      std::cout << "raFunc: \n" << raFunc << '\n';
+	      std::cout << "raResid: \n" << raResid << '\n';
+	      std::cout << "ra: chisq prob dof " << chisqRa << " " << probChisqRa << " " << trackLen << '\n';
+	      std::cout << "decB: \n" << decB << '\n';
+	      std::cout << "decE: \n" << decE << '\n';
+	      std::cout << "decA: \n" << decA << '\n';
+	      std::cout << "decSVD: \n" << decA.jacobiSvd().singularValues() << '\n';
+	      std::cout << "decFunc: \n" << decFunc << '\n';
+	      std::cout << "decResid: \n" << decResid << '\n';
+	      std::cout << "dec: chisq prob dof " << chisqDec << " " << probChisqDec << " " << trackLen << '\n';
 #endif
 }
 
@@ -207,11 +208,11 @@ void Track::predictLocationAtTime(const double mjd, double &ra, double &dec) con
     }
 
 #ifdef DEBUG
-    std::cerr << "tPowers: \n" << tPowers << '\n';
-    std::cerr << "raFunc: \n" << raFunc << '\n';
-    std::cerr << "ra: " << ra << '\n';
-    std::cerr << "decFunc: \n" << decFunc << '\n';
-    std::cerr << "dec: " << dec << '\n';
+    std::cout << "tPowers: \n" << tPowers << '\n';
+    std::cout << "raFunc: \n" << raFunc << '\n';
+    std::cout << "ra: " << ra << '\n';
+    std::cout << "decFunc: \n" << decFunc << '\n';
+    std::cout << "dec: " << dec << '\n';
 #endif
 }
 

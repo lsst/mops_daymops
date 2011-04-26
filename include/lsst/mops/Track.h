@@ -74,7 +74,8 @@ public:
        acceleration for the track are NOT SET.  the USER is responsible for
        calling before using predictLocationAtTime() or getBestFitQuadratic().
      */
-    void calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets);
+    void calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets,
+        const bool useFullRaFit=false);
     
     /* use best-fit quadratic to predict location at time mjd. will return WRONG VALUES
      if calculateBestFitQuadratic has not been called.*/

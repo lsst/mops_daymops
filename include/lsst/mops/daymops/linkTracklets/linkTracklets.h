@@ -81,9 +81,7 @@ public:
 
             /* Kubica uses .0005, but that's in RADIANS! this is the
              * degree equivalent. */
-//            trackAdditionThreshold = .028648;
-            trackAdditionThreshold = .05;
-
+            trackAdditionThreshold = .028648;
 
             /* This is the square root of value we've been giving
              * Kubica (0.00000025); he takes MEAN SQUARED not ROOT

@@ -14,6 +14,7 @@
 #include "lsst/mops/KDTree.h"
 #include "lsst/mops/daymops/linkTracklets/TrackletTree.h"
 
+#undef DEBUG
 
 /* taking a queue from Kubica, it's only once per ITERATIONS_PER_SPLIT
  * calls to doLinkingRecurse that we actually split the (non-leaf)
@@ -888,6 +889,10 @@ bool endpointTrackletsAreCompatible(
     newTrack.getBestFitQuadratic(epoch, 
                                  ra0, raV, raAcc, 
                                  dec0, decV, decAcc);
+#ifdef DEBUG
+    std::cout << "compatible? " << epoch << ' ' << ra0 << ' ' << raV << ' ' << raAcc
+              << ' ' <<  dec0 << ' ' << decV << ' ' << decAcc  << '\n';
+#endif
 
     if (raAcc > searchConfig.maxRAAccel) {
         allOK = false;
@@ -993,9 +998,15 @@ void addDetectionsCloseToPredictedPositions(
             newTrack.predictLocationAtTime(detMjd, predRa, predDec);
 
             double decDistance = fabs(detDec - predDec);
+#ifdef DEBUG
+            std::cout << "dec dist:" << decDistance << " thresh: " << searchConfig.trackAdditionThreshold << '\n';
+#endif
             if (decDistance < searchConfig.trackAdditionThreshold) {
 
                 double distance = angularDistanceRADec_deg(detRa, detDec, predRa, predDec);
+#ifdef DEBUG
+                std::cout << "ang dist:" << distance << " thresh: " << searchConfig.trackAdditionThreshold << '\n';
+#endif
                 
                 // if the detection is compatible, consider whether
                 // it's the best at the image time
@@ -1045,6 +1056,9 @@ void addDetectionsCloseToPredictedPositions(
             trackMJDs.insert(candidatesIter->first);
             newTrack.addDetection(candidatesIter->second.detId, 
                                   allDetections);
+#ifdef DEBUG
+            std::cout << "inserted detection: " << candidatesIter->second.detId << '\n';
+#endif
             newTrack.componentTrackletIndices.insert(
                 candidatesIter->second.parentTrackletId);
         }
@@ -1153,8 +1167,8 @@ void buildTracksAddToResults(
 
     uint numCompatible = 0;
 
-    //debugPrint(firstEndpoint, secondEndpoint, supportNodes,
-    //allDetections, allTracklets);
+    debugPrint(firstEndpoint, secondEndpoint, supportNodes,
+      allDetections, allTracklets);
 
     if ((firstEndpoint.myTree->isLeaf() == false) ||
         (secondEndpoint.myTree->isLeaf() == false)) {
@@ -1202,8 +1216,8 @@ void buildTracksAddToResults(
             newTrack.addTracklet(secondEndpointTrackletIndex, 
                                  allTracklets.at(secondEndpointTrackletIndex),
                                  allDetections);
-            
-            newTrack.calculateBestFitQuadratic(allDetections);
+            // the 'false' here says do NOT use the full form for ra fit
+            newTrack.calculateBestFitQuadratic(allDetections, false);
 
             if (endpointTrackletsAreCompatible(allDetections, 
                                                newTrack,
@@ -1252,12 +1266,26 @@ void buildTracksAddToResults(
                                               searchConfig)) {
                     // recalculate best-fit quadratic and check if RMS
                     // is sufficient
-                    newTrack.calculateBestFitQuadratic(allDetections);
+                    // the 'true' here says DO use the full form for ra fit if there are enough
+                    // points to do so
+
+                    newTrack.calculateBestFitQuadratic(allDetections, true);
                     if (trackRmsIsSufficientlyLow(allDetections, 
                                                   newTrack, 
                                                   searchConfig)) {
+#ifdef DEBUG
+                        std::cout << "track passed rms\n";
+#endif
                         results.insert(newTrack);
+                    } else {
+#ifdef DEBUG
+                        std::cout << "track failed rms\n";
+#endif
                     }
+                } else {
+#ifdef DEBUG
+                    std::cout << "track has insufficient support\n";
+#endif
                 }
 
                 if ((RACE_TO_MAX_COMPATIBLE == true) && 
@@ -1266,15 +1294,18 @@ void buildTracksAddToResults(
                     exit(0);
                 }
 
-            }
-        }    
+                
+            }  else {
+#ifdef DEBUG
+                    std::cout << "endpoint tracklets incompatible\n";
+#endif
+                }  
     }
-
+}
     buildTracksAddToResultsTime += timeSince(start);
 
+
 }
-
-
 
 
 

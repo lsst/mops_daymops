@@ -27,18 +27,22 @@ namespace mops {
         char* outFileName = NULL;
         bool removeSubsets = true;
         bool keepOnlyLongestPerDet = false;
+        bool shortCircuit = true;
+        bool sortBeforeIntersect = false;
         
         static const struct option longOpts[] = {
             { "inFile", required_argument, NULL, 'i' },
             { "outFile", required_argument, NULL, 'o' },
             { "removeSubsets", required_argument, NULL, 'r' },
             { "keepOnlyLongest", required_argument, NULL, 'k'},
+            { "shortCircuit", required_argument, NULL, 'c'},
+            { "sortBeforeIntersect", required_argument, NULL, 's'},
             { "help", no_argument, NULL, 'h' },
             { NULL, no_argument, NULL, 0 }
         };
 
         int longIndex = -1;
-        const char* optString = "i:o:r:k:h";
+        const char* optString = "i:o:r:k:c:s:h";
         int opt = getopt_long( argc, argv, optString, longOpts, &longIndex );
         while( opt != -1 ) {
             switch( opt ) {
@@ -56,6 +60,12 @@ namespace mops {
                 
             case 'k':
                 keepOnlyLongestPerDet = guessBoolFromStringOrGiveErr(optarg, USAGE);
+                break;
+            case 'c':
+                shortCircuit = guessBoolFromStringOrGiveErr(optarg, USAGE);
+                break;
+            case 's':
+                sortBeforeIntersect = guessBoolFromStringOrGiveErr(optarg, USAGE);
                 break;
                 
             case 'h':   /* fall-through is intentional */
@@ -83,6 +93,10 @@ namespace mops {
         std::cout << "Output file:                                 " << outFileName << std::endl;
         std::cout << "RemoveSubsets:                               "<< boolToString(removeSubsets)
                   << std::endl;
+        std::cout << "Short-circuit if possible:                   "<< boolToString(shortCircuit)
+                  << std::endl;
+        std::cout << "Sort sets by size before set intersection:   "<< boolToString(sortBeforeIntersect)
+                  << std::endl;
         std::cout << "Keep only longest tracklet(s) per detection: "<< 
             boolToString(keepOnlyLongestPerDet) << std::endl;
 
@@ -105,7 +119,10 @@ namespace mops {
         SubsetRemover mySR;
         
         if (removeSubsets == true) {
-            mySR.removeSubsetsPopulateOutputVector(pairsVector, *outputVector);
+            mySR.removeSubsetsPopulateOutputVector(pairsVector, 
+                                                   *outputVector,
+                                                   shortCircuit, 
+                                                   sortBeforeIntersect);
         }
         else {
             delete outputVector;

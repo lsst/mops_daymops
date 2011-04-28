@@ -5,8 +5,8 @@ OPSIM_DB="opsim_3_61"
 OPSIM_TABLE="output_opsim3_61"
 
 DIAS_DB="mops_noDeepAstromError"
-#DIAS_TABLE="fullerDiaSource"
-DIAS_TABLE="diasUnattributedAfterSlowMoverPass_plusNoise10000PerImage"
+DIAS_TABLE="fullerDiaSource"
+#DIAS_TABLE="diasUnattributedAfterSlowMoverPass_plusNoise10000PerImage"
 
 DB_USER="jmyers"
 DB_PASS="jmyers"

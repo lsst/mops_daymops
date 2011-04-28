@@ -1167,9 +1167,6 @@ void buildTracksAddToResults(
 
     uint numCompatible = 0;
 
-    debugPrint(firstEndpoint, secondEndpoint, supportNodes,
-      allDetections, allTracklets);
-
     if ((firstEndpoint.myTree->isLeaf() == false) ||
         (secondEndpoint.myTree->isLeaf() == false)) {
         LSST_EXCEPT(ProgrammerErrorException, 

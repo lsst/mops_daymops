@@ -29,10 +29,10 @@ import mopsDatabases
 
 # YOU ABSOLUTELY MUST SET THESE ARGUMENTS
 
-TRACKLETS_BY_OBSHIST_DIR="/workspace0/jmyers/unattributed_after_maxv0.5_mint0.01_15DayWindows/10kNoisePerImage/maxv2.0Tracklets/collapsed/byObsHist/"
+TRACKLETS_BY_OBSHIST_DIR="/mnt/raid/jmyers/ticket_1610_5dayWindows/byObsHistId/"
 
 # place to put .miti files for input to c linkTracklets
-OUTPUT_LINKTRACKLETS_INFILE_DIR="/workspace0/jmyers/unattributed_after_maxv0.5_mint0.01_15DayWindows/10kNoisePerImage/maxv2.0Tracklets/collapsed/linkTrackletsInFiles/"
+OUTPUT_LINKTRACKLETS_INFILE_DIR="/mnt/raid/jmyers/ticket_1610_5dayWindows/linkTrackletsInfiles/"
 
 
 # place to put start_t_ranges for each linkTracklets input files
@@ -46,7 +46,7 @@ FORCED_OBSCODE="807"
 # this needs to be larger than the min time between images.
 EPSILON=1e-5
 
-TRACKING_WINDOW_DAYS=15 # in days; we only look for tracks spanning <= this number of nights.
+TRACKING_WINDOW_DAYS=5 # in days; we only look for tracks spanning <= this number of nights.
 MAX_START_IMAGES_PER_RUN=30
 
 TRACKLETS_BY_OBSHIST_SUFFIX=".tracklets.byDiaId"

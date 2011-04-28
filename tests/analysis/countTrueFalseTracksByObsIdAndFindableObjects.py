@@ -253,8 +253,8 @@ if __name__=="__main__":
             sys.exit(1)
 
         tracksGlobPattern = sys.argv[1]
-        diasDb = sys.argv[3]
-        diasTable = sys.argv[4]
+        diasDb = sys.argv[2]
+        diasTable = sys.argv[3]
         conn = db.connect(user=DB_USER, passwd=DB_PASS, host=DB_HOST)
         diasLookupTool = [conn.cursor(), diasDb, diasTable]
 

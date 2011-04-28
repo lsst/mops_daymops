@@ -167,7 +167,7 @@ Track generateTrack(double ra0, double dec0, double raV, double decV,
             // create new det, add it to our total set of dets,
             // add its ID to the cur tracklet, and cur track.
             lastDetId++;
-            MopsDetection newDet(lastDetId, *obsTime, resultRa, resultDec);
+            MopsDetection newDet(lastDetId, *obsTime, resultRa, resultDec, 2.8e-5, 2.8e-5 );
             allDetections.push_back(newDet);
             newTracklet.indices.insert(lastDetId);
             newTrack.addDetection(lastDetId, allDetections);           
@@ -192,7 +192,8 @@ Track generateTrack(double ra0, double dec0, double raV, double decV,
 // helper function for creating sets of detections
 void addDetectionAt(double MJD, double RA, double dec,  std::vector<MopsDetection> &detVec)
 {
-    MopsDetection tmpDet(detVec.size(), MJD, RA, dec);
+    MopsDetection tmpDet(detVec.size(), MJD, RA, dec, 2.8e-5, 2.8e-5);
+//    tmpDet.calculateTopoCorr( -30.169, -70.804);
     detVec.push_back(tmpDet);
 }
 

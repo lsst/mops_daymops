@@ -1,4 +1,3 @@
-// -*- LSST-C++ -*-
 #include <boost/lexical_cast.hpp>
 #include <stdlib.h>
 #include <string>
@@ -59,6 +58,10 @@ int main(int argc, char* argv[])
 	  + std::string("\n") +
 	  std::string("     -L / --earliestLastEndpoint (float) : if specified, only search for tracks with last endpoint after time specified")
 	  +  std::string("\n") +
+	  std::string("     -u / --minNights (int) : require tracks contain detections from at least this many nights, default = ")
+	  + boost::lexical_cast<std::string>(searchConfig.minUniqueNights) +  std::string("\n") +
+	  std::string("     -s / --minDetections (int) : require tracks contain at least this many detections, default = ")
+	  + boost::lexical_cast<std::string>(searchConfig.minDetectionsPerTrack) +  std::string("\n") +
 	  std::string("     -n / --leafNodeSize (int) : set max leaf node size for nodes in KDTree")
 	  +  std::string("\n");
 
@@ -71,6 +74,8 @@ int main(int argc, char* argv[])
 	  { "maxRAAcceleration", required_argument, NULL, 'R'},
 	  { "latestFirstEndpoint", required_argument, NULL, 'F'},
 	  { "earliestLastEndpointTime", required_argument, NULL, 'L'},
+	  { "minNights", required_argument, NULL, 'u'},
+	  { "minDetections", required_argument, NULL, 's'},
 	  { "leafNodeSize", required_argument, NULL, 'n'},
 	  { "help", no_argument, NULL, 'h' },
 	  { NULL, no_argument, NULL, 0 }
@@ -83,7 +88,7 @@ int main(int argc, char* argv[])
 
      
      int longIndex = -1;
-     const char *optString = "d:t:o:e:D:R:F:L:h:v:n:";
+     const char *optString = "d:t:o:e:D:R:F:L:u:s:n:h";
      int opt = getopt_long( argc, argv, optString, longOpts, &longIndex );
      while( opt != -1 ) {
 	  switch( opt ) {
@@ -101,15 +106,15 @@ int main(int argc, char* argv[])
 	       break;
 	  case 'D':
 	       searchConfig.maxDecAccel = atof(optarg);
+
 	       break;
 	  case 'R':
 	       searchConfig.maxRAAccel = atof(optarg);
 	       break;
-
 	  case 'F':
 	       searchConfig.restrictTrackStartTimes = true;
 	       searchConfig.latestFirstEndpointTime = atof(optarg);
-	       std::cerr << "Got latest first endpoint time = " << 
+	       std::cout << "Got latest first endpoint time = " << 
 		    std::setprecision(12) << searchConfig.latestFirstEndpointTime
 			 << std::endl;
 	       break;
@@ -117,9 +122,19 @@ int main(int argc, char* argv[])
 	       searchConfig.restrictTrackEndTimes = true;
 	       searchConfig.earliestLastEndpointTime = atof(optarg);
 	       break;
+	  case 'u':
+	       searchConfig.minUniqueNights = atoi(optarg);
+	       std::cout << "Set min unique nights per track: " 
+			 << searchConfig.minUniqueNights << "\n";
+	       break;
+	  case 's':
+	       searchConfig.minDetectionsPerTrack = atoi(optarg);
+	       std::cout << "Set min detections per track: " 
+			 << searchConfig.minDetectionsPerTrack << "\n";
+	       break;
 	  case 'n':
 	       searchConfig.leafSize = atoi(optarg);
-	       std::cerr << " Set leaf node size = " 
+	       std::cout << " Set leaf node size = " 
 			 << searchConfig.leafSize << std::endl;
 	       break;
 	  case 'h':
@@ -130,6 +145,10 @@ int main(int argc, char* argv[])
 	  }
 	  opt = getopt_long( argc, argv, optString, longOpts, &longIndex );
      }
+
+// Set static obsLat and obsLong in MopsDetection
+
+     lsst::mops::MopsDetection::setObservatoryLocation(searchConfig.obsLat, searchConfig.obsLong);
 
      if ((detectionsFileName == "") || (trackletsFileName == "")) {
 	  std::cerr << helpString << std::endl;
@@ -147,7 +166,11 @@ int main(int argc, char* argv[])
      if(PRINT_TIMING_INFO) {     
 	  last = std::clock();
      }
-     populateDetVectorFromFile(detectionsFileName, allDets);
+     
+     const double astromErr =  searchConfig.defaultAstromErr;
+     std::cerr << "Using defaultAstromErr " << astromErr << '\n';
+     populateDetVectorFromFile(detectionsFileName, allDets, astromErr);
+     calculateTopoCorr(allDets, searchConfig);
      populatePairsVectorFromFile(trackletsFileName, allTracklets);
 
      if(PRINT_TIMING_INFO) {     	  

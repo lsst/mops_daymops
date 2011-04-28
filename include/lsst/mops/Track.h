@@ -8,6 +8,8 @@
 
 #include <set>
 #include <vector>
+#include <Eigen/Dense>
+#include "gsl/gsl_cdf.h"
 
 #include "MopsDetection.h"
 #include "Tracklet.h"
@@ -64,11 +66,16 @@ public:
 
     const std::set<unsigned int> getComponentDetectionDiaIds() const;
 
+    double getProbChisqRa() const { return probChisqRa; }
+    double getProbChisqDec() const { return probChisqDec; }
+    double getFitRange() const;
+
     /* until this function is called, initial position, velocity and
        acceleration for the track are NOT SET.  the USER is responsible for
        calling before using predictLocationAtTime() or getBestFitQuadratic().
      */
-    void calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets);
+    void calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets,
+        const bool useFullRaFit=false);
     
     /* use best-fit quadratic to predict location at time mjd. will return WRONG VALUES
      if calculateBestFitQuadratic has not been called.*/
@@ -109,12 +116,13 @@ public:
 private:
     std::set<unsigned int> componentDetectionIndices;
     std::set<unsigned int> componentDetectionDiaIds;
-    std::vector<double> raFunc;
-    std::vector<double> decFunc;
+    Eigen::VectorXd raFunc;
+    Eigen::VectorXd decFunc;
+    double chisqRa;
+    double chisqDec;
+    double probChisqRa;
+    double probChisqDec;
     double epoch;
-    void  bestFit1d(std::vector<double> &X,
-                    const std::vector<double> &time,
-                    std::vector<double> & res);
 };
 
 }} // close lsst::mops namespace

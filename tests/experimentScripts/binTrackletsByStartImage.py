@@ -53,25 +53,35 @@ def getAllDiasInFile(inTracklets):
 
 
 def getDiaTimesAndImages(dias, dbCurs, diasDb, diasTable):
-    s = """ SELECT diaSourceId, taiMidPoint, opSimId 
-            FROM  
-              %s.%s""" \
-        % (diasDb, diasTable)
-        
-    s += """  WHERE diaSourceId IN ( """ 
-    first = True
-    for d in dias:
-        if not first :
-            s+= ", "
-        first = False
-        s += str(d)
-    s += " );"
-    dbCurs.execute(s)
-    res = dbCurs.fetchall()
+    diasList = list(dias)
+    iterations = 0
+    iterationSize = 10000
+    curDias = diasList[iterations*iterationSize:(iterations+1)*iterationSize]
     # build a dict mapping from diaSourceId to obs time and obsHistId
     toRet = {}
-    for r in res:
-        toRet[r[0]] = [r[1], r[2]]
+    while curDias != []:
+        print "Working on iteration ", iterations
+        s = """ SELECT diaSourceId, taiMidPoint, opSimId 
+                FROM  
+                  %s.%s""" \
+            % (diasDb, diasTable)
+
+        s += """  WHERE diaSourceId IN ( """ 
+        first = True
+        for d in curDias:
+            if not first :
+                s+= ", "
+            first = False
+            s += str(d)
+        s += " );"
+        dbCurs.execute(s)
+        res = dbCurs.fetchall()
+        for r in res:
+            toRet[r[0]] = [r[1], r[2]]
+        print "we now have ", len(toRet), " elements read from DB (of ", len(diasList), ")"
+        iterations += 1
+        curDias = diasList[iterations*iterationSize:(iterations+1)*iterationSize]
+
     return toRet
 
 

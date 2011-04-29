@@ -40,14 +40,14 @@ bool isSane(unsigned int detsSize, const std::vector<Tracklet> *pairs);
 void writeTrackletsToOutFile(const std::vector<Tracklet> * tracklets, std::ofstream &outFile);
 
 
-void populateDetVectorFromFile(std::ifstream &detsFile, std::vector <MopsDetection> &myDets);
+void populateDetVectorFromFile(std::ifstream &detsFile, std::vector <MopsDetection> &myDets, const double &astromErr = 0.0);
 
 void populatePairsVectorFromFile(std::ifstream &pairsFile,
 				 std::vector <Tracklet> &pairsVector);
 
 /* these overloaded versions are mainly for SWIG, since Python file objects != fstreams */
 void writeTrackletsToOutFile(const std::vector<Tracklet> * tracklets, std::string outFileName);
-void populateDetVectorFromFile(std::string detsFileName, std::vector <MopsDetection> &myDets);
+    void populateDetVectorFromFile(std::string detsFileName, std::vector <MopsDetection> &myDets, const double &astromErr = 0.0);
 void populatePairsVectorFromFile(std::string pairsFileName,
 				 std::vector <Tracklet> &pairsVector);
 

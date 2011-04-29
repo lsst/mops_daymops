@@ -5,7 +5,10 @@
 #include "lsst/mops/MopsDetection.h"
 #include "lsst/mops/Exceptions.h"
 
+#include "slalib.h"
+#include "slamac.h"
 
+#undef DEBUG
 
 /*
  * jmyers 7/29/08
@@ -15,6 +18,9 @@
 namespace lsst {
     namespace mops {
 
+double MopsDetection::obsLat;
+double MopsDetection::obsLong;
+
 MopsDetection::MopsDetection()
 {
     RA = -380;
@@ -23,12 +29,15 @@ MopsDetection::MopsDetection()
 }
 
 
-MopsDetection::MopsDetection(long int ID, double epochMJD, double RA, double Dec) 
+        MopsDetection::MopsDetection(long int ID, double epochMJD, double RA, double Dec, double RaErr, double DecErr, int ssmId) 
 {
     this->ID = ID;
     MJD = epochMJD;
     this->RA = RA;
     this->dec = Dec;
+    this->RaErr = RaErr;
+    this->DecErr = DecErr;
+    this->ssmId = ssmId;
 }
 
 
@@ -55,6 +64,31 @@ void MopsDetection::setDec(double newDec)
     dec = newDec;
 }
         
+void MopsDetection::setRaErr(double newRaErr)
+{
+    RaErr = newRaErr;
+}
+        
+void MopsDetection::setDecErr(double newDecErr)
+{
+    DecErr = newDecErr;
+}
+ 
+void MopsDetection::setObservatoryLocation(double lat, double longitude)
+{
+    obsLat = lat;
+    obsLong = longitude;
+}
+
+void MopsDetection::setSsmId(int ssmId)
+{
+    this->ssmId = ssmId;
+}
+
+int MopsDetection::getSsmId() const
+{
+    return ssmId;
+}
 
 long int MopsDetection::getID() const 
 {
@@ -79,6 +113,21 @@ double MopsDetection::getDec()  const
     return dec;
 }
 
+double MopsDetection::getRaErr()  const 
+{
+    return RaErr;
+}
+
+double MopsDetection::getDecErr()  const 
+{
+    return DecErr;
+}
+
+double MopsDetection::getRaTopoCorr()  const 
+{
+    return RaTopoCorr ;
+}
+
 
 
 
@@ -88,7 +137,6 @@ void MopsDetection::fromMITIString(std::string mitiString) {
     // read these parameters to local vars; we don't save them.
     double mag;
     std::string obscode;
-    std::string objName;
     double length;
     double angle;
     double etime;
@@ -103,7 +151,7 @@ void MopsDetection::fromMITIString(std::string mitiString) {
         ss >> dec;
         ss >> mag;
         ss >> obscode;
-        ss >> objName;
+        ss >> ssmId;
         ss >> length;
         ss >> angle;
     }
@@ -121,7 +169,53 @@ void MopsDetection::fromMITIString(std::string mitiString) {
 }
 
 
+void MopsDetection::calculateTopoCorr() {
 
+    double obsLatRad, obsLongRad;
+
+    obsLatRad = obsLat*DD2R;
+    obsLongRad = obsLong*DD2R;
+    
+    double localAppSidTime = slaGmst(MJD - slaDt(slaEpj(MJD))/86400.0) + obsLongRad;
+
+    double geoPosVel[6]; // observing position (and velocity) in AU, AU/sec
+    slaPvobs(obsLatRad, 0, localAppSidTime, geoPosVel);
+    
+    double raRad, decRad;
+    raRad = RA*DD2R;
+    decRad = dec*DD2R;
+    
+    float rho[3];   // geocentric unit 3-vector to object
+    slaCs2c(raRad, decRad, rho);
+
+    // add geoPos to rho (multiplied by 1 AU) to get the topocentric vector to the object
+    float rhoTopo[3];
+    rhoTopo[0] = rho[0] + geoPosVel[0];
+    rhoTopo[1] = rho[1] + geoPosVel[1];
+    rhoTopo[2] = rho[2] + geoPosVel[2];
+
+    // calculate the topocentric ra, dec
+
+    float raTopo, decTopo;
+    slaCc2s(rhoTopo, &raTopo, &decTopo);
+
+    double deltaRa = raTopo - raRad;
+
+    // make sure result is in right quadrant
+
+    if (deltaRa < -DPIBY2) {
+        deltaRa += D2PI;
+    } else if (deltaRa > DPIBY2) {
+        deltaRa -= D2PI;
+    }
+
+    RaTopoCorr = deltaRa*DR2D;
+
+#ifdef DEBUG
+    std::cerr << "topo_corr: " << MJD << ' ' << RA << ' ' << localAppSidTime << ' ' << RaTopoCorr << '\n';
+#endif
+    
+}
 
 
 } } // close lsst::mops namespace

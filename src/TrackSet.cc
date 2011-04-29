@@ -8,9 +8,13 @@
 #include "lsst/mops/TrackSet.h"
 
 #include <iomanip>
+#include <sstream>
 
 namespace lsst { 
 namespace mops {
+
+
+
 
 
 
@@ -106,9 +110,9 @@ void TrackSet::writeToFile()
            calculates an up-to-date fit function for every track, after adding
            support points.
          */
-        double epoch, ra0, raV, raAcc, dec0, decV, decAcc;
-        (*curTrack).getBestFitQuadratic(epoch, ra0, raV, raAcc, 
-                                     dec0, decV, decAcc);
+        // double epoch, ra0, raV, raAcc, dec0, decV, decAcc;
+        // (*curTrack).getBestFitQuadratic(epoch, ra0, raV, raAcc, 
+        //                                 dec0, decV, decAcc);
         // outFile << std::setprecision(12) 
         //         << std::scientific 
         //         << "epoch=" << epoch 

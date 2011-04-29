@@ -11,7 +11,8 @@ Import("env")
 #ext_libs = ["gsl", "gslcblas", "pex_exceptions"]
 		      
 commonStuff = ['common', 'MopsDetection',
-               'Orbit', 'TrackletVector', 'TrackSet', 'Track', 'Tracklet']
+               'Orbit', 'TrackletVector', 
+               'TrackSet', 'Track', 'Tracklet']
 
 common_libs = []
 
@@ -28,7 +29,13 @@ common_libs.append(env.StaticLibrary('fileUtils', ['fileUtils.cc', 'MopsDetectio
 common_libs.append(env.StaticLibrary('removeSubsets',  ['removeSubsets.cc'] + common_libs))
 
 
+
+
 env.Program('../bin/removeSubsets',  ['removeSubsetsMain.cc'] + common_libs,
+            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
+
+env.Program('../bin/readTracksWriteStats',  ['readTracksWriteStats.cc', 'TrackVector.cc'] \
+                + common_libs,
             LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
 
 

@@ -60,13 +60,15 @@ void writeTrackletsToOutFile(const std::vector<Tracklet> * tracklets, std::ofstr
 
 
 
-void populateDetVectorFromFile(std::ifstream &detsFile, std::vector <MopsDetection> &myDets) {
+void populateDetVectorFromFile(std::ifstream &detsFile, std::vector <MopsDetection> &myDets, const double &astromErr) {
      std::string line;
      MopsDetection tmpDet;
      line.clear();
      std::getline(detsFile, line);
      while (detsFile.fail() == false) {
 	  tmpDet.fromMITIString(line);
+          tmpDet.setRaErr(astromErr);
+          tmpDet.setDecErr(astromErr);
 	  myDets.push_back(tmpDet);
 	  line.clear();
 	  std::getline(detsFile, line);
@@ -126,7 +128,7 @@ void writeTrackletsToOutFile(const std::vector<Tracklet> * tracklets, std::strin
      writeTrackletsToOutFile(tracklets, outFile);
 }
     
-void populateDetVectorFromFile(std::string detsFileName, std::vector <MopsDetection> &myDets)
+        void populateDetVectorFromFile(std::string detsFileName, std::vector <MopsDetection> &myDets, const double &astromErr)
 {
      std::ifstream detsFile;
      detsFile.open(detsFileName.c_str());
@@ -134,12 +136,13 @@ void populateDetVectorFromFile(std::string detsFileName, std::vector <MopsDetect
 	  throw LSST_EXCEPT(FileException,
 			    "Failed to open dets file " + detsFileName + " - does this file exist?\n");
      }
-     populateDetVectorFromFile(detsFile, myDets);
+     populateDetVectorFromFile(detsFile, myDets, astromErr);
         
 }
     
 void populatePairsVectorFromFile(std::string pairsFileName,
-						    std::vector <Tracklet> &pairsVector)
+                                 std::vector <Tracklet> &pairsVector)
+
 {
      std::ifstream pairsFile;
      pairsFile.open(pairsFileName.c_str());

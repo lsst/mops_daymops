@@ -14,7 +14,7 @@
 #include "lsst/mops/KDTree.h"
 #include "lsst/mops/daymops/linkTracklets/TrackletTree.h"
 
-
+#undef DEBUG
 
 /* taking a queue from Kubica, it's only once per ITERATIONS_PER_SPLIT
  * calls to doLinkingRecurse that we actually split the (non-leaf)
@@ -46,7 +46,7 @@ pretty good).  Will make searching INSANELY slow.
 #define uint unsigned int 
 
 namespace lsst {
-    namespace mops {
+   namespace mops {
 
 
 
@@ -249,10 +249,6 @@ public:
 
 
 // for debugging and calculating timing info
-double getTimeElapsed(clock_t priorEvent)
-{
-     return ( std::clock() - priorEvent ) / (double)CLOCKS_PER_SEC;
-}
 double timeSince(clock_t priorEvent)
 {
      return ( std::clock() - priorEvent ) / (double)CLOCKS_PER_SEC;
@@ -720,137 +716,6 @@ void modifyWithAcceleration(double &position, double &velocity,
 
 
 
-/*
- * determine whether support node is compatible with endpoint nodes
- * using math borrowed from C linkTracklets.  Refines min,max
- * acceleration limits; we assume that these are then potentially used
- * for splitting child nodes of the support node in question
- */
-bool areMutuallyCompatible(const TreeNodeAndTime &firstNode,
-                           const TreeNodeAndTime &secondNode,
-                           const TreeNodeAndTime &thirdNode,
-                           const linkTrackletsConfig &searchConfig,
-                           double &minR, double &maxR,
-                           double &minD, double &maxD)
-{
-
-    for (uint whichPair = 0; whichPair < 2; whichPair++) {
-        const TrackletTreeNode * A;
-        const TrackletTreeNode * B;
-        double aTime;
-        double bTime;
-
-        if (whichPair == 0) {
-            A = firstNode.myTree;
-            aTime = firstNode.myTime.getMJD();
-            B = secondNode.myTree;
-            bTime = secondNode.myTime.getMJD();            
-        }
-        else {
-            A = secondNode.myTree;
-            aTime = secondNode.myTime.getMJD();
-            B = thirdNode.myTree;
-            bTime = thirdNode.myTime.getMJD();
-        }
-    
-
-        double dt = bTime - aTime;
-        double dt2 = 2.0 / (dt * dt);
-        double dti = 1.0/dt;
-        
-        for (uint axis = 0; axis < 2; axis++) {
-            double parentMin, parentMax;
-            double AmaxV, AminV, AmaxP, AminP;
-            double BmaxV, BminV, BmaxP, BminP;
-            unsigned int pos, vel;
-            if (axis == 0) {
-                pos=POINT_RA;
-                vel=POINT_RA_VELOCITY;
-                parentMin = minR;
-                parentMax = maxR;
-            }
-            else {
-                pos=POINT_DEC;
-                vel=POINT_DEC_VELOCITY;
-                parentMin = minD;
-                parentMax = maxD;
-            }
-
-            // short circuit ASAP if this won't work
-            if (parentMax < parentMin) {
-                return false;
-            }
-
-            AmaxP = A->getUBounds()->at(pos);
-            AminP = A->getLBounds()->at(pos);
-            AmaxV = A->getUBounds()->at(vel);
-            AminV = A->getLBounds()->at(vel);
-        
-            BmaxP = B->getUBounds()->at(pos);
-            BminP = B->getLBounds()->at(pos);
-            BmaxV = B->getUBounds()->at(vel);
-            BminV = B->getLBounds()->at(vel);
-
-                
-            double newMinAcc, newMaxAcc;            
-            double tmpAcc;
-            std::vector<double> possibleAccs;
-            
-            /* calculate min acceleration first. set it to the highest
-             * of the three values we could compute and the value
-             * previously assigned. */
-            possibleAccs.push_back(parentMin);
-            
-            tmpAcc = dt2*(BminP - AmaxP - AmaxV * dt);
-            possibleAccs.push_back(tmpAcc);
-                
-            // jmyers: this item shaky - no one seems to understand it...
-            tmpAcc = dt2*(AminP - BmaxP + BminV * dt);
-            possibleAccs.push_back(tmpAcc);
-                
-            tmpAcc = (BminV - AmaxV) * dti;
-            possibleAccs.push_back(tmpAcc);
-                
-            newMinAcc = *(std::max_element(possibleAccs.begin(),
-                                           possibleAccs.end()));
-            possibleAccs.clear();
-                
-            // now calculate new max acc.
-            possibleAccs.push_back(parentMax);
-                
-            tmpAcc = dt2 * (BmaxP - AminP - AminV * dt);
-            possibleAccs.push_back(tmpAcc);
-                
-            // jmyers: this item shaky - no one seems to understand it...
-            tmpAcc = dt2 * (AmaxP - BminP + BmaxV * dt);
-            possibleAccs.push_back(tmpAcc);
-                
-            tmpAcc = (BmaxV - AminV) * dti;
-            possibleAccs.push_back(tmpAcc);
-                
-            newMaxAcc = *(std::min_element(possibleAccs.begin(),
-                                           possibleAccs.end()));
-            possibleAccs.clear();
-                
-            if (axis == 0) {
-                minR = newMinAcc;
-                maxR = newMaxAcc;
-            }
-            else {
-                minD = newMinAcc;
-                maxD = newMaxAcc;
-            }
-                
-            // short-circuit if possible
-            if (newMaxAcc < newMinAcc) {
-                return false;
-            }
-        }
-        
-    }
-    // we didn't short circuit so it must be valid. return true.
-    return true;
-}
 
 
 
@@ -889,6 +754,10 @@ bool endpointTrackletsAreCompatible(
     newTrack.getBestFitQuadratic(epoch, 
                                  ra0, raV, raAcc, 
                                  dec0, decV, decAcc);
+#ifdef DEBUG
+    std::cout << "compatible? " << epoch << ' ' << ra0 << ' ' << raV << ' ' << raAcc
+              << ' ' <<  dec0 << ' ' << decV << ' ' << decAcc  << '\n';
+#endif
 
     if (raAcc > searchConfig.maxRAAccel) {
         allOK = false;
@@ -994,9 +863,15 @@ void addDetectionsCloseToPredictedPositions(
             newTrack.predictLocationAtTime(detMjd, predRa, predDec);
 
             double decDistance = fabs(detDec - predDec);
+#ifdef DEBUG
+            std::cout << "dec dist:" << decDistance << " thresh: " << searchConfig.trackAdditionThreshold << '\n';
+#endif
             if (decDistance < searchConfig.trackAdditionThreshold) {
 
                 double distance = angularDistanceRADec_deg(detRa, detDec, predRa, predDec);
+#ifdef DEBUG
+                std::cout << "ang dist:" << distance << " thresh: " << searchConfig.trackAdditionThreshold << '\n';
+#endif
                 
                 // if the detection is compatible, consider whether
                 // it's the best at the image time
@@ -1046,6 +921,9 @@ void addDetectionsCloseToPredictedPositions(
             trackMJDs.insert(candidatesIter->first);
             newTrack.addDetection(candidatesIter->second.detId, 
                                   allDetections);
+#ifdef DEBUG
+            std::cout << "inserted detection: " << candidatesIter->second.detId << '\n';
+#endif
             newTrack.componentTrackletIndices.insert(
                 candidatesIter->second.parentTrackletId);
         }
@@ -1108,38 +986,25 @@ bool trackHasSufficientSupport(const std::vector<MopsDetection> &allDetections,
 
 
 /* 
- * Calculate track RMS. Trust that the best fit quadratic has been
- * calculated since the last addition of a detection and thus is up to
- * date.  Return true iff RMS < searchConfig.maxTrackRms.
- */ 
+ * The name no longer reflects exactly what this does.  It decides
+ * whether the quality of the fit of the track model to the detections
+ * is sufficiently good.   This is based on a combination of prob(chisq)
+ * and the requirement of a physical range fit from the topocentric corrections.
+ * Due to the definition of the fit function, a physical range value here is
+ * NEGATIVE.  If a range was not fit, it will be zero.
+ */
+ 
 bool trackRmsIsSufficientlyLow(
     const std::vector<MopsDetection> &allDetections,
     const Track &newTrack, 
     const linkTrackletsConfig &searchConfig)
 {
 
-    double netSqError = 0.;
-    std::set<uint> trackDets = newTrack.getComponentDetectionIndices();
+    bool ok = newTrack.getProbChisqRa() > searchConfig.trackMinProbChisq &&
+        newTrack.getProbChisqDec() > searchConfig.trackMinProbChisq &&
+        newTrack.getFitRange() <= 0.0;
 
-    std::set<uint>::const_iterator detIter;
-    for (detIter = trackDets.begin(); 
-         detIter != trackDets.end(); 
-         detIter++) {
-        const MopsDetection thisDet = allDetections.at(*detIter);
-        double predictedRa, predictedDec;
-        newTrack.predictLocationAtTime(thisDet.getEpochMJD(), 
-                                       predictedRa, 
-                                       predictedDec);
-        double dist = angularDistanceRADec_deg(thisDet.getRA(), 
-                                               thisDet.getDec(), 
-                                               predictedRa, 
-                                               predictedDec);
-        netSqError += dist*dist;
-    }
-
-    double rmsError = sqrt(netSqError / trackDets.size());
-
-    return (rmsError < searchConfig.trackMaxRms);
+    return ok;
 }
 
 
@@ -1166,9 +1031,6 @@ void buildTracksAddToResults(
     buildTracksAddToResultsVisits++;
 
     uint numCompatible = 0;
-
-    //debugPrint(firstEndpoint, secondEndpoint, supportNodes,
-    //allDetections, allTracklets);
 
     if ((firstEndpoint.myTree->isLeaf() == false) ||
         (secondEndpoint.myTree->isLeaf() == false)) {
@@ -1216,8 +1078,8 @@ void buildTracksAddToResults(
             newTrack.addTracklet(secondEndpointTrackletIndex, 
                                  allTracklets.at(secondEndpointTrackletIndex),
                                  allDetections);
-            
-            newTrack.calculateBestFitQuadratic(allDetections);
+            // the 'false' here says do NOT use the full form for ra fit
+            newTrack.calculateBestFitQuadratic(allDetections, false);
 
             if (endpointTrackletsAreCompatible(allDetections, 
                                                newTrack,
@@ -1266,12 +1128,26 @@ void buildTracksAddToResults(
                                               searchConfig)) {
                     // recalculate best-fit quadratic and check if RMS
                     // is sufficient
-                    newTrack.calculateBestFitQuadratic(allDetections);
+                    // the 'true' here says DO use the full form for ra fit if there are enough
+                    // points to do so
+
+                    newTrack.calculateBestFitQuadratic(allDetections, true);
                     if (trackRmsIsSufficientlyLow(allDetections, 
                                                   newTrack, 
                                                   searchConfig)) {
+#ifdef DEBUG
+                        std::cout << "track passed rms\n";
+#endif
                         results.insert(newTrack);
+                    } else {
+#ifdef DEBUG
+                        std::cout << "track failed rms\n";
+#endif
                     }
+                } else {
+#ifdef DEBUG
+                    std::cout << "track has insufficient support\n";
+#endif
                 }
 
                 if ((RACE_TO_MAX_COMPATIBLE == true) && 
@@ -1280,12 +1156,185 @@ void buildTracksAddToResults(
                     exit(0);
                 }
 
-            }
-        }    
+                
+            }  else {
+#ifdef DEBUG
+                    std::cout << "endpoint tracklets incompatible\n";
+#endif
+                }  
     }
-
+}
     buildTracksAddToResultsTime += timeSince(start);
 
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* 
+ * feb 17, 2011: update acc bounds using formulas reverse-engineered
+ * from Kubica.
+ */
+bool updateAccBoundsReturnValidity(const TreeNodeAndTime &firstEndpoint, 
+                                   const TreeNodeAndTime &secondEndpoint,
+                                   double &aMinRa, double &aMaxRa, 
+                                   double &aMinDec, double &aMaxDec)
+{
+
+    double dt = secondEndpoint.myTime.getMJD() - 
+        firstEndpoint.myTime.getMJD();
+    double dt2 = 2./(dt*dt);
+    double dti = 1./(dt);
+
+    TrackletTreeNode* A = firstEndpoint.myTree;
+    TrackletTreeNode* B = secondEndpoint.myTree;
+
+    double AmaxVRa, AminVRa, AmaxPRa, AminPRa;
+    double BmaxVRa, BminVRa, BmaxPRa, BminPRa;
+    double AmaxVDec, AminVDec, AmaxPDec, AminPDec;
+    double BmaxVDec, BminVDec, BmaxPDec, BminPDec;
+
+    // short-circuit right away if possible.
+    if ((aMaxRa < aMinRa) || (aMaxDec < aMinDec)) {
+        return false;
+    }
+
+    AmaxPRa = A->getUBounds()->at(POINT_RA);
+    AminPRa = A->getLBounds()->at(POINT_RA);
+    AmaxVRa = A->getUBounds()->at(POINT_RA_VELOCITY);
+    AminVRa = A->getLBounds()->at(POINT_RA_VELOCITY);
+    
+    BmaxPRa = B->getUBounds()->at(POINT_RA);
+    BminPRa = B->getLBounds()->at(POINT_RA);
+    BmaxVRa = B->getUBounds()->at(POINT_RA_VELOCITY);
+    BminVRa = B->getLBounds()->at(POINT_RA_VELOCITY);
+
+    AmaxPDec = A->getUBounds()->at(POINT_DEC);
+    AminPDec = A->getLBounds()->at(POINT_DEC);
+    AmaxVDec = A->getUBounds()->at(POINT_DEC_VELOCITY);
+    AminVDec = A->getLBounds()->at(POINT_DEC_VELOCITY);
+    
+    BmaxPDec = B->getUBounds()->at(POINT_DEC);
+    BminPDec = B->getLBounds()->at(POINT_DEC);
+    BmaxVDec = B->getUBounds()->at(POINT_DEC_VELOCITY);
+    BminVDec = B->getLBounds()->at(POINT_DEC_VELOCITY);
+
+    
+    double tmpAcc;
+    // max using vel test
+    tmpAcc = (BmaxVRa - AminVRa) * dti;
+    if (tmpAcc < aMaxRa) {
+        aMaxRa = tmpAcc;
+    }
+    tmpAcc = (BmaxVDec - AminVDec) * dti;
+    if (tmpAcc < aMaxDec) {
+        aMaxDec = tmpAcc;
+    }
+    // min using velocity test
+    tmpAcc = (BminVRa - AmaxVRa) * dti;
+    if (tmpAcc > aMinRa) {
+        aMinRa = tmpAcc;
+    }
+    tmpAcc = (BminVDec - AmaxVDec) * dti;
+    if (tmpAcc > aMinDec) {
+        aMinDec = tmpAcc;
+    }
+    // short circuit if possible
+    if ((aMinRa > aMaxRa) || (aMinDec > aMaxDec)) {
+        return false;
+    }
+
+
+    // max using pos/vel test 1
+    tmpAcc = dt2 * (AmaxPRa - BminPRa + BmaxVRa * dt);
+    if (tmpAcc < aMaxRa) {
+        aMaxRa = tmpAcc;
+    }
+    tmpAcc = dt2 * (AmaxPDec - BminPDec + BmaxVDec * dt);
+    if (tmpAcc < aMaxDec) {
+        aMaxDec = tmpAcc;
+    }
+    // min using pos/vel test 1
+    tmpAcc = dt2*(BminPRa - AmaxPRa - AmaxVRa * dt);
+    if (tmpAcc > aMinRa) {
+        aMinRa = tmpAcc;
+    }
+    tmpAcc = dt2*(BminPDec - AmaxPDec - AmaxVDec * dt);
+    if (tmpAcc > aMinDec) {
+        aMinDec = tmpAcc;
+    }
+    // short circuit if possible
+    if ((aMinRa > aMaxRa) || (aMinDec > aMaxDec)) {
+        return false;
+    }
+
+
+    // max using pos/vel test 2
+    tmpAcc = dt2 * (BmaxPRa - AminPRa - AminVRa * dt);
+    if (tmpAcc < aMaxRa) {
+        aMaxRa = tmpAcc;
+    }
+    tmpAcc = dt2 * (BmaxPDec - AminPDec - AminVDec * dt);
+    if (tmpAcc < aMaxDec) {
+        aMaxDec = tmpAcc;
+    }
+    // min using pos/vel test 2
+    tmpAcc = dt2*(AminPRa - BmaxPRa + BminVRa * dt);
+    if (tmpAcc > aMinRa) {
+        aMinRa = tmpAcc;
+    }
+    tmpAcc = dt2*(AminPDec - BmaxPDec + BminVDec * dt);
+    if (tmpAcc > aMinDec) {
+        aMinDec = tmpAcc;
+    }
+    // short circuit if possible
+    if ((aMinRa > aMaxRa) || (aMinDec > aMaxDec)) {
+        return false;
+    }
+    
+    
+    // we know maxAcc > minAcc because we didn't short-circuit above.
+    return true;
+}
+
+
+
+/*
+ * determine whether support node is compatible with endpoint nodes
+ * using math borrowed from C linkTracklets.  Refines min,max
+ * acceleration limits; we assume that these are then potentially used
+ * for splitting child nodes of the support node in question
+ */
+bool areMutuallyCompatible(const TreeNodeAndTime &firstNode,
+                           const TreeNodeAndTime &secondNode,
+                           const TreeNodeAndTime &thirdNode,
+                           const linkTrackletsConfig &searchConfig,
+                           double &aMinRa, double &aMaxRa,
+                           double &aMinDec, double &aMaxDec)
+{
+
+    bool firstPairCompat = 
+        updateAccBoundsReturnValidity(firstNode, secondNode, 
+                                      aMinRa, aMaxRa, aMinDec, aMaxDec);
+    if (!firstPairCompat) 
+        return false;
+
+    bool secondPairCompat = 
+        updateAccBoundsReturnValidity(secondNode, thirdNode, 
+                                      aMinRa, aMaxRa, aMinDec, aMaxDec);
+    return secondPairCompat;
 }
 
 
@@ -1505,115 +1554,6 @@ double nodeWidth(TrackletTreeNode *node)
 
 
 
-/* 
- * feb 17, 2011: update acc bounds using formulas reverse-engineered
- * from Kubica.
- */
-bool updateAccBoundsReturnValidity(const TreeNodeAndTime &firstEndpoint, 
-                                   const TreeNodeAndTime &secondEndpoint,
-                                   double &accMinRa, double &accMaxRa, 
-                                   double &accMinDec, double &accMaxDec)
-{
-    unsigned int axis;
-    double parentMin, parentMax;
-
-    double dt = secondEndpoint.myTime.getMJD() - 
-        firstEndpoint.myTime.getMJD();
-    double dt2 = 2./(dt*dt);
-    double dti = 1./(dt);
-
-    TrackletTreeNode* node1 = firstEndpoint.myTree;
-    TrackletTreeNode* node2 = secondEndpoint.myTree;
-
-    for (axis = 0; axis < 2; axis++) {
-        double node1maxV, node1minV, node1maxP, node1minP;
-        double node2maxV, node2minV, node2maxP, node2minP;
-        unsigned int pos, vel;
-        if (axis == 0) {
-            pos=POINT_RA;
-            vel=POINT_RA_VELOCITY;
-            parentMin = accMinRa;
-            parentMax = accMaxRa;
-        }
-        else {
-            pos=POINT_DEC;
-            vel=POINT_DEC_VELOCITY;
-            parentMin = accMinDec;
-            parentMax = accMaxDec;
-        }
-
-        // short-circuit right away if possible.
-        if (parentMax < parentMin) return false;
-
-        node1maxP = node1->getUBounds()->at(pos);
-        node1minP = node1->getLBounds()->at(pos);
-        node1maxV = node1->getUBounds()->at(vel);
-        node1minV = node1->getLBounds()->at(vel);
-        
-        node2maxP = node2->getUBounds()->at(pos);
-        node2minP = node2->getLBounds()->at(pos);
-        node2maxV = node2->getUBounds()->at(vel);
-        node2minV = node2->getLBounds()->at(vel);
-
-        
-        double newMinAcc, newMaxAcc;
-            
-        double tmpAcc;
-        std::vector<double> possibleAccs;
-        /* calculate min acceleration first. set it to the highest of
-         * the three values we could compute and the value previously
-         * assigned. */
-        possibleAccs.push_back(parentMin);
-            
-        tmpAcc = (node2minV - node1maxV) * dti;
-        possibleAccs.push_back(tmpAcc);
-            
-        tmpAcc = dt2 * (node2minP - node1maxP - node1maxV * dt);
-        possibleAccs.push_back(tmpAcc);
-            
-        // jmyers: this item shaky - no one seems to understand it...
-        tmpAcc = dt2 * (node1minP - node2maxP + node2minV * dt);
-        possibleAccs.push_back(tmpAcc);
-            
-        newMinAcc = *(std::max_element(possibleAccs.begin(), 
-                                       possibleAccs.end()));
-        possibleAccs.clear();
-            
-        // now calculate max acceleration and take the least of the
-        // possible values.
-        possibleAccs.push_back(parentMax);
-            
-        tmpAcc = (node2maxV - node1minV) * dti;
-        possibleAccs.push_back(tmpAcc);
-            
-        tmpAcc = dt2 * (node2maxP - node1minP - node1minV * dt);
-        possibleAccs.push_back(tmpAcc);
-            
-        // jmyers: this item shaky - no one seems to understand it...
-        tmpAcc = dt2 * (node1maxP - node2minP + node2maxV * dt);
-        possibleAccs.push_back(tmpAcc);
-            
-        newMaxAcc = *(std::min_element(possibleAccs.begin(), 
-                                       possibleAccs.end()));
-            
-        possibleAccs.clear();
-            
-        if (axis == 0) {
-            accMinRa = newMinAcc;
-            accMaxRa = newMaxAcc;
-        }
-        else {
-            accMinDec = newMinAcc;
-            accMaxDec = newMaxAcc;
-        }
-            
-        // short-circuit if possible
-        if (newMaxAcc < newMinAcc) return false;
-
-    }
-    // we know maxAcc > minAcc because we didn't short-circuit above.
-    return true;
-}
 
 
 
@@ -1687,9 +1627,6 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                                   supportNodes, searchConfig, 
                                   accMinRa, accMaxRa, accMinDec, accMaxDec,
                                   newSupportNodes);
-        }        
-
-        if (iterationsTillSplit <= 0) {
             iterationsTillSplit = ITERATIONS_PER_SPLIT;
         }
         else{
@@ -2063,6 +2000,7 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
 
 TrackSet* linkTracklets(std::vector<MopsDetection> &allDetections,
                         std::vector<Tracklet> &queryTracklets,
+                        TrackVector &queryTracks,
                         const linkTrackletsConfig &searchConfig) {
     TrackSet * toRet;
     if (searchConfig.outputMethod == RETURN_TRACKS) {
@@ -2142,6 +2080,19 @@ TrackSet* linkTracklets(std::vector<MopsDetection> &allDetections,
 }
 
 
+void calculateTopoCorr(std::vector<MopsDetection> &allDetections,
+                       const linkTrackletsConfig &searchConfig) {
+
+    std::vector<MopsDetection>::iterator detIter;
+    
+    for (detIter = allDetections.begin();
+         detIter != allDetections.end();
+         detIter++) {
+        detIter->calculateTopoCorr();
+    }
+
+
+}
 
 
 

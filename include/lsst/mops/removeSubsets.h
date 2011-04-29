@@ -18,11 +18,18 @@ namespace mops {
 
     class SubsetRemover {
     public:
+
+        
+      
         void removeSubsetsPopulateOutputVector(
-            const std::vector<Tracklet> *pairsVector, 
-            std::vector<Tracklet> &outVector);
+            const std::vector<Tracklet> *tracksVector, 
+            std::vector<Tracklet> &outVector,
+            bool shortCircuit=true,
+            bool sortBeforeIntersect=false);
         
     };
+    
+    
 
     void putLongestPerDetInOutputVector(const std::vector<Tracklet> *pairsVector, 
                                         std::vector<Tracklet> &outputVector);

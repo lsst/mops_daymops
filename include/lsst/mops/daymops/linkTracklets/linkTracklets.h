@@ -10,6 +10,7 @@
 #include "lsst/mops/Tracklet.h"
 #include "lsst/mops/Track.h"
 #include "lsst/mops/TrackSet.h"
+#include "lsst/mops/TrackVector.h"
 
 namespace lsst {
     namespace mops {
@@ -83,7 +84,6 @@ public:
              * degree equivalent. */
             trackAdditionThreshold = .028648;
 
-
             /* This is the square root of value we've been giving
              * Kubica (0.00000025); he takes MEAN SQUARED not ROOT
              * mean squared as we do. */           
@@ -106,6 +106,17 @@ public:
             outputMethod = RETURN_TRACKS;
             outputFile = "";
             outputBufferSize = 0;
+
+            // observatory latitude and (East) longitude, in degrees
+            obsLat = -30.169;
+            obsLong = -70.804;
+
+            // default astrometric error, in degrees
+            defaultAstromErr = 0.2 / 3600;
+
+            // min prob(Chisq) of the fit of model to track points to consider a candidate track further
+            trackMinProbChisq = 0.3;
+
             
         }
 
@@ -225,6 +236,17 @@ public:
 
     linkTrackletsVerbositySettings myVerbosity;
 
+    // latitude and East longitude of observatory site in degrees.
+    // Needed for calculating topocentric corrections
+
+    double obsLat;
+    double obsLong;
+
+    // default astrometric error assumed for MopsDetections, in degrees
+
+    double defaultAstromErr;
+
+    double trackMinProbChisq;
 };
 
 
@@ -238,6 +260,7 @@ public:
    changed. Detections will be recentered, though.*/
 TrackSet* linkTracklets(std::vector<MopsDetection> &allDetections,
                         std::vector<Tracklet> &queryTracklets,
+                        TrackVector &queryTracks,
                         const linkTrackletsConfig &searchConfig);
 
 
@@ -253,6 +276,10 @@ void modifyWithAcceleration(double &position, double &velocity,
                             double acceleration, double time);
 
 
+
+// calcuate the topocentric corrections in RA for a vector of MopsDetections
+void calculateTopoCorr(std::vector<MopsDetection> &allDetections,
+                       const linkTrackletsConfig &searchConfig);
 
     }} // close lsst::mops
 

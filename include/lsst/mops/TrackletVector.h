@@ -11,7 +11,8 @@
 #include <vector>
 
 
-#include "Tracklet.h"
+#include "lsst/mops/Tracklet.h"
+#include "lsst/mops/LinkageVector.h"
 
 namespace lsst {
 namespace mops {
@@ -21,11 +22,11 @@ namespace mops {
 // formerly inherited from Persistable, but for now we aren't using
 // that functionality.
 
-class TrackletVector {
+class TrackletVector : public LinkageVector{
 public:
 
     // create a normal TrackletVector, which is just a container class. no file behaviors.
-    TrackletVector() { useCache = false; cacheSize = 0; useOutFile = false;};
+    TrackletVector();
 
     /*
      * if useCache == True: create a TrackletVector which holds at most cacheSize 
@@ -58,11 +59,13 @@ public:
 
     void push_back(const Tracklet &newTracklet);
 
-    Tracklet at(unsigned int) const;
-
+    Tracklet* at(unsigned int);
+    
     unsigned int size() const;
     
+    void populateFromFile(std::string fileName);
 
+    void setTrackletVelocities(const std::vector<MopsDetection> &allDetections);
 
     /*
      * see warnings in Tracklet.h.  If two tracklet sets were generated from
@@ -95,7 +98,7 @@ private:
     void writeToFile();
     std::vector<Tracklet> componentTracklets;
     bool useCache;
-    std::ofstream outFile;
+    std::ofstream* outFile;
     bool useOutFile;
     unsigned int cacheSize;
     

@@ -33,9 +33,10 @@ void Track::addTracklet(unsigned int trackletIndex,
 
 void Track::addDetection(unsigned int detIndex, const std::vector<MopsDetection> & allDets)
 {
-    // TDB: might be nice to check that we haven't been given two dets from the same image time.
-    // this will enforce some safety with quadratic fitting. not critical for now, 
-    // since linkTracklets never does anything that dumb.
+    // TDB: might be nice to check that we haven't been given two dets
+    // from the same image time.  this will enforce some safety with
+    // quadratic fitting. not critical for now, since linkTracklets
+    // never does anything that dumb.
     componentDetectionIndices.insert(detIndex);
     componentDetectionDiaIds.insert(allDets.at(detIndex).getID());
 }
@@ -90,6 +91,30 @@ int Track::getObjectId(const std::vector<MopsDetection> &allDets)
      }
      return underlyingId;
 
+}
+
+
+
+/* jmyers - these implement the interface inherited from Linkage; it
+ * will be used by TrackletTree (which should probably be renamed) and
+ * the accel comparison functions in linkTrackets.*/
+void Track::calculateBestFitFunc(const std::vector<MopsDetection> &allDets)
+{
+     // is it wise to use the higher-order function for accel prune, etc...?
+     // probably not - we're trying to use acceleration as a filter, 
+     // higher-order factors could cause great confusion.
+     calculateBestFitQuadratic(allDets, false);
+}
+
+
+void Track::getFitFunction(double& epoch, std::vector<double> &raFunc,
+			   std::vector<double> &decFunc)
+{
+     raFunc.resize(3);
+     decFunc.resize(3);
+     getBestFitQuadratic(epoch, raFunc[0], raFunc[1], raFunc[2],
+			 decFunc[0], decFunc[1], decFunc[2]);
+     
 }
 
 
@@ -264,6 +289,98 @@ double Track::getFitRange() const {
 	  return 0;
      }
 }
+
+
+unsigned int Track::getId()
+{
+     return myId;
+}
+
+void Track::setId(unsigned int newId)
+{
+     myId = newId;
+}
+
+
+
+MopsDetection Track::getLastDetection(
+    const std::vector<MopsDetection> &dets)
+    const
+{
+     if (componentDetectionIndices.size() < 1) {
+	  LSST_EXCEPT(UninitializedException, 
+   "Track: start time requested, but track contains no detections.");
+     }
+          
+     bool haveLast = false;
+     MopsDetection lastDet;
+     double lastTime;
+
+     std::set<unsigned int>::const_iterator indIt;
+     for (indIt = componentDetectionIndices.begin(); 
+	  indIt != componentDetectionIndices.end(); indIt++) {
+
+	  if (*indIt > dets.size()) {
+	       LSST_EXCEPT(BadIndexException, 
+  "Track: the detection vector we were handed cannot possibly go with this track.");
+	  }
+
+	  double thisTime = dets.at(*indIt).getEpochMJD();
+	  if ((!haveLast) || (thisTime > lastTime)) {
+	       lastTime = thisTime;
+	       haveLast = true;
+               lastDet = dets.at(*indIt);
+	  }
+     }
+     return lastDet;    
+}
+
+
+
+
+MopsDetection Track::getFirstDetection(
+    const std::vector<MopsDetection> &dets) const
+{
+     if (componentDetectionIndices.size() < 1) {
+	  LSST_EXCEPT(UninitializedException, 
+   "Track: start time requested, but tracklet contains no detections.");
+     }
+          
+     bool haveFirst = false;
+     MopsDetection firstDet;
+     double firstTime;
+
+     std::set<unsigned int>::const_iterator indIt;
+     for (indIt = componentDetectionIndices.begin(); 
+	  indIt != componentDetectionIndices.end(); indIt++) {
+
+	  if (*indIt > dets.size()) {
+	       LSST_EXCEPT(BadIndexException, 
+  "Track: the detection vector we were handed cannot possibly go with this track.");
+	  }
+
+	  double thisTime = dets.at(*indIt).getEpochMJD();
+	  if ((!haveFirst) || (thisTime < firstTime)) {
+	       firstTime = thisTime;
+	       haveFirst = true;
+               firstDet = dets.at(*indIt);
+	  }
+     }
+     return firstDet;    
+}
+
+
+
+double Track::getStartTime(const std::vector<MopsDetection> &dets) const
+{
+    return getFirstDetection(dets).getEpochMJD();
+}
+
+double Track::getDeltaTime(const std::vector<MopsDetection> &dets) const
+{
+    return getLastDetection(dets).getEpochMJD() - getStartTime(dets);
+}
+
 
 
 }};

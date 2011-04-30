@@ -8,6 +8,7 @@
 
 #include "lsst/mops/BaseKDTreeNode.h"
 #include "lsst/mops/Exceptions.h"
+#include "lsst/mops/LinkageVector.h"
 
 
 /***************************************************************************
@@ -24,14 +25,19 @@ namespace lsst {
 namespace mops {
 
 
-    class TrackletTreeNode: public BaseKDTreeNode<unsigned int, TrackletTreeNode> {
+    class TrackletTreeNode: 
+        public BaseKDTreeNode<unsigned int, TrackletTreeNode> {
     public: 
         friend class BaseKDTreeNode<unsigned int, TrackletTreeNode>;
 
-        /* tracklets is a series of pointAndValues and should hold a
-         * bunch of elements like:
+        /* linkages should be a series of pointAndValues and should
+         * hold a bunch of elements like:
          * 
          * (RA, Dec, RAv, DecV, deltaTime)
+         * 
+         * or
+         *
+         * (RA, Dec, RAv, DecV, RAAcc, DecAcc, deltaTime)
          *
          * of the tracklet, mapped to the ID of the tracklet.
          * 
@@ -45,7 +51,8 @@ namespace mops {
 
 
         TrackletTreeNode(
-            const std::vector<PointAndValue <unsigned int> > &tracklets, 
+            const std::vector<PointAndValue <unsigned int> > &linkages, 
+            LinkageVector* allLinkages,
             double positionalErrorRa, 
             double positionalErrorDec,
             unsigned int maxLeafSize, 
@@ -59,20 +66,34 @@ namespace mops {
         const unsigned int getNumVisits() const;
         void addVisit();
 
-        // return true iff this node OR ITS CHILDREN holds the tracklet t
-        bool hasTracklet(unsigned int t);
 
         // these are to be used by linkTracklets.
         bool hasLeftChild() const;
         bool hasRightChild() const;
         TrackletTreeNode * getLeftChild();
-        TrackletTreeNode * getRightChild();
+        TrackletTreeNode * getRightChild();        
+
+
+        /* getMyData returns PointsAndValues; the Values are indexes
+         * into a vector. getDataParentVec is a pointer to that
+         * vector.  */
+        LinkageVector* getDataParentVec() const;
 
         const std::vector<PointAndValue <unsigned int> > * getMyData() const;
         bool isLeaf() const;
 
 
+
+
+        // return true iff this node OR ITS CHILDREN holds the
+        // tracklet w. ID t. This is crazy slow on large trees (due to
+        // the fact that it does an undirected depth-first
+        // traversal) but helpful for debugging.
+        bool hasTracklet(unsigned int t);
+
     protected:
+
+        LinkageVector* dataParentVec;
 
         /* after the "real" constructor is called at the root, and the
          * BaseKDTree constructor sets up the children, this function

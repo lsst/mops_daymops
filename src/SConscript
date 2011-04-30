@@ -12,18 +12,24 @@ Import("env")
 		      
 commonStuff = ['common', 'MopsDetection',
                'Orbit', 'TrackletVector', 
-               'TrackSet', 'Track', 'Tracklet']
+               'TrackSet', 'Track', 
+               'TrackVector']
 
 common_libs = []
 
 for lib in commonStuff:
     common_libs.append(env.Library(lib, lib+'.cc'))
 
-
 common_libs.append(env.StaticLibrary('rmsLineFit', 
-                                     ['rmsLineFit.cc', 'common', 'MopsDetection', 'Tracklet']))
+                                     ['rmsLineFit.cc', 'common', 
+                                      'MopsDetection', 'Tracklet.cc']))
 
-common_libs.append(env.StaticLibrary('fileUtils', ['fileUtils.cc', 'MopsDetection','Tracklet']))
+common_libs.append(env.StaticLibrary('Tracklet',
+                                     ['Tracklet.cc', 'rmsLineFit']))
+
+
+common_libs.append(env.StaticLibrary('fileUtils', 
+                                     ['fileUtils.cc', 'MopsDetection','Tracklet']))
 
 
 common_libs.append(env.StaticLibrary('removeSubsets',  ['removeSubsets.cc'] + common_libs))
@@ -34,9 +40,9 @@ common_libs.append(env.StaticLibrary('removeSubsets',  ['removeSubsets.cc'] + co
 env.Program('../bin/removeSubsets',  ['removeSubsetsMain.cc'] + common_libs,
             LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
 
-env.Program('../bin/readTracksWriteStats',  ['readTracksWriteStats.cc', 'TrackVector.cc'] \
-                + common_libs,
-            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
+#env.Program('../bin/readTracksWriteStats',  ['readTracksWriteStats.cc'] \
+#                + common_libs,
+#            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
 
 
 

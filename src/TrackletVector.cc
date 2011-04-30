@@ -5,16 +5,25 @@
 
 #include <ios>
 #include <set>
+#include <vector>
 
 #include "lsst/mops/Exceptions.h"
 #include "lsst/mops/fileUtils.h"
 #include "lsst/mops/TrackletVector.h"
-
+#include "lsst/mops/MopsDetection.h"
 
 
 namespace lsst { 
 namespace mops {
 
+
+TrackletVector::TrackletVector() 
+{ 
+    useCache = false; 
+    cacheSize = 0; 
+    useOutFile = false;
+    outFile = NULL;
+};
 
 
 TrackletVector::TrackletVector(std::string outFileName, bool useCache, unsigned int cacheSize) 
@@ -25,16 +34,27 @@ TrackletVector::TrackletVector(std::string outFileName, bool useCache, unsigned 
     }
     else {
         this->useCache = false;
-        this->cacheSize = 0;        
+        this->cacheSize = 0;
     }
 
     useOutFile = true;
-    outFile.open(outFileName.c_str(), std::ios_base::out | std::ios_base::app);
+    outFile = new std::ofstream;
+    outFile->open(outFileName.c_str(), std::ios_base::out | std::ios_base::app);
 
 }
 
 
 
+void TrackletVector::setTrackletVelocities(
+    const std::vector<MopsDetection> &allDetections)
+{
+    for (uint i = 0; i < componentTracklets.size(); i++) {
+        Tracklet *curTracklet = &componentTracklets.at(i);
+        std::vector <MopsDetection> trackletDets;
+        curTracklet->calculateBestFitFunc(allDetections);
+    }
+
+}
 
 
 void TrackletVector::purgeToFile() 
@@ -63,7 +83,8 @@ TrackletVector::~TrackletVector()
 {
     if (useOutFile) {
         purgeToFile();
-        outFile.close();
+        outFile->close();
+        delete outFile;
     }
 }
 
@@ -74,7 +95,7 @@ TrackletVector::~TrackletVector()
 void TrackletVector::writeToFile()
 {
     // TBD: eventually, get rid of fileUtils entirely and put its code here.
-    writeTrackletsToOutFile(&componentTracklets, outFile);
+    writeTrackletsToOutFile(&componentTracklets, *outFile);
 }
 
 
@@ -92,18 +113,29 @@ void TrackletVector::push_back(const Tracklet &newTracklet) {
 }
 
 
+void TrackletVector::populateFromFile(std::string fileName) 
+{
+    if (useCache) {
+        throw LSST_EXCEPT(NotWhileCacheing, 
+                          "TrackletVector was requested to read in from file but has output cacheing enabled. This is almost certainly a bad idea."); 
+    }
+
+    populatePairsVectorFromFile(fileName, componentTracklets);
+}
 
 
 
 
-Tracklet TrackletVector::at(unsigned int i) const {
+
+
+Tracklet* TrackletVector::at(unsigned int i) {
 
     if (useCache) {
-        throw LSST_EXCEPT(lsst::pex::exceptions::Exception, 
+        throw LSST_EXCEPT(NotWhileCacheing, 
                           "trackletVector: Cannot call do random access via at() when using output cacheing.");
     }
 
-    return componentTracklets.at(i);
+    return &(componentTracklets.at(i));
 }
 
 
@@ -113,7 +145,7 @@ Tracklet TrackletVector::at(unsigned int i) const {
 unsigned int TrackletVector::size() const {
 
     if (useCache) {
-        throw LSST_EXCEPT(lsst::pex::exceptions::Exception, 
+        throw LSST_EXCEPT(NotWhileCacheing, 
                           "trackletVector: Cannot request 'size' when using cacheing.");
     }
 
@@ -126,7 +158,7 @@ unsigned int TrackletVector::size() const {
 bool TrackletVector::isSubsetOf(const TrackletVector &other) const {
 
     if (useCache) {
-        throw LSST_EXCEPT(lsst::pex::exceptions::Exception, 
+        throw LSST_EXCEPT(NotWhileCacheing, 
                           "trackletVector: Cannot call isSubsetOf when using cacheing.");
     }
 
@@ -159,10 +191,13 @@ bool TrackletVector::isSubsetOf(const TrackletVector &other) const {
 
 
 
+
+
+
 bool TrackletVector::operator==(const TrackletVector &other) const {
 
     if (useCache) {
-        throw LSST_EXCEPT(lsst::pex::exceptions::Exception, 
+        throw LSST_EXCEPT(NotWhileCacheing, 
                           "trackletVector: Cannot call == when using cacheing.");
     }
 
@@ -175,7 +210,7 @@ bool TrackletVector::operator==(const TrackletVector &other) const {
 bool TrackletVector::operator!=(const TrackletVector &other) const {
 
     if (useCache) {
-        throw LSST_EXCEPT(lsst::pex::exceptions::Exception, 
+        throw LSST_EXCEPT(NotWhileCacheing, 
                           "trackletVector: Cannot call != when using cacheing.");
     }
 

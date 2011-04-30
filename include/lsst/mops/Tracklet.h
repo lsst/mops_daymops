@@ -10,15 +10,21 @@
 #define LSST_TRACKLET_H
 #include <set>
 #include "lsst/mops/MopsDetection.h"
+#include "lsst/mops/Linkage.h"
 #include "lsst/mops/Exceptions.h"
 
 namespace lsst {
 namespace mops {
 
-class Tracklet {
+class Tracklet : public Linkage {
 public: 
     Tracklet();
     Tracklet(std::set <unsigned int> startIndices);
+
+
+    void calculateBestFitFunc(const std::vector<MopsDetection> &allDets);
+    void getFitFunction(double& epoch, std::vector<double> &raFunc,
+                        std::vector<double> &decFunc);
 
     /* a tracklet is just a collection of detections.  To conserve
        memory, we don't hold copies of those detections here, we hold
@@ -33,10 +39,6 @@ public:
 
     std::set<unsigned int> indices;
     bool isCollapsed;    
-    // these fields are used only by linkTracklets. linkTracklets
-    // is responsible for setting them before reading.
-    double velocityRA;
-    double velocityDec;
     
     /* return start/end times and first/last detections. does NOT
      * assume indices are assigned chronologically. DOES ASSUME,
@@ -49,6 +51,18 @@ public:
     MopsDetection getLastDetection(const std::vector<MopsDetection> &dets)
         const;
 
+    void setId(unsigned int nId) { myId = nId;}
+    unsigned int getId() const { return myId; }
+
+    /* fetch this tracklet's detections from allDetections and put
+     * them in detectionsForTracklet. Of course allDetections must
+     * correspond to this tracklet or you'll get nonsense!
+     */
+    void getAllDetections(
+        const std::vector<MopsDetection> & allDetections,
+        std::vector<MopsDetection> &detectionsForTracklet)
+    const;
+
     /*
      * The following operators consider only the indices set.  Note
      * that if you compare two tracklets with indices into different
@@ -57,10 +71,6 @@ public:
      * t1.indices contains id X, then X in t2.indices has the same
      * meaning.
      */
-
-    void setId(unsigned int nId) { myId = nId;}
-    unsigned int getId() const { return myId; }
-
 
     Tracklet & operator= (const Tracklet &other);
 
@@ -71,6 +81,9 @@ public:
     bool operator<(const Tracklet &other) const; 
 
 private:
+    double fitFuncEpoch;
+    std::vector<double> RaBestFitFunc;
+    std::vector<double> DecBestFitFunc;
     void copy(const Tracklet &other);
     unsigned int myId; 
 

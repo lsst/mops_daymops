@@ -46,8 +46,8 @@ int main(int argc, char* argv[])
      searchConfig.myVerbosity.printBoundsInfo = true;
 
      std::string helpString = 
-	  std::string("Usage: linkTracklets -d <detections file> -t <tracklets file> -o <output (tracks) file>") + std::string("\n") +
-	  std::string("  optional arguments: ") + std::string("\n") +
+	  std::string("Usage: linkTracklets -d <detections file> -t <tracklets file> -o <output (tracks) file>") + std::string("\n")
+	  + std::string("  optional arguments: ") + std::string("\n")
 	  + std::string("     -T / --tracksFile : optional set of tracks to use for linking ") 
 
 	  + std::string("     -e / --detectionErrorThresh (float) : maximum allowed observational error, default = ")
@@ -102,7 +102,7 @@ int main(int argc, char* argv[])
 	  case 't':
 	       trackletsFileName = optarg;
 	       break;
-	  case 't':
+	  case 'T':
 	       tracksFileName = optarg;
 	       break;
 	  case 'o':
@@ -163,8 +163,8 @@ int main(int argc, char* argv[])
      }
 
      std::vector<lsst::mops::MopsDetection> allDets;
-     std::vector<lsst::mops::Tracklet> allTracklets;
-     TrackVector inTracks;
+     lsst::mops::TrackletVector allTracklets;
+     lsst::mops::TrackVector inTracks;
      lsst::mops::TrackSet * resultTracks;
      searchConfig.outputMethod = lsst::mops::IDS_FILE_WITH_CACHE;
      searchConfig.outputBufferSize = 1000;
@@ -179,7 +179,12 @@ int main(int argc, char* argv[])
      std::cerr << "Using defaultAstromErr " << astromErr << '\n';
      populateDetVectorFromFile(detectionsFileName, allDets, astromErr);
      calculateTopoCorr(allDets, searchConfig);
-     populatePairsVectorFromFile(trackletsFileName, allTracklets);
+     allTracklets.populateFromFile(trackletsFileName);
+
+     if (tracksFileName != "") {
+	  inTracks.populateFromFile(tracksFileName, allDets);
+     }
+
 
      if(PRINT_TIMING_INFO) {     	  
 	  dif = lsst::mops::timeElapsed(last);
@@ -192,7 +197,7 @@ int main(int argc, char* argv[])
 	  last = std::clock();
      }
 
-     resultTracks = lsst::mops::linkTracklets(allDets, allTracklets, searchConfig);
+     resultTracks = lsst::mops::linkTracklets(allDets, allTracklets, inTracks, searchConfig);
 
 
      if(PRINT_TIMING_INFO) {     

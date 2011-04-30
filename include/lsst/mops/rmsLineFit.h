@@ -38,6 +38,12 @@ namespace mops {
                           std::vector<double>*perDetSqDist=NULL);
     
 
+    /* takes a vector of doubles between 0 and 360 and moves the
+     * 180-360 angles to corresponding -180 to 0 values.  this is
+     * called in a few places but it's a stupid way of doing things;
+     * replace it when possible. TBD. */    
+    void make180To360Negative(std::vector<double> &v);
+
 
     
     /*

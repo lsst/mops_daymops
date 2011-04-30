@@ -11,6 +11,7 @@
 #include "lsst/mops/Track.h"
 #include "lsst/mops/TrackSet.h"
 #include "lsst/mops/TrackVector.h"
+#include "lsst/mops/TrackletVector.h"
 
 namespace lsst {
     namespace mops {
@@ -259,8 +260,17 @@ public:
    velocityDec fields.  otherwise queryTracklets will not be
    changed. Detections will be recentered, though.*/
 TrackSet* linkTracklets(std::vector<MopsDetection> &allDetections,
-                        std::vector<Tracklet> &queryTracklets,
+                        TrackletVector &queryTracklets,
                         TrackVector &queryTracks,
+                        const linkTrackletsConfig &searchConfig);
+
+
+/* DEPRECATED: old interface, which took no tracks as input and took a
+ * vector of tracklets instead of a TrackletVector.  This is mainly to
+ * keep our old unit tests from complaining. Delete it when those are
+ * fixed! TBD*/
+TrackSet* linkTracklets(std::vector<MopsDetection> &allDetections,
+                        std::vector<Tracklet> &queryTracklets,
                         const linkTrackletsConfig &searchConfig);
 
 

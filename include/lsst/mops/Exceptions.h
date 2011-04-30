@@ -66,6 +66,12 @@
         
         LSST_EXCEPTION_TYPE(KnownShortcomingException, std::Exception,
                             lsst::mops::KnownShortcomingException)
+
+        LSST_EXCEPTION_TYPE(InheritanceException, std::Exception,
+                            lsst::mops::InheritanceException)
+
+        LSST_EXCEPTION_TYPE(NotWhileCacheing, std::Exception,
+                            lsst::mops::InheritanceException)
     
     
 
@@ -109,6 +115,11 @@ LSST_EXCEPTION_TYPE(BadIndexException, lsst::pex::exceptions::Exception,
 LSST_EXCEPTION_TYPE(KnownShortcomingException, lsst::pex::exceptions::Exception,
                     lsst::mops::KnownShortcomingException)
 
+LSST_EXCEPTION_TYPE(InheritanceException, lsst::pex::exceptions::Exception,
+                    lsst::mops::InheritanceException)
+    
+LSST_EXCEPTION_TYPE(NotWhileCacheing,lsst::pex::exceptions::Exception,
+                    lsst::mops::NotWhileCacheing)
 
 
 

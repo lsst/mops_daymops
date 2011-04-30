@@ -32,8 +32,17 @@
 
 
 #include "lsst/mops/MopsDetection.h"
+#include "lsst/mops/LinkageVector.h"
 #include "lsst/mops/TrackletVector.h"
 
+
+/* jmyers
+   april 29 2011
+
+   as of today, this class name is yet another slight misnomer. The
+   TrackletTree and TrackletTreeNode class shall now actually hold
+   references to Linkages, which may be either Tracklets or Tracks.
+ */
 
 
 namespace lsst {
@@ -60,16 +69,24 @@ namespace mops {
          * these widths will be used to determine the axis splitting at each
          * level as in C linkTracklets mk_tbt - the axis with max width is chosen, 
          * where width at i is (UBound[i] - LBound[i]) / perAxisWidths[i]
+         *
+         * The tree will hold tracklets or tracks (please make sure
+         * it's just one or the other!) in the vector
+         * thisTreeLinkages, which will be copied. Make sure all the
+         * tracklets and/or tracks held there allLinkages should be
+         * the global collection of Tracklets or the global collection of Tracks.
          */
         TrackletTree(const std::vector<MopsDetection> &allDetections,
-                     const std::vector<Tracklet> &thisTreeTracklets,
+                     LinkageVector &thisTreeLinkages,
+                     LinkageVector *allLinkages,
                      double positionalErrorRa, 
                      double positionalErrorDec,
                      unsigned int maxLeafSize,
                      const std::vector<double> &perAxisWidths);
 
         TrackletTree(const std::vector<MopsDetection> &allDetections,
-                     const std::vector<Tracklet> &thisTreeTracklets,
+                     LinkageVector &thisTreeLinkages,
+                     LinkageVector *allLinkages,
                      double positionalErrorRa, 
                      double positionalErrorDec,
                      unsigned int maxLeafSize);
@@ -81,7 +98,8 @@ namespace mops {
          * ready for it.
          */
         void buildFromData(const std::vector<MopsDetection> &allDetections,
-                           const std::vector<Tracklet> &thisTreeTracklets,
+                           LinkageVector &thisTreeLinkages,
+                           LinkageVector *allLinkages,
                            double positionalErrorRa, 
                            double positionalErrorDec,
                            unsigned int maxLeafSize,

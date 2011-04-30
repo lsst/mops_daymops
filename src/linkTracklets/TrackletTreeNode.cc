@@ -2,6 +2,8 @@
 /* jmyers 2/10/11 */
 
 #include "lsst/mops/daymops/linkTracklets/TrackletTreeNode.h"
+#include "lsst/mops/Exceptions.h"
+
 #define uint unsigned int
 
 namespace lsst { namespace mops {
@@ -10,11 +12,16 @@ namespace lsst { namespace mops {
 
 
 
+LinkageVector* TrackletTreeNode::getDataParentVec() const
+{
+    return dataParentVec;
+}
 
         
 TrackletTreeNode::TrackletTreeNode(
     const std::vector<PointAndValue <unsigned int> > &tracklets, 
-    double positionalErrorRa, 
+    LinkageVector* allLinkages,
+    double positionalErrorRa,
     double positionalErrorDec,
     unsigned int maxLeafSize, 
     unsigned int myAxisToSplit, 
@@ -24,7 +31,16 @@ TrackletTreeNode::TrackletTreeNode(
     bool splitWidest)
 {
     myRefCount = 1;
-    myK = 4; 
+    dataParentVec = allLinkages;
+
+    /* we expect either ra, dec, raV, decV, dt or
+       ra, dec, raV, decV, raAcc, decAcc, dt.
+     */
+    myK = tracklets.at(0).getPoint().size() - 1;
+    if ((myK != 4) && (myK != 6)) {
+        throw LSST_EXCEPT(BadParameterException,
+    "Don't know what to do with data of this dimensionality!\n");
+    }
 
     lastId++;
     id = lastId;
@@ -34,16 +50,16 @@ TrackletTreeNode::TrackletTreeNode(
     std::vector<PointAndValue <uint> > leftPointsAndValues, rightPointsAndValues;
 
     
-    myUBounds.resize(4);
-    myLBounds.resize(4);
+    myUBounds.resize(myK);
+    myLBounds.resize(myK);
 
     // need to calculate initial UBounds, LBounds for our data.
     for (uint i = 0; i < tracklets.size(); i++) {
-        if (tracklets.at(i).getPoint().size() != 5) {
+        if (tracklets.at(i).getPoint().size() != myK + 1) {
             LSST_EXCEPT(ProgrammerErrorException, 
-       "expected all tracklet points to be 5d: Ra, Dec, RaV, DecV, dt\n");
+       "expected all tracklet/track points to be 5d or 7d: Ra, Dec, RaV, DecV, dt or Ra, Dec, RaV, DecV, RaAcc, DecAcc, dt.\n");
         }
-        for (uint axis = 0; axis < 4; axis++) {
+        for (uint axis = 0; axis < myK; axis++) {
             double val = tracklets.at(i).getPoint().at(axis);
             if ((i == 0) || (val > myUBounds[axis])) {
                 myUBounds[axis] = val;
@@ -56,7 +72,7 @@ TrackletTreeNode::TrackletTreeNode(
     
 
     if (tracklets.size() <= maxLeafSize) {
-        // leaf case is easy.
+       // leaf case is easy.
         myData = tracklets;
     }
 
@@ -71,12 +87,11 @@ TrackletTreeNode::TrackletTreeNode(
             // choose an axis to split, overwrite myAxisToSplit
             double maxWidth = -1;
             uint widestAxis = -1; 
-            for (uint i = 0; i < 4; i++) {
-                // 
+            for (uint i = 0; i < myK; i++) {
                 double width = (myUBounds[i] - myLBounds[i]) / widths[i];
                 if (width < 0) {
                     LSST_EXCEPT(ProgrammerErrorException,
-                                " Got impossible width when building trackletTree\n");
+             " Got impossible width when building trackletTree\n");
                 }
                 if (width > maxWidth) {
                     maxWidth = width;
@@ -108,8 +123,8 @@ TrackletTreeNode::TrackletTreeNode(
             }
         }
         
-        // like in C linkTracklets, partition up data and if it doesn't work well
-        // just partition arbitrarily...
+        // like in C linkTracklets, partition up data and if it
+        // doesn't work well just partition arbitrarily...
         if ((leftPointsAndValues.size() == 0) || 
             (rightPointsAndValues.size() == 0)) {
             leftPointsAndValues.clear();
@@ -128,6 +143,7 @@ TrackletTreeNode::TrackletTreeNode(
         nextAxis = (myAxisToSplit + 1) % (myK);
         
         TrackletTreeNode leftChild(leftPointsAndValues,
+                                   allLinkages,
                                    positionalErrorRa, positionalErrorDec,
                                    maxLeafSize, nextAxis, widths, lastId, 
                                    useMedian, splitWidest);
@@ -135,6 +151,7 @@ TrackletTreeNode::TrackletTreeNode(
         myChildren.push_back(leftChild);
         
         TrackletTreeNode rightChild(rightPointsAndValues, 
+                                    allLinkages,
                                     positionalErrorRa, positionalErrorDec,
                                     maxLeafSize, nextAxis, widths, lastId, 
                                     useMedian, splitWidest);
@@ -267,46 +284,99 @@ void TrackletTreeNode::recalculateBoundsWithError(
         // extend UBounds, LBounds with knowledge of velocity error.
         if (myData.size() <= 0) {
             LSST_EXCEPT(ProgrammerErrorException, 
-                        "Unexpected condition: tree node is leaf, but has no data.");
+      "Unexpected condition: tree node is leaf, but has no data.");
         }
+
+        if (myK == 4) {
 	
-        // extend UBounds, LBounds in RA, Dec by position error.
-        myUBounds.at(0) += positionalErrorRa;
-        myLBounds.at(0) -= positionalErrorRa;
-        myUBounds.at(1) += positionalErrorDec;
-        myLBounds.at(1) -= positionalErrorDec;
-	
-        // find min/max RA, Dec velocities after accounting for error.
-        
-        for (unsigned int i = 0; i < myData.size(); i++) {
-            std::vector<double> trackletPoint = 
-                myData.at(i).getPoint();
-            double trackletRaV  = trackletPoint.at(2);
-            double trackletDecV = trackletPoint.at(3);
-            double thisDt = trackletPoint.at(4);
+            // extend UBounds, LBounds in RA, Dec by position error.
+            myUBounds.at(0) += positionalErrorRa;
+            myLBounds.at(0) -= positionalErrorRa;
+            myUBounds.at(1) += positionalErrorDec;
+            myLBounds.at(1) -= positionalErrorDec;
             
-            double maxVelocityErrRa =  2.0 * positionalErrorRa  / thisDt;
-            double maxVelocityErrDec = 2.0 * positionalErrorDec / thisDt;
+            // find min/max RA, Dec velocities after accounting for error.
             
-            double maxRaV = trackletRaV + maxVelocityErrRa;
-            double minRaV = trackletRaV - maxVelocityErrRa;
-            double maxDecV = trackletDecV + maxVelocityErrDec;
-            double minDecV = trackletDecV - maxVelocityErrDec;
-            
-            if (myUBounds.at(2) < maxRaV) {
-                myUBounds.at(2) = maxRaV;
+            for (unsigned int i = 0; i < myData.size(); i++) {
+                std::vector<double> trackletPoint = 
+                    myData.at(i).getPoint();
+                double trackletRaV  = trackletPoint.at(2);
+                double trackletDecV = trackletPoint.at(3);
+                double thisDt = trackletPoint.at(4);
+                
+                double maxVelocityErrRa =  2.0 * positionalErrorRa  / thisDt;
+                double maxVelocityErrDec = 2.0 * positionalErrorDec / thisDt;
+                
+                double maxRaV = trackletRaV + maxVelocityErrRa;
+                double minRaV = trackletRaV - maxVelocityErrRa;
+                double maxDecV = trackletDecV + maxVelocityErrDec;
+                double minDecV = trackletDecV - maxVelocityErrDec;
+                
+                if (myUBounds.at(2) < maxRaV) {
+                    myUBounds.at(2) = maxRaV;
+                }
+                if (myUBounds.at(3) < maxDecV) {
+                    myUBounds.at(3) = maxDecV;
+                }
+                if (myLBounds.at(2) > minRaV) {
+                    myLBounds.at(2) = minRaV;
+                }
+                if (myLBounds.at(3) > minDecV) {
+                    myLBounds.at(3) = minDecV;
+                }
             }
-            if (myUBounds.at(3) < maxDecV) {
-                myUBounds.at(3) = maxDecV;
-            }
-            if (myLBounds.at(2) > minRaV) {
-                myLBounds.at(2) = minRaV;
-            }
-            if (myLBounds.at(3) > minDecV) {
-                myLBounds.at(3) = minDecV;
+           
+        }
+        else {
+            /* this isn't really a tracklet, it's a track! */
+            // extend UBounds, LBounds in RA, Dec by position error.
+            myUBounds.at(0) += positionalErrorRa;
+            myLBounds.at(0) -= positionalErrorRa;
+            myUBounds.at(1) += positionalErrorDec;
+            myLBounds.at(1) -= positionalErrorDec;
+            // TBD: Hopefully Tim will write something smarter here,
+            // for now used dummy values more or less.
+            double DUMMY_ACCEL_ERROR = .000001;
+
+            myUBounds.at(4) += DUMMY_ACCEL_ERROR;
+            myLBounds.at(4) -= DUMMY_ACCEL_ERROR;
+            myUBounds.at(5) += DUMMY_ACCEL_ERROR;
+            myLBounds.at(5) -= DUMMY_ACCEL_ERROR;
+
+            // guess that velocity error is basically just like in the
+            // vel-only case. probably not. TBD, don't do something
+            // this stupid.
+
+            for (unsigned int i = 0; i < myData.size(); i++) {
+                std::vector<double> trackletPoint = 
+                    myData.at(i).getPoint();
+                double thisDt = trackletPoint.at(6);
+
+                double trackletRaV  = trackletPoint.at(2);
+                double trackletDecV = trackletPoint.at(3);
+
+                double maxVelocityErrRa =  2.0 * positionalErrorRa  / thisDt;
+                double maxVelocityErrDec = 2.0 * positionalErrorDec / thisDt;
+                
+                double maxRaV = trackletRaV + maxVelocityErrRa;
+                double minRaV = trackletRaV - maxVelocityErrRa;
+                double maxDecV = trackletDecV + maxVelocityErrDec;
+                double minDecV = trackletDecV - maxVelocityErrDec;
+                
+                if (myUBounds.at(2) < maxRaV) {
+                    myUBounds.at(2) = maxRaV;
+                }
+                if (myUBounds.at(3) < maxDecV) {
+                    myUBounds.at(3) = maxDecV;
+                }
+                if (myLBounds.at(2) > minRaV) {
+                    myLBounds.at(2) = minRaV;
+                }
+                if (myLBounds.at(3) > minDecV) {
+                    myLBounds.at(3) = minDecV;
+                }
             }
         }
-        
     }
     else {
         // traverse children, then extend your own bounds.

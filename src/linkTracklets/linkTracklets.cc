@@ -8,7 +8,6 @@
 #include <time.h>
 #include <algorithm>
 
-#include "lsst/mops/rmsLineFit.h"
 #include "lsst/mops/daymops/linkTracklets/linkTracklets.h"
 #include "lsst/mops/Exceptions.h"
 #include "lsst/mops/KDTree.h"
@@ -42,6 +41,8 @@ pretty good).  Will make searching INSANELY slow.
 #define POINT_DEC          1
 #define POINT_RA_VELOCITY   2
 #define POINT_DEC_VELOCITY  3
+#define POINT_RA_ACCEL   4
+#define POINT_DEC_ACCEL  5
 
 #define uint unsigned int 
 
@@ -275,7 +276,7 @@ std::set<uint> setUnion(const std::set<uint> &s1,
 
 std::set<uint> allDetsInTreeNode(TrackletTreeNode &t,
                                  const std::vector<MopsDetection>&allDets,
-                                 const std::vector<Tracklet>&allTracklets) 
+                                 TrackletVector&allTracklets) 
 {
     std::set<uint> toRet;
     std::vector<PointAndValue<uint> >::const_iterator tIter;
@@ -299,8 +300,8 @@ std::set<uint> allDetsInTreeNode(TrackletTreeNode &t,
              tIter++) {
             
             std::set<uint>::const_iterator detIter;
-            for (detIter = allTracklets.at(tIter->getValue()).indices.begin();
-                 detIter != allTracklets.at(tIter->getValue()).indices.end();
+            for (detIter = allTracklets.at(tIter->getValue())->indices.begin();
+                 detIter != allTracklets.at(tIter->getValue())->indices.end();
                  detIter++) {
                 
                 toRet.insert(allDets.at(*detIter).getID());
@@ -339,7 +340,7 @@ void debugPrint(const TreeNodeAndTime &firstEndpoint,
                 const TreeNodeAndTime &secondEndpoint, 
                 std::vector<TreeNodeAndTime> &supportNodes, 
                 const std::vector<MopsDetection> &allDetections,
-                const std::vector<Tracklet> &allTracklets) 
+                TrackletVector &allTracklets) 
 {
     std::set<uint> leftEndpointDetIds = allDetsInTreeNode(*(firstEndpoint.myTree), 
                                                           allDetections, allTracklets);
@@ -482,24 +483,6 @@ void initDebugTimingInfo()
 
 
 
-/* the final parameter is modified; it will hold Detections associated
-   with the tracklet t. */
-
-void getAllDetectionsForTracklet(
-    const std::vector<MopsDetection> & allDetections,
-    const Tracklet &t,
-    std::vector<MopsDetection> &detectionsForTracklet) 
-{
-    detectionsForTracklet.clear();
-    std::set<uint>::const_iterator trackletIndexIter;
-
-    for (trackletIndexIter = t.indices.begin();
-         trackletIndexIter != t.indices.end();
-         trackletIndexIter++) {
-        detectionsForTracklet.push_back(allDetections.at(
-                                            *trackletIndexIter));
-    }
-}
 
 
 
@@ -570,31 +553,6 @@ void recenterDetections(std::vector<MopsDetection> &allDetections,
 
 
 
-void setTrackletVelocities(
-    const std::vector<MopsDetection> &allDetections,
-    std::vector<Tracklet> &queryTracklets)
-    
-{
-    for (uint i = 0; i < queryTracklets.size(); i++) {
-        Tracklet *curTracklet = &queryTracklets.at(i);
-        std::vector <MopsDetection> trackletDets;
-        getAllDetectionsForTracklet(allDetections, 
-                                    *curTracklet, 
-                                    trackletDets);
-
-        std::vector<double> RASlopeAndOffset;
-        std::vector<double> DecSlopeAndOffset;
-        leastSquaresSolveForRADecLinear(&trackletDets,
-                                        RASlopeAndOffset,
-                                        DecSlopeAndOffset);
-        
-        curTracklet->velocityRA = RASlopeAndOffset.at(0);
-        curTracklet->velocityDec = DecSlopeAndOffset.at(0);
-    }
-
-}
-
-
 
 
 
@@ -602,7 +560,7 @@ void setTrackletVelocities(
 
 void makeTrackletTimeToTreeMap(
     const std::vector<MopsDetection> &allDetections,
-    std::vector<Tracklet> &queryTracklets,
+    TrackletVector &queryTracklets,
     std::map<ImageTime, TrackletTree > &newMap,
     const linkTrackletsConfig &myConf)
 {
@@ -625,18 +583,18 @@ void makeTrackletTimeToTreeMap(
     // small dynamic stuff like this. Also they have no copy
     // contructor, which is needed for map, because C++ STL doesn't
     // let you copy streams.
-    std::map<double, std::vector<Tracklet> > allTrackletsByTime;
+    std::map<double, TrackletVector > allTrackletsByTime;
 
     allTrackletsByTime.clear();
 
     for (uint i = 0; i < queryTracklets.size(); i++) {
 
         double firstDetectionTime = 
-            queryTracklets.at(i).getStartTime(allDetections);
+            queryTracklets.at(i)->getStartTime(allDetections);
 
-        queryTracklets.at(i).setId(i);
+        queryTracklets.at(i)->setId(i);
         allTrackletsByTime[firstDetectionTime].push_back(
-            queryTracklets.at(i));
+            *queryTracklets.at(i));
     }
 
     if (printDebug) 
@@ -649,7 +607,7 @@ void makeTrackletTimeToTreeMap(
     // so we are iterating over all image times in order.
     uint curImageId = 0;
 
-    std::map<double, std::vector<Tracklet> >::const_iterator 
+    std::map<double, TrackletVector >::iterator 
         timesIter;
     
     for (timesIter = allTrackletsByTime.begin(); 
@@ -659,6 +617,7 @@ void makeTrackletTimeToTreeMap(
 
         TrackletTree curTree(allDetections, 
                              timesIter->second,
+                             &queryTracklets,
                              myConf.detectionLocationErrorThresh,
                              myConf.detectionLocationErrorThresh,
                              myConf.leafSize);
@@ -834,7 +793,7 @@ public:
  */
 void addDetectionsCloseToPredictedPositions(
     const std::vector<MopsDetection> &allDetections, 
-    const std::vector<Tracklet> &allTracklets, 
+    TrackletVector &allTracklets, 
     const std::vector<uint> &candidateTrackletIds,
     Track &newTrack, 
     const linkTrackletsConfig &searchConfig)
@@ -851,7 +810,7 @@ void addDetectionsCloseToPredictedPositions(
     for (trackletIDIter = candidateTrackletIds.begin();
          trackletIDIter != candidateTrackletIds.end();
          trackletIDIter++) {
-        const Tracklet * curTracklet = &allTracklets.at(*trackletIDIter);
+        const Tracklet * curTracklet = allTracklets.at(*trackletIDIter);
         for (detectionIDIter =  curTracklet->indices.begin();
              detectionIDIter != curTracklet->indices.end();
              detectionIDIter++) {
@@ -1020,7 +979,7 @@ bool trackRmsIsSufficientlyLow(
  */
 void buildTracksAddToResults(
     const std::vector<MopsDetection> &allDetections,
-    const std::vector<Tracklet> &allTracklets,
+    TrackletVector &allTracklets,
     const linkTrackletsConfig &searchConfig,
     TreeNodeAndTime &firstEndpoint,
     TreeNodeAndTime &secondEndpoint,
@@ -1072,11 +1031,11 @@ void buildTracksAddToResults(
 
             
             newTrack.addTracklet(firstEndpointTrackletIndex, 
-                                 allTracklets.at(firstEndpointTrackletIndex),
+                                 *allTracklets.at(firstEndpointTrackletIndex),
                                  allDetections);
             
             newTrack.addTracklet(secondEndpointTrackletIndex, 
-                                 allTracklets.at(secondEndpointTrackletIndex),
+                                 *allTracklets.at(secondEndpointTrackletIndex),
                                  allDetections);
             // the 'false' here says do NOT use the full form for ra fit
             newTrack.calculateBestFitQuadratic(allDetections, false);
@@ -1588,7 +1547,7 @@ unsigned int countImageTimes(const std::vector<TreeNodeAndTime> &nodes)
  * each one. we then split one model node and recurse.
  */
 void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
-                      const std::vector<Tracklet> &allTracklets,
+                      TrackletVector &allTracklets,
                       const linkTrackletsConfig &searchConfig,
                       TreeNodeAndTime &firstEndpoint,
                       TreeNodeAndTime &secondEndpoint,
@@ -1805,7 +1764,7 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
 
 
 void doLinking(const std::vector<MopsDetection> &allDetections,
-               std::vector<Tracklet> &allTracklets,
+               TrackletVector &allTracklets,
                const linkTrackletsConfig &searchConfig,
                std::map<ImageTime, TrackletTree > &trackletTimeToTreeMap,
                TrackSet &results)
@@ -1999,7 +1958,7 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
 
 
 TrackSet* linkTracklets(std::vector<MopsDetection> &allDetections,
-                        std::vector<Tracklet> &queryTracklets,
+                        TrackletVector &queryTracklets,
                         TrackVector &queryTracks,
                         const linkTrackletsConfig &searchConfig) {
     TrackSet * toRet;
@@ -2038,7 +1997,7 @@ TrackSet* linkTracklets(std::vector<MopsDetection> &allDetections,
     if (searchConfig.myVerbosity.printStatus) {
         std::cout << "Setting tracklet velocities.\n";
     }
-    setTrackletVelocities(allDetections, queryTracklets);
+    queryTracklets.setTrackletVelocities(allDetections);
 
     if (searchConfig.myVerbosity.printStatus) {
         std::cout << "Sorting tracklets by image time and creating trees.\n";
@@ -2078,6 +2037,25 @@ TrackSet* linkTracklets(std::vector<MopsDetection> &allDetections,
     
     return toRet;
 }
+
+
+
+/* compatibility with old interface, which took no tracks as input and
+ * used a std::vector of Tracklets instead of a TrackletVector.*/
+TrackSet* linkTracklets(std::vector<MopsDetection> &allDetections,
+                        std::vector<Tracklet> &queryTracklets,
+                        const linkTrackletsConfig &searchConfig)
+{
+    TrackVector dummy;
+    TrackletVector realTlets;
+    for (unsigned int i = 0; i < queryTracklets.size(); i++) {
+        realTlets.push_back(queryTracklets.at(i));
+    }
+    return linkTracklets(allDetections, realTlets, dummy, searchConfig);
+}
+
+
+
 
 
 void calculateTopoCorr(std::vector<MopsDetection> &allDetections,

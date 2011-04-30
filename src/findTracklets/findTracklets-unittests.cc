@@ -55,9 +55,9 @@ void addDetectionAt(double MJD, double RA, double dec,  std::vector<MopsDetectio
 bool containsPair(unsigned int ID1, unsigned int ID2, TrackletVector *pairs)
 {
     for (unsigned int i = 0; i < pairs->size(); i++) {
-        Tracklet curPair = pairs->at(i);
-        if ((curPair.indices.find(ID1) != curPair.indices.end())
-            && (curPair.indices.find(ID2) != curPair.indices.end()))
+        Tracklet* curPair = pairs->at(i);
+        if ((curPair->indices.find(ID1) != curPair->indices.end())
+            && (curPair->indices.find(ID2) != curPair->indices.end()))
             return true;
     }
     return false;

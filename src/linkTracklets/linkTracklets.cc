@@ -249,10 +249,6 @@ public:
 
 
 // for debugging and calculating timing info
-double getTimeElapsed(clock_t priorEvent)
-{
-     return ( std::clock() - priorEvent ) / (double)CLOCKS_PER_SEC;
-}
 double timeSince(clock_t priorEvent)
 {
      return ( std::clock() - priorEvent ) / (double)CLOCKS_PER_SEC;
@@ -590,10 +586,18 @@ void setTrackletVelocities(
         std::vector<double> DecSlopeAndOffset;
         leastSquaresSolveForRADecLinear(&trackletDets,
                                         RASlopeAndOffset,
-                                        DecSlopeAndOffset);
+                                        DecSlopeAndOffset,
+                                        curTracklet->getStartTime(allDetections));
+        // slope and offset is reverse of p0, vel form...
+        std::vector<double> raP0Vel(2);
+        raP0Vel[0] = RASlopeAndOffset[1];
+        raP0Vel[1] = RASlopeAndOffset[0];
+        std::vector<double> decP0Vel(2);
+        decP0Vel[0] = DecSlopeAndOffset[1];
+        decP0Vel[1] = DecSlopeAndOffset[0];
         
-        curTracklet->velocityRA = RASlopeAndOffset.at(0);
-        curTracklet->velocityDec = DecSlopeAndOffset.at(0);
+        curTracklet->setBestFitFunctionRa(raP0Vel);
+        curTracklet->setBestFitFunctionDec(decP0Vel);
     }
 
 }
@@ -1631,9 +1635,6 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                                   supportNodes, searchConfig, 
                                   accMinRa, accMaxRa, accMinDec, accMaxDec,
                                   newSupportNodes);
-        }        
-
-        if (iterationsTillSplit <= 0) {
             iterationsTillSplit = ITERATIONS_PER_SPLIT;
         }
         else{

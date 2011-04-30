@@ -76,10 +76,12 @@ void TrackletTree::buildFromData(
             PointAndValue<unsigned int> trackletPav;
 
             std::vector<double> trackletPoint;
-            trackletPoint.push_back(firstDetection.getRA());
-            trackletPoint.push_back(firstDetection.getDec());
-            trackletPoint.push_back(myT.velocityRA);
-            trackletPoint.push_back(myT.velocityDec);
+	    const std::vector<double> *raP0Vel = myT.getBestFitFunctionRa();
+	    const std::vector<double> *decP0Vel = myT.getBestFitFunctionDec();
+            trackletPoint.push_back(raP0Vel->at(0));
+            trackletPoint.push_back(decP0Vel->at(0));
+            trackletPoint.push_back(raP0Vel->at(1));
+            trackletPoint.push_back(decP0Vel->at(1));
             trackletPoint.push_back(myT.getDeltaTime(allDetections));
 
             trackletPav.setPoint(trackletPoint);

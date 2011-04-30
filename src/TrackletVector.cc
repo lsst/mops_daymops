@@ -50,7 +50,6 @@ void TrackletVector::setTrackletVelocities(
 {
     for (uint i = 0; i < componentTracklets.size(); i++) {
         Tracklet *curTracklet = &componentTracklets.at(i);
-        std::vector <MopsDetection> trackletDets;
         curTracklet->calculateBestFitFunc(allDetections);
     }
 

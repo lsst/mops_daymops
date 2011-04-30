@@ -32,17 +32,30 @@ common_libs.append(env.StaticLibrary('fileUtils',
                                      ['fileUtils.cc', 'MopsDetection','Tracklet']))
 
 
-common_libs.append(env.StaticLibrary('removeSubsets',  ['removeSubsets.cc'] + common_libs))
-
-
+common_libs.append(env.Library('removeSubsets',  ['removeSubsets.cc'] +common_libs))
 
 
 env.Program('../bin/removeSubsets',  ['removeSubsetsMain.cc'] + common_libs,
             LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
 
-#env.Program('../bin/readTracksWriteStats',  ['readTracksWriteStats.cc'] \
-#                + common_libs,
+# for some insane reason, this won't compile unless you list the libraries explicitly rather than
+# appending common_libs. No idea why! Driving me crazy.
+
+#env.Program('../bin/readTracksWriteStats',  ['readTracksWriteStatsMain.cc'] + common_libs, 
 #            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
+env.Program('../bin/readTracksWriteStats',  ['readTracksWriteStatsMain.cc', 
+                                             'readTracksWriteStats.cc',
+                                             'Track', 'TrackVector',
+                                             'TrackletVector',
+                                             'TrackSet',
+                                             'linkTracklets/linkTracklets.cc',
+                                             'linkTracklets/TrackletTree',
+                                             'linkTracklets/TrackletTreeNode',
+                                             'MopsDetection', 'fileUtils', 'Tracklet', 
+                                             'rmsLineFit', 'common'],
+
+            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
+
 
 
 

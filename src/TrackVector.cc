@@ -111,7 +111,12 @@ void TrackVector::writeTracksAndStatsToFile(std::string outFileName,
                  << decV << " " 
                  << decAcc  
                  << " Underlying object: " 
-                 << curTrack->getObjectId(allDets) << "\n";
+                 << curTrack->getObjectId(allDets) 
+                 << " Chi squared prob: Ra: " 
+                 << curTrack->getProbChisqRa() 
+                 << " Dec: "
+                 << curTrack->getProbChisqDec()
+                 << "\n";
      }
 }
 

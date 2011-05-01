@@ -557,25 +557,25 @@ void recenterDetections(std::vector<MopsDetection> &allDetections,
 
 
 
-
+template <class LinkageVectorT>
 void makeTrackletTimeToTreeMap(
     const std::vector<MopsDetection> &allDetections,
-    TrackletVector &queryTracklets,
+    LinkageVectorT *queryLinkages,
     std::map<ImageTime, TrackletTree > &newMap,
     const linkTrackletsConfig &myConf)
 {
     bool printDebug = false;
     if (printDebug) {
-        std::cout << "Sorting tracklets by \"root\" time. We have  " 
+        std::cout << "Sorting tracklets/tracks by \"root\" time. We have  " 
                   << allDetections.size() 
-                  << " detections and " << queryTracklets.size() 
+                  << " detections and " << queryLinkages->size() 
                   << " tracklets.\n";
 
     }
 
     newMap.clear();
 
-    //sort all tracklets by their first image time and assign them IDs.
+    //sort all track(let)s by their first image time and assign them IDs.
     // IDs are their indices into the queryTracklets[] vector.
     
     // we use a std::vector of tracklets rather than trackletvector
@@ -583,22 +583,22 @@ void makeTrackletTimeToTreeMap(
     // small dynamic stuff like this. Also they have no copy
     // contructor, which is needed for map, because C++ STL doesn't
     // let you copy streams.
-    std::map<double, TrackletVector > allTrackletsByTime;
+    std::map<double, LinkageVectorT > allLinkagesByTime;
 
-    allTrackletsByTime.clear();
+    allLinkagesByTime.clear();
 
-    for (uint i = 0; i < queryTracklets.size(); i++) {
+    for (uint i = 0; i < queryLinkages->size(); i++) {
 
         double firstDetectionTime = 
-            queryTracklets.at(i)->getStartTime(allDetections);
+            queryLinkages->at(i)->getStartTime(allDetections);
 
-        queryTracklets.at(i)->setId(i);
-        allTrackletsByTime[firstDetectionTime].push_back(
-            *queryTracklets.at(i));
+        queryLinkages->at(i)->setId(i);
+        allLinkagesByTime[firstDetectionTime].push_back(
+            queryLinkages->at(i));
     }
 
     if (printDebug) 
-        std::cout << " got" << allTrackletsByTime.size()
+        std::cout << " got" << allLinkagesByTime.size()
                   << " image times.\n";
     
     // iterate over each time/trackletVec pair and build a
@@ -607,17 +607,16 @@ void makeTrackletTimeToTreeMap(
     // so we are iterating over all image times in order.
     uint curImageId = 0;
 
-    std::map<double, TrackletVector >::iterator 
-        timesIter;
+    typename std::map<double, LinkageVectorT >::iterator timesIter;
     
-    for (timesIter = allTrackletsByTime.begin(); 
-         timesIter != allTrackletsByTime.end(); 
+    for (timesIter = allLinkagesByTime.begin(); 
+         timesIter != allLinkagesByTime.end(); 
          timesIter++) {
 
 
         TrackletTree curTree(allDetections, 
                              timesIter->second,
-                             &queryTracklets,
+                             queryLinkages,
                              myConf.detectionLocationErrorThresh,
                              myConf.detectionLocationErrorThresh,
                              myConf.leafSize);
@@ -1981,6 +1980,13 @@ TrackSet* linkTracklets(std::vector<MopsDetection> &allDetections,
     }
 
 
+    if (searchConfig.myVerbosity.printStatus) {
+        std::cout 
+ << "Making sure all detections fall along contiguous 180-degree regions in RA and Dec.\n";
+    }
+    recenterDetections(allDetections, searchConfig);
+
+
     /*create a sorted list of KDtrees, each tree holding tracklets
       with unique start times (times of first detection in the
       tracklet).
@@ -1988,12 +1994,34 @@ TrackSet* linkTracklets(std::vector<MopsDetection> &allDetections,
       the points in the trees are in [RA, Dec, RAVelocity,
       DecVelocity] and the returned keys are indices into
       queryTracklets.
+
+      also do the same for the tracks.
     */
-    if (searchConfig.myVerbosity.printStatus) {
-        std::cout << "Recentering all detections on (180, 0).\n";
-    }
-    recenterDetections(allDetections, searchConfig);
+
     
+    std::map<ImageTime, TrackletTree > trackTimeToTreeMap;    
+    if (queryTracks.size() != 0)
+    {
+        if (searchConfig.myVerbosity.printStatus) {
+            std::cout << "Calculating input track best-fit quadratics.\n";
+        }
+        for (unsigned int i = 0; i < queryTracks.size(); i++) {
+            /* for now, we expect "short" tracks (<=2 nights of obs)
+             and the tree code only deals with p0, vel, acc.So
+             restrict us to quadratic fits, not cubic + topocentric
+             velocity (hence the 'false') */
+            queryTracks.at(i)->calculateBestFitQuadratic(allDetections, false);
+        }
+        if (searchConfig.myVerbosity.printStatus) {
+            std::cout << "Sorting tracks by image time and creating trees.\n";
+        }
+        makeTrackletTimeToTreeMap<TrackVector>(allDetections, 
+                                               &queryTracks, 
+                                               trackTimeToTreeMap, 
+                                               searchConfig);    
+    }
+
+
     if (searchConfig.myVerbosity.printStatus) {
         std::cout << "Setting tracklet velocities.\n";
     }
@@ -2003,13 +2031,15 @@ TrackSet* linkTracklets(std::vector<MopsDetection> &allDetections,
         std::cout << "Sorting tracklets by image time and creating trees.\n";
     }
     std::map<ImageTime, TrackletTree > trackletTimeToTreeMap;    
-    makeTrackletTimeToTreeMap(allDetections, 
-                              queryTracklets, 
-                              trackletTimeToTreeMap, 
-                              searchConfig);
+    makeTrackletTimeToTreeMap<TrackletVector>(allDetections, 
+                                              &queryTracklets, 
+                                              trackletTimeToTreeMap, 
+                                              searchConfig);
     if (searchConfig.myVerbosity.printStatus) {
         std::cout << "Doing the linking.\n";
     }
+
+
 
     clock_t linkingStart = std::clock();
 
@@ -2022,6 +2052,7 @@ TrackSet* linkTracklets(std::vector<MopsDetection> &allDetections,
         std::cout << "Finished linking.\n";
     }
     if (searchConfig.myVerbosity.printVisitCounts) {
+
         std::cout << "Made " << doLinkingRecurseVisits 
                   << " calls to doLinkingRecurse.\n";
         std::cout << "Made " << buildTracksAddToResultsVisits << 
@@ -2049,7 +2080,7 @@ TrackSet* linkTracklets(std::vector<MopsDetection> &allDetections,
     TrackVector dummy;
     TrackletVector realTlets;
     for (unsigned int i = 0; i < queryTracklets.size(); i++) {
-        realTlets.push_back(queryTracklets.at(i));
+        realTlets.push_back(&queryTracklets.at(i));
     }
     return linkTracklets(allDetections, realTlets, dummy, searchConfig);
 }

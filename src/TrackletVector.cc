@@ -101,14 +101,14 @@ void TrackletVector::writeToFile()
 
 
 
-void TrackletVector::push_back(const Tracklet &newTracklet) {
+void TrackletVector::push_back(const Tracklet *newTracklet) {
 
 
     if ((useOutFile) && (useCache) && (componentTracklets.size() >= cacheSize)) {
         purgeToFile();
     }
 
-    componentTracklets.push_back(newTracklet);
+    componentTracklets.push_back(*newTracklet);
 }
 
 

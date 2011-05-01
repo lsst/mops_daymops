@@ -336,7 +336,14 @@ void TrackletTreeNode::recalculateBoundsWithError(
             myLBounds.at(1) -= positionalErrorDec;
             // TBD: Hopefully Tim will write something smarter here,
             // for now used dummy values more or less.
-            double DUMMY_ACCEL_ERROR = .000001;
+            double DUMMY_ACCEL_ERROR = .0001;
+            double DUMMY_VEL_ERROR = .001;
+
+            myUBounds.at(2) += DUMMY_VEL_ERROR;
+            myLBounds.at(2) -= DUMMY_VEL_ERROR;
+            myUBounds.at(3) += DUMMY_VEL_ERROR;
+            myLBounds.at(3) -= DUMMY_VEL_ERROR;
+
 
             myUBounds.at(4) += DUMMY_ACCEL_ERROR;
             myLBounds.at(4) -= DUMMY_ACCEL_ERROR;

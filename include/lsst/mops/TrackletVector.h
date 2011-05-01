@@ -57,7 +57,7 @@ public:
      */
     void purgeToFile();
 
-    void push_back(const Tracklet &newTracklet);
+    void push_back(const Tracklet *newTracklet);
 
     Tracklet* at(unsigned int);
     

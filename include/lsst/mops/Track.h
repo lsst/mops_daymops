@@ -118,7 +118,7 @@ public:
     void getFitFunction(double& epoch, std::vector<double> &raFunc,
                         std::vector<double> &decFunc);
 
-    unsigned int getId();
+    unsigned int getId() const ;
     void setId(unsigned int newId);
 
     virtual double getDeltaTime(

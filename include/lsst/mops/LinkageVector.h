@@ -36,6 +36,11 @@ public:
             return 0;
         }
 
+    virtual void push_back(Linkage* l)
+        {
+            panic();
+        }
+
 
 private:
      void panic() const { throw LSST_EXCEPT(InheritanceException,

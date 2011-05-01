@@ -256,7 +256,7 @@ void getTracklets(TrackletVector &results,
                     Tracklet newTracklet;
                     newTracklet.indices.insert(curQuery->getID());               
                     newTracklet.indices.insert(closeEnoughResults.at(ii));
-                    results.push_back(newTracklet);
+                    results.push_back(&newTracklet);
                 }
                 
                 queryResults.clear();

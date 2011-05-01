@@ -61,7 +61,7 @@ public:
 
     void debugPrint();
 
-    void push_back(const Track &newTrack) { contents.push_back(newTrack);}
+    void push_back(const Track *newTrack) { contents.push_back(*newTrack);}
 
     unsigned int size() const { return contents.size(); }
 

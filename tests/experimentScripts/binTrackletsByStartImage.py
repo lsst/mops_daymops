@@ -53,25 +53,33 @@ def getAllDiasInFile(inTracklets):
 
 
 def getDiaTimesAndImages(dias, dbCurs, diasDb, diasTable):
-    s = """ SELECT diaSourceId, taiMidPoint, opSimId 
-            FROM  
-              %s.%s""" \
-        % (diasDb, diasTable)
-        
-    s += """  WHERE diaSourceId IN ( """ 
-    first = True
-    for d in dias:
-        if not first :
-            s+= ", "
-        first = False
-        s += str(d)
-    s += " );"
-    dbCurs.execute(s)
-    res = dbCurs.fetchall()
-    # build a dict mapping from diaSourceId to obs time and obsHistId
+    diasList = list(dias)
+    it = 0
+    iterSize = 10000
+    curDias = diasList[it*iterSize:(it+1)*iterSize]
     toRet = {}
-    for r in res:
-        toRet[r[0]] = [r[1], r[2]]
+    while curDias != []:
+        print "Performing fetch # ", it
+        s = """ SELECT diaSourceId, taiMidPoint, opSimId 
+                FROM  
+                  %s.%s""" \
+            % (diasDb, diasTable)
+
+        s += """  WHERE diaSourceId IN ( """ 
+        first = True
+        for d in curDias:
+            if not first :
+                s+= ", "
+            first = False
+            s += str(d)
+        s += " );"
+        dbCurs.execute(s)
+        res = dbCurs.fetchall()
+        for r in res:
+            toRet[r[0]] = [r[1], r[2]]
+        it += 1
+        curDias = diasList[it*iterSize:(it+1)*iterSize]
+
     return toRet
 
 

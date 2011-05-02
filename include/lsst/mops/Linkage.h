@@ -18,6 +18,7 @@
 #define LSST_LINKAGE_H
 
 #include <vector>
+#include <set>
 #include "lsst/mops/MopsDetection.h"
 #include "lsst/mops/Exceptions.h"
 
@@ -40,6 +41,9 @@ public:
                                 std::vector<double> &raFunc,
                                 std::vector<double> &fitFunc) 
         { panic(); return; }
+    
+    virtual const std::set<unsigned int> getComponentDetectionIndices() const 
+        { panic(); std::set<unsigned int> dummy; return dummy;}
     
     
     virtual double getStartTime(

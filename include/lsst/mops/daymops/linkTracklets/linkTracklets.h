@@ -60,6 +60,13 @@ public:
 
     linkTrackletsConfig() 
         {   
+
+            /* this is the default behavior... */
+            doTrackletTrackletLinking = true;
+            doTrackTrackLinking = true;
+            doTrackTrackletLinking = true;
+            
+
             maxRAAccel = .02; // consistent with 99% of MBOs
             maxDecAccel = .02;  // consistent with 99% of MBOs
 
@@ -115,11 +122,30 @@ public:
             // default astrometric error, in degrees
             defaultAstromErr = 0.2 / 3600;
 
-            // min prob(Chisq) of the fit of model to track points to consider a candidate track further
+            // min prob(Chisq) of the fit of model to track points to
+            // consider a candidate track further
             trackMinProbChisq = 0.3;
 
             
         }
+
+
+    /* if true, enable normal linkTracklets behavior - look for pairs
+     * of endpoint tracklets and support tracks, try to build tracks
+     * out of them. */
+    bool doTrackletTrackletLinking;
+    /* these will only do anything if input tracks are
+     * present. They will attempt linking with tracks given as
+     * input tracks, and not do anything crazy with the output
+     * tracks - those will go straight to an output file.*/
+    
+    /* if true, then attempt to link (short) tracks with other
+     * (short) tracks, creating fuller and/or longer tracks.*/
+    bool doTrackTrackLinking;
+    /* if true, attempt to do linking between (short) tracks
+     * and tracklets, creating longer tracks. */
+    bool doTrackTrackletLinking;
+    
 
     /* acceleration terms are in degrees/(day^2)
        

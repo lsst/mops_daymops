@@ -65,7 +65,7 @@ public:
        detections may be added without any associated tracklets.
     */
     void addTracklet(unsigned int trackletIndex, 
-                     const Tracklet &t, 
+                     const Linkage *t, 
                      const std::vector<MopsDetection> & allDets);
 
     const std::set<unsigned int> getComponentDetectionIndices() const;
@@ -133,12 +133,15 @@ public:
         return toRet ;
     }
 
+    void setNumUniqueNights(unsigned int);
+    unsigned int getNumUniqueNights() const;
+
     bool operator!=(const Track &other) const {
         return ! (*this == other);
     }
     
     /* returns SSM ID of underlying object or -1 if a false track.*/
-    int getObjectId(const std::vector<MopsDetection> &allDets);
+    int getObjectId(const std::vector<MopsDetection> &allDets) const;
 
     /* the results of this comparison are probably not meaningful to a
      * human but this operator is needed for building container
@@ -146,7 +149,7 @@ public:
     bool operator<(const Track &other) const {
         bool toRet = componentDetectionDiaIds < other.componentDetectionDiaIds;
         return toRet;
-        
+       
     }
 
 
@@ -161,6 +164,7 @@ private:
     double probChisqDec;
     double epoch;
     unsigned int myId;
+    unsigned int numUniqueNights;
 };
 
 }} // close lsst::mops namespace

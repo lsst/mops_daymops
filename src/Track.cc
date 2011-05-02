@@ -15,20 +15,23 @@ Track::Track()
 
 
 void Track::addTracklet(unsigned int trackletIndex, 
-			const Tracklet &t, 
+			const Linkage *t, 
 			const std::vector<MopsDetection> & allDets)
 {
      componentTrackletIndices.insert(trackletIndex);
-     std::set<unsigned int>::const_iterator trackletDetIter;
-     for (trackletDetIter = t.indices.begin(); 
-	  trackletDetIter != t.indices.end(); 
-	  trackletDetIter++) {
-	  componentDetectionIndices.insert(*trackletDetIter);
-	  componentDetectionDiaIds.insert(allDets.at(*trackletDetIter).getID());
+     std::set<unsigned int> tDets = t->getComponentDetectionIndices();
+     std::set<unsigned int>::const_iterator tDetIter;
+	  for (tDetIter = tDets.begin();
+	       tDetIter != tDets.end();
+	       tDetIter++) {
+	  componentDetectionIndices.insert(*tDetIter);
+	  componentDetectionDiaIds.insert(allDets.at(*tDetIter).getID());
      }
 
 }
 	  
+
+
 
 
 void Track::addDetection(unsigned int detIndex, const std::vector<MopsDetection> & allDets)
@@ -58,9 +61,15 @@ Track & Track::operator= (const Track &other) {
     componentTrackletIndices = other.componentTrackletIndices;
     componentDetectionIndices = other.componentDetectionIndices;
     componentDetectionDiaIds = other.componentDetectionDiaIds;
-    epoch = other.epoch;
     raFunc = other.raFunc;
     decFunc = other.decFunc;
+    chisqRa = other.chisqRa;
+    chisqDec = other.chisqDec;
+    probChisqRa = probChisqRa;
+    probChisqDec = probChisqDec;
+    epoch = other.epoch;
+    myId = other.myId;
+    numUniqueNights = other.numUniqueNights;
     return *this;
 }
 
@@ -69,7 +78,7 @@ Track & Track::operator= (const Track &other) {
 
 
 /* returns SSM ID of underlying object or -1 if a false track.*/
-int Track::getObjectId(const std::vector<MopsDetection> &allDets)
+int Track::getObjectId(const std::vector<MopsDetection> &allDets) const
 {
      std::set<unsigned int>::const_iterator detIter = componentDetectionIndices.begin();
      if (componentDetectionIndices.size() == 0) {
@@ -233,6 +242,16 @@ void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets,
 #endif
 }
 
+
+
+void Track::setNumUniqueNights(unsigned int n)
+{
+     numUniqueNights = n;
+}
+unsigned int Track::getNumUniqueNights() const
+{
+     return numUniqueNights;
+}
 
 
 void Track::predictLocationAtTime(const double mjd, double &ra, double &dec) const

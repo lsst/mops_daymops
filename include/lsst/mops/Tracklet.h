@@ -37,6 +37,9 @@ public:
        they associate Tracklets with the correct Detection vector.
      */
 
+    //use of the getter is preferred but direct access is allowed.
+    const std::set<unsigned int> getComponentDetectionIndices() const;
+
     std::set<unsigned int> indices;
     bool isCollapsed;    
     

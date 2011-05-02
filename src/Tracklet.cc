@@ -25,6 +25,14 @@ Tracklet::Tracklet()
 
 
 
+const std::set<unsigned int> Tracklet::getComponentDetectionIndices() const
+{
+    const std::set<unsigned int>copy(indices);
+    return copy;
+}
+
+
+
 /* the final parameter is modified; it will hold Detections associated
    with the tracklet t. */
 

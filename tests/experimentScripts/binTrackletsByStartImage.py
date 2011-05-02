@@ -59,7 +59,6 @@ def getDiaTimesAndImages(dias, dbCurs, diasDb, diasTable):
     curDias = diasList[it*iterSize:(it+1)*iterSize]
     toRet = {}
     while curDias != []:
-        print "Performing fetch # ", it
         s = """ SELECT diaSourceId, taiMidPoint, opSimId 
                 FROM  
                   %s.%s""" \

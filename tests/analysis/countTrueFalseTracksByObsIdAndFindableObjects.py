@@ -61,7 +61,7 @@ import sys
 
 FALSE_DIA_SSM_ID="-1" # the ssmId of a DiaSource which is attributable to non-asteroid sources
 
-PRELOAD_DIAS_FROM_FILE=True
+PRELOAD_DIAS_FROM_FILE=False
 
 if not PRELOAD_DIAS_FROM_FILE:
     import MySQLdb as db
@@ -264,27 +264,27 @@ if __name__=="__main__":
 
 
     for tracks in tracksGlob:
-            tracksFile = file(tracks,'r')
-            statsOutFile = file(tracks + ".stats",'w')
-            obsHistOutFile = file(tracks + ".stats_perObsHist",'w')
-            foundObjectsOutFile = file(tracks + ".foundObjects",'w')
-            trueTracksOutFile = file(tracks + ".trueTracks.byDiaId", 'w')
-            
-            print "Starting analysis of ", tracks, " at ", time.ctime()
-            t0 = time.time()
-            nTrue, nFalse, obsHistCounts, foundObjects = getLotsOfStatsFromTracksFile(diasLookupTool, tracksFile, trueTracksOutFile)
-            print "Done at ", time.ctime()
-            dt = time.time() - t0
-            print "Reading/analyzing ", nTrue + nFalse, " tracks took ", dt, " seconds."
-            print "Writing output at ", time.ctime()
-            writeStatsFile(nTrue, nFalse, foundObjects, statsOutFile)
-            writeObsHistFile(obsHistCounts, obsHistOutFile)
-            writeFoundObjectsFile(foundObjects, foundObjectsOutFile)
-            
-            statsOutFile.close()
-            obsHistOutFile.close()
-            foundObjectsOutFile.close()
-            
-            print "Analysis DONE and output written successfully at ", time.ctime()
+        tracksFile = file(tracks,'r')
+        statsOutFile = file(tracks + ".stats",'w')
+        obsHistOutFile = file(tracks + ".stats_perObsHist",'w')
+        foundObjectsOutFile = file(tracks + ".foundObjects",'w')
+        trueTracksOutFile = file(tracks + ".trueTracks.byDiaId", 'w')
+        
+        print "Starting analysis of ", tracks, " at ", time.ctime()
+        t0 = time.time()
+        nTrue, nFalse, obsHistCounts, foundObjects = getLotsOfStatsFromTracksFile(diasLookupTool, tracksFile, trueTracksOutFile)
+        print "Done at ", time.ctime()
+        dt = time.time() - t0
+        print "Reading/analyzing ", nTrue + nFalse, " tracks took ", dt, " seconds."
+        print "Writing output at ", time.ctime()
+        writeStatsFile(nTrue, nFalse, foundObjects, statsOutFile)
+        writeObsHistFile(obsHistCounts, obsHistOutFile)
+        writeFoundObjectsFile(foundObjects, foundObjectsOutFile)
+        
+        statsOutFile.close()
+        obsHistOutFile.close()
+        foundObjectsOutFile.close()
+        
+        print "Analysis DONE and output written successfully at ", time.ctime()
 
     print "ALL ANALYSES FINISHED AT ", time.ctime()

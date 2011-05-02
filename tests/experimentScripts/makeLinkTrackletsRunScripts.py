@@ -45,7 +45,7 @@ def writeCppRunScript(infile, startTRangeFile, vtree_thresh):
     timeFile = BASENAME_FOR_INFILE(infile) + ".cpp.runtime"
     logFile = BASENAME_FOR_INFILE(infile) + ".cpp.runlog"
 
-    args = "-d " + dets + " -t " + ids + " -o " + tracks + " -F `cat " + startRange + "`" + " -e " + str(vtree_thresh)
+    args = "-d " + dets + " -t " + ids + " -o " + tracks + " -F `cat " + startRange + "`" + " -u 2 " + " -e " + str(vtree_thresh) 
 
     outS = """#!/usr/bin/bash
 

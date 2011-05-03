@@ -3,6 +3,7 @@
 
 #include "lsst/mops/daymops/linkTracklets/TrackletTreeNode.h"
 #include "lsst/mops/Exceptions.h"
+#include "lsst/mops/MopsDetection.h"
 
 #define uint unsigned int
 
@@ -19,6 +20,7 @@ LinkageVector* TrackletTreeNode::getDataParentVec() const
 
         
 TrackletTreeNode::TrackletTreeNode(
+    const std::vector<MopsDetection> allDetections,
     const std::vector<PointAndValue <unsigned int> > &tracklets, 
     LinkageVector* allLinkages,
     double positionalErrorRa,
@@ -74,6 +76,14 @@ TrackletTreeNode::TrackletTreeNode(
     if (tracklets.size() <= maxLeafSize) {
        // leaf case is easy.
         myData = tracklets;
+        for (unsigned int i = 0; i != myData.size(); i++) {
+            int obj= allLinkages->at(
+                myData.at(i).getValue())
+                ->getObjectId(allDetections);
+            if (obj != -1) {
+                myObjects.insert(obj);
+            }
+        }
     }
 
     else {
@@ -142,7 +152,8 @@ TrackletTreeNode::TrackletTreeNode(
 
         nextAxis = (myAxisToSplit + 1) % (myK);
         
-        TrackletTreeNode leftChild(leftPointsAndValues,
+        TrackletTreeNode leftChild(allDetections,
+                                   leftPointsAndValues,
                                    allLinkages,
                                    positionalErrorRa, positionalErrorDec,
                                    maxLeafSize, nextAxis, widths, lastId, 
@@ -150,13 +161,24 @@ TrackletTreeNode::TrackletTreeNode(
         
         myChildren.push_back(leftChild);
         
-        TrackletTreeNode rightChild(rightPointsAndValues, 
+        TrackletTreeNode rightChild(allDetections,
+                                    rightPointsAndValues, 
                                     allLinkages,
                                     positionalErrorRa, positionalErrorDec,
                                     maxLeafSize, nextAxis, widths, lastId, 
                                     useMedian, splitWidest);
 
         myChildren.push_back(rightChild);
+
+        // get objects from child nodes
+        for (unsigned int i = 0; i < myChildren.size(); i++) {
+            const std::set<int> *childObjs = 
+                (myChildren.at(i).getMyObjects());
+            std::set<int>::const_iterator o;
+            for (o = childObjs->begin(); o != childObjs->end(); o++) {
+                myObjects.insert(*o);
+            }
+        }
     }
 
 
@@ -164,6 +186,15 @@ TrackletTreeNode::TrackletTreeNode(
     recalculateBoundsWithError(positionalErrorRa, positionalErrorDec);
 
 }
+
+
+const std::set<int> * TrackletTreeNode::getMyObjects()
+{
+    // this is populated at construction-time
+    return & myObjects;
+}
+
+
         
 
 // these are to be used by linkTracklets.
@@ -336,8 +367,8 @@ void TrackletTreeNode::recalculateBoundsWithError(
             myLBounds.at(1) -= positionalErrorDec;
             // TBD: Hopefully Tim will write something smarter here,
             // for now used dummy values more or less.
-            double DUMMY_ACCEL_ERROR = .0001;
-            double DUMMY_VEL_ERROR = .001;
+            double DUMMY_ACCEL_ERROR = .01;
+            double DUMMY_VEL_ERROR = .01;
 
             myUBounds.at(2) += DUMMY_VEL_ERROR;
             myLBounds.at(2) -= DUMMY_VEL_ERROR;

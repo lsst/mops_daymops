@@ -141,7 +141,8 @@ void TrackletTree::buildFromData(
         /* create the root of the tree (and the rest of the tree
          * recursively), save it to private var. */
         unsigned int idCounter = 0;
-        myRoot = new TrackletTreeNode(parameterizedTracklets, 
+        myRoot = new TrackletTreeNode(allDetections,            
+                                      parameterizedTracklets, 
                                       allLinkages,
                                       positionalErrorRa, 
                                       positionalErrorDec,

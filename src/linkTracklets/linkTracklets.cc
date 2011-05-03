@@ -13,7 +13,7 @@
 #include "lsst/mops/KDTree.h"
 #include "lsst/mops/daymops/linkTracklets/TrackletTree.h"
 
-#undef DEBUG
+#define DEBUG true
 
 /* taking a queue from Kubica, it's only once per ITERATIONS_PER_SPLIT
  * calls to doLinkingRecurse that we actually split the (non-leaf)
@@ -900,13 +900,14 @@ bool trackHasSufficientSupport(
     // the first. Ugly C++ syntax.
     std::set<double>::const_iterator mjdIter = allMjds.begin();
     for (++mjdIter; mjdIter != allMjds.end();  mjdIter++) {
-        
+        std::cout << " cur MJD is " << *mjdIter << "\n";
         if (*mjdIter - lastDetTime > .5) {
             uniqueNightsSeen++;
+            std::cout << " that's a new night!\n";
         }
         lastDetTime = *mjdIter;            
     }
-
+    std::cout << " that's " << uniqueNightsSeen << " nights\n";
     newTrack.setNumUniqueNights(uniqueNightsSeen);
 
     if (uniqueNightsSeen < searchConfig.minUniqueNights) {
@@ -1063,12 +1064,15 @@ void buildTracksAddToResults(
             
             /* jmyers: april 30, 2011
 
-               catch the special case that endpoint track(let)s are the same!
+               catch the special case that endpoint track(let)s are
+               the same!
             */
             if (! ((firstEndpointData == secondEndpointData)
                    &&
                    (firstEndpointTrackletIndex == secondEndpointTrackletIndex))) {
                 
+                std::cout << " Starting a new track!\n";
+
                 newTrack.addTracklet(firstEndpointTrackletIndex, 
                                      firstEndpointData->at(firstEndpointTrackletIndex),
                                      allDetections);
@@ -1076,13 +1080,21 @@ void buildTracksAddToResults(
                 newTrack.addTracklet(secondEndpointTrackletIndex, 
                                      secondEndpointData->at(secondEndpointTrackletIndex),
                                      allDetections);
+
+                std::cout << " getting initial best-fit for track\n";
                 // the 'false' here says do NOT use the full form for
                 // ra fit                
                 newTrack.calculateBestFitQuadratic(allDetections, false);
+
+                int trackObj = newTrack.getObjectId(allDetections);
+                if (trackObj != -1) {
+                    std::cout << "got a true track!\n";
+                }
                 
                 if (endpointTrackletsAreCompatible(allDetections, 
                                                    newTrack,
                                                    searchConfig)) {
+                    std::cout << " it had compatible endpoint \n";
                     numCompatible++;
                     compatibleEndpointsFound++;
                     
@@ -1091,6 +1103,7 @@ void buildTracksAddToResults(
                                                        supportNodes,
                                                        possibleSupportDetectionIds);
                     
+                    std::cout << " adding support \n";
                     
                     // Add support points if they are within thresholds.
                     addDetectionsCloseToPredictedPositions(allDetections, 
@@ -1101,10 +1114,13 @@ void buildTracksAddToResults(
                     
                     // Final check to see if track meets requirements:
                     // first sufficient support, then RMS fitting error
-                    
+
+                    // jmyers, may 2 - this function calls
+                    // track.setUniqueNights() so we can use it just below.
                     if (trackHasSufficientSupport(allDetections, 
                                                   newTrack,
                                                   searchConfig)) {
+                        std::cout << " it had enough support \n";
                         
                         // recalculate best-fit quadratic and check if RMS
                         // is sufficient the 'true' here says DO use the
@@ -1125,13 +1141,27 @@ void buildTracksAddToResults(
 #ifdef DEBUG
                             std::cout << "track passed rms\n";
 #endif
+                            if (trackObj != -1) {
+                                std::cout << "keeping the true track!\n";
+                            }
+                            
                             results.insert(newTrack);
                         } else {
 #ifdef DEBUG
                             std::cout << "track failed rms\n";
+                            if (trackObj != -1) {
+                                std::cout << "True track failed RMS!\n";
+                            }
 #endif
                         }
                     } else {
+
+                        if (trackObj != -1) {
+                            std::cout << "True Track had insufficient support - "
+                                      << newTrack.getNumUniqueNights() 
+                                      << " nights.\n";
+                                
+                        }
 #ifdef DEBUG
                         std::cout << "track has insufficient support\n";
 #endif
@@ -1240,92 +1270,113 @@ bool updateAccBoundsReturnValidity(const TreeNodeAndTime &firstEndpoint,
 
     double tmpAcc;
 
-    //april 30, 2011, jmyers - if we have tracks, they have their own
-    //acc bounds, use them if possible.
-    if (A->getUBounds()->size() == 6) {
-        modifyBoundsWithTrackTree(A, aMinRa, aMaxRa, aMinDec, aMaxDec);
-    }
-    if (B->getUBounds()->size() == 6) {
-        modifyBoundsWithTrackTree(A, aMinRa, aMaxRa, aMinDec, aMaxDec);
-    }
+    if ((A->getUBounds()->size() == 6) && 
+        (B->getUBounds()->size() == 6)) {
+        //april 30, 2011, jmyers - if we have tracks, they have
+        //their own acc bounds, use them if possible.
+        if (A->getUBounds()->size() == 6) {
+            modifyBoundsWithTrackTree(A, aMinRa, aMaxRa, 
+                                      aMinDec, aMaxDec);
+        }
+        if (B->getUBounds()->size() == 6) {
+            modifyBoundsWithTrackTree(A, aMinRa, aMaxRa, 
+                                      aMinDec, aMaxDec);
+        }
+        if ((aMinRa < aMaxRa) && (aMinDec < aMaxDec)) {
+            return true;
+        }
+        else {
+            return false;
+        }
 
-    // short circuit if possible
-    if ((aMinRa > aMaxRa) || (aMinDec > aMaxDec)) {
-        return false;
     }
     
-    // max using vel test
-    tmpAcc = (BmaxVRa - AminVRa) * dti;
-    if (tmpAcc < aMaxRa) {
-        aMaxRa = tmpAcc;
-    }
-    tmpAcc = (BmaxVDec - AminVDec) * dti;
-    if (tmpAcc < aMaxDec) {
-        aMaxDec = tmpAcc;
-    }
-    // min using velocity test
-    tmpAcc = (BminVRa - AmaxVRa) * dti;
-    if (tmpAcc > aMinRa) {
-        aMinRa = tmpAcc;
-    }
-    tmpAcc = (BminVDec - AmaxVDec) * dti;
-    if (tmpAcc > aMinDec) {
-        aMinDec = tmpAcc;
-    }
-    // short circuit if possible
-    if ((aMinRa > aMaxRa) || (aMinDec > aMaxDec)) {
-        return false;
-    }
+    else if 
+        ((A->getUBounds()->size() == 4) && 
+         (B->getUBounds()->size() == 4)) {
+        // do normal tracklet/tracklet filtering
 
-
-    // max using pos/vel test 1
-    tmpAcc = dt2 * (AmaxPRa - BminPRa + BmaxVRa * dt);
-    if (tmpAcc < aMaxRa) {
-        aMaxRa = tmpAcc;
+        // short circuit if possible
+        if ((aMinRa > aMaxRa) || (aMinDec > aMaxDec)) {
+            return false;
+        }
+        
+        // max using vel test
+        tmpAcc = (BmaxVRa - AminVRa) * dti;
+        if (tmpAcc < aMaxRa) {
+            aMaxRa = tmpAcc;
+        }
+        tmpAcc = (BmaxVDec - AminVDec) * dti;
+        if (tmpAcc < aMaxDec) {
+            aMaxDec = tmpAcc;
+        }
+        // min using velocity test
+        tmpAcc = (BminVRa - AmaxVRa) * dti;
+        if (tmpAcc > aMinRa) {
+            aMinRa = tmpAcc;
+        }
+        tmpAcc = (BminVDec - AmaxVDec) * dti;
+        if (tmpAcc > aMinDec) {
+            aMinDec = tmpAcc;
+        }
+        // short circuit if possible
+        if ((aMinRa > aMaxRa) || (aMinDec > aMaxDec)) {
+            return false;
+        }
+        
+        
+        // max using pos/vel test 1
+        tmpAcc = dt2 * (AmaxPRa - BminPRa + BmaxVRa * dt);
+        if (tmpAcc < aMaxRa) {
+            aMaxRa = tmpAcc;
+        }
+        tmpAcc = dt2 * (AmaxPDec - BminPDec + BmaxVDec * dt);
+        if (tmpAcc < aMaxDec) {
+            aMaxDec = tmpAcc;
+        }
+        // min using pos/vel test 1
+        tmpAcc = dt2*(BminPRa - AmaxPRa - AmaxVRa * dt);
+        if (tmpAcc > aMinRa) {
+            aMinRa = tmpAcc;
+        }
+        tmpAcc = dt2*(BminPDec - AmaxPDec - AmaxVDec * dt);
+        if (tmpAcc > aMinDec) {
+            aMinDec = tmpAcc;
+        }
+        // short circuit if possible
+        if ((aMinRa > aMaxRa) || (aMinDec > aMaxDec)) {
+            return false;
+        }
+        
+        
+        // max using pos/vel test 2
+        tmpAcc = dt2 * (BmaxPRa - AminPRa - AminVRa * dt);
+        if (tmpAcc < aMaxRa) {
+            aMaxRa = tmpAcc;
+        }
+        tmpAcc = dt2 * (BmaxPDec - AminPDec - AminVDec * dt);
+        if (tmpAcc < aMaxDec) {
+            aMaxDec = tmpAcc;
+        }
+        // min using pos/vel test 2
+        tmpAcc = dt2*(AminPRa - BmaxPRa + BminVRa * dt);
+        if (tmpAcc > aMinRa) {
+            aMinRa = tmpAcc;
+        }
+        tmpAcc = dt2*(AminPDec - BmaxPDec + BminVDec * dt);
+        if (tmpAcc > aMinDec) {
+            aMinDec = tmpAcc;
+        }
+        // short circuit if possible
+        if ((aMinRa > aMaxRa) || (aMinDec > aMaxDec)) {
+            return false;
+        }
+        
     }
-    tmpAcc = dt2 * (AmaxPDec - BminPDec + BmaxVDec * dt);
-    if (tmpAcc < aMaxDec) {
-        aMaxDec = tmpAcc;
+    else {
+        throw LSST_EXCEPT(KnownShortcomingException,
+      " Track/tracklet linking logic not yet implemented.\n");
     }
-    // min using pos/vel test 1
-    tmpAcc = dt2*(BminPRa - AmaxPRa - AmaxVRa * dt);
-    if (tmpAcc > aMinRa) {
-        aMinRa = tmpAcc;
-    }
-    tmpAcc = dt2*(BminPDec - AmaxPDec - AmaxVDec * dt);
-    if (tmpAcc > aMinDec) {
-        aMinDec = tmpAcc;
-    }
-    // short circuit if possible
-    if ((aMinRa > aMaxRa) || (aMinDec > aMaxDec)) {
-        return false;
-    }
-
-
-    // max using pos/vel test 2
-    tmpAcc = dt2 * (BmaxPRa - AminPRa - AminVRa * dt);
-    if (tmpAcc < aMaxRa) {
-        aMaxRa = tmpAcc;
-    }
-    tmpAcc = dt2 * (BmaxPDec - AminPDec - AminVDec * dt);
-    if (tmpAcc < aMaxDec) {
-        aMaxDec = tmpAcc;
-    }
-    // min using pos/vel test 2
-    tmpAcc = dt2*(AminPRa - BmaxPRa + BminVRa * dt);
-    if (tmpAcc > aMinRa) {
-        aMinRa = tmpAcc;
-    }
-    tmpAcc = dt2*(AminPDec - BmaxPDec + BminVDec * dt);
-    if (tmpAcc > aMinDec) {
-        aMinDec = tmpAcc;
-    }
-    // short circuit if possible
-    if ((aMinRa > aMaxRa) || (aMinDec > aMaxDec)) {
-        return false;
-    }
-    
-    
     // we know maxAcc > minAcc because we didn't short-circuit above.
     return true;
 }
@@ -1631,7 +1682,7 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                       double accMinDec, double accMaxDec,
                       TrackSet & results,
                       int iterationsTillSplit,
-                      unsigned int minUniqueNights)
+                      unsigned int minSupport)
 {
 
     double start = std::clock();
@@ -1639,10 +1690,41 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
 
     doLinkingRecurseVisits++;
 
+    bool hasTrueTrack = false;
+    bool DEBUGRECURSE = true;
+    if (DEBUGRECURSE) {
+        const std::set<int>* firstObjs = 
+            firstEndpoint.myTree->getMyObjects();
+        const std::set<int>* secondObjs = 
+            firstEndpoint.myTree->getMyObjects();
+        std::set<int> commonObjs;
+        std::set_intersection(firstObjs->begin(),
+                              firstObjs->end(),
+                              secondObjs->begin(),
+                              secondObjs->end(),
+                              std::insert_iterator<std::set<int> > 
+                              (commonObjs, commonObjs.begin()));
+        if (commonObjs.size() > 0) {
+            hasTrueTrack = true;
+        }
+    }
+    
+    double oldAccMinRa, oldAccMaxRa, oldAccMinDec, oldAccMaxDec;
+    oldAccMinRa = accMinRa;
+    oldAccMinDec = accMinDec;
+    oldAccMaxRa = accMaxRa;
+    oldAccMaxDec = accMaxDec;
     bool isValid = updateAccBoundsReturnValidity(firstEndpoint, 
                                                  secondEndpoint,
                                                  accMinRa, accMaxRa, 
                                                  accMinDec, accMaxDec); 
+    if (hasTrueTrack && (!isValid)) {
+        std::cout << "About to discard a true track on acc bounds\n";
+        isValid = updateAccBoundsReturnValidity(firstEndpoint, 
+                                                secondEndpoint,
+                                                oldAccMinRa, oldAccMaxRa, 
+                                                oldAccMinDec, oldAccMaxDec); 
+    }
 
     if (isValid)
     {
@@ -1668,14 +1750,20 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
             newSupportNodes = supportNodes;
         }
         
-        unsigned int nUniqueMJDs = countImageTimes(newSupportNodes);
+        unsigned int nSupport = countImageTimes(newSupportNodes);
 
         // in tracklet/tracklet linking, we get at least 2 unique
         // nights from endpoints, and 4 unique detections from
         // endpoints.  add those in and see if we have sufficient
         // support.  In track/track or track/tracklet linking,
         // minUniqueNights is probably 0 so this test always passes...
-        if (nUniqueMJDs + 2 >= minUniqueNights)
+        if (hasTrueTrack && (nSupport < minSupport)) {
+      std::cout << "About to discard a true track on lack of support\n";
+      std::cout << "nSupport = " << nSupport << " minSupport = " <<
+          minSupport << "\n";
+        } 
+
+        if (nSupport >= minSupport)
         {
             // we have enough model nodes, and enough support nodes.
             // if they are all leaves, then start building tracks.  if
@@ -1743,7 +1831,7 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                                          accMaxDec,
                                          results, 
                                          iterationsTillSplit, 
-                                         minUniqueNights); 
+                                         minSupport); 
                         //std::cout << "Returned from recursion on
                         //left child of first endpoint.\n";
                     }
@@ -1766,7 +1854,7 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                                          accMaxDec,
                                          results, 
                                          iterationsTillSplit,
-                                         minUniqueNights);  
+                                         minSupport);  
                         //std::cout << "Returned from recursion on
                         //right child of first endpoint.\n";
                     }
@@ -1800,7 +1888,7 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                                          accMaxDec,
                                          results, 
                                          iterationsTillSplit,
-                                         minUniqueNights);
+                                         minSupport);
                         //std::cout << "Returned from recursion on
                         //left child of second endpoint.\n";
                     }
@@ -1824,13 +1912,13 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                                          accMaxDec,
                                          results, 
                                          iterationsTillSplit,
-                                         minUniqueNights);
+                                         minSupport);
                         //std::cout << "Returned from recursion on
                         //right child of second endpoint.\n";
                         
                     }
                 }
-            }                        
+            }
         }
     }
 }
@@ -1862,7 +1950,6 @@ void doTrackletTrackletLinking(const std::vector<MopsDetection> &allDetections,
      * doLinking, we start the searching with the head (i.e. root)
      * node of each tree.
      */
-    bool DEBUG = false;
     unsigned int imagePairs = 0;
 
     initDebugTimingInfo();
@@ -1996,7 +2083,7 @@ void doTrackletTrackletLinking(const std::vector<MopsDetection> &allDetections,
                                          searchConfig.maxDecAccel,
                                          results, 
                                          ITERATIONS_PER_SPLIT,
-                                         searchConfig.minUniqueNights);
+                                         searchConfig.minUniqueNights - 2);
 
                         if (searchConfig.myVerbosity.printStatus) {
                             time_t rawtime;
@@ -2049,72 +2136,91 @@ void doTrackTrackLinking(const std::vector<MopsDetection> &allDetections,
          firstEndpointIter != trackTimeToTreeMap.end(); 
          firstEndpointIter++)
     {
-        std::map<ImageTime, TrackletTree >::const_iterator 
-            secondEndpointIter;
-        for (secondEndpointIter = firstEndpointIter;
-             secondEndpointIter != trackTimeToTreeMap.end();
-             secondEndpointIter++) {
 
-            TreeNodeAndTime firstEndpoint(firstEndpointIter->second.getRootNode(), 
-                                          firstEndpointIter->first);
-            TreeNodeAndTime secondEndpoint(secondEndpointIter->second.getRootNode(),
-                                           secondEndpointIter->first);
+        /* check if the user wants us to look for tracks starting at this time */
+        if (( !searchConfig.restrictTrackStartTimes ) || 
+            (firstEndpointIter->first.getMJD() 
+             <= searchConfig.latestFirstEndpointTime)) {
             
-            //call the recursive linker with the endpoint
-            //nodes. No support nodes for track-to-track linking (yet)
-            
-            double iterationTime = std::clock();
-            if (searchConfig.myVerbosity.printStatus) {
-                std::cout << "Doing TRACK/TRACK LINKING using images " 
-                          << std::setprecision(12) 
-                          << firstEndpointIter->first.getMJD() 
-                          << " (image " << firstEndpointIter->first.getImageId() + 1
-                          << " / " << numImages << ")"
-                          << " and " 
-                          << std::setprecision(12)
-                          << secondEndpointIter->first.getMJD()
-                          << " (image " 
-                          << secondEndpointIter->first.getImageId() + 1
-                          << " / " << numImages << ") ";
-                    //<< " (with " 
-                    //    << supportPoints.size() << " support images).\n";
-
-                struct tm * timeinfo;
-                time_t rawtime;
-                time ( &rawtime );
-                timeinfo = localtime ( &rawtime );                    
+            {
                 
-                std::cout << " current wall-clock time is " 
-                          << asctime (timeinfo);
-                
-            }
-            // send empty support node set.
-            std::vector<TreeNodeAndTime> supportPoints;
-            supportPoints.clear();
-            doLinkingRecurse(allDetections,
-                             searchConfig,
-                             firstEndpoint,
-                             secondEndpoint,
-                             supportPoints,
-                             searchConfig.maxRAAccel*-1.,
-                             searchConfig.maxRAAccel,
-                             searchConfig.maxDecAccel*-1.,
-                             searchConfig.maxDecAccel,
-                             results,
-                             ITERATIONS_PER_SPLIT,
-                             0);
-
-            if (searchConfig.myVerbosity.printStatus) {
-                time_t rawtime;
-                
-                struct tm * timeinfo;
-                std::cout << "That iteration took " 
-                          << timeSince(iterationTime) << " seconds. "
-                          << std::endl;
-                std::cout << " so far, we have found " << 
-                    results.size() << " tracks.\n\n";
-                time ( &rawtime );
-                timeinfo = localtime ( &rawtime );                    
+                std::map<ImageTime, TrackletTree >::const_iterator 
+                    secondEndpointIter;
+                for (secondEndpointIter = firstEndpointIter;
+                     secondEndpointIter != trackTimeToTreeMap.end();
+                     secondEndpointIter++) {
+                    
+                    /* check if the user wants us to look for tracks
+                     * ending at this time */
+                    if ((!searchConfig.restrictTrackEndTimes) || 
+                        (secondEndpointIter->first.getMJD() 
+                         >= searchConfig.earliestLastEndpointTime)) {
+                        
+                        
+                        
+                        TreeNodeAndTime firstEndpoint(firstEndpointIter->second.getRootNode(), 
+                                                      firstEndpointIter->first);
+                        TreeNodeAndTime secondEndpoint(secondEndpointIter->second.getRootNode(),
+                                                       secondEndpointIter->first);
+                        
+                        //call the recursive linker with the endpoint
+                        //nodes. No support nodes for track-to-track linking (yet)
+                        
+                        double iterationTime = std::clock();
+                        if (searchConfig.myVerbosity.printStatus) {
+                            std::cout << "Doing TRACK/TRACK LINKING using images " 
+                                      << std::setprecision(12) 
+                                      << firstEndpointIter->first.getMJD() 
+                                      << " (image " << firstEndpointIter->first.getImageId() + 1
+                                      << " / " << numImages << ")"
+                                      << " and " 
+                                      << std::setprecision(12)
+                                      << secondEndpointIter->first.getMJD()
+                                      << " (image " 
+                                      << secondEndpointIter->first.getImageId() + 1
+                                      << " / " << numImages << ")\n";
+                            //<< " (with " 
+                            //    << supportPoints.size() << " support images).\n";
+                            
+                            struct tm * timeinfo;
+                            time_t rawtime;
+                            time ( &rawtime );
+                            timeinfo = localtime ( &rawtime );                    
+                            
+                            std::cout << " current wall-clock time is " 
+                                      << asctime (timeinfo);
+                            
+                        }
+                        // send empty support node set.
+                        std::vector<TreeNodeAndTime> supportPoints;
+                        supportPoints.clear();
+                        doLinkingRecurse(allDetections,
+                                         searchConfig,
+                                         firstEndpoint,
+                                         secondEndpoint,
+                                         supportPoints,
+                                         searchConfig.maxRAAccel*-1.,
+                                         searchConfig.maxRAAccel,
+                                         searchConfig.maxDecAccel*-1.,
+                                         searchConfig.maxDecAccel,
+                                         results,
+                                         ITERATIONS_PER_SPLIT,
+                                         0);
+                        
+                        if (searchConfig.myVerbosity.printStatus) {
+                            time_t rawtime;
+                            
+                        struct tm * timeinfo;
+                        std::cout << "That iteration took " 
+                                  << timeSince(iterationTime) << " seconds. "
+                                  << std::endl;
+                        std::cout << " so far, we have found " << 
+                            results.size() << " tracks.\n\n";
+                        time ( &rawtime );
+                        timeinfo = localtime ( &rawtime );                    
+                        }
+                    }
+                }
             }
         }
     }

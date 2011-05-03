@@ -66,6 +66,10 @@ public:
         std::vector<MopsDetection> &detectionsForTracklet)
     const;
 
+
+    /* returns SSM ID of underlying object or -1 if a false track.*/
+    int getObjectId(const std::vector<MopsDetection> &allDets) const;
+
     /*
      * The following operators consider only the indices set.  Note
      * that if you compare two tracklets with indices into different

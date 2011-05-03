@@ -51,6 +51,7 @@ namespace mops {
 
 
         TrackletTreeNode(
+            const std::vector<MopsDetection> allDetections,
             const std::vector<PointAndValue <unsigned int> > &linkages, 
             LinkageVector* allLinkages,
             double positionalErrorRa, 
@@ -72,7 +73,8 @@ namespace mops {
         bool hasRightChild() const;
         TrackletTreeNode * getLeftChild();
         TrackletTreeNode * getRightChild();        
-
+        // return IDs of objects with true tracks at or below this node
+        const std::set<int> * getMyObjects();
 
         /* getMyData returns PointsAndValues; the Values are indexes
          * into a vector. getDataParentVec is a pointer to that
@@ -105,6 +107,7 @@ namespace mops {
 
     private:
         unsigned int numVisits;
+        std::set<int> myObjects;
     };
 
 

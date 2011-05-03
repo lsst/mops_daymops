@@ -33,6 +33,34 @@ const std::set<unsigned int> Tracklet::getComponentDetectionIndices() const
 
 
 
+/* returns SSM ID of underlying object or -1 if a false track.*/
+int Tracklet::getObjectId(const std::vector<MopsDetection> &allDets) const
+{
+     std::set<unsigned int>::const_iterator detIter = indices.begin();
+     if (indices.size() == 0) {
+	  throw LSST_EXCEPT(UninitializedException,
+			    "Object Id requested from empty track.");	  
+     }
+     // get a first guess at our ID. 
+     int underlyingId = allDets.at(*detIter).getSsmId();
+     // if any other ID is != underlyingId, then we're a false track.
+     // note that if our initial underlying ID is -1 (noise) then
+     // we'll return -1 no matter what.
+     for (detIter = indices.begin();
+	  detIter != indices.end();
+	  detIter++) {
+	  int thisId = allDets.at(*detIter).getSsmId();
+	  if (thisId != underlyingId) {
+	       return -1;
+	  }
+     }
+     return underlyingId;
+
+}
+
+
+
+
 /* the final parameter is modified; it will hold Detections associated
    with the tracklet t. */
 

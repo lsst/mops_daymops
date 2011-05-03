@@ -45,6 +45,10 @@ public:
     virtual const std::set<unsigned int> getComponentDetectionIndices() const 
         { panic(); std::set<unsigned int> dummy; return dummy;}
     
+
+    /* returns SSM ID of underlying object or -1 if a false track.*/
+    virtual int getObjectId(const std::vector<MopsDetection> &allDets) const
+        { panic(); return -1; }
     
     virtual double getStartTime(
         const std::vector<MopsDetection> &dets) const

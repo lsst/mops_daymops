@@ -39,9 +39,9 @@ svn info  | tee -a $OLDPWD/mopsSetup.log
 cd $OLDPWD
 
 echo "" | tee -a mopsSetup.log
-echo "Creating DB: $DIAS_DB " | tee -a mopsSetup.log
-echo "Reading DiaSources from : $DIAS_FILE " | tee -a mopsSetup.log
-echo "Copying DiaSources to table : $DIAS_TABLE " | tee -a mopsSetup.log
+#echo "Creating DB: $DIAS_DB " | tee -a mopsSetup.log
+#echo "Reading DiaSources from : $DIAS_FILE " | tee -a mopsSetup.log
+#echo "Copying DiaSources to table : $DIAS_TABLE " | tee -a mopsSetup.log
 echo "" | tee -a mopsSetup.log
 echo " EUPS PACKAGES: " | tee -a mopsSetup.log
 eups list | tee -a mopsSetup.log
@@ -54,10 +54,10 @@ MOPS_HACKS="$MOPS_DAYMOPS_DIR/tests/experimentScripts/"
 # set up the databases for later.
 SQL="mysql -h $DB_HOST -u $DB_USER -p$DB_PASS"
 
-echo "CREATE DATABASE $DIAS_DB; USE $DIAS_DB; `cat $MOPS_HACKS/fullerDiaSource.sql`;" | $SQL
-echo "CREATE TABLE $DIAS_TABLE LIKE fullerDiaSource;" | $SQL $DIAS_DB
-echo "LOAD DATA INFILE '$DIAS_FILE' INTO TABLE 
-      $DIAS_TABLE FIELDS TERMINATED BY ' '" | $SQL $DIAS_DB
+#echo "CREATE DATABASE $DIAS_DB; USE $DIAS_DB; `cat $MOPS_HACKS/fullerDiaSource.sql`;" | $SQL
+#echo "CREATE TABLE $DIAS_TABLE LIKE fullerDiaSource;" | $SQL $DIAS_DB
+#echo "LOAD DATA INFILE '$DIAS_FILE' INTO TABLE 
+#      $DIAS_TABLE FIELDS TERMINATED BY ' '" | $SQL $DIAS_DB
 
 python  $MOPS_HACKS/splitByNight.py $DIAS_FILE
 

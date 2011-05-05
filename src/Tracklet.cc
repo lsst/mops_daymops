@@ -14,17 +14,33 @@ Tracklet::Tracklet()
 {
     myId = -1;
     isCollapsed = false; 
-    velocityRA = 0.; 
-    velocityDec = 0.;
 }
 
+
+void Tracklet::setBestFitFunctionRa(std::vector<double> bff)
+{
+    bestFitFunctionRa = bff;
+}
+
+const std::vector<double>* Tracklet::getBestFitFunctionRa()
+{
+    return &bestFitFunctionRa;
+}
+
+void Tracklet::setBestFitFunctionDec(std::vector<double> bff)
+{
+    bestFitFunctionDec = bff;
+}
+
+const std::vector<double>* Tracklet::getBestFitFunctionDec()
+{
+    return &bestFitFunctionDec;
+}
 
 
 Tracklet::Tracklet(std::set <unsigned int> startIndices) 
 { 
     myId = -1;
-    velocityRA = 0.;
-    velocityDec = 0.;
     isCollapsed = false; 
     indices = startIndices;
 }
@@ -143,8 +159,8 @@ bool Tracklet::operator<(const Tracklet &other) const
 void Tracklet::copy(const Tracklet &other)
 {
     indices = other.indices;
-    velocityRA = other.velocityRA;
-    velocityDec = other.velocityDec;
+    bestFitFunctionRa = other.bestFitFunctionRa;
+    bestFitFunctionDec = other.bestFitFunctionDec;
     isCollapsed = other.isCollapsed;
     myId = other.myId;
 }

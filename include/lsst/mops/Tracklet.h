@@ -33,10 +33,11 @@ public:
 
     std::set<unsigned int> indices;
     bool isCollapsed;    
-    // these fields are used only by linkTracklets. linkTracklets
-    // is responsible for setting them before reading.
-    double velocityRA;
-    double velocityDec;
+    
+    void setBestFitFunctionRa(std::vector<double>);
+    const std::vector<double>* getBestFitFunctionRa();
+    void setBestFitFunctionDec(std::vector<double>);
+    const std::vector<double>* getBestFitFunctionDec();
     
     /* return start/end times and first/last detections. does NOT
      * assume indices are assigned chronologically. DOES ASSUME,
@@ -71,6 +72,8 @@ public:
     bool operator<(const Tracklet &other) const; 
 
 private:
+    std::vector<double> bestFitFunctionRa;
+    std::vector<double> bestFitFunctionDec;
     void copy(const Tracklet &other);
     unsigned int myId; 
 

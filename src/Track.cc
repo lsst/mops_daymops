@@ -21,9 +21,6 @@ void Track::addTracklet(unsigned int trackletIndex,
 {
      componentTrackletIndices.insert(trackletIndex);
      std::set<unsigned int> tDets = t->getComponentDetectionIndices();
-     std::cout << " inserting a new track(let) to this track. \n"
-	       << " initial size is " << componentDetectionIndices.size()
-	       << " \n";
      std::set<unsigned int>::const_iterator tDetIter;
 	  for (tDetIter = tDets.begin();
 	       tDetIter != tDets.end();
@@ -31,9 +28,6 @@ void Track::addTracklet(unsigned int trackletIndex,
 	  componentDetectionIndices.insert(*tDetIter);
 	  componentDetectionDiaIds.insert(allDets.at(*tDetIter).getID());
      }
-     std::cout << " after insert size is "
-	       << componentDetectionIndices.size()
-	       << " \n";
 
 }
 	  

@@ -317,6 +317,13 @@ void modifyWithAcceleration(double &position, double &velocity,
 void calculateTopoCorr(std::vector<MopsDetection> &allDetections,
                        const linkTrackletsConfig &searchConfig);
 
+
+// this is now called by readTracksWriteStats. It's also poorly named
+// since it no longer recenters, it just makes degree values fall
+// along the same 180-degree region if possible. consider renaming and
+// moving it to common.
+void recenterDetections(std::vector<MopsDetection> &allDetections, 
+                        const linkTrackletsConfig &searchConfig);
     }} // close lsst::mops
 
 #endif 

@@ -41,6 +41,8 @@ int readTracksWriteStats(int argc, char** argv) {
      std::vector<MopsDetection> allDets;
      std::cout << "Reading dets...\n";
      populateDetVectorFromFile(inDetsFile, allDets, astromErr);
+     std::cout << "Recentering detections...\n";
+     lsst::mops::recenterDetections(allDets, searchConfig);
      std::cout << "Reading input tracks (as indices)...\n";
      myTv.populateFromFile(inFile, allDets);
      std::cout << "Calculating topocentric correction of detections...\n";

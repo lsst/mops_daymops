@@ -13,7 +13,8 @@
 #include "lsst/mops/KDTree.h"
 #include "lsst/mops/daymops/linkTracklets/TrackletTree.h"
 
-#define DEBUG true
+#undef DEBUG 
+#define ANNOUNCE_TRUE_TRACKS 
 
 /* taking a queue from Kubica, it's only once per ITERATIONS_PER_SPLIT
  * calls to doLinkingRecurse that we actually split the (non-leaf)
@@ -900,14 +901,11 @@ bool trackHasSufficientSupport(
     // the first. Ugly C++ syntax.
     std::set<double>::const_iterator mjdIter = allMjds.begin();
     for (++mjdIter; mjdIter != allMjds.end();  mjdIter++) {
-        std::cout << " cur MJD is " << *mjdIter << "\n";
         if (*mjdIter - lastDetTime > .5) {
             uniqueNightsSeen++;
-            std::cout << " that's a new night!\n";
         }
         lastDetTime = *mjdIter;            
     }
-    std::cout << " that's " << uniqueNightsSeen << " nights\n";
     newTrack.setNumUniqueNights(uniqueNightsSeen);
 
     if (uniqueNightsSeen < searchConfig.minUniqueNights) {
@@ -1071,8 +1069,6 @@ void buildTracksAddToResults(
                    &&
                    (firstEndpointTrackletIndex == secondEndpointTrackletIndex))) {
                 
-                std::cout << " Starting a new track!\n";
-
                 newTrack.addTracklet(firstEndpointTrackletIndex, 
                                      firstEndpointData->at(firstEndpointTrackletIndex),
                                      allDetections);
@@ -1081,20 +1077,16 @@ void buildTracksAddToResults(
                                      secondEndpointData->at(secondEndpointTrackletIndex),
                                      allDetections);
 
-                std::cout << " getting initial best-fit for track\n";
                 // the 'false' here says do NOT use the full form for
                 // ra fit                
                 newTrack.calculateBestFitQuadratic(allDetections, false);
 
+#ifdef ANNOUNCE_TRUE_TRACKS
                 int trackObj = newTrack.getObjectId(allDetections);
-                if (trackObj != -1) {
-                    std::cout << "got a true track!\n";
-                }
-                
+#endif
                 if (endpointTrackletsAreCompatible(allDetections, 
                                                    newTrack,
                                                    searchConfig)) {
-                    std::cout << " it had compatible endpoint \n";
                     numCompatible++;
                     compatibleEndpointsFound++;
                     
@@ -1103,7 +1095,6 @@ void buildTracksAddToResults(
                                                        supportNodes,
                                                        possibleSupportDetectionIds);
                     
-                    std::cout << " adding support \n";
                     
                     // Add support points if they are within thresholds.
                     addDetectionsCloseToPredictedPositions(allDetections, 
@@ -1120,7 +1111,6 @@ void buildTracksAddToResults(
                     if (trackHasSufficientSupport(allDetections, 
                                                   newTrack,
                                                   searchConfig)) {
-                        std::cout << " it had enough support \n";
                         
                         // recalculate best-fit quadratic and check if RMS
                         // is sufficient the 'true' here says DO use the
@@ -1141,10 +1131,11 @@ void buildTracksAddToResults(
 #ifdef DEBUG
                             std::cout << "track passed rms\n";
 #endif
+#ifdef ANNOUNCE_TRUE_TRACKS
                             if (trackObj != -1) {
                                 std::cout << "keeping the true track!\n";
                             }
-                            
+#endif
                             results.insert(newTrack);
                         } else {
 #ifdef DEBUG
@@ -1690,23 +1681,21 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
 
     doLinkingRecurseVisits++;
 
+#ifdef ANNOUNCE_TRUE_TRACKS
     bool hasTrueTrack = false;
-    bool DEBUGRECURSE = true;
-    if (DEBUGRECURSE) {
-        const std::set<int>* firstObjs = 
-            firstEndpoint.myTree->getMyObjects();
-        const std::set<int>* secondObjs = 
-            firstEndpoint.myTree->getMyObjects();
-        std::set<int> commonObjs;
-        std::set_intersection(firstObjs->begin(),
-                              firstObjs->end(),
-                              secondObjs->begin(),
-                              secondObjs->end(),
-                              std::insert_iterator<std::set<int> > 
-                              (commonObjs, commonObjs.begin()));
-        if (commonObjs.size() > 0) {
-            hasTrueTrack = true;
-        }
+    const std::set<int>* firstObjs = 
+        firstEndpoint.myTree->getMyObjects();
+    const std::set<int>* secondObjs = 
+        firstEndpoint.myTree->getMyObjects();
+    std::set<int> commonObjs;
+    std::set_intersection(firstObjs->begin(),
+                          firstObjs->end(),
+                          secondObjs->begin(),
+                          secondObjs->end(),
+                          std::insert_iterator<std::set<int> > 
+                          (commonObjs, commonObjs.begin()));
+    if (commonObjs.size() > 0) {
+        hasTrueTrack = true;
     }
     
     double oldAccMinRa, oldAccMaxRa, oldAccMinDec, oldAccMaxDec;
@@ -1714,10 +1703,12 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
     oldAccMinDec = accMinDec;
     oldAccMaxRa = accMaxRa;
     oldAccMaxDec = accMaxDec;
+#endif 
     bool isValid = updateAccBoundsReturnValidity(firstEndpoint, 
                                                  secondEndpoint,
                                                  accMinRa, accMaxRa, 
                                                  accMinDec, accMaxDec); 
+#ifdef ANNOUNCE_TRUE_TRACKS
     if (hasTrueTrack && (!isValid)) {
         std::cout << "About to discard a true track on acc bounds\n";
         isValid = updateAccBoundsReturnValidity(firstEndpoint, 
@@ -1725,6 +1716,7 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
                                                 oldAccMinRa, oldAccMaxRa, 
                                                 oldAccMinDec, oldAccMaxDec); 
     }
+#endif 
 
     if (isValid)
     {
@@ -1757,11 +1749,13 @@ void doLinkingRecurse(const std::vector<MopsDetection> &allDetections,
         // endpoints.  add those in and see if we have sufficient
         // support.  In track/track or track/tracklet linking,
         // minUniqueNights is probably 0 so this test always passes...
+#ifdef ANNOUNCE_TRUE_TRACKS
         if (hasTrueTrack && (nSupport < minSupport)) {
       std::cout << "About to discard a true track on lack of support\n";
       std::cout << "nSupport = " << nSupport << " minSupport = " <<
           minSupport << "\n";
         } 
+#endif 
 
         if (nSupport >= minSupport)
         {
@@ -1951,6 +1945,8 @@ void doTrackletTrackletLinking(const std::vector<MopsDetection> &allDetections,
      * node of each tree.
      */
     unsigned int imagePairs = 0;
+
+    bool DEBUG=false;
 
     initDebugTimingInfo();
 

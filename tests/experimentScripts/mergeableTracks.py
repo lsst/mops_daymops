@@ -149,8 +149,14 @@ if __name__=="__main__":
                     numFindable += 1
                     raAccs = [t.raAcc for t in tracks]
                     decAccs = [t.decAcc for t in tracks]
-                    print "max delta ra acc = ", (max(raAccs) - min(raAccs)) 
-                    print "max delta dec acc = ", (max(decAccs) - min(decAccs)) 
+                    dAccRa = (max(raAccs) - min(raAccs)) 
+                    print "max delta ra acc = ", dAccRa
+                    dAccDec = (max(decAccs) - min(decAccs)) 
+                    print "max delta dec acc = ", dAccDec
+                    if (dAccRa > 1 or dAccDec > 1):
+                        print raAccs
+                        print decAccs
+                        print obj
                     # calculate predicted positions and velocities at aveTime
                     predPRas = []
                     predVRas = []

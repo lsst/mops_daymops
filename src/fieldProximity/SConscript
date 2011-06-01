@@ -12,6 +12,10 @@ env.Library('../../lib/Field', 'Field.cc',
 env.Library('../../lib/fieldProximity', common_libs + ['fieldProximity.cc', 'Field'],
             LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
 
+env.Program('../../bin/fieldProximity', common_libs + 
+            ['fieldProximity.o', 'fieldProximityMain.cc', 'Field', '../common.o'],
+            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
+
 env.Program('../../tests/fieldProximity-unitTests', ['fieldProximityUnitTests.cc', 'fieldProximity.o', 'Field'] + common_libs,
             LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
 

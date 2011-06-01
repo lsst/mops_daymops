@@ -11,6 +11,8 @@
 #include <string>
 
 
+namespace lsst { namespace mops {
+
 class FieldProximityPoint {
 public: 
     void setRA(double w) {RA = w;}
@@ -39,22 +41,22 @@ private:
 class FieldProximityTrack {
 public:
 
-    FieldProximityTrack() { myID = ""; myPoints.clear(); }
+    FieldProximityTrack() { myID = 0; myPoints.clear(); }
 
-    void setID(std::string s) { myID = s; }
+    void setID(uint s) { myID = s; }
 
     void setPoints(std::vector<FieldProximityPoint> w) { myPoints = w; }
 
     void addPoint(FieldProximityPoint w) { myPoints.push_back(w); }
 
-    std::string getID() const { return myID; }
+    unsigned int getID() const { return myID; }
     std::vector<FieldProximityPoint> getPoints() const { return myPoints; }
 
 private:
-    std::string myID;
+    unsigned int myID;
     std::vector<FieldProximityPoint> myPoints;
 };
 
-
+}} // close lsst::mops
 
 #endif

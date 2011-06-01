@@ -48,18 +48,13 @@ DB_PASS="jmyers"
 OPSIM_DB="opsim_3_61"
 OPSIM_TABLE="output_opsim3_61"
 
-DIAS_DB="mops_noDeepAstromError"
-DIAS_TABLE="fullerDiaSource"
-
-FALSE_DIAS_DB="mops_noDeepAstromError"
-FALSE_DIAS_TABLE="diasUnattributedAfterSlowMoverPass_plusNoise2500PerImage"
 FALSE_DIA_SSMID=-1
 FALSE_DIA_MAG=1
 FALSE_DIA_SNR=1
 
 
 
-def getAllFieldsObserved(cursor):
+def getAllFieldsObserved(cursor, trueDiasDb, trueDiasTable):
     """ Return list of all obsHistIds for all fields visited in our
     simulation. """
     # TBD: Currently we just check for fields which contained some
@@ -69,7 +64,7 @@ def getAllFieldsObserved(cursor):
     # case we may need to do something more intelligent.
     
 
-    sql = """select distinct(opSimId) from %s.%s;""" % (DIAS_DB, DIAS_TABLE)
+    sql = """select distinct(opSimId) from %s.%s;""" % (trueDiasDb, trueDiasTable)
     cursor.execute(sql)
     obsHists = cursor.fetchall()
     # we get a list of singleton lists: [[1],[2],[3]...]. Change it.
@@ -88,7 +83,8 @@ def getImageTimeLoc(cursor, obsHistId):
 
 
 
-def addFalseDias(locs, time, obsHistId, firstId, cursor):
+def addFalseDias(locs, time, obsHistId, firstId, cursor,
+                 falseDiasDb, falseDiasTable):
     """ Add false dias with specified locations. They are assumed to
     share a common time and obsHistId.  Ids are assigned starting at
     firstId and climbing upward. All other needed values are taken
@@ -96,12 +92,12 @@ def addFalseDias(locs, time, obsHistId, firstId, cursor):
 
     s = """ INSERT INTO %s.%s (diaSourceId, opSimId, ssmId, 
               ra, decl, taiMidPoint, mag, snr) VALUES """ % \
-        (FALSE_DIAS_DB, FALSE_DIAS_TABLE)
+        (falseDiasDb, falseDiasTable)
     nextId = firstId
     for i in range(len(locs)):
         loc = locs[i]
         s += "(%d, %d, %d, %12f, %12f, %12f, %12f, %12f)" % \
-            (nextId, obsHistId, FALSE_DIA_SSMID, loc[0], loc[1], 
+            (nextId, obsHistId, FALSE_DIA_SSMID, loc[0], loc[1],
              time, FALSE_DIA_MAG, FALSE_DIA_SNR)
         if i != len(locs) - 1:
             s += ", "
@@ -190,10 +186,10 @@ def chooseRandomLocationsInImage(n, centerRa, centerDec, radius):
     
 
 
-def getLastTrueDiaId(cursor):
+def getLastTrueDiaId(cursor, trueDiasDb, trueDiasTable):
     """ return the maximum diaSource id in the diaSource table. """
     s = """ SELECT MAX(diaSourceId) FROM %s.%s; """ % \
-        (DIAS_DB, DIAS_TABLE)
+        (trueDiasDb, trueDiasTable)
     cursor.execute(s)
     return cursor.fetchone()[0]
 
@@ -201,22 +197,41 @@ def getLastTrueDiaId(cursor):
 if __name__=="__main__":
     
     noisePointsPerImage = int(sys.argv[1])
-    print "Adding ", noisePointsPerImage, " noise points to table ", \
-        FALSE_DIAS_DB, ".", FALSE_DIAS_TABLE
+
+    trueDiasDb = sys.argv[2]
+    trueDiasTable = sys.argv[3]
+
+    falseDiasDb = sys.argv[4]
+    falseDiasTable = sys.argv[5]
+
+    print "Copying dias from ", trueDiasDb , "." , trueDiasTable
+    print "Adding dias and ", noisePointsPerImage, " noise points per image to table ", \
+        falseDiasDb, ".", falseDiasTable
 
     conn = db.connect(host=DB_HOST, user=DB_USER, passwd=DB_PASS)
     curs = conn.cursor()
+
+    #curs.execute("DROP TABLE IF EXISTS %s.%s" % (falseDiasDb, falseDiasTable))
+    curs.execute("CREATE TABLE %s.%s LIKE %s.%s;" % \
+                     (falseDiasDb, falseDiasTable,
+                      trueDiasDb, trueDiasTable))
+
+    curs.execute("INSERT INTO %s.%s SELECT * FROM  %s.%s;" % \
+                     (falseDiasDb, falseDiasTable, 
+                      trueDiasDb, trueDiasTable))
     
-    obsHists = getAllFieldsObserved(curs)
-    firstFalseDiaId = getLastTrueDiaId(curs) +  1
+    obsHists = getAllFieldsObserved(curs, falseDiasDb, falseDiasTable)
+    firstFalseDiaId = getLastTrueDiaId(curs, falseDiasDb, falseDiasTable) +  1
     curFalseDiaId = firstFalseDiaId
     for obsHist in obsHists:
         centerRa,centerDec,time = getImageTimeLoc(curs, obsHist)
         print centerRa, centerDec, time
-
+        
         locs = chooseRandomLocationsInImage(noisePointsPerImage, 
                                             centerRa, centerDec, 
                                             IMAGE_RADIUS_DEG)
-        addFalseDias(locs, time, obsHist,  curFalseDiaId, curs)
+
+        addFalseDias(locs, time, obsHist,  curFalseDiaId, curs, 
+                     falseDiasDb, falseDiasTable)
         curFalseDiaId += len(locs)
      

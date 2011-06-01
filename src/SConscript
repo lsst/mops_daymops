@@ -10,7 +10,7 @@ Import("env")
 
 #ext_libs = ["gsl", "gslcblas", "pex_exceptions"]
 		      
-commonStuff = ['common', 'MopsDetection',
+commonStuff = ['MopsDetection','common',
                'Orbit', 'TrackletVector', 'TrackSet', 'Track', 'Tracklet']
 
 common_libs = []

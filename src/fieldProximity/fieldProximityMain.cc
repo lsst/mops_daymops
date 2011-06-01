@@ -25,10 +25,10 @@ void debugPrintTracks(const std::vector<FieldProximityTrack> &allTracks)
     for (i = allTracks.begin(); i != allTracks.end(); i++) {
         std::cout << "Track " << i->getID() << " : \n";
 
-        std::vector<FieldProximityPoint> points = i->getPoints();
+        const std::vector<FieldProximityPoint> * points = i->getPoints();
         std::vector<FieldProximityPoint>::const_iterator j;
         
-        for (j = points.begin(); j != points.end(); j++) {
+        for (j = points->begin(); j != points->end(); j++) {
             std::cout << std::setprecision(10);
             std::cout << "\tmjd=" << j->getEpochMJD() << 
                 " pos=(" << j->getRA() << ", " << j->getDec() << ")\n";

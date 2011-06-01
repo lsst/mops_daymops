@@ -52,11 +52,11 @@ void buildPavsForEphem(const std::vector<FieldProximityTrack> &tracks,
     // value is the index of the track holding that ephemeris.
 
     for(unsigned int i=0; i < tracks.size(); i++){
-        std::vector<FieldProximityPoint> pointsHere;
+        const std::vector<FieldProximityPoint> * pointsHere;
         pointsHere = tracks.at(i).getPoints();
-        for (unsigned int j=0; j < pointsHere.size(); j++)
+        for (unsigned int j=0; j < pointsHere->size(); j++)
         {
-            addPAV(pointsHere[j], i, allTrackPoints);
+            addPAV(pointsHere->at(j), i, allTrackPoints);
         }
     }
 
@@ -82,13 +82,13 @@ void buildPavsForEphem(const std::vector<FieldProximityTrack> &tracks,
  */
 void getNearestPoints(const Field &img, 
                       const FieldProximityTrack &track,
-                      FieldProximityPoint* &before,
-                      FieldProximityPoint* &after)
+                      FieldProximityPoint &before,
+                      FieldProximityPoint &after)
 {
     double imgMjd = img.getEpochMJD();
 
-    std::vector<FieldProximityPoint> trackPts = track.getPoints();
-    if (trackPts.size() < 2) {
+    const std::vector<FieldProximityPoint> * trackPts = track.getPoints();
+    if (trackPts->size() < 2) {
         throw LSST_EXCEPT(BadParameterException, 
        "Field Proximity track contains < 2 points. This is impossible to work with.");
     }
@@ -97,8 +97,8 @@ void getNearestPoints(const Field &img,
     bool foundBefore = false;
     bool foundAfter = false;
     uint afterIndex = 0;
-    for (uint i = 0; i < trackPts.size(); i++) {
-        double mjdHere = trackPts[i].getEpochMJD();
+    for (uint i = 0; i < trackPts->size(); i++) {
+        double mjdHere = trackPts->at(i).getEpochMJD();
         if (mjdHere < imgMjd) {
             if ((foundBefore == false) || 
                 (maxBefore < mjdHere)) {
@@ -120,29 +120,29 @@ void getNearestPoints(const Field &img,
         std::cerr << "FAILURE! Image mjd, ra, dec were " <<
             imgMjd << ", " << img.getRA() << ", " << img.getDec() << "\n";
         std::cerr << " Track for object " << track.getID() << " had times/locs: \n";
-        for (uint i = 0; i < trackPts.size(); i++) {
-            std::cerr << "\t" << trackPts[i].getEpochMJD()
-                      << ", " << trackPts[i].getRA() 
-                      << ", " << trackPts[i].getDec() << "\n";
+        for (uint i = 0; i < trackPts->size(); i++) {
+            std::cerr << "\t" << trackPts->at(i).getEpochMJD()
+                      << ", " << trackPts->at(i).getRA() 
+                      << ", " << trackPts->at(i).getDec() << "\n";
         }
         throw LSST_EXCEPT(BadParameterException,
                           "Track did not have points before/after the image time.");
     }
 
-    before = &(trackPts.at(beforeIndex));
-    after = &(trackPts.at(afterIndex));
+    before = (trackPts->at(beforeIndex));
+    after = (trackPts->at(afterIndex));
 }
 
 
 
 bool isInsideImage(const Field &img, const FieldProximityTrack &t) 
 {
-    FieldProximityPoint* before, *after;
+    FieldProximityPoint before, after;
     getNearestPoints(img, t, before, after);
-    double ra0 = before->getRA();
-    double dec0 = before->getDec();
-    double ra1 = after->getRA();
-    double dec1 = after->getDec();
+    double ra0 = before.getRA();
+    double dec0 = before.getDec();
+    double ra1 = after.getRA();
+    double dec1 = after.getDec();
     while (ra0 - ra1 > 180.) {
         ra1 += 360;
     }
@@ -156,8 +156,8 @@ bool isInsideImage(const Field &img, const FieldProximityTrack &t)
         dec1 -= 360.;
     }
 
-    double t0 = before->getEpochMJD();
-    double dt = after->getEpochMJD() - t0;
+    double t0 = before.getEpochMJD();
+    double dt = after.getEpochMJD() - t0;
     
     double raSlope = (ra1 - ra0) / dt;
     double decSlope = (dec1 - dec0) / dt;
@@ -183,8 +183,8 @@ void getProximity(std::vector<std::pair<uint, uint> > &resultsVec,
   
     std::vector<GeometryType> ephemGeometry;
     ephemGeometry.push_back(EUCLIDEAN);
-    ephemGeometry.push_back(RA_DEGREES);
-    ephemGeometry.push_back(DEC_DEGREES);
+    ephemGeometry.push_back(CIRCULAR_DEGREES);
+    ephemGeometry.push_back(CIRCULAR_DEGREES);
 
     // hyperRectangleSearch result container
     std::vector<PointAndValue<uint> > queryResults;
@@ -195,20 +195,18 @@ void getProximity(std::vector<std::pair<uint, uint> > &resultsVec,
          * the image.
          */
 
-        std::vector<double> queryRaDec(2,0);
-        queryRaDec[0] = queryPoints[i].getRA();
-        queryRaDec[1] = queryPoints[i].getDec();
-        std::vector<double> queryTime(1,0);
-        queryTime[0] = queryPoints[i].getEpochMJD();
-        std::vector<double> timeRadius(1,0);
-        timeRadius[0] = 1;
-        double queryRange = queryPoints[i].getRadius();
+        std::vector<double> queryPoint(3,0);
+        queryPoint[0] = queryPoints[i].getEpochMJD();
+        queryPoint[1] = queryPoints[i].getRA();
+        queryPoint[2] = queryPoints[i].getDec();
+        std::vector<double> queryRange(3,0);
+        queryRange[0] = 1;
+        queryRange[1] = queryPoints[i].getRadius();
+        queryRange[2] = queryPoints[i].getRadius();
 
-        queryResults = myTree.RADecRangeSearch(queryRaDec, 
-                                               queryRange,
-                                               queryTime,
-                                               timeRadius,
-                                               ephemGeometry);
+        queryResults = myTree.hyperRectangleSearch(queryPoint, 
+                                                   queryRange,
+                                                   ephemGeometry);
 
         // we now know all the tracks which pass near this image.
 

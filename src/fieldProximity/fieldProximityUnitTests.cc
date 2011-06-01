@@ -1,3 +1,16 @@
+// -*- LSST-C++ -*-
+
+/* jmyers  6/1/2011
+ *
+ * the new fieldProximity demands two things: first, that tracks
+ * contain 1 detection per day, and second, that the track contains at
+ * least one detection within the square which enscribes the
+ * (circular) image.  This will only break down if tracks move very
+ * quickly - by my calculations, >1.44 deg/day given an image of
+ * radius 1.75 degrees.
+ *
+ */ 
+
 #define BOOST_TEST_MODULE fieldProximityTests
 
 #include <boost/test/included/unit_test.hpp>
@@ -13,6 +26,10 @@
 #include "lsst/mops/daymops/fieldProximity/Field.h"
 #include "lsst/mops/daymops/fieldProximity/fieldProximity.h"
 #include "lsst/mops/daymops/fieldProximity/TrackForFieldProximity.h"
+
+
+
+
 
 
 using namespace lsst::mops;
@@ -41,6 +58,8 @@ bool containsPair(unsigned int a, unsigned int b, std::vector<std::pair <unsigne
 
 
 
+
+
 BOOST_AUTO_TEST_CASE ( fieldProximity1 ) 
 {
      //simple test - one field, one track.
@@ -52,20 +71,20 @@ BOOST_AUTO_TEST_CASE ( fieldProximity1 )
      tmpField.setEpochMJD(300);
      tmpField.setRA(50);
      tmpField.setDec(50);
-     tmpField.setRadius(10);
+     tmpField.setRadius(1.75);
      queryFields.push_back(tmpField);
      
      FieldProximityTrack tmpTrack;
      tmpTrack.setID(42);
      FieldProximityPoint tmpPoint;
-     tmpPoint.setRA(30);
+     tmpPoint.setRA(50);
      tmpPoint.setDec(50);
-     tmpPoint.setEpochMJD(299);
+     tmpPoint.setEpochMJD(299.5);
      tmpTrack.addPoint(tmpPoint);
 
-     tmpPoint.setRA(70);
-     tmpPoint.setDec(50);
-     tmpPoint.setEpochMJD(301);
+     tmpPoint.setRA(51);
+     tmpPoint.setDec(49);
+     tmpPoint.setEpochMJD(300.5);
      tmpTrack.addPoint(tmpPoint);
 
      allTracks.push_back(tmpTrack);
@@ -92,34 +111,34 @@ BOOST_AUTO_TEST_CASE ( fieldProximity2 )
      tmpField.setEpochMJD(300);
      tmpField.setRA(50);
      tmpField.setDec(50);
-     tmpField.setRadius(10);
+     tmpField.setRadius(1.75);
      queryFields.push_back(tmpField);
      
      FieldProximityTrack tmpTrack;
      tmpTrack.setID(42);
      FieldProximityPoint tmpPoint;
-     tmpPoint.setRA(30);
+     tmpPoint.setRA(50);
      tmpPoint.setDec(50);
-     tmpPoint.setEpochMJD(299);
+     tmpPoint.setEpochMJD(299.5);
      tmpTrack.addPoint(tmpPoint);
 
-     tmpPoint.setRA(70);
-     tmpPoint.setDec(50);
-     tmpPoint.setEpochMJD(301);
+     tmpPoint.setRA(51);
+     tmpPoint.setDec(49);
+     tmpPoint.setEpochMJD(300.5);
      tmpTrack.addPoint(tmpPoint);
      allTracks.push_back(tmpTrack);
      
-     //note that this one is too far north
+     //note that this one is too far west
      FieldProximityTrack tmpTrack2;
      tmpTrack2.setID(33);
-     tmpPoint.setRA(30);
-     tmpPoint.setDec(70);
-     tmpPoint.setEpochMJD(299);
+     tmpPoint.setRA(51.76);
+     tmpPoint.setDec(50);
+     tmpPoint.setEpochMJD(299.5);
      tmpTrack2.addPoint(tmpPoint);
 
-     tmpPoint.setRA(70);
-     tmpPoint.setDec(80);
-     tmpPoint.setEpochMJD(301);
+     tmpPoint.setRA(52.5);
+     tmpPoint.setDec(50);
+     tmpPoint.setEpochMJD(300.5);
      tmpTrack2.addPoint(tmpPoint);
      allTracks.push_back(tmpTrack2);     
 
@@ -131,91 +150,6 @@ BOOST_AUTO_TEST_CASE ( fieldProximity2 )
      
 }
 
-
-
-
-
-BOOST_AUTO_TEST_CASE ( fieldProximity3 ) 
-{
-     //simple test - two fields, 4 tracks.
-     std::vector<Field> queryFields;
-     std::vector<FieldProximityTrack> allTracks;
-
-     Field tmpField;
-     tmpField.setFieldID(1);
-     tmpField.setEpochMJD(300);
-     tmpField.setRA(50);
-     tmpField.setDec(50);
-     tmpField.setRadius(10);
-     queryFields.push_back(tmpField);
-
-     tmpField.setFieldID(2);
-     tmpField.setEpochMJD(300);
-     tmpField.setRA(10);
-     tmpField.setDec(-30);
-     tmpField.setRadius(10);
-     queryFields.push_back(tmpField);
-
-     
-     FieldProximityTrack tmpTrack;
-     FieldProximityPoint tmpPoint;
-     tmpPoint.setRA(30);
-     tmpPoint.setDec(50);
-     tmpPoint.setEpochMJD(299);
-     tmpTrack.addPoint(tmpPoint);
-
-     tmpPoint.setRA(70);
-     tmpPoint.setDec(50);
-     tmpPoint.setEpochMJD(301);
-     tmpTrack.addPoint(tmpPoint);
-     allTracks.push_back(tmpTrack);
-     
-     //note that this one is too far north
-     FieldProximityTrack tmpTrack2;
-     tmpPoint.setRA(30);
-     tmpPoint.setDec(70);
-     tmpPoint.setEpochMJD(299);
-     tmpTrack2.addPoint(tmpPoint);
-
-     tmpPoint.setRA(70);
-     tmpPoint.setDec(80);
-     tmpPoint.setEpochMJD(301);
-     tmpTrack2.addPoint(tmpPoint);
-     allTracks.push_back(tmpTrack2);     
-
-     FieldProximityTrack tmpTrack3;
-     tmpPoint.setRA(10);
-     tmpPoint.setDec(-30);
-     tmpPoint.setEpochMJD(299);
-     tmpTrack3.addPoint(tmpPoint);
-
-     tmpPoint.setRA(10.000001);
-     tmpPoint.setDec(-30.000001);
-     tmpPoint.setEpochMJD(301);
-     tmpTrack3.addPoint(tmpPoint);
-     allTracks.push_back(tmpTrack3);
-     
-     //note that this one is too far east
-     FieldProximityTrack tmpTrack4;
-     tmpPoint.setRA(30);
-     tmpPoint.setDec(-10);
-     tmpPoint.setEpochMJD(299);
-     tmpTrack4.addPoint(tmpPoint);
-
-     tmpPoint.setRA(30.5);
-     tmpPoint.setDec(-10);
-     tmpPoint.setEpochMJD(301);
-     tmpTrack4.addPoint(tmpPoint);
-     allTracks.push_back(tmpTrack4);     
-
-
-     std::vector<std::pair <unsigned int, unsigned int> > pairs =
-	  fieldProximity(allTracks, queryFields, 0);
-     
-     BOOST_CHECK(pairs.size() == 2);
-     BOOST_CHECK(containsPair(0,0,pairs));
-     BOOST_CHECK(containsPair(1,2,pairs));
-}
 
 
 
@@ -271,12 +205,12 @@ BOOST_AUTO_TEST_CASE ( fieldProximity6 )
      FieldProximityPoint tmpPoint;
      tmpPoint.setRA(30);
      tmpPoint.setDec(50);
-     tmpPoint.setEpochMJD(299);
+     tmpPoint.setEpochMJD(299.5);
      tmpTrack.addPoint(tmpPoint);
 
      tmpPoint.setRA(70);
      tmpPoint.setDec(50);
-     tmpPoint.setEpochMJD(301);
+     tmpPoint.setEpochMJD(300.5);
      tmpTrack.addPoint(tmpPoint);
      allTracks.push_back(tmpTrack);
 
@@ -301,30 +235,29 @@ BOOST_AUTO_TEST_CASE ( fieldProximity7 )
      Field tmpField;
      tmpField.setFieldID(1);
      tmpField.setEpochMJD(300);
-     tmpField.setRA(10);
+     tmpField.setRA(1.5);
      tmpField.setDec(50);
-     tmpField.setRadius(10);
+     tmpField.setRadius(1.75);
      queryFields.push_back(tmpField);
      
      FieldProximityTrack tmpTrack;
      FieldProximityPoint tmpPoint;
-     tmpPoint.setRA(357);
-     tmpPoint.setDec(50);
-     tmpPoint.setEpochMJD(298);
-     tmpTrack.addPoint(tmpPoint);
-
+     tmpTrack.setID(42);
      tmpPoint.setRA(359);
      tmpPoint.setDec(50);
-     tmpPoint.setEpochMJD(299);
+     tmpPoint.setEpochMJD(299.5);
      tmpTrack.addPoint(tmpPoint);
 
-     // the next day it will reach position 1, 50
+     tmpPoint.setRA(1);
+     tmpPoint.setDec(50);
+     tmpPoint.setEpochMJD(300.5);
+     tmpTrack.addPoint(tmpPoint);
      allTracks.push_back(tmpTrack);
 
      std::vector<std::pair <unsigned int, unsigned int> > pairs =
 	  fieldProximity(allTracks, queryFields, 0);
      
      BOOST_CHECK(pairs.size() == 1);
-     BOOST_CHECK(containsPair(0,0,pairs));
+     BOOST_CHECK(containsPair(1,42,pairs));
      
 }

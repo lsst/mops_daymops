@@ -50,7 +50,7 @@ public:
     void addPoint(FieldProximityPoint w) { myPoints.push_back(w); }
 
     unsigned int getID() const { return myID; }
-    std::vector<FieldProximityPoint> getPoints() const { return myPoints; }
+    const std::vector<FieldProximityPoint> * getPoints() const { return &myPoints; }
 
 private:
     unsigned int myID;

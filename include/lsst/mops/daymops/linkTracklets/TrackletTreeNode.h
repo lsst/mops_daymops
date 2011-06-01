@@ -45,7 +45,7 @@ namespace mops {
 
 
         TrackletTreeNode(
-            const std::vector<PointAndValue <unsigned int> > &tracklets, 
+            std::vector<PointAndValue <unsigned int> > &tracklets, 
             double positionalErrorRa, 
             double positionalErrorDec,
             unsigned int maxLeafSize, 

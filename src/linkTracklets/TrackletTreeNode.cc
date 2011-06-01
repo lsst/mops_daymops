@@ -13,7 +13,7 @@ namespace lsst { namespace mops {
 
         
 TrackletTreeNode::TrackletTreeNode(
-    const std::vector<PointAndValue <unsigned int> > &tracklets, 
+    std::vector<PointAndValue <unsigned int> > &tracklets, 
     double positionalErrorRa, 
     double positionalErrorDec,
     unsigned int maxLeafSize, 
@@ -124,6 +124,8 @@ TrackletTreeNode::TrackletTreeNode(
                 }
             }
         }
+        // now that tracklets have been partitioned, we no longer need them.
+        tracklets.clear();
 
         nextAxis = (myAxisToSplit + 1) % (myK);
         
@@ -133,6 +135,7 @@ TrackletTreeNode::TrackletTreeNode(
                                    useMedian, splitWidest);
         
         myChildren.push_back(leftChild);
+        leftPointsAndValues.clear();
         
         TrackletTreeNode rightChild(rightPointsAndValues, 
                                     positionalErrorRa, positionalErrorDec,
@@ -140,6 +143,7 @@ TrackletTreeNode::TrackletTreeNode(
                                     useMedian, splitWidest);
 
         myChildren.push_back(rightChild);
+        rightPointsAndValues.clear();
     }
 
 

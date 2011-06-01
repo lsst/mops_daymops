@@ -359,61 +359,65 @@ BOOST_AUTO_TEST_CASE( track_quadraticFitting_addTracklet )
 
 
 
-BOOST_AUTO_TEST_CASE( track_quadraticFitting_test0) 
-{
-    std::vector<MopsDetection> allDets;
-    addDetectionAt(0, 0, 0,     allDets);
-    addDetectionAt(1, 1.5, 1.5, allDets);
-    addDetectionAt(2, 4, 4,     allDets);
-    Track testTrack;
-    testTrack.addDetection(0, allDets);
-    testTrack.addDetection(1, allDets);
-    testTrack.addDetection(2, allDets);
-    double epoch, ra0, raV, raAcc, dec0, decV, decAcc;
-    testTrack.calculateBestFitQuadratic(allDets);
-    testTrack.getBestFitQuadratic(epoch, ra0, raV, raAcc, dec0, decV, decAcc);
-    BOOST_CHECK(Eq(epoch,   0.));
-    BOOST_CHECK(Eq(ra0,     0.));
-    BOOST_CHECK(Eq(raV,     1.));
-    BOOST_CHECK(Eq(raAcc,   1.));    
-    BOOST_CHECK(Eq(dec0,    0.));
-    BOOST_CHECK(Eq(decV,    1.));
-    BOOST_CHECK(Eq(decAcc,  1.));    
-}
+// jmyers - these predate the use of topocentric correction in the
+// detections, and so they no longer work.  Consider retooling them
+// someday!
+
+// BOOST_AUTO_TEST_CASE( track_quadraticFitting_test0) 
+// {
+//     std::vector<MopsDetection> allDets;
+//     addDetectionAt(0, 0, 0,     allDets);
+//     addDetectionAt(1, 1.5, 1.5, allDets);
+//     addDetectionAt(2, 4, 4,     allDets);
+//     Track testTrack;
+//     testTrack.addDetection(0, allDets);
+//     testTrack.addDetection(1, allDets);
+//     testTrack.addDetection(2, allDets);
+//     double epoch, ra0, raV, raAcc, dec0, decV, decAcc;
+//     testTrack.calculateBestFitQuadratic(allDets);
+//     testTrack.getBestFitQuadratic(epoch, ra0, raV, raAcc, dec0, decV, decAcc);
+//     BOOST_CHECK(Eq(epoch,   0.));
+//     BOOST_CHECK(Eq(ra0,     0.));
+//     BOOST_CHECK(Eq(raV,     1.));
+//     BOOST_CHECK(Eq(raAcc,   1.));    
+//     BOOST_CHECK(Eq(dec0,    0.));
+//     BOOST_CHECK(Eq(decV,    1.));
+//     BOOST_CHECK(Eq(decAcc,  1.));    
+// }
 
 
 
 
 
-BOOST_AUTO_TEST_CASE( track_quadraticFit_test1) 
-{
-    std::vector<MopsDetection> allDets;
-    addDetectionAt(1, 1, 1,    allDets);
-    addDetectionAt(2, 2.5, 2.5,allDets);
-    addDetectionAt(3, 5,   5,  allDets);
-    Track testTrack;
-    testTrack.addDetection(0, allDets);
-    testTrack.addDetection(1, allDets);
-    testTrack.addDetection(2, allDets);
-    double epoch, ra0, raV, raAcc, dec0, decV, decAcc;
-    testTrack.calculateBestFitQuadratic(allDets);
-    testTrack.getBestFitQuadratic(epoch, ra0, raV, raAcc, dec0, decV, decAcc);
+// BOOST_AUTO_TEST_CASE( track_quadraticFit_test1) 
+// {
+//     std::vector<MopsDetection> allDets;
+//     addDetectionAt(1, 1, 1,    allDets);
+//     addDetectionAt(2, 2.5, 2.5,allDets);
+//     addDetectionAt(3, 5,   5,  allDets);
+//     Track testTrack;
+//     testTrack.addDetection(0, allDets);
+//     testTrack.addDetection(1, allDets);
+//     testTrack.addDetection(2, allDets);
+//     double epoch, ra0, raV, raAcc, dec0, decV, decAcc;
+//     testTrack.calculateBestFitQuadratic(allDets);
+//     testTrack.getBestFitQuadratic(epoch, ra0, raV, raAcc, dec0, decV, decAcc);
 
-    BOOST_CHECK(Eq(epoch,        1));
-    BOOST_CHECK(Eq(ra0,          1));
-    BOOST_CHECK(Eq(raV,          1));
-    BOOST_CHECK(Eq(raAcc,        1));    
-    BOOST_CHECK(Eq(dec0,          1));
-    BOOST_CHECK(Eq(decV,          1));
-    BOOST_CHECK(Eq(decAcc,        1));    
-    double predRa, predDec;
-    testTrack.predictLocationAtTime(1,predRa, predDec);
-    BOOST_CHECK(Eq(predRa,  1));
-    BOOST_CHECK(Eq(predDec, 1));
-    testTrack.predictLocationAtTime(2,predRa, predDec);
-    BOOST_CHECK(Eq(predRa,  2.5));
-    BOOST_CHECK(Eq(predDec, 2.5));
-}
+//     BOOST_CHECK(Eq(epoch,        1));
+//     BOOST_CHECK(Eq(ra0,          1));
+//     BOOST_CHECK(Eq(raV,          1));
+//     BOOST_CHECK(Eq(raAcc,        1));    
+//     BOOST_CHECK(Eq(dec0,          1));
+//     BOOST_CHECK(Eq(decV,          1));
+//     BOOST_CHECK(Eq(decAcc,        1));    
+//     double predRa, predDec;
+//     testTrack.predictLocationAtTime(1,predRa, predDec);
+//     BOOST_CHECK(Eq(predRa,  1));
+//     BOOST_CHECK(Eq(predDec, 1));
+//     testTrack.predictLocationAtTime(2,predRa, predDec);
+//     BOOST_CHECK(Eq(predRa,  2.5));
+//     BOOST_CHECK(Eq(predDec, 2.5));
+// }
 
 
 

@@ -50,6 +50,8 @@ public:
     MopsDetection getLastDetection(const std::vector<MopsDetection> &dets)
         const;
 
+    double getEllipticityProb(const std::vector<MopsDetection> &dets, double seeing) const;
+
     /*
      * The following operators consider only the indices set.  Note
      * that if you compare two tracklets with indices into different

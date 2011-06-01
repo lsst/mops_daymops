@@ -38,12 +38,12 @@ public:
     // create a detection with initialized data, but no exposure time
     MitiDetection(long int ID, double epochMJD, double RA, double Dec, 
               int obsCode, std::string objName, double mag,
-              double elongationLength, double elongationAngle);
+              double ellipticityLength, double ellipticityAngle);
 
     //create a detection with initialized data, including exposure time data
     MitiDetection(long int ID, double epochMJD, double RA, double Dec, 
               int obsCode, std::string objName, double mag, 
-              double elongationLength, double elongationAngle, 
+              double ellipticityLength, double ellipticityAngle, 
               double exposureTime);
     
     // a detection is only initialized after we have assigned

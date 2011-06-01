@@ -6,16 +6,13 @@
 #include "lsst/mops/daymops/fieldProximity/Field.h"
 #include "lsst/mops/Exceptions.h"
 
+namespace lsst { namespace mops {
 
 /**************************************************
  * SETTERS
  **************************************************/
-void Field::setFileIndex(int f)
-{
-    fileIndex = f;
-}
 
-void Field::setFieldID(std::string f)
+void Field::setFieldID(unsigned int f)
 {
     fieldID = f;
 }
@@ -45,12 +42,8 @@ void Field::setRadius(double r)
 /**************************************************
  * GETTERS
  **************************************************/
-int Field::getFileIndex() const
-{
-    return fileIndex;
-}
 
-std::string Field::getFieldID() const
+unsigned int Field::getFieldID() const
 {
     return fieldID;
 }
@@ -74,3 +67,6 @@ double Field::getRadius() const
 {
     return radius;
 }
+
+
+}} // close lsst::mops

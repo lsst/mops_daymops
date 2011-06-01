@@ -29,7 +29,10 @@ MopsDetection::MopsDetection()
 }
 
 
-MopsDetection::MopsDetection(long int ID, double epochMJD, double RA, double Dec, double RaErr, double DecErr) 
+MopsDetection::MopsDetection(long int ID, double epochMJD, 
+                             double RA, double Dec, 
+                             double RaErr, double DecErr, 
+                             double ellipticity, double ellipticityAngle) 
 {
     this->ID = ID;
     MJD = epochMJD;
@@ -37,8 +40,30 @@ MopsDetection::MopsDetection(long int ID, double epochMJD, double RA, double Dec
     this->dec = Dec;
     this->RaErr = RaErr;
     this->DecErr = DecErr;
+    this->ellipticity = ellipticity;
+    this->ellipticityAngle = ellipticityAngle;
 }
 
+void MopsDetection::setEllipticity(double newE)
+{
+    ellipticity = newE;
+}
+
+void MopsDetection::setEllipticityAngle(double newA)
+{
+    ellipticityAngle = newA;
+}
+
+
+double MopsDetection::getEllipticityAngle() const
+{
+    return ellipticityAngle;
+}
+
+double MopsDetection::getEllipticity() const
+{
+    return ellipticity;
+}
 
 
 void MopsDetection::setID(long int newId)
@@ -127,8 +152,6 @@ void MopsDetection::fromMITIString(std::string mitiString) {
     double mag;
     std::string obscode;
     std::string objName;
-    double length;
-    double angle;
     double etime;
     bool hasETime;
     std::istringstream ss(mitiString);
@@ -142,13 +165,15 @@ void MopsDetection::fromMITIString(std::string mitiString) {
         ss >> mag;
         ss >> obscode;
         ss >> objName;
-        ss >> length;
-        ss >> angle;
+        ss >> ellipticity;
+        ss >> ellipticityAngle;
     }
     catch (...) {
         throw LSST_EXCEPT(BadParameterException, 
                           "Badly-formatted MITI string\n");
     }
+    // right now we don't keep ellipticity time, but sometimes it is
+    // provided to us (e.g. in PanSTARRS settings). 
     try {
         ss >> etime;
         hasETime = true;

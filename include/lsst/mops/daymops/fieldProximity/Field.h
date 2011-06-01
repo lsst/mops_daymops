@@ -10,18 +10,18 @@
 
 #include <string>
 
+namespace lsst { namespace mops {
+
 class Field {
 public:
 
-    void setFileIndex(int);
-    void setFieldID(std::string);
+    void setFieldID(unsigned int);
     void setEpochMJD(double);
     void setRA(double);
     void setDec(double);
     void setRadius(double);
 
-    int getFileIndex() const;
-    std::string getFieldID() const;
+    unsigned int getFieldID() const;
     double getEpochMJD() const;
     double getRA() const;
     double getDec() const;
@@ -29,8 +29,7 @@ public:
 
 private:
 
-    int fileIndex;
-    std::string fieldID;
+    unsigned int fieldID;
 
     double MJD;
 
@@ -40,6 +39,6 @@ private:
     double radius;
 };
 
-
+}} // close lsst::mops
 
 #endif

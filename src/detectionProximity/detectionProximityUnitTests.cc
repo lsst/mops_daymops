@@ -52,7 +52,7 @@ BOOST_AUTO_TEST_CASE( detectionProximity1 )
   
   /*Detection(long int ID, double epochMJD, double RA, double Dec, 
 	    int obsCode, std::string objName, double mag,
-	    double elongationLength, double elongationAngle); */
+	    double ellipticityLength, double ellipticityAngle); */
 
   //           ID    MJD      RA      DEC     
   MopsDetection qd1(0, 53736,    100.00,   50.00);
@@ -79,7 +79,7 @@ BOOST_AUTO_TEST_CASE( detectionProximity2 )
   
   /*Detection(long int ID, double epochMJD, double RA, double Dec, 
 	    int obsCode, std::string objName, double mag,
-	    double elongationLength, double elongationAngle); */
+	    double ellipticityLength, double ellipticityAngle); */
 
   //           ID    MJD      RA      DEC    
   MopsDetection qd1(0, 53736,    100.00,   50.00);
@@ -102,7 +102,7 @@ BOOST_AUTO_TEST_CASE( detectionProximity3 )
   
   /*Detection(long int ID, double epochMJD, double RA, double Dec, 
 	    int obsCode, std::string objName, double mag,
-	    double elongationLength, double elongationAngle); */
+	    double ellipticityLength, double ellipticityAngle); */
 
   //           ID    MJD      RA      DEC     obs  NAME      MAG 
   MopsDetection dd1(0, 53736,    100.00,   50.00);
@@ -126,7 +126,7 @@ BOOST_AUTO_TEST_CASE( detectionProximity4 )
   
   /*MopsDetection(long int ID, double epochMJD, double RA, double Dec, 
 	    int obsCode, std::string objName, double mag,
-	    double elongationLength, double elongationAngle); */
+	    double ellipticityLength, double ellipticityAngle); */
 
   queryResult = detectionProximity(queryDets, dataDets, .1, 0.1);
   BOOST_CHECK(queryResult.size() == 0);
@@ -147,7 +147,7 @@ BOOST_AUTO_TEST_CASE( detectionProximity5 )
   
   /*MopsDetection(long int ID, double epochMJD, double RA, double Dec, 
 	    int obsCode, std::string objName, double mag,
-	    double elongationLength, double elongationAngle); */
+	    double ellipticityLength, double ellipticityAngle); */
 
   //           ID    MJD      RA      DEC     obs  NAME      MAG 
   MopsDetection qd1(0, 53736,    100.00,   89.50);
@@ -174,7 +174,7 @@ BOOST_AUTO_TEST_CASE( detectionProximity6 )
   
   /*MopsDetection(long int ID, double epochMJD, double RA, double Dec, 
 	    int obsCode, std::string objName, double mag,
-	    double elongationLength, double elongationAngle); */
+	    double ellipticityLength, double ellipticityAngle); */
 
   //           ID    MJD      RA      DEC     obs  NAME      MAG 
   MopsDetection qd1(0, 53736,    100.00,   -89.50);
@@ -202,7 +202,7 @@ BOOST_AUTO_TEST_CASE( detectionProximity7 )
   
   /*MopsDetection(long int ID, double epochMJD, double RA, double Dec, 
 	    int obsCode, std::string objName, double mag,
-	    double elongationLength, double elongationAngle); */
+	    double ellipticityLength, double ellipticityAngle); */
 
   //           ID    MJD      RA      DEC     obs  NAME      MAG 
   MopsDetection qd1(0, 53736,   -100.00,   -10.00);
@@ -231,7 +231,7 @@ BOOST_AUTO_TEST_CASE( detectionProximity8 )
   
   /*MopsDetection(long int ID, double epochMJD, double RA, double Dec, 
 	    int obsCode, std::string objName, double mag,
-	    double elongationLength, double elongationAngle); */
+	    double ellipticityLength, double ellipticityAngle); */
 
   //           ID    MJD      RA      DEC     obs  NAME      MAG 
   MopsDetection qd1(0, 53736,    010.00,   -10.00);
@@ -270,7 +270,7 @@ BOOST_AUTO_TEST_CASE( detectionProximity9 )
   
   /*MopsDetection(long int ID, double epochMJD, double RA, double Dec, 
 	    int obsCode, std::string objName, double mag,
-	    double elongationLength, double elongationAngle); */
+	    double ellipticityLength, double ellipticityAngle); */
 
   //           ID    MJD      RA      DEC     obs  NAME      MAG 
   MopsDetection qd1(0, 53736,    010.00,   -10.00);
@@ -306,7 +306,7 @@ BOOST_AUTO_TEST_CASE( detectionProximity10 )
   
   /*MopsDetection(long int ID, double epochMJD, double RA, double Dec, 
 	    int obsCode, std::string objName, double mag,
-	    double elongationLength, double elongationAngle); */
+	    double ellipticityLength, double ellipticityAngle); */
 
   //           ID    MJD      RA      DEC     obs  NAME      MAG 
   MopsDetection dd1(0, 53736,    010.00,   -10.00);
@@ -343,7 +343,7 @@ BOOST_AUTO_TEST_CASE( detectionProximity11 )
   
   /*MopsDetection(long int ID, double epochMJD, double RA, double Dec, 
 	    int obsCode, std::string objName, double mag,
-	    double elongationLength, double elongationAngle); */
+	    double ellipticityLength, double ellipticityAngle); */
 
   //           ID    MJD      RA      DEC     obs  NAME      MAG 
   MopsDetection dd1(0, 53736,    010.00,   -10.00);
@@ -388,7 +388,7 @@ BOOST_AUTO_TEST_CASE( detectionProximity13 )
   
   /*MopsDetection(long int ID, double epochMJD, double RA, double Dec, 
 	    int obsCode, std::string objName, double mag,
-	    double elongationLength, double elongationAngle); */
+	    double ellipticityLength, double ellipticityAngle); */
 
   //           ID    MJD      RA      DEC     obs  NAME      MAG 
   MopsDetection dd1(0, 53736,   010.00,   -10.00);
@@ -417,7 +417,7 @@ BOOST_AUTO_TEST_CASE( detectionProximity14 )
   
   /*MopsDetection(long int ID, double epochMJD, double RA, double Dec, 
 	    int obsCode, std::string objName, double mag,
-	    double elongationLength, double elongationAngle); */
+	    double ellipticityLength, double ellipticityAngle); */
 
   //           ID    MJD      RA      DEC     obs  NAME      MAG 
   MopsDetection qd1(0, 53736,   000.00,   -10.00);

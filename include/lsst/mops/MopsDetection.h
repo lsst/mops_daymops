@@ -32,12 +32,14 @@ public:
     MopsDetection();
 
     //create a "lightweight" detection.
-    MopsDetection(long int ID, double epochMJD, double RA, double Dec, double RaErr=0, double DecErr=0);
+    MopsDetection(long int ID, double epochMJD, double RA, double Dec, 
+                  double RaErr=0, double DecErr=0, 
+                  double ellipticity=0, double ellipticityAngle=0);
     
     // the MITI format holds lots more data than ID, MJD, Ra, and Dec.  
     // We don't store those items, though!
     void fromMITIString(std::string);
-
+    
     //getters...  note that if you don't set values, you'll get bogus
     // placeholder values from the "getters" - they used to send exceptions in
     // this case, but to save the extra byte, I dropped the "initialized" flag.
@@ -48,6 +50,8 @@ public:
     double getRaErr() const ;
     double getDecErr() const ;
     double getRaTopoCorr() const ;
+    double getEllipticity() const;
+    double getEllipticityAngle() const;
 
     void setID(long int newId);
     void setEpochMJD(double newMjd);
@@ -55,6 +59,9 @@ public:
     void setDec(double newDec);
     void setRaErr(double RaErr);
     void setDecErr(double DecErr);
+    void setEllipticity(double);
+    void setEllipticityAngle(double);
+
     void calculateTopoCorr();
 
     static void setObservatoryLocation(double obsLat, double obsLong);
@@ -71,6 +78,8 @@ private:
     double RaErr;
     double DecErr;
     double RaTopoCorr;
+    double ellipticity; 
+    double ellipticityAngle;
 };
 
 }} // close namespace lsst::mops

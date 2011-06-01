@@ -44,6 +44,9 @@ public:
             outputMethod = RETURN_TRACKLETS;
             outputFile = "";
             outputBufferSize = 0;
+
+            minEllipticityProb=0.; // filtering disabled
+            seeing=0.; // set in degrees; dummy value obviously
         }
 
     // units for these two are in days.
@@ -77,6 +80,13 @@ public:
     trackletOutputMethod outputMethod;
     std::string outputFile;
     unsigned int outputBufferSize;
+
+    // these values are used for filtering linkages based on the
+    // probability that two points with observed ellipticitys could be
+    // linked.  For now treat the seeing as nightly rather than per-image.
+    double minEllipticityProb;
+    double seeing;
+
 };
         
 

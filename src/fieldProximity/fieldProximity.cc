@@ -1,430 +1,302 @@
 // -*- LSST-C++ -*-
 #include <stdlib.h>
-#include <stdio.h>
 #include <algorithm>
 #include <iostream>
 #include <iomanip>
 #include <fstream>
 #include <vector>
-#include <getopt.h>
 #include <set>
 #include <map>
 #include <string>
-#include <sstream>
 #include <math.h>
+#include <sstream>
+#include <time.h>
 
 #include "lsst/mops/KDTree.h"
+#include "lsst/mops/common.h"
 #include "lsst/mops/daymops/fieldProximity/fieldProximity.h"
 
+#define uint unsigned int
 
-namespace lsst {
-    namespace mops {
+#define LEAF_NODE_SIZE 8
 
-// private declarations
-
-std::vector<FieldProximityTrack> buildEphemeridesVec(const std::vector<FieldProximityTrack>,
-                                     std::vector<std::string>*,
-                                     const std::vector<double>);
-
-void generateMJDVecs(const std::vector<FieldProximityTrack>, 
-                     std::vector<double>,
-                     std::vector<std::vector<FieldProximityTrack> >*);
-
-void generateTreeMap(std::vector< std::vector<FieldProximityTrack> >*, 
-		     std::map<double, KDTree<int> >*);
-
-void getProximity(std::vector<int>*,
-                  std::map<double, KDTree<int> >*,
-                  const std::vector<Field>);
-
-int vecPosition(const std::vector<std::string>*, std::string);
-
-int vecPosition(const std::vector<double>*, double);
-
-std::vector<double> getFieldTimes(std::vector<Field>, std::vector<std::string>*);
-
-std::vector<std::pair <unsigned int, unsigned int> > makePair(std::vector<int>);
+namespace lsst { namespace mops {
 
 
-/**************************************************
- *
- *                 main function
- *
- **************************************************/
-std::vector<std::pair <unsigned int, unsigned int> > 
-fieldProximity(std::vector<FieldProximityTrack> allTracks,
-               std::vector<Field> queryFields,
-               double distThresh) 
+
+
+void addPAV(const FieldProximityPoint &p, 
+            uint objId,
+            std::vector<PointAndValue<uint> > &allTrackPoints)
 {
-    //return value
-    std::vector<std::pair <unsigned int, unsigned int> > pairsResult;
+    PointAndValue<uint> tmpPAV;
+    std::vector<double> tmpPt;
+    tmpPt.push_back(p.getEpochMJD());
+    tmpPt.push_back(convertToStandardDegrees(p.getRA()));
+    tmpPt.push_back(convertToStandardDegrees(p.getDec()));
+    tmpPAV.setPoint(tmpPt);
+    tmpPAV.setValue(objId);
 
-    if(queryFields.size() > 0 && allTracks.size() > 0){
-        std::vector<std::string> trackIDs, fieldIDs;
-        
-        //a vector of FPT vectors, each outer vector contains
-        //a vector of FPT of a specific time
-        std::vector<std::vector<FieldProximityTrack> > tracksByTime;
-        
-        //link MJD to KDTree of unique MJD detections
-        std::map<double, KDTree<int> > myTreeMap; 
-        
-        std::vector<double> fieldTimes = getFieldTimes(queryFields, &fieldIDs);
-        
-        std::vector<FieldProximityTrack> ephemeridesTracks = buildEphemeridesVec(allTracks,
-                                                                                 &trackIDs,
-                                                                                 fieldTimes);
-        
-        generateMJDVecs(ephemeridesTracks, fieldTimes, &tracksByTime);
-        
-        generateTreeMap(&tracksByTime, &myTreeMap);
-        
-        //get results
-        std::vector<int> results;
-      
-        getProximity(&results, &myTreeMap, queryFields);
-        
-        //format results into desired, pair, output
-        pairsResult = makePair(results);
-    }
-    
-    return pairsResult;
+    allTrackPoints.push_back(tmpPAV);
 }
-
-
-
-
-
-/***************************************************
- *
- ***************************************************/
-std::vector<double> getFieldTimes(std::vector<Field> fields,
-                                  std::vector<std::string>* fieldIDs)
-{
-    std::vector<double> results;
-
-    for(unsigned int i=0; i < fields.size(); i++){
-        double time = fields.at(i).getEpochMJD();
-
-        //keep track of all field times to be searched
-        int vecPos = vecPosition(&results, time);
         
-        if(vecPos == -1){
-            results.push_back(time);
-        }
-
-        fieldIDs->push_back(fields.at(i).getFieldID());
-                          
-    }
-
-    return results;
-}
 
 
 
-/***************************************************
- *
- ***************************************************/
-std::vector<FieldProximityTrack> buildEphemeridesVec(const std::vector<FieldProximityTrack> tracks,
-                                       std::vector<std::string> *trackIDs,
-                                       const std::vector<double> fieldTimes)
+void buildPavsForEphem(const std::vector<FieldProximityTrack> &tracks, 
+                       std::vector<PointAndValue<uint> > &allTrackPoints)
 {
-    std::vector<FieldProximityTrack> finalTracks;
-    
-    double pt1RA, pt1Dec, pt1Time;
-    double pt2RA, pt2Dec, pt2Time;
-    
-    std::string trackID;
-    
-    //find track link points and calculate for each track
+                         
+    // build KD-Tree PointsAndValues to put in the tree.  Each
+    // ephemeris (time, ra, dec) is a point in the tree and the
+    // value is the index of the track holding that ephemeris.
+
     for(unsigned int i=0; i < tracks.size(); i++){
-
-        trackID = tracks.at(i).getID();
-
-        //keep a list of input tracks
-        trackIDs->push_back(trackID);
-
-        std::vector<FieldProximityPoint> points = tracks.at(i).getPoints();
-
-        //first point
-        pt1RA = points.at(0).getRA();
-        pt1Dec = points.at(0).getDec();
-        pt1Time = points.at(0).getEpochMJD();
-
-        pt2RA = points.at(1).getRA();
-        pt2Dec = points.at(1).getDec();
-        pt2Time = points.at(1).getEpochMJD();
-    
-        //generate the ephemerides points along the line described
-        //by pts 1 and 2 for each possible time
-        for(unsigned int j=0; j < fieldTimes.size(); j++){
-            
-            double ephRA, ephDec;
-
-            //for projecting forward in time
-            if(fieldTimes.at(j) > pt2Time){
-                ephRA = pt2RA + (pt2RA - pt1RA) * (fieldTimes.at(j) - pt2Time);
-                ephDec = pt2Dec + (pt2Dec - pt1Dec) * (fieldTimes.at(j) - pt2Time);
-            }
-            //for projecting backwards in time
-            else if(fieldTimes.at(j) < pt1Time){
-                ephRA = pt1RA - (pt2RA - pt1RA) * (pt1Time - fieldTimes.at(j));
-                ephDec = pt1RA - (pt2Dec - pt1Dec) * (pt1Time - fieldTimes.at(j));
-            }
-            //for ephemera in between pt1 and pt2 times
-            else{
-                double timeFactor = (pt2Time - fieldTimes.at(j))/(pt2Time - pt1Time);
-                ephRA = pt1RA + ((pt2RA - pt1RA) * timeFactor);
-                ephDec = pt1Dec + ((pt2Dec - pt1Dec) * timeFactor);
-            }
-
-            FieldProximityTrack f;
-            std::vector<FieldProximityPoint> addPoints;
-            FieldProximityPoint pt;
-            
-            pt.setRA(convertToStandardDegrees(ephRA));
-            pt.setDec(convertToStandardDegrees(ephDec));
-            pt.setEpochMJD(fieldTimes.at(j)); //i ???
-            
-            addPoints.push_back(pt);
-            
-            f.setPoints(addPoints);
-            
-            std::string s;
-            std::stringstream out;
-            out << i;
-            f.setID(out.str());
-            
-            finalTracks.push_back(f);
+        std::vector<FieldProximityPoint> pointsHere;
+        pointsHere = tracks.at(i).getPoints();
+        for (unsigned int j=0; j < pointsHere.size(); j++)
+        {
+            addPAV(pointsHere[j], i, allTrackPoints);
         }
     }
-    
-    return finalTracks;
+
 }
 
 
 
-/*****************************************************************
- * Create a vector of Track vectors.  Each inner vector will 
- * contain all tracks of a specific MJD.
- *****************************************************************/
-void generateMJDVecs(const std::vector<FieldProximityTrack> allTracks, 
-                     std::vector<double> fieldTimes,
-                     std::vector<std::vector<FieldProximityTrack> > *tracksByTime)
+
+
+/* Helper function for getProximity.  When a tree search reveals that
+ * a given track may pass through a given image, we need to see the
+ * points nearest that image and check whether they do fall within the
+ * image itself.
+
+ * modify args to point at the two points in the track which happen
+ * immediately before and after the specified image, or return an
+ * exception.  Note that this should be fine for our current data sets
+ * (may 23 2011) since we pre-filter and make sure that any object
+ * remotely near the images is included in the data set.
+ *
+ * this could be done more efficiently if we assumed that the track's
+ * associated points were in sorted order.
+ */
+void getNearestPoints(const Field &img, 
+                      const FieldProximityTrack &track,
+                      FieldProximityPoint* &before,
+                      FieldProximityPoint* &after)
 {
-    double thisTime;
-    int vecPos;
+    double imgMjd = img.getEpochMJD();
 
-    tracksByTime->resize(fieldTimes.size());
-
-    for(unsigned int i=0; i < allTracks.size(); i++){
-        
-        thisTime = allTracks.at(i).getPoints().at(0).getEpochMJD();
-        
-        vecPos = vecPosition(&fieldTimes, thisTime);
-
-        if(vecPos != -1){
-            FieldProximityTrack f = allTracks.at(i);
-            tracksByTime->at(vecPos).push_back(f);            
-        }
+    std::vector<FieldProximityPoint> trackPts = track.getPoints();
+    if (trackPts.size() < 2) {
+        throw LSST_EXCEPT(BadParameterException, 
+       "Field Proximity track contains < 2 points. This is impossible to work with.");
     }
-}
-
-
-  
-
-/******************************************************************
- * Take 2D vector of detections and create a map linking
- * each MJD vector to its MJD double value.
- ******************************************************************/
-void generateTreeMap(std::vector< std::vector<FieldProximityTrack> > *trackSets, 
-		     std::map<double, KDTree<int> > *myTreeMap)
-{
-    // for each vector representing a single EpochMJD, created
-    // a KDTree containing its line number in the input file 
-    // and PointAndValue pair
-    for(unsigned int i=0; i < trackSets->size(); i++){
-
-        int thisTreeSize = trackSets->at(i).size();
-
-        if(thisTreeSize > 0){
-            
-            std::vector<FieldProximityTrack> thisTrackVec = trackSets->at(i);
-
-            if(thisTrackVec.size() > 0){
-
-                FieldProximityTrack t;
-                t = thisTrackVec.at(0);
-                std::vector<FieldProximityPoint> pts;
-                pts = t.getPoints();
-
-                double thisEpoch = pts.at(0).getEpochMJD();
-      
-                std::vector<PointAndValue<int> > vecPV;
-	
-                for(int j=0; j < thisTreeSize; j++){
-
-                    PointAndValue<int> tempPV;
-                    std::vector<double> pairRADec;
-
-                    t = thisTrackVec.at(j);
-                    pts = t.getPoints();
-
-                    pairRADec.push_back(convertToStandardDegrees(pts.at(0).getRA()));
-                    pairRADec.push_back(convertToStandardDegrees(pts.at(0).getDec()));
-                    
-                    tempPV.setPoint(pairRADec);
-                    tempPV.setValue(atoi(t.getID().c_str()));
-                    vecPV.push_back(tempPV);
-
-                }
-                KDTree<int> tempKDTree(vecPV, 2, 100);
-                myTreeMap->insert(std::make_pair(thisEpoch, tempKDTree) );
+    uint beforeIndex = 0;
+    double maxBefore, minAfter;
+    bool foundBefore = false;
+    bool foundAfter = false;
+    uint afterIndex = 0;
+    for (uint i = 0; i < trackPts.size(); i++) {
+        double mjdHere = trackPts[i].getEpochMJD();
+        if (mjdHere < imgMjd) {
+            if ((foundBefore == false) || 
+                (maxBefore < mjdHere)) {
+                foundBefore = true;
+                maxBefore = mjdHere;
+                beforeIndex = i;
+            }
+        }
+        else if (mjdHere > imgMjd) {
+            if ((foundAfter == false) || 
+                (minAfter > mjdHere)) {
+                foundAfter = true;
+                minAfter = mjdHere;
+                afterIndex = i;
             }
         }
     }
+    if ((!foundBefore)||(!foundAfter)) {
+        std::cerr << "FAILURE! Image mjd, ra, dec were " <<
+            imgMjd << ", " << img.getRA() << ", " << img.getDec() << "\n";
+        std::cerr << " Track for object " << track.getID() << " had times/locs: \n";
+        for (uint i = 0; i < trackPts.size(); i++) {
+            std::cerr << "\t" << trackPts[i].getEpochMJD()
+                      << ", " << trackPts[i].getRA() 
+                      << ", " << trackPts[i].getDec() << "\n";
+        }
+        throw LSST_EXCEPT(BadParameterException,
+                          "Track did not have points before/after the image time.");
+    }
+
+    before = &(trackPts.at(beforeIndex));
+    after = &(trackPts.at(afterIndex));
 }
 
 
 
-/******************************************************************
- * Given a mapping of MJDs to KDTrees of PointAndValue pairs 
- * index by file line number index, generate tracklets for each 
- * query point within a distance determined by maxVelocity.
- ******************************************************************/
-void getProximity(std::vector<int> *resultsVec,  
-		  std::map<double, KDTree<int> > *myTreeMap,
-		  const std::vector<Field> queryPoints)
+bool isInsideImage(const Field &img, const FieldProximityTrack &t) 
+{
+    FieldProximityPoint* before, *after;
+    getNearestPoints(img, t, before, after);
+    double ra0 = before->getRA();
+    double dec0 = before->getDec();
+    double ra1 = after->getRA();
+    double dec1 = after->getDec();
+    while (ra0 - ra1 > 180.) {
+        ra1 += 360;
+    }
+    while (ra0 - ra1 < -180.) {
+        ra1 -= 360.;
+    }
+    while (dec0 - dec1 > 180.) {
+        dec1 += 360;
+    }
+    while (dec0 - dec1 < -180.) {
+        dec1 -= 360.;
+    }
+
+    double t0 = before->getEpochMJD();
+    double dt = after->getEpochMJD() - t0;
+    
+    double raSlope = (ra1 - ra0) / dt;
+    double decSlope = (dec1 - dec0) / dt;
+    
+    double imgT = img.getEpochMJD();
+    double predRa = ra0 + raSlope*(imgT - t0);
+    double predDec = dec0 + decSlope*(imgT - t0);
+    
+    double dist = angularDistanceRADec_deg(predRa, predDec, img.getRA(), img.getDec());
+
+    return (dist <= img.getRadius());
+}
+
+
+
+void getProximity(std::vector<std::pair<uint, uint> > &resultsVec,  
+                  KDTree<uint> &myTree,
+                  const std::vector<Field> &queryPoints,
+                  const std::vector<FieldProximityTrack> &allTracks)
 {
     // vectors of hyperRectangleSearch parameters
     std::vector<double> tolerances;
   
-    std::vector<GeometryType> myGeos;
-    myGeos.push_back(CIRCULAR_DEGREES);
-    myGeos.push_back(CIRCULAR_DEGREES);
+    std::vector<GeometryType> ephemGeometry;
+    ephemGeometry.push_back(EUCLIDEAN);
+    ephemGeometry.push_back(RA_DEGREES);
+    ephemGeometry.push_back(DEC_DEGREES);
 
     // hyperRectangleSearch result container
-    std::vector<PointAndValue<int> > queryResults;
-    std::map<double, KDTree<int> >::iterator iter;
+    std::vector<PointAndValue<uint> > queryResults;
+    
+    for (uint i = 0; i < queryPoints.size(); i++) {
+        /* wonderfully confusing KDTree interface.  basically, find
+         * any ephemeris which is inside the image and within 1 day of
+         * the image.
+         */
 
-    //temps for querying
-    Field tempField;
-    double tempRA, tempDec, tempMJD, tempRadius, treeMJD;
-    int tempFileIndex, leftIndex, rightIndex;
-    KDTree<int> tempKDTree;
-    std::vector<double> queryPt;
+        std::vector<double> queryRaDec(2,0);
+        queryRaDec[0] = queryPoints[i].getRA();
+        queryRaDec[1] = queryPoints[i].getDec();
+        std::vector<double> queryTime(1,0);
+        queryTime[0] = queryPoints[i].getEpochMJD();
+        std::vector<double> timeRadius(1,0);
+        timeRadius[0] = 1;
+        double queryRange = queryPoints[i].getRadius();
 
-    //iterate through all fields collected, querying them against
-    //the appropriate KDTrees
-    for(unsigned int i=0; i<queryPoints.size(); i++){
+        queryResults = myTree.RADecRangeSearch(queryRaDec, 
+                                               queryRange,
+                                               queryTime,
+                                               timeRadius,
+                                               ephemGeometry);
 
-        // iterate through each KDTree of tracks, where each KDTree
-        // represents a unique MJD
-        for(iter = myTreeMap->begin(); iter != myTreeMap->end(); ++iter) {
+        // we now know all the tracks which pass near this image.
 
-            tempField = queryPoints.at(i);
+        // we may get some redundant entries from the tree search;
+        // avoid needless processing by removing redundant entries
+        std::set<uint> queryResultsSet;
+        for (uint j = 0; j < queryResults.size(); j++) {
+            queryResultsSet.insert(queryResults[j].getValue());
+        }
+        std::set<uint>::const_iterator resultIter;
+        for (resultIter = queryResultsSet.begin(); 
+             resultIter != queryResultsSet.end(); 
+             resultIter++) {
 
-            tempRA = convertToStandardDegrees(tempField.getRA());
-            tempDec = convertToStandardDegrees(tempField.getDec());
-            tempMJD = tempField.getEpochMJD();
-            tempFileIndex = tempField.getFileIndex();
-            tempRadius = tempField.getRadius();
+            const FieldProximityTrack* matchingTrack = 
+                &(allTracks.at(*resultIter));
+            if (isInsideImage(queryPoints[i], *matchingTrack)) {
+                resultsVec.push_back(std::make_pair(queryPoints[i].getFieldID(),
+                                                    matchingTrack->getID()));
 
-            treeMJD = iter->first;     //map key
-            tempKDTree = iter->second; //value associated with key
-
-            //only consider this tree if it contains fields
-            //that occurred at the considered time
-            if(treeMJD == tempMJD){
-	  
-                tolerances.push_back(tempRadius);
-                tolerances.push_back(tempRadius);
-
-                queryPt.push_back(tempRA);
-                queryPt.push_back(tempDec);
-
-                leftIndex = i; //index of query Field considered
-	
-                queryResults = tempKDTree.hyperRectangleSearch(queryPt, tolerances, myGeos);
-
-                // collect results for each query point's results for each MJD
-                for(unsigned int j=0; j<queryResults.size(); j++){
-	  
-                    rightIndex = queryResults.at(j).getValue();//
-                    
-                    std::vector<double> tempv = queryResults.at(j).getPoint();
-                    
-                    resultsVec->push_back(leftIndex);
-                    resultsVec->push_back(rightIndex);
-                }
-        
-                tolerances.clear();
-                queryPt.clear();
-                queryResults.clear();
             }
         }
     }
+
 }
 
 
 
 
-/****************************************************************
- * Find the position of a double in a vector of strings.  Return
- * position index or -1 if not found.
- ****************************************************************/
-int vecPosition(const std::vector<std::string>* lookUp, std::string val)
+
+bool compByTime(const Field &f1, const Field &f2)
 {
-    std::vector<std::string>::iterator result;
-  
-    unsigned int position = std::find(lookUp->begin(), lookUp->end(), val) - lookUp->begin();
-
-    if(position < lookUp->size()){
-        return position;
-    }
-    else{
-        return -1;
-    }
+    return f1.getEpochMJD() < f2.getEpochMJD();
 }
 
-/***************************************************
- * Find the position of a double in a vector of doubles.  Return
- * position index or -1 if not found.
- ***************************************************/
-int vecPosition(const std::vector<double>* lookUp, double val)
+void fieldProximity(const std::vector<FieldProximityTrack> &allTracks,
+                    std::vector<Field> &queryFields,
+                    std::vector<std::pair<unsigned int, unsigned int>  > &results,
+                    double distThresh)
 {
-    std::vector<std::string>::iterator result;
-  
-    unsigned int position = std::find(lookUp->begin(), lookUp->end(), val) - lookUp->begin();
 
-    if(position < lookUp->size()){
-        return position;
+    if(queryFields.size() > 0 && allTracks.size() > 0){
+        
+        std::sort(queryFields.begin(), queryFields.end(), compByTime);
+        
+        std::vector<PointAndValue<uint> > allEphem;
+        time_t currentTime;
+        time(&currentTime);
+        std::cout << "Massaging data for tree construction at " 
+                  << ctime(&currentTime) << "\n";
+        buildPavsForEphem(allTracks, allEphem);
+        // build a tree of (time, ra, dec) -> track index 
+        time(&currentTime);
+        std::cout << "Building tree at " 
+                  << ctime(&currentTime) << "\n";
+        KDTree<uint> myTree(allEphem, 3, LEAF_NODE_SIZE);        
+        time(&currentTime);
+        std::cout << "Searching tree at " 
+                  << ctime(&currentTime) << "\n";
+        getProximity(results, myTree, queryFields, allTracks);
+        time(&currentTime);
+        std::cout << "Finished searching at " 
+                  << ctime(&currentTime) << "\n";
+        
     }
-    else{
-        return -1;
-    }
+    
 }
 
 
-
-
-/***************************************************
- *
- ***************************************************/
-std::vector<std::pair <unsigned int, unsigned int> > makePair(std::vector<int> results)
+// legacy interface
+std::vector<std::pair<unsigned int, unsigned int>  > 
+fieldProximity(const std::vector<FieldProximityTrack> &allTracks,
+               std::vector<Field> &queryFields,
+               double distThresh)
 {
-    std::vector<std::pair <unsigned int, unsigned int> > returnVal;
-
-    for(unsigned int i=0; i<results.size(); i++){
-        std::pair <unsigned int, unsigned int> temp;
-        temp.first = results.at(i);
-        i++;
-        temp.second = results.at(i);
-        returnVal.push_back(temp);
-    }
-
-    return returnVal;
+    std::vector<std::pair<unsigned int, unsigned int>  > toRet;
+    fieldProximity(allTracks, queryFields, toRet, distThresh);
+    return toRet;
 }
+
+
+
+
+
+
+
+
+
 
 
 }} // close lsst::mops 

@@ -48,7 +48,7 @@ BOOST_AUTO_TEST_CASE ( fieldProximity1 )
      std::vector<FieldProximityTrack> allTracks;
 
      Field tmpField;
-     tmpField.setFieldID("01");
+     tmpField.setFieldID(1);
      tmpField.setEpochMJD(300);
      tmpField.setRA(50);
      tmpField.setDec(50);
@@ -56,6 +56,7 @@ BOOST_AUTO_TEST_CASE ( fieldProximity1 )
      queryFields.push_back(tmpField);
      
      FieldProximityTrack tmpTrack;
+     tmpTrack.setID(42);
      FieldProximityPoint tmpPoint;
      tmpPoint.setRA(30);
      tmpPoint.setDec(50);
@@ -73,7 +74,7 @@ BOOST_AUTO_TEST_CASE ( fieldProximity1 )
 	  fieldProximity(allTracks, queryFields, 0);
      
      BOOST_CHECK(pairs.size() == 1);
-     BOOST_CHECK(containsPair(0,0,pairs));
+     BOOST_CHECK(containsPair(1,42,pairs));
      
 }
 
@@ -87,7 +88,7 @@ BOOST_AUTO_TEST_CASE ( fieldProximity2 )
      std::vector<FieldProximityTrack> allTracks;
 
      Field tmpField;
-     tmpField.setFieldID("01");
+     tmpField.setFieldID(1);
      tmpField.setEpochMJD(300);
      tmpField.setRA(50);
      tmpField.setDec(50);
@@ -95,6 +96,7 @@ BOOST_AUTO_TEST_CASE ( fieldProximity2 )
      queryFields.push_back(tmpField);
      
      FieldProximityTrack tmpTrack;
+     tmpTrack.setID(42);
      FieldProximityPoint tmpPoint;
      tmpPoint.setRA(30);
      tmpPoint.setDec(50);
@@ -109,6 +111,7 @@ BOOST_AUTO_TEST_CASE ( fieldProximity2 )
      
      //note that this one is too far north
      FieldProximityTrack tmpTrack2;
+     tmpTrack2.setID(33);
      tmpPoint.setRA(30);
      tmpPoint.setDec(70);
      tmpPoint.setEpochMJD(299);
@@ -124,7 +127,7 @@ BOOST_AUTO_TEST_CASE ( fieldProximity2 )
 	  fieldProximity(allTracks, queryFields, 0);
      
      BOOST_CHECK(pairs.size() == 1);
-     BOOST_CHECK(containsPair(0,0,pairs));
+     BOOST_CHECK(containsPair(1,42,pairs));
      
 }
 
@@ -139,14 +142,14 @@ BOOST_AUTO_TEST_CASE ( fieldProximity3 )
      std::vector<FieldProximityTrack> allTracks;
 
      Field tmpField;
-     tmpField.setFieldID("01");
+     tmpField.setFieldID(1);
      tmpField.setEpochMJD(300);
      tmpField.setRA(50);
      tmpField.setDec(50);
      tmpField.setRadius(10);
      queryFields.push_back(tmpField);
 
-     tmpField.setFieldID("02");
+     tmpField.setFieldID(2);
      tmpField.setEpochMJD(300);
      tmpField.setRA(10);
      tmpField.setDec(-30);
@@ -225,7 +228,7 @@ BOOST_AUTO_TEST_CASE ( fieldProximity4 )
      std::vector<FieldProximityTrack> allTracks;
 
      Field tmpField;
-     tmpField.setFieldID("01");
+     tmpField.setFieldID(1);
      tmpField.setEpochMJD(300);
      tmpField.setRA(50);
      tmpField.setDec(50);
@@ -296,7 +299,7 @@ BOOST_AUTO_TEST_CASE ( fieldProximity7 )
      std::vector<FieldProximityTrack> allTracks;
 
      Field tmpField;
-     tmpField.setFieldID("01");
+     tmpField.setFieldID(1);
      tmpField.setEpochMJD(300);
      tmpField.setRA(10);
      tmpField.setDec(50);

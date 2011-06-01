@@ -35,9 +35,14 @@ int main(int argc, char* argv[])
 
     double maxVelocity = 2.0;
     double minVelocity = 0.0;
+    double minEllipticityProb = 0.0;
+    double seeing = 0.;
+
+    std::string USAGE= "Usage: findTracklets -i <input file> -o <output file> [-v <max velocity>] [-m <min velocity>] [-e <min ellipticity prob>] [-s <seeing>]\n";
+
 
     if(argc < 2){
-        std::cout << "Usage: findTracklets -i <input file> -o <output file> [-v <max velocity>] [-m <min velocity>]" << std::endl;
+        std::cerr << USAGE;
         exit(1);
     }
 
@@ -46,6 +51,8 @@ int main(int argc, char* argv[])
         { "outFile", required_argument, NULL, 'o' },
         { "maxVeloctiy", required_argument, NULL, 'v' },
         { "minVeloctiy", optional_argument, NULL, 'm' },
+        { "minEllipticityProb", optional_argument, NULL, 'e' },
+        { "seeing", optional_argument, NULL, 's' },
         { "help", no_argument, NULL, 'h' },
         { NULL, no_argument, NULL, 0 }
     };
@@ -68,8 +75,14 @@ int main(int argc, char* argv[])
         case 'm':
             minVelocity = atof(optarg);
             break;
+        case 'e':
+            minEllipticityProb = atof(optarg);
+            break;
+        case 's':
+            seeing = atof(optarg);
+            break;
         case 'h':
-            std::cout << "Usage: findTracklets -i <input file> -o <output file> [-v <max velocity>] [-m <min velocity>]" << std::endl;
+            std::cout << USAGE ;
             exit(0);
         default:
             break;
@@ -84,6 +97,8 @@ int main(int argc, char* argv[])
     lsst::mops::findTrackletsConfig config;
     config.maxV = maxVelocity;
     config.minV = minVelocity;
+    config.minEllipticityProb = minEllipticityProb;
+    config.seeing = seeing;
     config.outputMethod = lsst::mops::IDS_FILE_WITH_CACHE;
     config.outputFile = outFileName;
     config.outputBufferSize = 10000;

@@ -25,7 +25,7 @@ MitiDetection::MitiDetection()
 
 MitiDetection::MitiDetection(long int ID, double epochMJD, double RA, double Dec, 
                      int obsCode, std::string objName, double mag, 
-                     double elongationLength, double elongationAngle)
+                     double ellipticityLength, double ellipticityAngle)
 {
     hasETime = false;
     initialized = true;
@@ -36,14 +36,14 @@ MitiDetection::MitiDetection(long int ID, double epochMJD, double RA, double Dec
     this->obscode = obsCode;
     this->objName = objName;
     this->mag = mag;
-    length = elongationLength;
-    angle = elongationAngle;
+    length = ellipticityLength;
+    angle = ellipticityAngle;
     fileIndex = -1;
 }
 
 MitiDetection::MitiDetection(long int ID, double epochMJD, double RA, double Dec, 
                      int obsCode, std::string objName, double mag, 
-                     double elongationLength, double elongationAngle,
+                     double ellipticityLength, double ellipticityAngle,
                      double exposureTime)
 {
     hasETime = true;
@@ -55,8 +55,8 @@ MitiDetection::MitiDetection(long int ID, double epochMJD, double RA, double Dec
     this->obscode = obsCode;
     this->objName = objName;
     this->mag = mag;
-    length = elongationLength;
-    angle = elongationAngle;
+    length = ellipticityLength;
+    angle = ellipticityAngle;
     etime = exposureTime;
     fileIndex = -1;
 }

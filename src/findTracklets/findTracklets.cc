@@ -178,7 +178,7 @@ void generatePerImageTrees(const std::map<double, std::vector<MopsDetection> > &
  ******************************************************************/
 void getTracklets(TrackletVector &results,  
 		  const std::map<double, KDTree<long int> > &myTreeMap,
-		  const std::vector<MopsDetection> &queryPoints,
+		  const std::vector<MopsDetection> &allDetections,
 		  findTrackletsConfig config)
 {
     // vectors of RADecRangeSearch parameters we search exclusively in RA, Dec;
@@ -195,9 +195,9 @@ void getTracklets(TrackletVector &results,
 
     // iterate through list of collected Detections, as read from input
     // file, and search over them
-    for(unsigned int i=0; i<queryPoints.size(); i++){
+    for(unsigned int i=0; i<allDetections.size(); i++){
         
-        const MopsDetection * curQuery = &(queryPoints.at(i));
+        const MopsDetection * curQuery = &(allDetections.at(i));
         double queryRA = convertToStandardDegrees(curQuery->getRA());
         double queryDec = convertToStandardDegrees(curQuery->getDec());
         double queryMJD = curQuery->getEpochMJD();
@@ -256,7 +256,10 @@ void getTracklets(TrackletVector &results,
                     Tracklet newTracklet;
                     newTracklet.indices.insert(curQuery->getID());               
                     newTracklet.indices.insert(closeEnoughResults.at(ii));
-                    results.push_back(newTracklet);
+                    if (newTracklet.getEllipticityProb(allDetections, config.seeing)
+                        >= config.minEllipticityProb) {
+                        results.push_back(newTracklet);
+                    }
                 }
                 
                 queryResults.clear();

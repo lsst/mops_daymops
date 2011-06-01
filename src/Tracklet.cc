@@ -17,6 +17,32 @@ Tracklet::Tracklet()
 }
 
 
+double Tracklet::getEllipticityProb(const std::vector<MopsDetection> &dets, double seeing) const 
+{
+    // TBD: Tim, this is the place to calculate probability of a pair
+    // of detections being linked.
+
+    // maybe this will help get you started? 
+    std::set<unsigned int>::const_iterator detI;
+    std::vector<double> mjds; 
+    std::vector<double> ras;
+    std::vector<double> decs;
+    std::vector<double> ellipticities;
+    std::vector<double> ellipticityAngles;
+    for (detI = indices.begin(); detI != indices.end(); detI++) {
+        const MopsDetection* curDet = &(dets.at(*detI));
+        mjds.push_back(curDet->getEpochMJD());
+        ras.push_back(curDet->getRA());
+        decs.push_back(curDet->getDec());    
+        ellipticities.push_back(curDet->getEllipticity());
+        ellipticityAngles.push_back(curDet->getEllipticityAngle());
+    }
+    // temporary placeholder
+    return 1.0;
+}
+
+
+
 void Tracklet::setBestFitFunctionRa(std::vector<double> bff)
 {
     bestFitFunctionRa = bff;

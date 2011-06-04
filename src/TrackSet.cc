@@ -3,11 +3,12 @@
    4/08/10
 */
 
+#include <iomanip>
+#include <iostream>
 
 #include "lsst/mops/Exceptions.h"
 #include "lsst/mops/TrackSet.h"
 
-#include <iomanip>
 
 namespace lsst { 
 namespace mops {
@@ -33,6 +34,7 @@ TrackSet::TrackSet(std::string outFileName, bool useCache, unsigned int cacheSiz
 
 void TrackSet::purgeToFile() 
 {
+    std::cout << "TrackSet: purgeToFile called.\n";
     if (useOutFile) {
         if (componentTracks.size() != 0) {
             writeToFile();
@@ -44,6 +46,7 @@ void TrackSet::purgeToFile()
     }
 
     if (useCache) {
+        std::cout << "TrackSet: clearing component tracks from memory.\n";
         componentTracks.clear();
     }
 }
@@ -127,6 +130,11 @@ void TrackSet::writeToFile()
 
 void TrackSet::insert(const Track &newTrack) {
     componentTracks.insert(newTrack);
+    if (useCache && (componentTracks.size() >= cacheSize)) {
+        std::cout << "TrackSet: componentTracks has reached size " << componentTracks.size()
+                  << "; purging to file to clear out tracks.\n";
+        purgeToFile();
+    }
 }
 
 

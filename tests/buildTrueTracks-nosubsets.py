@@ -420,6 +420,7 @@ if __name__ == "__main__":
         if nextLine == []:
             done = True
         #elif nextLine[4] != curObject:
+        # modified version uses MITI input
         elif nextLine[6] != curObject:
             done = True
 

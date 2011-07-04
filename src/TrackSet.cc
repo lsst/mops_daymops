@@ -120,7 +120,7 @@ void TrackSet::writeToFile()
         
         outFile << std::endl;
     }
-    outFile.close();
+    outFile.flush();
 }
 
 

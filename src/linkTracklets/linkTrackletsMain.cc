@@ -44,6 +44,8 @@ int main(int argc, char* argv[])
      searchConfig.myVerbosity.printVisitCounts = true;
      searchConfig.myVerbosity.printTimesByCategory = true;
      searchConfig.myVerbosity.printBoundsInfo = true;
+     
+     int bufferSize = 1000;
 
      std::string helpString = 
 	  std::string("Usage: linkTracklets -d <detections file> -t <tracklets file> -o <output (tracks) file>") + std::string("\n") +
@@ -62,6 +64,8 @@ int main(int argc, char* argv[])
 	  + boost::lexical_cast<std::string>(searchConfig.minUniqueNights) +  std::string("\n") +
 	  std::string("     -s / --minDetections (int) : require tracks contain at least this many detections, default = ")
 	  + boost::lexical_cast<std::string>(searchConfig.minDetectionsPerTrack) +  std::string("\n") +
+	  std::string("     -b / --outputBufferSize (int) : number of tracks to buffer in memory before flushing output. Default = ")
+	  + boost::lexical_cast<std::string>(bufferSize) +  std::string("\n") +
 	  std::string("     -n / --leafNodeSize (int) : set max leaf node size for nodes in KDTree")
 	  +  std::string("\n");
 
@@ -76,6 +80,7 @@ int main(int argc, char* argv[])
 	  { "earliestLastEndpointTime", required_argument, NULL, 'L'},
 	  { "minNights", required_argument, NULL, 'u'},
 	  { "minDetections", required_argument, NULL, 's'},
+	  { "outputBufferSize", required_argument, NULL, 'b'},
 	  { "leafNodeSize", required_argument, NULL, 'n'},
 	  { "help", no_argument, NULL, 'h' },
 	  { NULL, no_argument, NULL, 0 }
@@ -88,7 +93,7 @@ int main(int argc, char* argv[])
 
      
      int longIndex = -1;
-     const char *optString = "d:t:o:e:D:R:F:L:u:s:n:h";
+     const char *optString = "d:t:o:e:D:R:F:L:u:s:b:n:h";
      int opt = getopt_long( argc, argv, optString, longOpts, &longIndex );
      while( opt != -1 ) {
 	  switch( opt ) {
@@ -132,6 +137,15 @@ int main(int argc, char* argv[])
 	       std::cout << "Set min detections per track: " 
 			 << searchConfig.minDetectionsPerTrack << "\n";
 	       break;
+	  case 'b':
+	       bufferSize = atoi(optarg);
+	       std::cout << " Set output buffer size = " 
+			 << bufferSize << std::endl;
+	       if (bufferSize < 1) {
+		    std::cerr << "Illegal output buffer size. Exiting.\n";
+		    return -1;
+	       }
+	       break;
 	  case 'n':
 	       searchConfig.leafSize = atoi(optarg);
 	       std::cout << " Set leaf node size = " 
@@ -159,8 +173,8 @@ int main(int argc, char* argv[])
      std::vector<lsst::mops::Tracklet> allTracklets;
      lsst::mops::TrackSet * resultTracks;
      searchConfig.outputMethod = lsst::mops::IDS_FILE_WITH_CACHE;
-     searchConfig.outputBufferSize = 1000;
-
+     searchConfig.outputBufferSize = bufferSize;
+     
      clock_t last;
      double dif;
      if(PRINT_TIMING_INFO) {     
@@ -190,7 +204,7 @@ int main(int argc, char* argv[])
      if(PRINT_TIMING_INFO) {     
 	  last = std::clock();
      }
-
+     
      resultTracks->purgeToFile();
      std::cout << "Results successfully written to disk." << std::endl;
      

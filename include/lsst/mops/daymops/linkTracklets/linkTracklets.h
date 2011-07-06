@@ -116,7 +116,6 @@ public:
             // min prob(Chisq) of the fit of model to track points to consider a candidate track further
             trackMinProbChisq = 0.3;
 
-            
         }
 
     /* acceleration terms are in degrees/(day^2)

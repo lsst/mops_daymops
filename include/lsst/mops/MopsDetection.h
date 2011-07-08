@@ -32,7 +32,7 @@ public:
     MopsDetection();
 
     //create a "lightweight" detection.
-    MopsDetection(long int ID, double epochMJD, double RA, double Dec, double RaErr=0, double DecErr=0);
+    MopsDetection(long int ID, double epochMJD, double RA, double Dec, double RaErr=0, double DecErr=0, int ssmId=-1);
     
     // the MITI format holds lots more data than ID, MJD, Ra, and Dec.  
     // We don't store those items, though!
@@ -45,6 +45,7 @@ public:
     double getEpochMJD() const ;
     double getRA() const ;
     double getDec() const ;
+    int getSsmId() const;
     double getRaErr() const ;
     double getDecErr() const ;
     double getRaTopoCorr() const ;
@@ -53,6 +54,7 @@ public:
     void setEpochMJD(double newMjd);
     void setRA(double newRa);
     void setDec(double newDec);
+    void setSsmId(int newSsmId);
     void setRaErr(double RaErr);
     void setDecErr(double DecErr);
     void calculateTopoCorr();
@@ -71,6 +73,7 @@ private:
     double RaErr;
     double DecErr;
     double RaTopoCorr;
+    int ssmId;
 };
 
 }} // close namespace lsst::mops

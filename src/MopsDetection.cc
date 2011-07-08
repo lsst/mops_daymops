@@ -29,7 +29,7 @@ MopsDetection::MopsDetection()
 }
 
 
-MopsDetection::MopsDetection(long int ID, double epochMJD, double RA, double Dec, double RaErr, double DecErr) 
+ MopsDetection::MopsDetection(long int ID, double epochMJD, double RA, double Dec, double RaErr, double DecErr, int ssmId) 
 {
     this->ID = ID;
     MJD = epochMJD;
@@ -37,6 +37,7 @@ MopsDetection::MopsDetection(long int ID, double epochMJD, double RA, double Dec
     this->dec = Dec;
     this->RaErr = RaErr;
     this->DecErr = DecErr;
+    this->ssmId = ssmId;
 }
 
 
@@ -44,6 +45,11 @@ MopsDetection::MopsDetection(long int ID, double epochMJD, double RA, double Dec
 void MopsDetection::setID(long int newId)
 {
     ID = newId;
+}
+
+void MopsDetection::setSsmId(int newSsmId)
+{
+    ssmId = newSsmId;
 }
 
 
@@ -82,6 +88,12 @@ void MopsDetection::setObservatoryLocation(double lat, double longitude)
 long int MopsDetection::getID() const 
 {
     return ID;
+
+}
+
+int MopsDetection::getSsmId() const 
+{
+    return ssmId;
 
 }
 
@@ -126,7 +138,6 @@ void MopsDetection::fromMITIString(std::string mitiString) {
     // read these parameters to local vars; we don't save them.
     double mag;
     std::string obscode;
-    std::string objName;
     double length;
     double angle;
     double etime;
@@ -141,7 +152,7 @@ void MopsDetection::fromMITIString(std::string mitiString) {
         ss >> dec;
         ss >> mag;
         ss >> obscode;
-        ss >> objName;
+        ss >> ssmId;
         ss >> length;
         ss >> angle;
     }

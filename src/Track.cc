@@ -66,7 +66,27 @@ Track & Track::operator= (const Track &other) {
 
 
 
-
+int Track::getObjectId(std::vector<MopsDetection> allDets) 
+{
+     if (componentDetectionIndices.size() == 0) {
+	  throw LSST_EXCEPT(UninitializedException, 
+			    "Cannot request object ID for track with no detections.");
+     }
+     // no object should have ssmId -1; it's -1 for noise >=0 for real ssmIds.
+     int toRet = -2;
+     std::set<unsigned int>::const_iterator detInd;
+     for (detInd = componentDetectionIndices.begin();
+	  detInd != componentDetectionIndices.end(); detInd++) {
+	  int curId = allDets.at(*detInd).getSsmId();
+	  if (toRet == -2) {
+	       toRet = curId;
+	  }
+	  if ((curId == -1) || (toRet != curId))  {
+	       return -1;
+	  }	  
+     }
+     return toRet;
+}
 
 
 

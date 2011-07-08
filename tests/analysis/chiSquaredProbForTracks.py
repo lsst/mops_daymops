@@ -19,11 +19,11 @@ import scipy.stats.stats as st
 mySqlHost = 'localhost'
 mySqlUser = 'jmyers'
 mySqlPasswd = 'jmyers'
-mySqlDb = 'mops_noDeepAstromError'
-mySqlEphemDb='dc3b_ephem_nodeep'
+mySqlDb = 'fullSkyOneMonth'
+mySqlEphemDb='fullSkyOneMonth'
     
-db = MySQLdb.connect(host=mySqlHost, user=mySqlUser, passwd=mySqlPasswd, db=mySqlDb)
-ephemDb = MySQLdb.connect(host=mySqlHost, user=mySqlUser, passwd=mySqlPasswd, db=mySqlEphemDb)
+db = MySQLdb.connect(host=mySqlHost, user=mySqlUser, passwd=mySqlPasswd, db=mySqlDb, unix_socket='/tmp/mysql.sock')
+ephemDb = MySQLdb.connect(host=mySqlHost, user=mySqlUser, passwd=mySqlPasswd, db=mySqlEphemDb, unix_socket='/tmp/mysql.sock')
 dtMin = 0.01
 nominalAstroErr = 0.1/3600.0
 
@@ -57,7 +57,7 @@ def getTrackDias(diaList):
     c=db.cursor()
 
     for dia in diaList:
-        query = "select taiMidPoint,ra,decl,ssmId from fullerDiaSource where diaSourceId=%d" % (int(dia))
+        query = "select taiMidPoint,ra,decl,ssmId from mopsDetections where diaSourceId=%d" % (int(dia))
         c.execute(query)
     
         result = c.fetchall()

@@ -105,12 +105,15 @@ public:
     }
 
 
+    int getObjectId(std::vector<MopsDetection> allDets);
+        
+
     /* the results of this comparison are probably not meaningful to a human but
      * this operator is needed for building container classes for this class */
     bool operator<(const Track &other) const {
         bool toRet = componentDetectionDiaIds < other.componentDetectionDiaIds;
         return toRet;
-        
+
     }
 
 private:

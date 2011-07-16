@@ -44,8 +44,11 @@ ASSUMED_OBSERVATORY=807
 ASSUMED_RMS_MAG=1.
 OPSIM_DB='opsim_3_61'
 OPSIM_TABLE='output_opsim3_61'
-DIAS_DB='mops_noDeepAstromError'
-DIAS_TABLE='fullerDiaSource'
+#DIAS_DB='mops_noDeepAstromError'
+#DIAS_TABLE='fullerDiaSource'
+DIAS_DB='fullSkyOneMonth'
+DIAS_TABLE='mopsDetections'
+
 MAX_TRACKLETS_PER_FILE=50000
 MAX_TRACKS_PER_FILE=24000
 
@@ -144,13 +147,18 @@ def lookUpDet(dbCursor, diaId):
     res = ui.sqlQuery(dbCursor, sql, verbose=False)
     #print res
     [taiTime, ra, dec, mag, opSimId, snr, groundTruthId] = res[0]
-    #print diaId, mag, opSimId
+    #print taiTime, ra, dec, mag, opSimId, snr, groundTruthId
     sql = "select 5sigma_ps, seeing from %s.%s where obsHistID=%d" %(OPSIM_DB, OPSIM_TABLE, opSimId)
     [sigma5_ps, seeing] = ui.sqlQuery(cursor, sql, verbose=False)[0]
     
     astromErr = astrom.calcAstrometricError(mag, sigma5_ps, seeing)
 
-    utcMjd = taiToUtc(taiTime)
+    #print "callint taiToUtc(", taiTime, ")"
+    #utcMjd = taiToUtc(taiTime)
+    #print " calling DateTime(", taiTime, ", DateTime.TAI)"
+    d = DateTime(taiTime, DateTime.MJD, DateTime.TAI)
+    utcMjd = d.mjd(DateTime.UTC)
+    #print "got tai ", taiTime, " = utc ", utcMjd
     return utcMjd, ra, dec, mag, astromErr, snr, groundTruthId
 
 
@@ -169,6 +177,7 @@ def writeDiasToDesTrackletsFile(diasToWrite, outFile, dbCursor):
 
         #TBD: RA astrometric error is not == astromErr, it's something else - cos(radians(dec))* astromErr?
         #   add this in later. For now on the ecliptic it won't really matter.
+
         outFile.write("%d %5.10f %s %3.12f %3.12f %3.12f %s %s %3.12f %3.12f %3.12f %3.12f %s\n" \
                           % \
                       (diaId, utcMjd, ASSUMED_OBS_TYPE, ra, dec, mag, ASSUMED_FILTER,

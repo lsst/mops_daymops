@@ -1,0 +1,70 @@
+\documentclass[12pt,preprint]{aastex}
+\usepackage{url}
+\usepackage{natbib}
+\usepackage{graphicx}
+%\usepackage{subfig}
+%\usepackage{fixltx2e}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% author-defined commands
+\newcommand\x         {\hbox{$\times$}}
+\def\mic              {\hbox{$\mu{\rm m}$}}
+\def\about            {\hbox{$\sim$}}
+\def\Mo               {\hbox{$M_{\odot}$}}
+\def\Lo               {\hbox{$L_{\odot}$}}
+
+\captionsetup[figure]{labelformat=simple}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\begin{document}
+
+\title{Moving Object Pipeline Requirements}
+
+\author{}
+
+\begin{abstract}
+The Moving Object Processing Software (MOPS) will identify moving
+objects observed by LSST, by linking together detections of moving
+objects in catalogs created from difference images obtained from LSST
+Data Management image processing. Candidate moving objects from each
+night will be identified by linking sources moving with linear
+velocities compatible with solar system objects (SSOs) to form
+`tracklets'. These tracklets will then be linked with candidate SSO
+tracklets on nearby nights, where the overall motion can be described
+by a quadratic in $RA$ and $Dec$ appropriate for SSOs, to form a
+`track'.  Orbits are then fit for the candidate SSO tracks; orbits
+with appropriately good fits are considered successful and the SSO
+`identified'.  This document provides an overview of the MOPS
+algorithms and describes metrics for evaluating the performance of
+MOPS.
+\end{abstract}
+
+\tableofcontents
+
+%\section{Science Requirements}
+
+\section{Introduction}
+
+Maybe a few words about the point of MOPS and its place in LSST here
+(just a paragraph or two). 
+ 
+\section{Overview of MOPS Software}
+
+
+How MOPS works  - tracklets - tracks - chisq - orbit fitting. 
+
+Precovery and attribution. 
+
+
+\section{MOPS Metrics \& Scaling}
+
+
+\section{Development Plan}
+
+
+
+\bibliographystyle{apj}
+\bibliography{baseline}
+
+\end{document}

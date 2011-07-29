@@ -24,6 +24,7 @@
 \author{}
 
 \begin{abstract}
+
 The Moving Object Processing Software (MOPS) will identify moving
 objects observed by LSST, by linking together detections of moving
 objects in catalogs created from difference images obtained from LSST
@@ -38,6 +39,7 @@ with appropriately good fits are considered successful and the SSO
 `identified'.  This document provides an overview of the MOPS
 algorithms and describes metrics for evaluating the performance of
 MOPS.
+
 \end{abstract}
 
 \tableofcontents
@@ -46,15 +48,35 @@ MOPS.
 
 \section{Introduction}
 
-Maybe a few words about the point of MOPS and its place in LSST here
-(just a paragraph or two). 
+The Moving Object Pipeline System (MOPS) is responsible for
+discovering solar system objects (SSOs) and identifying their
+detections.  SSO discovery refers to the process of analyzing
+unidentified sources in the data and grouping those which could be
+attributable to an object and identifying the orbit of that object.
+SSO identification refers the task of predicting the locations of
+known objects and identifying their detections in incoming and legacy
+data.
+
  
 \section{Overview of MOPS Software}
 
+The MOPS is based on operating in two different regimes: in
+orbit-space, operating on models of objects orbiting the sun; and
+sky-plane space, operating on models of apparent motion on the sky.
 
-How MOPS works  - tracklets - tracks - chisq - orbit fitting. 
+The process of SSO discovery requires the generation of sets of
+detections which may be attributable to the same SSO.  Detections
+which belong to the same set are said to be ``linked.'' Initially,
+linkages are proposed and filtered using sky-plane models of motion.
+Once a set of detections is sufficiently large, MOPS will attempt to
+calculate an initial orbit which could be associated with the
+specified detections.  If a good orbit is found, then the detections
+are associated with the orbit and the system saves the linkage and the
+orbit and declares this to be a newly-discovered SSO.  If no such
+orbit can be found, the linkage is determined to be a mislinkage and
+discarded.  
 
-Precovery and attribution. 
+
 
 
 \section{MOPS Metrics \& Scaling}

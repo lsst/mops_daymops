@@ -25,16 +25,16 @@
 
 \begin{abstract}
 
-The Moving Object Pipeline System (MOPS) has two responsibilities
-within LSST Data Management.  First, it is responsible for generating
+The Moving Object Pipeline System (MOPS) is responsible for generating
 and managing the \textbf{Moving Object} data products.  The Moving
 Objects are identified solar system objects (SSOs) with associated
 Keplerian orbits, errors, and a detected sources assocated with those
-solar system objects.  The second responsibility of the MOPS is to
-predict future locations of moving objects in incoming images so that
-their sources may be associated with known objects; this will reduce
-the number of transient detections and prevent Alert Generation for
-known Solar System objects.
+solar system objects.  The Moving Object database will also be used by
+the Association Pipeline to future locations of moving objects in
+incoming images, preventing the generation of Alerts on detections of
+known Solar System objects.  We present the relationship of the MOPS
+to overall LSST Data Management and provide a brief overview of the
+methods used within the MOPS.
 
 \end{abstract}
 
@@ -44,34 +44,29 @@ known Solar System objects.
 
 \section{System Design and Responsibilities}
 
-The Moving Object Pipeline System has two main responsibilities: the
-generation and maintenance of the Moving Object database, and the
-prediction of known object locations which are sent to the Association
-Pipeline to prevent unneccessary alerts.  In order to fulfill these
-goals, the MOPS has been broken into several componenets, colloquially
-known as ``DayMOPS'' and ``NightMOPS.''
  
 % ILLUSTRATIONS: DayMOPS, NightMOPS, MovingObjects database, telescope control
 
-``DayMOPS,'' so called because it processes data acquired from the
-previous night in a large batch operation, is responsible for
+\begin{figure}[!ht]
+\begin{center}
+  \includegraphics[width=13cm]{illustrations/mopsWithinLsst.png}
+\end{center}
+\caption{The Moving Object Pipeline System uses transient detections
+  (diaSources) discovered by the image processing pipeline to generate
+  and update the Moving Object table. }
+\end{figure}
+
+
+The Moving Object Pipeline System (MOPS) is responsible for
 discovering new Moving Objects in newly-acquired data, searching old
 data for detections of new objects, and updating the Moving Objects
 table to reflect newly-acquired data. It is also responsible for
 periodically cleaning and refining the contents of the Moving Objects
 table.
 
-``NightMOPS'' is responsible for projecting the locations of known
-Moving Objects in upcoming images as they are announced during
-night-time operations.  If Moving Objects are observed in these
-images, then the Moving Object table is modified to add these
-newly-acquired detections to their associated Moving Object.
 
-\subsection{DayMOPS: Discovering and Managing Moving Objects}
+\subsection{Discovering and Managing Moving Objects}
 
-% Illustration of DayMOPS
-
-% sky-plane vs. orbit-space illustration
 
 The initial task of DayMOPS is to identify unknown objects present in
 images and their orbits.  To accomplish this, the system initially
@@ -108,6 +103,16 @@ and several have implementations available to LSST
 \citep{OpenOrb2009}, \citep{granvik_thesis}.  These orbits, and the
 detections present in the track associated with that orbit, are used
 to generate new Moving Objects.
+
+\begin{figure}[h]
+\begin{center}
+  \includegraphics[width=11cm]{illustrations/mopsDiagram.png}
+\end{center}
+\caption{ Input detections (diaSources) sent to the MOPS are processed
+  through a multi-stage pipeline to generate the eventual Moving
+  Objects.} 
+\end{figure}
+
 
 As in the PanSTARRS MOPS design \citep{psMOPSDesign} the LSST's MOPS
 is expected to perform several additional tasks to manage and improve

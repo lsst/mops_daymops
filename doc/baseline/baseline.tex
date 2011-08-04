@@ -54,8 +54,8 @@ Keplerian orbits, errors, and a detected sources assocated with those
 solar system objects.  The second responsibility of the MOPS is to
 predict future locations of moving objects in incoming images so that
 their sources may be associated with known objects; this will reduce
-the number of transient detections and prevent Alert Generation for
-known Solar System objects.
+the number of transient detections and prevent Alert Generation on
+detections of known Solar System objects.
 
 \end{abstract}
 
@@ -250,13 +250,13 @@ is performed recursively until leaf nodes of the KD-Trees are reached.
 
 When the algorithm encounters a set of leaf nodes in the KD-Trees, it
 attempts to build a track using the detections held in the tracklets
-at the leaf nodes.  A quadratic fit, or if possible, a higher-order
-fit, to the day will be attempted.  Then a quality-of-fit assessment
-is used to determine whether the track is considered acceptably
-credible to pass downstream to the Orbit Determination.  Investigation
-into ideal quality-of-fit metrics is ongoing, but as of this writing a
-filter on minimum chi-squared probability appears to be the best
-option.
+at the leaf nodes.  A quadratic fit, or a higher-order fit if
+possible, to the detections will be attempted.  Then a quality-of-fit
+assessment is used to determine whether the track is considered
+acceptably credible to pass downstream to the Orbit Determination.
+Investigation into ideal quality-of-fit metrics is ongoing, but as of
+this writing a filter on minimum chi-squared probability appears to be
+the best option.
 
 
 
@@ -312,9 +312,206 @@ generation tool.
 
 \section{MOPS Metrics \& Scaling}
 
+Current development efforts have focused on the sky-plane tracking
+phase of DayMOPS, as all later processing hinges on its
+success. Existing orbit determination packages claim a high rate of
+success for accurate initial orbit determination (IOD) given a
+correctly linked track, and a low rate of false positives
+\textbf{(TBD: CITE)}. As a result, we expect that the ability of the
+system to successfully generate Moving Objects data products for solar
+system objects given to DayMOPS will be determined primarily by the
+sky-plane tracking component and its ability to send useful tracks to
+IOD.  We also expect the overall resource usage of the DayMOPS system
+will be calculable given the runtime of the sky-plane tracking
+component, the number of tracks it passes to IOD, and the per-track
+IOD time of our IOD package.  As a result, carefully studying the
+behavior and output of the sky-plane linking should provide a
+reasonable estimate of the resource usage of all of DayMOPS.
+
+% NightMOPS RESOURCE USAGE?!
+
+In this section, we will present metrics used to evaluate the
+usefulness of the sky-plane tracking approach, the correctness of our
+software implementation, and usefulness of filters. We also
+investigate the total cost of running our software and expected cost
+of performing IOD on its output.
+
+
+\subsection{Limits on Findability of Solar System Objects}
+
+The requirements of IOD and practical limitations of the sky-plane
+linking approach both limit the feasibility of deriving a Moving
+Object for a given solar system object.  As an extreme example,
+consider the case of an object observed exactly once during the survey
+- it is clearly impossible to generate an orbit which precisely
+predicts the motion of such an object.
+
+Objects which are observed such that their detections meet the
+requirements for IOD and sky-plane linking are considered ``findable''
+objects and we reasonably expect DayMOPS to generate Moving Objects
+for them.  Objects which do \textit{not} meet these requirements are
+considered ``unfindable'' objects.  It is the responsibility of the
+telescope Operations to ensure that a large number of objects are
+observed such that they are ``findable'' for MOPS.  The current
+implementation of simulated telescope operations take into account
+these requirements when generating simulated sets of telescope
+pointings. \textbf{reference to another chapter in the full document?}
+
+This section of the text will present a precise explanation of what
+makes an object ``findable'' or ``unfindable.'' The upcoming sections
+show scaling and results of our experiments with DayMOPS, and will
+reference the number of objects found by the software as a function of
+those which are findable.  Uninterested readers should feel free to
+skip this section, but those strictly interested in 
+
+
+\subsubsection{Limits Imposed By Initial Orbit Determination}
+
+Classical orbit determination methods require an object be observed on
+at least three distinct nights in order to establish a reasonable
+orbit \textbf{(CITE: MILANI?)}.  Further, in order to establish a
+precise orbit measurable orbital errors, it is neccessary that we have
+at least six total detections, allowing a precise linearized
+least-squares fit \textbf{(CITE? MILANI? CHESLEY? SHOULD WE JUST EMAIL
+  CHESLEY AND ASK WHAT TO CITE?)}.  Because precise orbits are expected to be
+necessary for downstream processing, we require that an object have at
+least six detections on three distinct nights for it to be considered
+``findable.''  Objects which do not meet this requirement are
+considered ``unfindable'' objects for DayMOPS.
+
+\subsubsection{Establishing Time, Velocity and Acceleration Limits}
+
+
+
+\paragraph{Velocity and Time Interval Limits For Tracklet Generation}
+
+The first stage of the DayMOPS pipeline is tracklet generation, in
+which the software identifies pairs of detections which could be
+attributable to the same object.  To limit the number of tracklets, it
+is necessary to establish limits on the maximum apparent velocity of
+tracklets as well as the maximum time interval between two detections
+for tracklet generation to be attempted.  Given a query detection, the
+velocity and time limit together establish the size of the sky-plane
+space searched for possible paired detections, and thus constrain the
+number of possible linkages.
+
+A casual study in \citet{kubica_thesis} and experiences related to us
+from work on the PanSTARRS MOPS both state an upper time limit of 90
+minutes is necessary to prevent excessively high numbers of
+mislinkages. A 15-minute lower limit was also suggested as a minimum
+for most objects to generate useful apparent motion relative to
+astrometric errors. These figures were accepted by the LSST and used
+in the cadence design and cadence simulations generated with the
+Operations Simulator.  
+
+Reasonable upper limits on tracklet max velocity can be reached with a
+survey of apparent motion of objects.  We carried out a survey of
+apparent motion of objects in the realistic Solar System Model
+presented in \citet{Grav2011}.
+
+\textbf{VELOCITY HISTOGRAM HERE, WITH EXPLANATORY TEXT}
+
+After study, we decided that an upper limit of .5 deg/day would be
+sufficient for all objects except Near-Earth Objects
+(NEOs). \textbf{LYNNE, NEED EXACT NUMBERS - PERCENT OF APPARITIONS
+  WITH VELOCITY BELOW .5}
+
+
+
+
+\paragraph{Acceleration and Time Interval Limits for Track Generation}
+
+Colloquial knowledge provided by PanSTARRS claims that the quadratic
+approximation of asteroid motion tends to break down when a track
+spans more than 30 days of observation.  Since the quadratic
+assumption is critical to sky-plane tracking, it is necessary to
+impose an additional limit on the maximum time span for tracks. 
+
+As a result, our software can examine data spanning at most 30 days
+when searching for tracks.  One can imagine the software as passing a
+sliding window over the data, looking for tracks which can be found
+within the windowed data.  This leads us to define a \textbf{tracking
+  window length}, describing the size of the window.  Objects for
+which no track can be generated within this time window are also
+considered ``unfindable,'' since limitations of sky-plane tracking
+prevent us from building a track for them.  In order to speed up
+testing of the system, we sometimes use shorter tracking windows,
+which reduce the number of potentially findable objects in the data
+but allow faster operation.
+
+Further, the generation of quadratic tracks from the linear tracklets requires
+an upper bound on track acceleration.  As with establishing a velocity
+limit, it is possible to perform a study of objects to choose a
+reasonable upper limit on track acceleration.  Again, the Solar System
+Model from \citet{Grav2011} was used to generate a histogram of
+apparent accelerations of objects, and this was used to establish a
+reasonable upper bound on track acceleration.
+
+\textbf{ACCELERATION HISTOGRAM HERE, WITH EXPLANATORY TEXT}
+
+We concluded from our survey that an upper bound .02 deg/day$^2$ was
+sufficient to find virtually all objects.
+
+\subsubsection{Total Requirements For Findability of Objects}
+
+We have presented four variables must be set to limit the scope of
+sky-plane searching. They are as follows:
+
+\begin{itemize}
+\item Tracklet time interval
+\item Tracklet maximum velocity
+\item Tracking window length
+\item Track maximum acceleration
+\end{itemize}
+
+We can use these four variables and our knowledge of IOD limitations
+to determine authoritatively whether an object is ``findable'' or
+``unfindable.''  In the evaluations of MOPS sky-plane linking that
+follow, we categorized objects as findable or unfindable, and compare
+with those found or not found.
+
+
+\subsection{Predicting Resource Usage of the System}
+
+\subsection{Tracklet Quality Metrics}
+
+\subsection{Main-Belt Searching On Ecliptic}
+
+\subsection{Scaling On Solar System Model Density}
+
+\subsection{Scaling On Non-Solar System Detection Density}
+
+\subsection{NightMOPS Resource Usage}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 \section{Development Plan}
+
+Though the core algorithms of MOPS have been implemented in
+LSST-appropriate style, further research and development are needed.
+
+\subsection{Increasing The Number of Findable Objects}
+
+\subsection{Exploring NEO Capability}
+
+\subsection{Distribution/Parallelization of Core Algorithms}
+
+
 
 
 

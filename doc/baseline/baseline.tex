@@ -199,13 +199,13 @@ constrain the number of tracklets.
 
 The discovery of tracklets can be accomplished efficiently using
 KD-Tree structures \citep{bentley_kdtrees} and methods from
-\citet{kubica_thesis}.  DayMOPS will build one (RA, Dec) KD-Tree for
-each image, holding the detections found in that image.  Because
-KD-Trees allow quick range searches of arbitrary-dimensional spatial
-data, it is possible to efficiently perform searches over the
-detections to find pairs of detections sufficiently close within time
-and within limits on apparent velocity. These pairs of detections are
-linked to generate tracklets.
+\citet{kubica_thesis}.  DayMOPS will build a 2-dimensional (RA, Dec)
+KD-Tree for each image, using the tree to hold the detections found in
+that image.  Because KD-Trees allow quick range searches of
+arbitrary-dimensional spatial data, it is possible to efficiently
+perform searches over the detections to find pairs of detections
+sufficiently close within time and within limits on apparent
+velocity. These pairs of detections are linked to generate tracklets.
 % TBD: Is this clear?!
 
 % psuedo code?
@@ -357,43 +357,46 @@ implementation of simulated telescope operations take into account
 these requirements when generating simulated sets of telescope
 pointings. \textbf{reference to another chapter in the full document?}
 
-This section of the text will present a precise explanation of what
-makes an object ``findable'' or ``unfindable.'' The upcoming sections
-show scaling and results of our experiments with DayMOPS, and will
-reference the number of objects found by the software as a function of
-those which are findable.  Uninterested readers should feel free to
-skip this section, but those strictly interested in 
+Currently, we define an object as ``findable'' if, on three or more
+nights within a span of thirty days, it generates three
+tracklets. These tracklets must be made of two or more detections
+which occur within a user-specified time interval.  Further, these
+tracklets must have an apparent velocity below the user-specified
+limit. Further, the best-fit quadratic fit of the detections in these
+tracklets must have an apparent acceleration which is also below a
+user-specified limit.
 
+IOD should be capable of fitting an accurate orbit to any
+correctly-linked track which fulfills the above criteria
+\textbf{(CITE: Milani? Chesley?)} because they are guaranteed to have
+at least six detections on three distinct nights.  
 
-\subsubsection{Limits Imposed By Initial Orbit Determination}
-
-Classical orbit determination methods require an object be observed on
-at least three distinct nights in order to establish a reasonable
-orbit \textbf{(CITE: MILANI?)}.  Further, in order to establish a
-precise orbit measurable orbital errors, it is neccessary that we have
-at least six total detections, allowing a precise linearized
-least-squares fit \textbf{(CITE? MILANI? CHESLEY? SHOULD WE JUST EMAIL
-  CHESLEY AND ASK WHAT TO CITE?)}.  Because precise orbits are expected to be
-necessary for downstream processing, we require that an object have at
-least six detections on three distinct nights for it to be considered
-``findable.''  Objects which do not meet this requirement are
-considered ``unfindable'' objects for DayMOPS.
 
 \subsubsection{Establishing Time, Velocity and Acceleration Limits}
 
-
+Setting limits on tracklet velocity, track acceleration and time
+intervals for the generation of tracks and tracklets is necessary for
+practical reasons.  Setting overzealously low limits will reduce the
+number of objects which can be found; however, as these limits are
+relaxed, the number of potential mislinkages can grow quickly, greatly
+increasing the computational workload.  By carefully choosing the
+limits used in sky-plane linking, one can significantly reduce the
+resource usage of the total DayMOPS pipeline while still extracting
+useful tracks.  In this section, we will discuss the reasons for
+setting these limits, present some of the limits we have chosen for
+experiments, and justify those choices.
 
 \paragraph{Velocity and Time Interval Limits For Tracklet Generation}
 
 The first stage of the DayMOPS pipeline is tracklet generation, in
 which the software identifies pairs of detections which could be
-attributable to the same object.  To limit the number of tracklets, it
-is necessary to establish limits on the maximum apparent velocity of
-tracklets as well as the maximum time interval between two detections
-for tracklet generation to be attempted.  Given a query detection, the
-velocity and time limit together establish the size of the sky-plane
-space searched for possible paired detections, and thus constrain the
-number of possible linkages.
+attributable to the same object.  To limit the number of incorrectly
+linked tracklets, it is necessary to establish limits on the maximum
+apparent velocity of tracklets as well as the maximum time interval
+between two detections for tracklet generation to be attempted.  Given
+a query detection, the velocity and time limit together establish the
+size of the sky-plane space searched for possible paired detections,
+and thus constrain the number of possible linkages.
 
 A casual study in \citet{kubica_thesis} and experiences related to us
 from work on the PanSTARRS MOPS both state an upper time limit of 90
@@ -413,8 +416,7 @@ presented in \citet{Grav2011}.
 
 After study, we decided that an upper limit of .5 deg/day would be
 sufficient for all objects except Near-Earth Objects
-(NEOs). \textbf{LYNNE, NEED EXACT NUMBERS - PERCENT OF APPARITIONS
-  WITH VELOCITY BELOW .5}
+(NEOs). \textbf{Exact numbers?}
 
 
 
@@ -439,11 +441,11 @@ testing of the system, we sometimes use shorter tracking windows,
 which reduce the number of potentially findable objects in the data
 but allow faster operation.
 
-Further, the generation of quadratic tracks from the linear tracklets requires
-an upper bound on track acceleration.  As with establishing a velocity
-limit, it is possible to perform a study of objects to choose a
-reasonable upper limit on track acceleration.  Again, the Solar System
-Model from \citet{Grav2011} was used to generate a histogram of
+Further, the generation of quadratic tracks from the linear tracklets
+requires an upper bound on track acceleration.  As with establishing a
+velocity limit, it is possible to perform a study of objects to choose
+a reasonable upper limit on track acceleration.  Again, the Solar
+System Model from \citet{Grav2011} was used to generate a histogram of
 apparent accelerations of objects, and this was used to establish a
 reasonable upper bound on track acceleration.
 
@@ -452,35 +454,18 @@ reasonable upper bound on track acceleration.
 We concluded from our survey that an upper bound .02 deg/day$^2$ was
 sufficient to find virtually all objects.
 
-\subsubsection{Total Requirements For Findability of Objects}
-
-We have presented four variables must be set to limit the scope of
-sky-plane searching. They are as follows:
-
-\begin{itemize}
-\item Tracklet time interval
-\item Tracklet maximum velocity
-\item Tracking window length
-\item Track maximum acceleration
-\end{itemize}
-
-We can use these four variables and our knowledge of IOD limitations
-to determine authoritatively whether an object is ``findable'' or
-``unfindable.''  In the evaluations of MOPS sky-plane linking that
-follow, we categorized objects as findable or unfindable, and compare
-with those found or not found.
 
 
 \subsection{Predicting Resource Usage of the System}
-
-\subsection{Tracklet Quality Metrics}
-
+cut?
+\subsection{Track and Tracklet Quality Metrics}
+cut?
 \subsection{Main-Belt Searching On Ecliptic}
-
+results go here
 \subsection{Scaling On Solar System Model Density}
-
+results go here
 \subsection{Scaling On Non-Solar System Detection Density}
-
+results go here
 \subsection{NightMOPS Resource Usage}
 
 

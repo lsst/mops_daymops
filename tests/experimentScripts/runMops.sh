@@ -15,7 +15,8 @@ DIAS_TABLE="$3"
 
 
 #set these if you care to
-WINDOW_SIZE=15
+WINDOW_SIZE=30
+TRACKLET_MAXV=.75
 DB_HOST="localhost"
 DB_USER="jmyers"
 DB_PASS="jmyers"
@@ -63,7 +64,7 @@ python  $MOPS_HACKS/splitByNight.py $DIAS_FILE
 
 mkdir tracklets
 
-bash $MOPS_HACKS/runFindTracklets.maxv0.5.sh
+bash $MOPS_HACKS/runFindTracklets.sh $TRACKLET_MAXV
 
 cd tracklets
 

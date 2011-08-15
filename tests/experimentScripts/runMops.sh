@@ -22,6 +22,7 @@ DB_USER="jmyers"
 DB_PASS="jmyers"
 
 
+echo $DIAS_FILE $DIAS_DB $DIAS_TABLE $MOPS_DAYMOPS_DIR
 if [ "$DIAS_FILE" == ""] || [ "$DIAS_DB" == "" ] || [ "$DIAS_TABLE" == "" ] || [ "$MOPS_DAYMOPS_DIR" == "" ]
 then
     echo "USAGE: runMops.sh <input dias file, Lynne format> <dias DB, should NOT exist already> <dias Table to create (should NOT exist already.)>"

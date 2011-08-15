@@ -20,7 +20,8 @@ for NIGHTLY in $NIGHTLY_DIASOURCES
 do
     CMD="$FINDTRACKLETS -i $NIGHTLY -o $OUTPUT_DIR/`basename $NIGHTLY .miti`.maxv0.5.tracklets -v ${MAXV} -m 0.0"
     echo running $CMD
-    /usr/bin/time -o $OUTPUT_DIR/`basename $NIGHTLY .miti`.maxv0.5.time $CMD
+    LOGFILE=$OUTPUT_DIR/`basename $NIGHTLY .miti`.findTracklets.log
+    /usr/bin/time -o $OUTPUT_DIR/`basename $NIGHTLY .miti`.findTracklets.time $CMD  | tee $LOGFILE
     echo ""
     echo ""
 done

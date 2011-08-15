@@ -7,6 +7,10 @@
 
 #include <istream>
 #include <sstream>
+// these C style headers used by printMemUse()
+#include <unistd.h>
+#include <string.h>
+
 
 #include "lsst/mops/fileUtils.h"
 
@@ -153,5 +157,24 @@ void populatePairsVectorFromFile(std::string pairsFileName,
      populatePairsVectorFromFile(pairsFile, pairsVector);
         
 }
+
+
+
+
+
+// look up the process PID and print its mem use info from /proc/<pid>
+void printMemUse()
+{
+
+    unsigned int mypid = getpid();
+    char catCmd[1000];
+    std::cout << "This process (" << mypid << ") memory usage: \n";
+    std::cout << "------------------------------------------\n";
+    sprintf(catCmd, "cat /proc/%d/status", mypid);
+    system(catCmd);
+    std::cout << "------------------------------------------\n\n";
+}
+
+
 
     }} // close lsst::mops

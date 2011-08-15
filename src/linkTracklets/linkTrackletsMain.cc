@@ -217,7 +217,7 @@ int main(int argc, char* argv[])
 
      std::cout << "Done. Exiting successfully." << std::endl;
 
-
+     lsst::mops::printMemUse();
      return 0;
 
     	    

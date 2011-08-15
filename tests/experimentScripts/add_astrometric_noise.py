@@ -29,8 +29,8 @@ if __name__ == '__main__':
     f = open(infile, 'r')
     #f = open('test', 'r')
     fout = open(outfile, 'w')
-    conn, cursor = ui.sqlConnect(hostname='lsst-db.astro.washington.edu', 
-                                 username='lsst', passwdname='lsst', dbname='opsimdev')
+    conn, cursor = ui.sqlConnect(hostname='localhost', 
+                                 username='jmyers', passwdname='jmyers', dbname='opsim_3_61')
 
     # ordered list of input data 
     inputdata_keys = ('diasourceID', 'opsimID', 'ssmID', 'ra', 'decl', 'expmjd', 'mag', 'snr')

@@ -61,7 +61,7 @@ import sys
 
 FALSE_DIA_SSM_ID="-1" # the ssmId of a DiaSource which is attributable to non-asteroid sources
 
-PRELOAD_DIAS_FROM_FILE=False
+PRELOAD_DIAS_FROM_FILE=True
 
 if not PRELOAD_DIAS_FROM_FILE:
     import MySQLdb as db

@@ -147,6 +147,7 @@ namespace lsst {
         std::cout << "Done. Writing output." << std::endl;
         writeTrackletsToOutFile(&postFilteredTracklets, outFile);
 
+        printMemUse();
         return 0;
     }
 

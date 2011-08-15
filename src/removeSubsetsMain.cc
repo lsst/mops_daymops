@@ -139,10 +139,12 @@ namespace mops {
         delete pairsVector;
 	if (outFile.good()) {
 	  std::cout << "Finished successfully finished at " << curTime() << std::endl;
+          printMemUse();
 	  return 0;
 	}
 	else {
 	  std::cout << "ERROR writing/closing file. Finished at " << curTime() << std::endl;
+          printMemUse();
 	  return 1;
 	}
     }

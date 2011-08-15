@@ -51,6 +51,8 @@ void writeTrackletsToOutFile(const std::vector<Tracklet> * tracklets, std::strin
 void populatePairsVectorFromFile(std::string pairsFileName,
 				 std::vector <Tracklet> &pairsVector);
 
+// look up the process PID and print its mem use info from /proc/<pid>
+void printMemUse();
 
 }} // close namespace lsst::mops
 

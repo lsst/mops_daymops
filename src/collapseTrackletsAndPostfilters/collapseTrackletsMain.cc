@@ -250,6 +250,7 @@ Only used if useRMSfilt == true.  Describes the function for RMS filtering.  Tra
         pairsFile.close();
         outFile.close();	
 
+        printMemUse();
         return 0;
     }
   
@@ -267,7 +268,7 @@ Only used if useRMSfilt == true.  Describes the function for RMS filtering.  Tra
 
 
 int main(int argc, char** argv) {
-    
+        
     return lsst::mops::collapseTrackletsMain(argc, argv);
     
 }

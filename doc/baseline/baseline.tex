@@ -18,23 +18,6 @@
 
 % Abstract
 
-% Role of MOPS
-% - Inputs and Responsibilities of MOPS : generating the Moving Objects table
-% - Uses of Moving Objects table: Association and Science Users
-
-% MOPS Functionality
-% - SW standards/implementation status
-% - Overview of history/refs (PS-MOPS, IOD)
-
-% MOPS Sky-Plane Tracking:
-% - Overview of system (tracklets, tracks, sky-plane tracking)
-% - FindTracklets and algorithms
-% - Tracklet Optimizations (collapseTracklets, subset removal) 
-% - Metrics and graphs of SSM distributions in velocity
-% - LinkTracklets (Kubica Algorithm) 
-% - Track Filters (chi-squared, subset removal)
-% - Metrics and graphs of SSM distributions in acceleration + velocity
-% - IOD references
 
 
 
@@ -55,7 +38,8 @@ solar system objects.  The second responsibility of the MOPS is to
 predict future locations of moving objects in incoming images so that
 their sources may be associated with known objects; this will reduce
 the number of transient detections and prevent Alert Generation on
-detections of known Solar System objects.
+detections of known Solar System objects.  Design for the MOPS
+component is based closely on the design of the PanSTARRS MOPS.
 
 \end{abstract}
 
@@ -70,7 +54,8 @@ generation and maintenance of the Moving Object database, and the
 prediction of known object locations which are sent to the Association
 Pipeline to prevent unneccessary alerts.  In order to fulfill these
 goals, the MOPS has been broken into several componenets, colloquially
-known as ``DayMOPS'' and ``NightMOPS.''
+known as ``DayMOPS'' and ``NightMOPS.''  Both are based on designs and
+algorithms in use in the PanSTARRS MOPS system.
  
 
 \begin{figure}[!ht]
@@ -130,10 +115,10 @@ processing.
 
 Once tracks are discovered, they are sent to the Orbit Determination
 phase. The Orbit Determination phase takes these sets of sky-plane
-detections and attempts to find a Kepler orbit which could generate
+detections and attempts to find a Keplerian orbit which could generate
 the detections, if any exists.  This orbit is further refined, and
-error bounds are established, using least-squares linearization.
-Orbit Determination will reject many tracks as false, but should
+error bounds are established, using differential correction.  Orbit
+Determination will reject many tracks as false, but should
 successfully find fairly precise orbits for virtually all correctly
 linked tracks.  Several methods for performing this task are known,
 and several have implementations available to LSST
@@ -212,10 +197,10 @@ velocity. These pairs of detections are linked to generate tracklets.
 
 Further refinements of tracklets are possible with additional
 processing. If an object gets more than one tracklet, it is possible
-to use methods similar to the Hough transform (CITE HOUGH, SELF) to
-identify and merge these redundant tracklets into larger tracklets,
-improving the linear position/velocity fits of the tracklets and
-reducing the number of tracklets passed downstream.
+to use methods similar to the Hough transform to identify and merge
+these redundant tracklets into larger tracklets, improving the linear
+position/velocity fits of the tracklets and reducing the number of
+tracklets passed downstream.
 
 \subsubsection{Building Tracks}
 
@@ -259,6 +244,44 @@ this writing a filter on minimum chi-squared probability appears to be
 the best option.
 
 
+\subsubsection{Orbit Fitting}
+\label{orbitFitting}
+
+Orbits are 6 parameter Keplerian orbits fit to the set of
+observations linked during the track building phase. The Keplerian
+orbit sets tighter and more complicated constraints on the linkages
+than the previous quadratic approximation to this motion, and thus
+provides a final filter on linkages which can correspond to true,
+physical objects. Determining the orbit (and the uncertainty in the
+orbit) of each moving object also allows us to predict its position
+(and the uncertainty in the position) at past or future times, as well
+as providing a basic element of the characterization of each moving
+object.
+
+Orbit fitting can be accomplished using either traditional geometric
+methods, where an ellipse or parabola consistent with movement in the
+gravitational field of the sun is fit to the set of detections, or
+with statistical ranging, where a wide range of potential orbits are
+evaluated against the set of detections to search for the ones with
+the lowest residuals. Traditional methods are typically much speedier,
+and are available to LSST through the OrbFit software from Milani
+\citep{Milani2006}. Statistical ranging methods are more accurate in
+exploring the full range of orbital uncertainties for each object,
+which can be particularly important for objects observed near 60--90
+degrees from the Sun where NEO and MBA exhibit similar apparent
+motions, and are available in the OpenOrb software from Granvik
+\citep{OpenOrb2009}.
+
+In general, orbit fitting is split into two conceptual pieces - an
+``initial orbit determination'' stage, where approximate orbits are
+calculated, and a ``differential orbit determination'' stage, where
+perturbations on the initial orbit are evaluated to find the best fit
+and uncertainty. With six observations on three different nights, most
+real moving objects will pass both initial orbit determination and
+differential orbit determination with an orbit accurate enough to
+generate predicted positions with uncertainties of less than a few
+arcminutes for the next few months \citep{basicSolarSystem}.
+
 
 
 \subsubsection{Cadence Requirements Imposed by Sky-Plane Linking Methods}
@@ -267,7 +290,7 @@ The multi-tiered approach we describe imposes certain requirements on
 telescope cadence.  For example, we cannot generate a tracklet for an
 object unless it is observed twice on a given night; a track cannot be
 generated for an object unless it generates multiple tracklets within
-a reasonable period of time.  
+a reasonable period of time.
 
 Further practical considerations impose further requirements on
 cadence. Even if an object is observed twice within a night, it may
@@ -286,22 +309,21 @@ periods longer than roughly one month \citep{kubica_thesis}.  As a
 result, it is not possible to form tracks from tracklets separated by
 greater than one month of observation time.
 
-It is generally held that most orbit determination methods can
-generate a reliable orbit given six detections of an object occuring
-on at least three distinct nights.  As a general rule, the telescope
-cadence will attempt to revisit fields of sky twice on a single night
-within a region of time that makes tracklet generation practical; it
-will then attempt to revisit these fields again on two more nights
-within a span of 30 days or less.  In this way, we can expect
-sky-plane linking to be practical, and objects in that field will be
-observed a total of at least six times on at least three different
-nights.
+As mentioned in \ref{orbitFitting}, it is generally held that most
+orbit determination methods can generate a reliable orbit given six
+detections of an object occuring on at least three distinct nights.
+As a general rule, the telescope cadence will attempt to revisit
+fields of sky twice on a single night within a region of time that
+makes tracklet generation practical; it will then attempt to revisit
+these fields again on two more nights within a span of 30 days or
+less.  In this way, and objects in that field will be observed a total
+of at least six times on at least three different nights, generating
+three or more tracklets sufficient for linking into a track.
 
 
 The current implementation of simulated telescope operations
 take into account these requirements when generating simulated sets of
-telescope pointings. \textbf{reference to another chapter in the full
-  document?}
+telescope pointings. 
 
 
 \subsection{NightMOPS: Predicting Moving Object Locations}
@@ -336,11 +358,10 @@ ephemeris for each known Moving Object for every image time.
 \subsection{Implementation Status}
 
 All software components of MOPS, with the possible exception of
-initial orbit determination, and orbital least-squares linearization
-fitting of orbits to data, and ephemeris generation, is expected to be
-completed in open-source C++ compliant with LSST software guidelines
-and in LSST appropriate coding style.  These components will run
-inside the LSST Pipeline Framework.  
+initial orbit determination, differential correction, and ephemeris
+generation, are expected to be completed in open-source C++ compliant
+with LSST software guidelines and in LSST appropriate coding style.
+These components will run inside the LSST Pipeline Framework.
 
 Currently, the initial tracking phases of DayMOPS are implemented in
 LSST-compliant C++.  The selection of an appropriate package for
@@ -359,9 +380,9 @@ generation tool.
 Current development efforts have focused on the sky-plane tracking
 phase of DayMOPS, as all later processing is dependant on its
 success. Existing orbit determination packages claim a high rate of
-success for accurate initial orbit determination (IOD) given a
-correctly linked track, and a low rate of false positives
-\textbf{(TBD: CITE)}. As a result, we expect that the ability of the
+success for accurate IOD given a correctly-linked track, and should
+correctly reject false tracks in nearly all cases
+\citep{Milani2006}. As a result, we expect that the ability of the
 system to successfully generate Moving Objects data products for solar
 system objects given to DayMOPS will be determined primarily by the
 sky-plane tracking component and its ability to send useful tracks to
@@ -430,22 +451,89 @@ generation, and the number of tracks should entirely decide the size
 of the workload for IOD.  As such, we measure the \textbf{number of
   tracks} and \textbf{number of tracklets}.
 
-Correctly-linked tracks and tracklets are referred to as \textbf{true
-  tracks} and \textbf{true tracklets}. The numbers of total true
-tracklets and tracks, as well as the \textbf{percent true} tracklets
-or tracks, are both of interest. Note that it is expected that
-multiple correctly-linked tracklets and/or tracks may be generated for a
-given found object. As such, we expect the number of true tracks and
-tracklets to be somewhat independent of the number of found objects.
+%% Correctly-linked tracks and tracklets are referred to as \textbf{true
+%%   tracks} and \textbf{true tracklets}. The numbers of total true
+%% tracklets and tracks, as well as the \textbf{percent true} tracklets
+%% or tracks, are both of interest. Note that it is expected that
+%% multiple correctly-linked tracklets and/or tracks may be generated for a
+%% given found object. As such, we expect the number of true tracks and
+%% tracklets to be somewhat independent of the number of found objects.
 
-\textbf{consider a paragraph on object coverage; we will need to
-  update my existing code if we use it.}
-
-
+%% \textbf{consider a paragraph on object coverage; we will need to
+%%   update my existing code if we use it.}
 
 
-\subsection{Results From Main-Belt Searching On Ecliptic}
-discuss the study of velocity and accelerations for main-belters
+
+
+\subsection{Results From Main-Belt and Distant Object Searching On Ecliptic}
+
+The ecliptic plane is the most densely-populated region of the sky,
+and main-belt asteroids generate the vast majority of detected objects
+there.  Because we expect that high density will contribute
+significantly to the costs of running our software, we chose to run a
+simulated one-year survey using simulated images from a section of the ecliptic.
+In this way, we expect to get a worst-case measurement of resource
+requirements for the linking phases of the LSST MOPS.
+
+The survey was intended to search for main-belt asteroids, on the
+expectation that if they could be found and removed the clutter of the
+images would be significantly reduced, making further searching (say,
+for fast-moving near earth objects) less challenging.  Further,
+because our software looks for objects moving or accelerating
+\textit{below} a set threshold, objects moving and accelerating more
+slowly than main-belters were also found.
+
+\subsubsection{Choosing Velocity and Acceleration Limits}
+
+\begin{figure}[ht!]
+  \begin{centering}
+  \includegraphics[width=13cm]{illustrations/mopsplots/findtracklets_vel1.png}
+  \end{centering}
+  \label{velSurvey}
+  \caption{A cumulative histogram of solar solar system object sky-plane velocities, organized by classification.  Note that only the near-earth objects have higher velocities than main-belt asteroids.}
+\end{figure}
+
+\begin{figure}[ht!]
+  \begin{centering}
+  \includegraphics[width=13cm]{illustrations/mopsplots/hist_accRA_sky2.png}
+  \end{centering}
+  \label{raAccSurvey}
+  \caption{A histogram of sky-plane accelerations of solar system objects in the RA axis; objects are grouped by classification.}
+\end{figure}
+
+\begin{figure}[ht!]
+  \begin{centering}
+  \includegraphics[width=13cm]{illustrations/mopsplots/hist_accDec2.png}
+  \end{centering}
+  \label{decAccSurvey}
+  \caption{A histogram of sky-plane accelerations of solar system objects in the declination axis, objects are grouped by classification.}
+\end{figure}
+
+In order to determine reasonable limits on velocity and acceleration
+of main-belters as well as other objects, a survey of the solar system
+model \citep{Grav2011} was conducted, see figures \ref{velSurvey}, \ref{raAccSurvey}, \ref{decAccSurvey}.  We
+chose a maximum velocity limit of .75 deg/day and an acceleration
+limit of .02 deg/day$^2$ as a result of this survey.
+
+\subsubsection{About the Data}
+
+The simulated survey was conducted using the output of a simulated
+survey using the LSST Operations Simulator.  A set of fields was
+chosen along the ecliptic: all fields with centers along $(-8, 8)$ in
+RA and $(-7.4, 8)$ in declination were considered.  This included
+images whose endpoints span a region of more than 367 square
+degrees. For images of those fields, we generated ephemeris for
+synthetic solar system objects which could appear in the image.  These
+ephemerides were then filtered on location and magnitude based on the
+filter and seeing of the images.  Astrometric error was added to these
+ephemerides resulting in simulated DiaSources which were used as input
+to the linking stages of MOPS.
+
+% TBD: Do we mention the missing fields?
+
+\subsubsection{Results}
+
+
 
 present results on main-belt survey - found, \% true, measured or expected IOD time, etc.
 
@@ -453,9 +541,35 @@ present results on main-belt survey - found, \% true, measured or expected IOD t
 
 present results on main-belt survey with scalind density
 
+\begin{tabular}{|c|r|r|r|r|r|}
+  \hline 
+  SSM Density & \#Tracklets & \#Tracks & Linking Runtime & Track \% True  \\
+  \hline
+  .1         &   211,635    & 122,160   & 0:11:09            & 75.97\%   \\
+  .025       &   649,907    & 401,895   & 1:01:04            & 57.94\%   \\
+  .05        & 1,618,205    & 1,116,346 & 04:48:24           & 40.70\%   \\
+  .75        & 2,897,291    & 2,085,296 & 12:47:56           & 32.14\%   \\
+  1.0        & 4,502,224    & 3,318,420 & 27:27:27           & 26.61\%   \\
+  \hline
+\end{tabular}
+
+
 \subsection{Scaling On Non-Solar System Detection Density}
 
 present results from the variable noise-per-image sims
+
+\begin{tabular}{|r|r|r|r|r|r|}
+  \hline 
+  \% Noise & \#Tracklets & \#Tracks  & Linking Runtime & Track \% True & Found/Findable \\
+  0.0\%    &  1,618,205  & 1,116,346 & 8,413           &  40.70\%      &  94.91\%       \\
+  20.63\%  & 1,947,235   & 1,127,355 & 9,996           & 40.28\%       &  94.90\%       \\
+  56.51\%  & 4,107,233   & 1,202,270 & 19,321          & 50.36\%       &  94.87\%       \\
+  72.21\%  & 8,693,128   & 1,361,796 & 51,008          & 33.14\%       &  94.80\%       \\
+  83.87\%  & 23,989,975  & 1,951,794 & 256,565         & 22.89\%       &  94.62\%       \\
+  \hline
+\end{tabular}
+
+
 
 \subsection{NightMOPS Resource Usage}
 
@@ -483,17 +597,79 @@ ephemeris cost.
 Though the core algorithms of MOPS have been implemented in
 LSST-appropriate style, further research and development are needed.
 
-\subsection{Refinements To Cadence}
 
-\subsection{Exploring NEO Capability}
+
+\subsection{Long-Term Management}
+
+Current simulations cover fairly short time periods, putting high
+focus on the problems of initial object discovery.  In the course of
+the full survey, we expect that the many detected sources will be
+attributed to already-discovered objects.  Because initial object
+discovery phases are relatively expensive and ephemeris calculation is
+relatively fast, we expect that the resource usage of the system will
+decline over time, as more objects are discovered and the size of
+input catalogs is reduced.
+
+Attribution, precovery and Moving Object management and refinement of the
+Moving Object table are not yet implemented in LSST-compliant software.
+Developing this software should be a significant development task.
+However, we hope that by using the algorithms from the PanSTARRS MOPS
+we can avoid any significant research tasks.
+
+To test this software, we will need to generate simulated input
+catalogs which span longer time periods.  Accomplishing this will
+require either significant compute-resources or improved tools for
+generating input catalogs.
+
+
+
+\subsection{Filtering on Trailing for Near-Earth-Object Searching}
 
 Describe trailing, how we don't really have it yet, perhaps some
 preliminary results from fast-mover searches without trailing,
 afterburner appraoches, etc.
 
-\subsection{Distribution/Parallelization of Core Algorithms}
+Near-Earth Objects tend to have the highest sky-plane velocity.  This
+presents a significant challenge; as we increase the maximum velocity
+limit of our tracklet generation, the potential for mislinkage
+increases significantly, leading to higher numbers of tracklets and
+increased costs.  
 
-Should be obvious what to put here
+Fortunately, we expect that fast-moving NEOs will generate visible
+trails in our images.  By requiring all tracklets to show trails
+consistent with their apparent sky-plane velocity, we expect that it
+will be possible to filter most false tracklet linkages, thus
+rendering the problem of NEO searching manageable.
+
+The ability to filter on trailing is dependent almost entirely on our
+ability to correctly identify trails in images.  Currently, the
+ability of image processing to detect trails is not established.  To
+remedy this, we will need to generate simulated images which include
+asteroid trails and send them to image processing; further refinement
+of image processing algorithms may be necesary.
+
+
+
+\subsection{Distribution/Parallelization of Software}
+
+Current software implementations and simulations presented in this
+document use only a single processor.  Performance has been
+sufficiently fast for this to be reasonable; however, as we increase
+the size of the simulated sky, it will likely become necessary to
+parallelize some core algorithms.
+
+The PanSTARRS MOPS can inform our decisions on parallelization and
+distribution.  Some phases of processing are trivially parallel, such
+as Initial Orbit Determination, in which the same operations are
+performed to a large variety of tracks; this should be very easy to
+accomplish in using LSST Pipeline Middleware.  
+
+Other tasks will be more difficult; in distributing sky-plane linking,
+PanSTARRS MOPS divides up the data by field of view and distributes
+the workload along this axis.  This has the advantage of distributing
+the workload in a straightforward way, but potentially generating
+poorly load-balanced workloads.  We plan to investigate this method,
+but leave open the possibility of attempting other approaches as well.
 
 
 \bibliographystyle{apj}

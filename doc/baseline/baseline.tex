@@ -23,7 +23,7 @@
 
 \begin{document}
 
-\title{Moving Object Pipeline Requirements}
+\title{Moving Object Pipeline}
 
 \author{}
 
@@ -33,7 +33,7 @@ The Moving Object Pipeline System (MOPS) has two responsibilities
 within LSST Data Management.  First, it is responsible for generating
 and managing the \textbf{Moving Object} data products.  The Moving
 Objects are identified solar system objects (SSOs) with associated
-Keplerian orbits, errors, and a detected sources assocated with those
+Keplerian orbits, errors, and detected sources assocated with those
 solar system objects.  The second responsibility of the MOPS is to
 predict future locations of moving objects in incoming images so that
 their sources may be associated with known objects; this will reduce
@@ -52,10 +52,10 @@ component is based closely on the design of the PanSTARRS MOPS.
 The Moving Object Pipeline System has two main responsibilities: the
 generation and maintenance of the Moving Object database, and the
 prediction of known object locations which are sent to the Association
-Pipeline to prevent unneccessary alerts.  In order to fulfill these
-goals, the MOPS has been broken into several componenets, colloquially
-known as ``DayMOPS'' and ``NightMOPS.''  Both are based on designs and
-algorithms in use in the PanSTARRS MOPS system.
+Pipeline to prevent unneccessary alerts.  The MOPS has been broken
+into two components, colloquially known as ``DayMOPS'' and ``NightMOPS.''
+Both are based on designs and algorithms in use in the PanSTARRS MOPS
+system.
  
 
 \begin{figure}[!ht]
@@ -76,13 +76,9 @@ discovering new Moving Objects in newly-acquired data, searching old
 data for detections of new objects, and updating the Moving Objects
 table to reflect newly-acquired data. It is also responsible for
 periodically cleaning and refining the contents of the Moving Objects
-table.
-
-``NightMOPS'' is responsible for projecting the locations of known
+table.  ``NightMOPS'' is responsible for projecting the locations of known
 Moving Objects in upcoming images as they are announced during
-night-time operations.  If Moving Objects are observed in these
-images, then the Moving Object table is modified to add these
-newly-acquired detections to their associated Moving Object.
+night-time operations.  
 
 The relationship between DayMOPS, NightMOPS and the neighboring
 components of the LSST Data Management system is illustrated in
@@ -94,17 +90,17 @@ figure \ref{mopsWithinLsst}.
 
 % sky-plane vs. orbit-space illustration
 
-The initial task of DayMOPS is to identify unknown objects present in
-images and their orbits.  To accomplish this, the system initially
-finds sets of detections which follow a sky-plane path roughly
-consistent with asteroid motion; these sets of detections and their
-fitted paths are called \textbf{tracks}.  This same method is the
-basis for asteroid discovery used in the PanSTARRS Moving Object
-Pipeline System \citep{psMOPSDesign}.  A set of algorithms for the
-discovery of sky-plane tracks in dense data are presented in
+The DayMOPS is responsible for discovering moving objects in source
+catalogs.  To accomplish this, the system initially finds sets of
+detections which follow a sky-plane path roughly consistent with
+asteroid motion; these sets of detections and their fitted paths are
+called \textbf{tracks}.  This same method is the basis for asteroid
+discovery used in the PanSTARRS Moving Object Pipeline System
+\citep{psMOPSDesign}.  A set of algorithms for the discovery of
+sky-plane tracks in dense data are presented in
 \citet{Kubica:2005:MTA:1081870.1081889}; these algorithms are used in
 the PanSTARRS MOPS as well.  Because of the loose approximations used,
-many of the tracks will be mislinkages, combining detections which are
+some of the tracks will be mislinkages, combining detections which are
 not attributable to the same source, but virtually all objects for
 which a true (correctly-linked) track could be generated will get some
 correct track.  LSST Data Management has developed additional
@@ -116,16 +112,15 @@ processing.
 Once tracks are discovered, they are sent to the Orbit Determination
 phase. The Orbit Determination phase takes these sets of sky-plane
 detections and attempts to find a Keplerian orbit which could generate
-the detections, if any exists.  This orbit is further refined, and
-error bounds are established, using differential correction.  Orbit
-Determination will reject many tracks as false, but should
-successfully find fairly precise orbits for virtually all correctly
-linked tracks.  Several methods for performing this task are known,
-and several have implementations available to LSST
-\citep{Milani04orbitdetermination}, \citep{Milani2006},
-\citep{OpenOrb2009}, \citep{granvik_thesis}.  These orbits, and the
-detections present in the track associated with that orbit, are used
-to generate new Moving Objects.
+the detections.  This orbit is further refined, and error bounds are
+established, using differential correction.  Orbit Determination will
+reject many tracks as false, but should successfully find precise
+orbits for virtually all correctly linked tracks.  Several methods for
+performing this task are known, and several have implementations
+available to LSST \citep{Milani04orbitdetermination},
+\citep{Milani2006}, \citep{OpenOrb2009}, \citep{granvik_thesis}.
+These orbits, and the detections present in the track associated with
+that orbit, are used to generate new Moving Objects.
 
 \begin{figure}[h]
 \begin{center}
@@ -238,25 +233,22 @@ attempts to build a track using the detections held in the tracklets
 at the leaf nodes.  A quadratic fit, or a higher-order fit if
 possible, to the detections will be attempted.  Then a quality-of-fit
 assessment is used to determine whether the track is considered
-acceptably credible to pass downstream to the Orbit Determination.
-Investigation into ideal quality-of-fit metrics is ongoing, but as of
-this writing a filter on minimum chi-squared probability appears to be
-the best option.
+sufficiently well-fitted to pass downstream to the Orbit
+Determination.  Investigation into ideal quality-of-fit metrics is
+ongoing, but as of this writing a filter on minimum chi-squared
+probability appears to be the best option.
 
 
 \subsubsection{Orbit Fitting}
 \label{orbitFitting}
 
-Orbits are 6 parameter Keplerian orbits fit to the set of
-observations linked during the track building phase. The Keplerian
-orbit sets tighter and more complicated constraints on the linkages
-than the previous quadratic approximation to this motion, and thus
-provides a final filter on linkages which can correspond to true,
-physical objects. Determining the orbit (and the uncertainty in the
-orbit) of each moving object also allows us to predict its position
-(and the uncertainty in the position) at past or future times, as well
-as providing a basic element of the characterization of each moving
-object.
+Orbits are 6 parameter Keplerian orbits fit to the set of observations
+linked during the track building phase. The Keplerian orbit sets
+tighter and more complicated constraints on the linkages than the
+previous quadratic approximation to this motion, and thus provides a
+final filter on linkages which can correspond to true, physical
+objects. Using a well-determined orbit, we can predict the location of
+an object at arbitrary times.
 
 Orbit fitting can be accomplished using either traditional geometric
 methods, where an ellipse or parabola consistent with movement in the
@@ -326,6 +318,30 @@ take into account these requirements when generating simulated sets of
 telescope pointings. 
 
 
+\subsubsection{Sky-Plane Motion Limits Imposed by Sky-Plane Linking Methods}
+
+Practical considerations necessitate that we set upper bounds on
+tracklet velocity and track acceleration in order to restrict the
+number of potential mislinkages. Existing methods attempt to find all
+tracklets or tracks within specified velocity and acceleration limits;
+as velocity and acceleration limits are raised, the number of
+tracklets and tracks can grow quickly.  As a result, the choice of
+velocity and acceleration limits is important, as it significantly
+impacts the objects found as well as the cost of running the software.
+
+Generally, all types of solar system objects except for the fastest of
+near-earth asteroids tend to have reasonably low velocity and
+acceleration. It is expected that the fastest-moving objects will
+leave visible trails in images; these may be used to isolate
+detections which could be attributable to fast-movers and restrict the
+potential search space for linking these detections.  See section
+\ref{neosTrailing} for more information on future plans for
+approaching this problem.
+
+
+
+
+
 \subsection{NightMOPS: Predicting Moving Object Locations}
 
 The NightMOPS section of MOPS is responsible for predicting the
@@ -338,7 +354,7 @@ products, and also allows the prevention of unnecessary Alerts.
 Predicting the locations of objects given an orbit can be accomplished
 through ephemeris calculation using existing orbit-space software
 suites \citep{Milani2006}, \citep{OpenOrb2009}.  However, ephemeris
-calculation can be fairly slow due for large data sets.  Because the
+calculation can be fairly slow for large data sets.  Because the
 observations schedule for LSST will be determined dynamically, it is
 necessary to generate ephemeris predictions for a large Moving Object
 table in a short period of time.
@@ -398,7 +414,7 @@ reasonable estimate of the resource usage of all of DayMOPS.
 In this section, we will present metrics used to evaluate the
 usefulness of the sky-plane tracking approach, the correctness of our
 software implementation, and usefulness of filters. We also
-investigate the total cost of running our software and expected cost
+investigate the expected resource usage of our software and expected cost
 of performing IOD on its output.
 
 
@@ -424,16 +440,6 @@ occurred, we can simply measure the time between these detections and
 determine whether the time intervals were sufficient for tracklet
 generation and track generation.  
 
-(\textbf{consider cutting this paragraph.}) Further, practical
-considerations necessitate that we set upper bounds on tracklet
-velocity and track acceleration in order to restrict the number of
-potential mislinkages, which can grow quickly as velocity and
-acceleration limits are raised.  This will preclude a given run of the
-software from finding some objects, mainly near-earth asteroids, which
-may have apparent velocity or acceleration above the specified
-bounds. Findable objects which should at some point in their
-observation generate a track below the velocity and acceleration
-limits will be referred to as \textbf{findable-within-limits}.
 
 \subsubsection{Studying Tracks and Tracklets}
 
@@ -573,10 +579,10 @@ present results from the variable noise-per-image sims
 
 \subsection{NightMOPS Resource Usage}
 
-do we have any idea?  should be upper bounded by size of SSM * nights
-of survey * ephemeris cost + max objects per image * num images *
-ephemeris cost.
-
+The costs of running NightMOPS are expected to be negligable compared
+with the costs of running DayMOPS.  NightMOPS (fed from a database of
+real known objects) has been run in past data challenges and has not
+imposed a significant cost. 
 
 
 
@@ -624,6 +630,8 @@ generating input catalogs.
 
 
 \subsection{Filtering on Trailing for Near-Earth-Object Searching}
+
+\label{neosTrailing}
 
 Describe trailing, how we don't really have it yet, perhaps some
 preliminary results from fast-mover searches without trailing,

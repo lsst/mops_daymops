@@ -5,6 +5,8 @@
 \usepackage{subfig}
 %\usepackage{fixltx2e}
 
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% author-defined commands
 \newcommand\x         {\hbox{$\times$}}
@@ -418,9 +420,9 @@ of performing IOD on its output.
 
 
 
-\subsection{Metrics And Definitions}
+\subsection{Experiments And Results}
 
-\subsubsection{End-to-end evaluation of Sky-plane Linking}
+\subsubsection{Metrics for End-to-end Evaluation of Sky-plane Linking}
 MOPS can generate a useful orbit, and thus a Moving Object, for an
 object if it is observed sufficiently for IOD to be performed (see
 \ref{cadenceRequirements} for details) and a track containing those
@@ -433,14 +435,14 @@ are observed in a manner such that they can generate an IOD-worthy
 track.  We refer to an object which is observed with a cadence
 sufficient for an IOD-worthy track to be generated as a
 \textbf{findable} object.  When running simulations, determining
-whether an object is findable or not is fairly straightforward; by
+whether or not a given object is findable is fairly straightforward: by
 using \textit{a priori} knowledge of when its simulated detections
-occurred, we can simply measure the time between these detections and
-determine whether the time intervals were sufficient for tracklet
-generation and track generation.  
+occurred, we can simply measure the time intervals between these detections and
+determine whether the time interval were sufficient for tracklet
+generation and track generation.  Note that the sky-plane
+velocity/acceleration of the objects are \textit{not} used in deciding
+whether an object is considered findable.
 
-
-\subsubsection{Studying Tracks and Tracklets}
 
 To understand net cost and benefit of a simulation, the number of
 objects found and the cost of finding them is likely sufficient.
@@ -454,15 +456,17 @@ estimating the resource usage of the system.  The number of tracklets
 will be a major factor in the predicting the workload of track
 generation, and the number of tracks should entirely decide the size
 of the workload for IOD.  As such, we measure the \textbf{number of
-  tracks} and \textbf{number of tracklets}.
+  tracks} and \textbf{number of tracklets}.  
 
-%% Correctly-linked tracks and tracklets are referred to as \textbf{true
-%%   tracks} and \textbf{true tracklets}. The numbers of total true
-%% tracklets and tracks, as well as the \textbf{percent true} tracklets
-%% or tracks, are both of interest. Note that it is expected that
-%% multiple correctly-linked tracklets and/or tracks may be generated for a
-%% given found object. As such, we expect the number of true tracks and
-%% tracklets to be somewhat independent of the number of found objects.
+Correctly-linked tracks and tracklets are referred to as \textbf{true
+  tracks} and \textbf{true tracklets}. We present the percentage of
+tracklets and tracks which are true in our results. Note that it is
+expected that multiple correctly-linked tracklets and/or tracks may be
+generated for a given found object. As such, we expect the number of
+true tracks and tracklets to significantly exceed the number of found
+objects.  Nonetheless, we find that checking the true/false ratio of
+tracklets and tracks helps to illustrate the quality of tracklets and
+tracks used by the linking software and passed to IOD.
 
 %% \textbf{consider a paragraph on object coverage; we will need to
 %%   update my existing code if we use it.}
@@ -474,11 +478,8 @@ of the workload for IOD.  As such, we measure the \textbf{number of
 
 The ecliptic plane is the most densely-populated region of the sky,
 and main-belt asteroids generate the vast majority of detected objects
-there.  Because we expect that high density will contribute
-significantly to the costs of running our software, we chose to run a
-simulated one-year survey using simulated images from a section of the ecliptic.
-In this way, we expect to get a worst-case measurement of resource
-requirements for the linking phases of the LSST MOPS.
+there.  We chose to run a simulated one-year survey using simulated
+images from a section of the ecliptic.  
 
 The survey was intended to search for main-belt asteroids, on the
 expectation that if they could be found and removed the clutter of the
@@ -504,28 +505,28 @@ here.
 \begin{figure}[ht!]
   \centering
   \includegraphics[width=13cm]{illustrations/mopsplots/findtracklets_vel1.png}
-  \label{velSurvey}
   \caption{A cumulative histogram of solar solar system object
     sky-plane velocities, organized by classification.  Note that only
     the near-earth objects have higher velocities than main-belt
     asteroids.  Note that the y-axis values begin at .8, not at zero.}
+  \label{velSurvey}
 \end{figure}
 
 \begin{figure}[ht!]
   \centering
   \includegraphics[width=13cm]{illustrations/mopsplots/hist_accRA_sky2.png}
-  \label{raAccSurvey}
   \caption{A histogram of sky-plane accelerations of solar system
     objects in the RA axis; objects are grouped by classification.}
+  \label{raAccSurvey}
 \end{figure}
 
 \begin{figure}[ht!]
   \centering
   \includegraphics[width=13cm]{illustrations/mopsplots/hist_accDec2.png}
-  \label{decAccSurvey}
   \caption{A histogram of sky-plane accelerations of solar system
     objects in the declination axis, objects are grouped by
     classification.}
+  \label{decAccSurvey}
 \end{figure}
 
 In order to determine reasonable limits on velocity and acceleration
@@ -556,13 +557,85 @@ filter and seeing of the images.  Astrometric error was added to these
 ephemerides resulting in simulated DiaSources which were used as input
 to the linking stages of MOPS.
 
-% TBD: Do we mention the missing fields?
+
+\begin{figure}[ht!]
+\centering
+\includegraphics[scale=.7]{illustrations/allDias_1_1000th_density.png}
+\caption{A reduced-density plot of simulated asteroid detections (DiaSources) used in our simulated catalog.  Detections from several fields were missing, but we expect that our results should be reasonably representative nonetheless.}
+\label{diasPlot}
+\end{figure}
+
+A plot of some of the detections used in the simulation is presented
+in figure \ref{diasPlot}.  As is visible in the plot, four of the
+twenty-two fields had missing data due to a software error.  We expect
+that the presence of this flaw in the data should not significantly
+affect the conclusions reached from our experiments.
+
+
 
 \subsubsection{Results}
 
 
 
-present results on main-belt survey - found, \% true, measured or expected IOD time, etc.
+\begin{figure}[ht!]
+\centering \subfloat[Summary of results]{
+\begin{tabular}{|r|r|}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\hline 
+Tracklet generation runtime:  & 2,355 sec  (.6 hours) \\
+Track generation runtime:     & 39,713 sec (11 hours) \\
+Total linking runtime:        & 42,068 sec (11.7 hours) \\
+Peak memory usage:            & 2.2 GB \\
+ & \\
+Number of tracklets:          & 4,502,224  \\
+Tracklet \% true:             & 43.4\% \\
+Number of tracks:             & 3,318,539 \\
+Track \% true:                & 26.6\% \\
+ & \\
+Estimated IOD cost (assuming 1000 IOD/sec):  & 3,318 sec (.9 hours) \\
+Estimated total resource usage:      & 45,386 sec (12.6 hours)\\
+ & \\
+Number of findable objects:   & 186,344 \\
+Number of objects found:      & 176,080 \\
+\% Found / findable:          & 94.5\% \\
+\hline
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\end{tabular}
+}
+
+\subfloat[Found objects by type]{
+\begin{tabular}{|r|r|r|r|}
+\hline
+Object class            & Number found & Number findable & Percent found/findable \\
+\hline
+Main-belt objects       & 172,539   &  182,285     & 94.7\%  \\
+Near-earth objects      & 276       &  504         & 54.8\%        \\
+Comets                  & 1,374     &  1,534       & 89.6\%      \\
+Trojans                 & 1,593     &  1,696       & 93.9\%      \\
+Trans-Neptunian objects & 254       &   281        & 90.4\%      \\
+Scattered disk objects  & 44        &    44        & 100\%       \\
+\hline
+\end{tabular}
+}
+
+\caption{In-depth results from our simulated survey of full-density asteroid sources from a subset of the visible sky.}
+\label{bigSimResults}
+\end{figure}
+
+Our simulated survey was run using a single 2.2 GHz Opteron core.
+Results from our simulated survey are presented in figure
+\ref{bigSimResults}.  Our success rate for discovery of findable
+objects was high (just below 95\%) and the number of tracks generated
+was reasonably small, meaning that IOD should not be computationally
+expensive.
+
+We also present the types of objects found by class; though our
+filters were tuned for main-belt objects, we had a high rate of
+success in finding several other types of objects.  Near-earth objects
+were underrepresented due to their high velocities; see
+\ref{neosTrailing} for future plans to address this.
+
+
 
 \subsection{Scaling On Solar System Model Density}
 
@@ -571,8 +644,8 @@ To test the scaling of the system as density increases, generated
 objects observed in the original catalog and removed a portion of
 their detections, then ran DayMOPS on the resulting catalog.  We found
 that our software continued to find true tracks for virtually all
-findable objects regardless of density, though the linking runtime
-increases significantly as density increased. See figure
+findable objects regardless of density, though the linking runtimes
+increased significantly as density increased. See figure
 \ref{ssmDensity} for results.
 
 
@@ -614,6 +687,7 @@ increases significantly as density increased. See figure
 \includegraphics[scale=.4]{illustrations/density_v_runtime.png}
 }
 
+
 \caption{ Results from running DayMOPS linking methods on reduced-density source catalogs. }
 
 \label{ssmDensity}
@@ -641,10 +715,11 @@ phenomena and image processing artifacts.  In order to estimate the
 tolerance of DayMOPS linking methods to these sources, we carried out
 a series of simulates surveys which included varying numbers of
 randomly-distributed ``noise'' sources throughout each simulated
-image.  The a 50\%-density SSM was reduced to reduce the runtime for
-the experiment.  Again, the ability of the software to find nearly all
-the expected objects was not impeded by noise, but the runtime of linking
-was increased.  See figure \ref{noiseDensity} for results.
+image.  The 50\%-density SSM catalog from the prior experiment was
+reduced to reduce the runtime for the experiment.  The addition of
+noise had little impact on the ability of the software to find nearly
+all the expected objects, but did result in increased runtime for the
+linking phase.  See figure \ref{noiseDensity} for results.
 
 
 

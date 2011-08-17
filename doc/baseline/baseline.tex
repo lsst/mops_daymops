@@ -2,7 +2,7 @@
 \usepackage{url}
 \usepackage{natbib}
 \usepackage{graphicx}
-%\usepackage{subfig}
+\usepackage{subfig}
 %\usepackage{fixltx2e}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -59,9 +59,8 @@ system.
  
 
 \begin{figure}[!ht]
-\begin{center}
+\centering
   \includegraphics[width=13cm]{illustrations/mopsWithinLsst.png}
-\end{center}
 \caption{ Data flow from the camera through DayMOPS to the Science
   Users and Alert Generation.  DayMOPS will build and maintain the
   Moving Objects table, NightMOPS will use the Moving Objects table to
@@ -489,40 +488,62 @@ because our software looks for objects moving or accelerating
 \textit{below} a set threshold, objects moving and accelerating more
 slowly than main-belters were also found.
 
+\subsubsection{Choosing the Linking Time-Window}
+
+As expected in production, we attempted to generate tracklets between
+any pair of images separated by more than 14.4 minutes and less than
+90 minutes.  However, to speed up the track generation phase, we
+attempted to link tracklets if they were separated by $\leq$ 15 days;
+in production, it is expected that this number will be 30.  These
+numbers should be consistently true across all experiments presented
+here.
+
+
 \subsubsection{Choosing Velocity and Acceleration Limits}
 
 \begin{figure}[ht!]
-  \begin{centering}
+  \centering
   \includegraphics[width=13cm]{illustrations/mopsplots/findtracklets_vel1.png}
-  \end{centering}
   \label{velSurvey}
-  \caption{A cumulative histogram of solar solar system object sky-plane velocities, organized by classification.  Note that only the near-earth objects have higher velocities than main-belt asteroids.}
+  \caption{A cumulative histogram of solar solar system object
+    sky-plane velocities, organized by classification.  Note that only
+    the near-earth objects have higher velocities than main-belt
+    asteroids.  Note that the y-axis values begin at .8, not at zero.}
 \end{figure}
 
 \begin{figure}[ht!]
-  \begin{centering}
+  \centering
   \includegraphics[width=13cm]{illustrations/mopsplots/hist_accRA_sky2.png}
-  \end{centering}
   \label{raAccSurvey}
-  \caption{A histogram of sky-plane accelerations of solar system objects in the RA axis; objects are grouped by classification.}
+  \caption{A histogram of sky-plane accelerations of solar system
+    objects in the RA axis; objects are grouped by classification.}
 \end{figure}
 
 \begin{figure}[ht!]
-  \begin{centering}
+  \centering
   \includegraphics[width=13cm]{illustrations/mopsplots/hist_accDec2.png}
-  \end{centering}
   \label{decAccSurvey}
-  \caption{A histogram of sky-plane accelerations of solar system objects in the declination axis, objects are grouped by classification.}
+  \caption{A histogram of sky-plane accelerations of solar system
+    objects in the declination axis, objects are grouped by
+    classification.}
 \end{figure}
 
 In order to determine reasonable limits on velocity and acceleration
 of main-belters as well as other objects, a survey of the solar system
-model \citep{Grav2011} was conducted, see figures \ref{velSurvey}, \ref{raAccSurvey}, \ref{decAccSurvey}.  We
-chose a maximum velocity limit of .75 deg/day and an acceleration
-limit of .02 deg/day$^2$ as a result of this survey.
+model \citep{Grav2011} was conducted, see figures \ref{velSurvey},
+\ref{raAccSurvey}, \ref{decAccSurvey}.  
 
-\subsubsection{About the Data}
+We found that a velocity limit of .5 deg/day and an acceleration limit
+.02 deg/day$^2$ would be generally sufficient.  By examining the
+detections on an object-per-object basis, we calculated that among the
+186,344 objects seen with proper cadence for IOD, 186,209 of these
+(more than 99.9\%) should generate useful tracks given these limits.
 
+%% see mops64: /mnt/raid/jmyers/variousDensities/fullDensity/maxV.5_15days/trueTracks/*.log
+
+
+\subsubsection{About the Simulated Source Catalog}
+\label{sourceCatalog}
 The simulated survey was conducted using the output of a simulated
 survey using the LSST Operations Simulator.  A set of fields was
 chosen along the ecliptic: all fields with centers along $(-8, 8)$ in
@@ -545,35 +566,128 @@ present results on main-belt survey - found, \% true, measured or expected IOD t
 
 \subsection{Scaling On Solar System Model Density}
 
-present results on main-belt survey with scalind density
+To test the scaling of the system as density increases, generated
+``reduced-density'' catalogs.  We randomly chose a subset of the
+objects observed in the original catalog and removed a portion of
+their detections, then ran DayMOPS on the resulting catalog.  We found
+that our software continued to find true tracks for virtually all
+findable objects regardless of density, though the linking runtime
+increases significantly as density increased. See figure
+\ref{ssmDensity} for results.
 
-\begin{tabular}{|c|r|r|r|r|r|}
+
+\begin{figure}
+\centering
+\subfloat{
+\footnotesize
+\begin{tabular}{|c|r|r|r|r|r|r|}
   \hline 
-  SSM Density & \#Tracklets & \#Tracks & Linking Runtime & Track \% True  \\
+  SSM Density & \#DiaSources & \#Tracklets & \#Tracks & Linking Runtime (sec) & Track \% True & Found/Findable   \\
   \hline
-  .1         &   211,635    & 122,160   & 0:11:09            & 75.97\%   \\
-  .025       &   649,907    & 401,895   & 1:01:04            & 57.94\%   \\
-  .05        & 1,618,205    & 1,116,346 & 04:48:24           & 40.70\%   \\
-  .75        & 2,897,291    & 2,085,296 & 12:47:56           & 32.14\%   \\
-  1.0        & 4,502,224    & 3,318,420 & 27:27:27           & 26.61\%   \\
+  .1        & 827021  &   211,635    & 122,160   & 669.27         & 75.97\%  & 95.31\% \\
+  .025      & 2070722 &   649,907    & 401,895   & 3664.36        & 57.94\%  & 94.71\% \\
+  .05       & 4140278 & 1,618,205    & 1,116,346 & 17304.11       & 40.70\%  & 94.91\% \\
+  .75       & 6197009 & 2,897,291    & 2,085,296 & 46076.54       & 32.14\%  & 94.74\% \\
+  1.0       & 8274898 & 4,502,224    & 3,318,420 & 98847.96       & 26.61\%  & 94.56\% \\
   \hline
 \end{tabular}
+}
+
+
+
+
+
+
+
+\subfloat{
+\includegraphics[scale=.4]{illustrations/density_v_nTracklets.png}
+}
+\subfloat{
+\includegraphics[scale=.4]{illustrations/density_v_nTracks.png}
+}
+
+
+\subfloat{
+\includegraphics[scale=.4]{illustrations/density_v_trackTrue.png}
+}
+\subfloat{
+\includegraphics[scale=.4]{illustrations/density_v_runtime.png}
+}
+
+\caption{ Results from running DayMOPS linking methods on reduced-density source catalogs. }
+
+\label{ssmDensity}
+
+\end{figure}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 \subsection{Scaling On Non-Solar System Detection Density}
 
-present results from the variable noise-per-image sims
+Even after removal of background stars, actual observational data will
+include a variety of non-asteroid sources, including transient
+phenomena and image processing artifacts.  In order to estimate the
+tolerance of DayMOPS linking methods to these sources, we carried out
+a series of simulates surveys which included varying numbers of
+randomly-distributed ``noise'' sources throughout each simulated
+image.  The a 50\%-density SSM was reduced to reduce the runtime for
+the experiment.  Again, the ability of the software to find nearly all
+the expected objects was not impeded by noise, but the runtime of linking
+was increased.  See figure \ref{noiseDensity} for results.
 
-\begin{tabular}{|r|r|r|r|r|r|}
+
+
+
+
+\begin{figure}
+
+\subfloat{
+\footnotesize
+\begin{tabular}{|r|r|r|r|r|r|r|}
   \hline 
-  \% Noise & \#Tracklets & \#Tracks  & Linking Runtime & Track \% True & Found/Findable \\
-  0.0\%    &  1,618,205  & 1,116,346 & 8,413           &  40.70\%      &  94.91\%       \\
-  20.63\%  & 1,947,235   & 1,127,355 & 9,996           & 40.28\%       &  94.90\%       \\
-  56.51\%  & 4,107,233   & 1,202,270 & 19,321          & 50.36\%       &  94.87\%       \\
-  72.21\%  & 8,693,128   & 1,361,796 & 51,008          & 33.14\%       &  94.80\%       \\
-  83.87\%  & 23,989,975  & 1,951,794 & 256,565         & 22.89\%       &  94.62\%       \\
-  \hline
+Noise Points / Image &   \% Noise & \#Tracklets & \#Tracks  & Linking Runtime (sec) & Track \% True & Found/Findable \\
+0      &     0.0\%    &  1,618,205  & 1,116,346 & 8,413           &  40.70\%      &  94.91\%       \\
+500    &     20.63\%  & 1,947,235   & 1,127,355 & 9,996           & 40.28\%       &  94.90\%       \\
+2,500  &     56.51\%  & 4,107,233   & 1,202,270 & 19,321          & 50.36\%       &  94.87\%       \\
+5,000  &     72.21\%  & 8,693,128   & 1,361,796 & 51,008          & 33.14\%       &  94.80\%       \\
+10,000 &     83.87\%  & 23,989,975  & 1,951,794 & 256,565         & 22.89\%       &  94.62\%       \\
+   \hline
 \end{tabular}
+}
+
+\subfloat{
+\includegraphics[scale=.4]{illustrations/noise_v_nTracklets.png}
+}
+\subfloat{
+\includegraphics[scale=.4]{illustrations/noise_v_nTracks.png}
+}
+
+\subfloat{
+\includegraphics[scale=.4]{illustrations/noise_v_trackTrue.png}
+}
+\subfloat{
+\includegraphics[scale=.4]{illustrations/noise_v_runtime.png}
+}
+
+\caption{Results from a simulated survey using a 50\%-density SSM and
+  varying numbers of randomly-distributed ``noise'' (non-asteroid)
+  sources per image.}
+\label{noiseDensity}
+\end{figure}
+
+
+
 
 
 

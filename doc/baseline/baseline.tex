@@ -117,7 +117,7 @@ the detections.  This orbit is further refined, and error bounds are
 established, using differential correction.  Orbit Determination will
 reject many tracks as false, but should successfully find precise
 orbits for virtually all correctly linked tracks.  Several methods for
-performing this task are known, and several have implementations
+performing this task are known, and several have open-source implementations
 available to LSST \citep{Milani04orbitdetermination},
 \citep{Milani2006}, \citep{OpenOrb2009}, \citep{granvik_thesis}.  The
 orbits discovered by Orbit Determination, and the detections present
@@ -385,7 +385,7 @@ Currently, the initial tracking phases of DayMOPS are implemented in
 LSST-compliant C++.  The selection of an appropriate package for
 initial orbit determination, orbital differential correction, and
 ephemeris generation is incomplete but several FORTRAN options are
-available to us, some open-source \citep{Milano2006}
+available to us, some open-source \citep{Milani2006}
 \citep{OpenOrb2009}.  A Python-based implementation of NightMOPS,
 using the LSST Pipeline Framework, is complete but it is currently
 using a closed-source ephemeris generation tool.
@@ -409,7 +409,7 @@ will be calculable given the runtime of the sky-plane tracking
 component, the number of tracks it passes to OD, and the per-track OD
 time of our OD package.  As a result, carefully studying the behavior
 and output of the sky-plane linking should provide a reasonable
-estimate of the resource usage of all of DayMOPS.
+estimate of the resource usage of all of DayMOPS object discovery.
 
 % NightMOPS RESOURCE USAGE?!
 
@@ -547,7 +547,7 @@ detections on an object-per-object basis, we calculated that among the
 
 \subsubsection{About the Simulated Source Catalog}
 \label{sourceCatalog}
-The simulated asteroid catalog was conducted using the cadence of a
+The simulated asteroid catalog was generated using the cadence of a
 simulated survey conducted using the LSST Operations Simulator.  A set
 of fields was chosen along the ecliptic: all fields with centers along
 $(-8, 8)$ in RA and $(-7.4, 8)$ in declination were considered.  This

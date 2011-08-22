@@ -25,9 +25,9 @@
 
 \begin{document}
 
-\title{Moving Object Pipeline}
+\title{Moving Object Pipeline System Design}
 
-\author{}
+\author{Jonathan Myers, Lynne Jones, Tim Axelrod}
 
 \begin{abstract}
 
@@ -720,7 +720,7 @@ Even after removal of background stars, actual observational data will
 include a variety of non-asteroid sources, including transient
 phenomena and image processing artifacts.  In order to estimate the
 tolerance of DayMOPS linking methods to these sources, we carried out
-a series of simulates surveys which included varying numbers of
+a series of simulated surveys which included varying numbers of
 randomly-distributed ``noise'' sources throughout each simulated
 image.  To reduce the runtime of the experiment, the asteroid
 detection catalog was taken from the 50\%-density SSM catalog from the
@@ -802,16 +802,17 @@ LSST-appropriate style, further research and development are needed.
 
 
 
-\subsection{Long-Term Management}
+\subsection{Long Duration Survey Performance}
 
-Current simulations cover fairly short time periods, putting high
-focus on the problems of initial object discovery.  In the course of
+Current simulations cover fairly short time periods, and therefore
+emphasize the problem of initial object discovery.  In the course of
 the full survey, we expect that many detected sources will be
 attributed to already-discovered objects.  Because initial object
 discovery phases are relatively expensive and ephemeris calculation is
 relatively fast, we expect that the resource usage of the system will
 decline over time, as more objects are discovered and the size of
-input catalogs is reduced.
+input catalogs is reduced.  This expectation needs to be verified and
+quantified.
 
 Attribution, precovery and Moving Object management and refinement of the
 Moving Object table are not yet implemented in LSST-compliant software.
@@ -836,15 +837,15 @@ limit of our tracklet generation, the potential for mislinkage
 increases significantly, leading to higher numbers of tracklets and
 increased costs.  
 
-Fortunately, we expect that fast-moving NEOs will generate visible
-trails in our images.  By requiring all tracklets to show trails
-consistent with their apparent sky-plane velocity, we expect that it
-will be possible to filter most false tracklet linkages, thus
-rendering the problem of NEO searching manageable.
+Fortunately, fast-moving NEOs will generate visible trails in our
+images.  By requiring all tracklets to show trails consistent with
+their apparent sky-plane velocity, we expect that it will be possible
+to filter most false tracklet linkages, thus rendering the problem of
+NEO searching manageable.
 
 The ability to filter on trailing is dependent almost entirely on our
 ability to correctly identify trails in images.  Currently, the
-ability of image processing to detect trails is not established.  To
+ability of image processing to detect trails is not well quantified.  To
 remedy this, we will need to generate simulated images which include
 asteroid trails and send them to image processing; further refinement
 of image processing algorithms may be neccesary.

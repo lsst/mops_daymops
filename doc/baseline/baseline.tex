@@ -505,35 +505,48 @@ here.
 \label{velAccLimits}
 \begin{figure}[ht!]
   \centering
-  \includegraphics[width=13cm]{illustrations/mopsplots/findtracklets_vel1.png}
+  \includegraphics[width=13cm]{illustrations/mopsplots/aug2011/n_velocity.png}
   \caption{A cumulative histogram of solar solar system object
     sky-plane velocities, organized by classification.  Note that only
     the near-earth objects have higher velocities than main-belt
-    asteroids.  Note that the y-axis values begin at .8, not at zero.}
+    asteroids.}
   \label{velSurvey}
 \end{figure}
 
 \begin{figure}[ht!]
   \centering
-  \includegraphics[width=13cm]{illustrations/mopsplots/hist_accRA_sky2.png}
-  \caption{A histogram of sky-plane accelerations of solar system
-    objects in the RA axis; objects are grouped by classification.}
-  \label{raAccSurvey}
+  \subfloat[Apparent Accelerations in Right Ascension over 15 Days]{
+    \includegraphics[width=8cm]{illustrations/mopsplots/aug2011/n_accel_ra_15.png}
+    }
+  \subfloat[Apparent Accelerations in Right Ascension over 30 Days]{
+    \includegraphics[width=8cm]{illustrations/mopsplots/aug2011/n_accel_ra_30.png}
+    }
+
+  \subfloat[Declination Apparent Accelerations in Declination over 15 Days]{
+    \includegraphics[width=8cm]{illustrations/mopsplots/aug2011/n_accel_dec_15.png}
+    }
+  \subfloat[Declination Apparent Accelerations in Declination over 30 Days]{
+    \includegraphics[width=8cm]{illustrations/mopsplots/aug2011/n_accel_dec_30.png}
+    }
+  \caption{Normalized histograms of sky-plane accelerations of several
+    classes solar system objects in the RA and declination, with
+    objects grouped by classification.  Histograms are presented for
+    changes over 15 days and 30 days. The best-fit accelerations vary
+    slightly given the size of the window; this is due to
+    non-quadratic factors not included in the simple quadratic model.
+    15 day tracking windows are used in the experiments presented in
+    this document, but we expect to move to 30 day windows in the
+    future.  In both cases, virtually all MBAs, and all other objects
+    except NEOs, should have accelerations between -.02 and .02
+    deg/day$^2$ in both axes.}
+  \label{accSurvey}
 \end{figure}
 
-\begin{figure}[ht!]
-  \centering
-  \includegraphics[width=13cm]{illustrations/mopsplots/hist_accDec2.png}
-  \caption{A histogram of sky-plane accelerations of solar system
-    objects in the declination axis, objects are grouped by
-    classification.}
-  \label{decAccSurvey}
-\end{figure}
 
 In order to determine reasonable limits on velocity and acceleration
 of various classes of solar system objects, a survey of the solar
 system model \citep{Grav2011} was conducted, see figures
-\ref{velSurvey}, \ref{raAccSurvey}, \ref{decAccSurvey} for histograms
+\ref{velSurvey}, \ref{accSurvey} for histograms
 presenting the results of these surveys.
 
 We found that a velocity limit of .5 deg/day and an acceleration limit
@@ -650,8 +663,8 @@ To test the scaling of the system as density increases, we generated
 ``reduced-density'' catalogs.  We randomly chose a subset of the
 objects observed in the original catalog and removed all detections of
 those objects, then ran DayMOPS on the resulting catalog.  We found
-that our software continued to find nearly all the remaining findable objects
-regardless of density, though the linking runtimes increased
+that our software continued to find nearly all the remaining findable
+objects regardless of density, though the linking runtimes increased
 significantly as density increased. See figure \ref{ssmDensity} for
 results.
 

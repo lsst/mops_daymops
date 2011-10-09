@@ -91,23 +91,25 @@ int Track::getObjectId(std::vector<MopsDetection> allDets)
 
 
 void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets, 
-	       const bool useFullRaFit)
+				      const bool useFullRaFit, std::ostream *outFile)
 {
     int trackLen = componentDetectionIndices.size();
 
 // A is a matrix with one row per MopsDetection, with the values of the fitting
 // functions at the time of that detection.
 
-    int raFuncLen;
-    if (useFullRaFit && trackLen >= 7) {
+    int raFuncLen, decFuncLen;
+    if (useFullRaFit && trackLen >= 6) {
 	 raFuncLen = 5;
+	 decFuncLen = 4;
     } else {
 	 raFuncLen = 3;
+	 decFuncLen = 3;
     }
 
     Eigen::MatrixXd raA(trackLen, raFuncLen);
     Eigen::VectorXd raCorr(trackLen);
-    Eigen::MatrixXd decA(trackLen, 3);
+    Eigen::MatrixXd decA(trackLen, decFuncLen);
 
 // b is a vector with the measured values, either ra or dec, for each MopsDetection
 
@@ -162,6 +164,7 @@ void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets,
     if (raFuncLen==5) {
 	raA.col(3).array() = raA.col(2).array() * raA.col(1).array(); 
 	raA.col(4).array() = raCorr.array() - raCorr.array().mean();
+	decA.col(3) = raA.col(3);
     }
 
 // Solve in a least squares sense, raA * raFunc = raB, and similarly for dec
@@ -187,20 +190,30 @@ void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets,
     probChisqDec = gsl_cdf_chisq_Q(chisqDec, trackLen);
 
 #ifdef DEBUG
-	      std::cout << "raB: \n" << raB << '\n';
-	      std::cout << "raE: \n" << raE << '\n';
-	      std::cout << "raA: \n" << raA << '\n';
-	      std::cout << "raSVD: \n" << raA.jacobiSvd().singularValues() << '\n';
-	      std::cout << "raFunc: \n" << raFunc << '\n';
-	      std::cout << "raResid: \n" << raResid << '\n';
-	      std::cout << "ra: chisq prob dof " << chisqRa << " " << probChisqRa << " " << trackLen << '\n';
-	      std::cout << "decB: \n" << decB << '\n';
-	      std::cout << "decE: \n" << decE << '\n';
-	      std::cout << "decA: \n" << decA << '\n';
-	      std::cout << "decSVD: \n" << decA.jacobiSvd().singularValues() << '\n';
-	      std::cout << "decFunc: \n" << decFunc << '\n';
-	      std::cout << "decResid: \n" << decResid << '\n';
-	      std::cout << "dec: chisq prob dof " << chisqDec << " " << probChisqDec << " " << trackLen << '\n';
+
+    if (outFile) {
+	 Eigen::VectorXd raSingularValues = raA.jacobiSvd().singularValues();
+	 double raCondNumber = raSingularValues(0)/raSingularValues(raSingularValues.rows()-1);
+	 Eigen::VectorXd decSingularValues = decA.jacobiSvd().singularValues();
+	 double decCondNumber = decSingularValues(0)/decSingularValues(decSingularValues.rows()-1);
+
+	      *outFile << "raB: \n" << raB << '\n';
+	      *outFile << "raE: \n" << raE << '\n';
+	      *outFile << "raA: \n" << raA << '\n';
+	      *outFile << "raSVD: \n" << raA.jacobiSvd().singularValues() << '\n';
+	      *outFile << "raFunc: \n" << raFunc << '\n';
+	      *outFile << "raResid: \n" << raResid << '\n';
+	      *outFile << "ra: chisq prob dof " << chisqRa << " " << probChisqRa << " " << trackLen << '\n';
+	      *outFile << "ra npts, probChisq, condNum, : " << raB.rows() << " " << probChisqRa << " " << raCondNumber << '\n';
+	      *outFile << "decB: \n" << decB << '\n';
+	      *outFile << "decE: \n" << decE << '\n';
+	      *outFile << "decA: \n" << decA << '\n';
+	      *outFile << "decSVD: \n" << decA.jacobiSvd().singularValues() << '\n';
+	      *outFile << "decFunc: \n" << decFunc << '\n';
+	      *outFile << "decResid: \n" << decResid << '\n';
+	      *outFile << "dec: chisq prob dof " << chisqDec << " " << probChisqDec << " " << trackLen << '\n';
+	      *outFile << "dec npts, probChisq, condNum, : " << decB.rows() << " " << probChisqDec << " " << decCondNumber << '\n';
+    }
 #endif
 }
 
@@ -215,20 +228,25 @@ void Track::predictLocationAtTime(const double mjd, double &ra, double &dec) con
 
     double t = mjd - epoch;
 
-    Eigen::Vector3d tPowers(1.0, t, t*t);
-    ra = raFunc.head(3).dot(tPowers);
-    dec = decFunc.dot(tPowers);
+    Eigen::Vector4d tPowersCubic(1.0, t, t*t, t*t*t);
 
     if (raFunc.size() == 5) {
 	 MopsDetection tmpDet(0, mjd, ra, dec);
 	 tmpDet.calculateTopoCorr();  
 	 double raTopoCorr = tmpDet.getRaTopoCorr();
-	 Eigen::Vector4d tPowersCubic(1.0, t, t*t, t*t*t);
 	 ra = raFunc.head(4).dot(tPowersCubic) + raFunc(4)*raTopoCorr;
+    } else {
+	 ra = raFunc.head(3).dot(tPowersCubic.head(3));
+    }
+
+    if (decFunc.size() == 4) {
+	 dec = decFunc.head(4).dot(tPowersCubic);
+    } else {
+	 dec = decFunc.head(3).dot(tPowersCubic.head(3));
     }
 
 #ifdef DEBUG
-    std::cout << "tPowers: \n" << tPowers << '\n';
+    std::cout << "tPowers: \n" << tPowersCubic << '\n';
     std::cout << "raFunc: \n" << raFunc << '\n';
     std::cout << "ra: " << ra << '\n';
     std::cout << "decFunc: \n" << decFunc << '\n';

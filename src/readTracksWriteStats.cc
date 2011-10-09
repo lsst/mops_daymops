@@ -40,6 +40,9 @@ int doIt(int argc, char** argv) {
      std::cout << "Reading input tracks (as indices)...\n";
      myTv.populateFromFile(inFile, allDets);
      std::cout << "Writing output tracks (as Dias) and stats...\n";
+
+     myTv.writeTracksToFile(outFile);
+
      myTv.writeTracksAndStatsToFile(outFile, allDets);
      std::cout << "Done.\n";
 

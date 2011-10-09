@@ -75,7 +75,7 @@ public:
        calling before using predictLocationAtTime() or getBestFitQuadratic().
      */
     void calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets,
-        const bool useFullRaFit=false);
+                                   const bool useFullRaFit=false, std::ostream *outFile = NULL);
     
     /* use best-fit quadratic to predict location at time mjd. will return WRONG VALUES
      if calculateBestFitQuadratic has not been called.*/

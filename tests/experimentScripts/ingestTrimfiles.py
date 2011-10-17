@@ -2,6 +2,7 @@
 
 import MySQLdb as db
 import sys
+import numpy
 from glob import glob
 
 
@@ -17,10 +18,11 @@ def expMjdForFile(lines):
 
 
 
-def addToDb(cursor, diaId, opsimId, ssmId, ra, decl, expMjd, mag):
-    sql = """ INSERT INTO fullSkyOneMonth.mopsDetections VALUES
-(%d, %d, %d, %f, %f, %f, %f, NULL); """ % \
-        (diaId, opsimId, ssmId, ra, decl, expMjd, mag)
+def addToDb(cursor, dest, diaId, opsimId, ssmId, ra, decl, expMjd, mag, snr):
+    sql = """ INSERT INTO %s 
+(diaSourceId, opSimId, ssmid, ra, decl, taiMidPoint, mag, snr) VALUES
+(%d, %d, %d, %f, %f, %f, %f, %f); """ % \
+        (dest, diaId, opsimId, ssmId, ra, decl, expMjd, mag, snr)
     cursor.execute(sql)
     
 
@@ -33,7 +35,18 @@ SELECT 5sigma_modified FROM opsim_3_61.output_opsim3_61
     return res
 
 
+def calcSNR_mag(mag, m5):
+    """Calculate the signal to noise of an object, given only the 5-sigma limiting mag"""
+    flux_ratio = numpy.power(10, 0.4*(m5-mag))
+    snr_obj = 5 * (flux_ratio)
+    return snr_obj
+
+
 if __name__=="__main__":
+    dbName = sys.argv[1]
+    dbTable = sys.argv[2]
+    dest = dbName + "." + dbTable
+
     conn = db.connect(user="jmyers", passwd="jmyers", host="localhost")
     cursor = conn.cursor()
     
@@ -60,12 +73,13 @@ if __name__=="__main__":
                 ssmId = int(items[0])
                 ra,dec  = map(float, items[1:3])
                 mag = float(items[5])
-                 
+                # image limiting mag is m5 mag
+                snr = calcSNR_mag(mag, imageLimit)
                 
                 if mag <= imageLimit:
-                    addToDb(cursor, 
+                    addToDb(cursor, dest, 
                             curDiaId, opsimId, ssmId, 
-                            ra, dec, expMjd, mag)
+                            ra, dec, expMjd, mag, snr)
                     
                     curDiaId += 1
                 else:

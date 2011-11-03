@@ -51,7 +51,7 @@ MJD_TO_NIGHT_NUM=lambda mjd: int(mjd)
 # of execution and this will allow for MUCH faster lookups later.
 # set to False if debugging to avoid a big wait at startup.
 PRELOAD_DIAS=True
-
+PRELOAD_DIAS_FROM_FILE=True
 
 
 
@@ -78,6 +78,40 @@ class Detection(object):
 def obsHistToTrackletsFile(obsHist, obsHistDir):
     return os.path.join(obsHistDir) + str(obsHist) + TRACKLETS_BY_OBSHIST_SUFFIX
 
+
+def fetchAllDiasFromFile(diasTableOrFile):
+    """ return a LIST mapping diaId to diaSource, for all Dias in the
+    given file. This fails if DiaIds do not ascend contiguously from 0
+    or 1 to their max value"""
+    toRet = [0]
+    print "Reading DiaSources from file..."
+    f = file(diasTableOrFile,'r')
+    nLines = 0
+    line = f.readline()
+    #fill the list with nLines elements
+    while line != "":
+        nLines += 1
+        toRet.append(0)
+        line = f.readline()
+    f.close()
+    print "File contains ", nLines, " elements. Created an ", len(toRet), " list to hold them."
+    #now populate the list
+    f = file(diasTableOrFile,'r')
+    line = f.readline()
+    count = 0;
+    while line != "":
+        diaId, obshistId, ssmId, ra, decl, MJD, mag, snr = line.split()
+        diaId, obshistId, ssmId = map(int, [diaId,obshistId, ssmId])
+        ra, decl, MJD, mag, snr = map(float, [ra, decl, MJD, mag, snr])
+        #d = Detection(diaId=diaId, ra=ra, dec=decl, mjd=MJD, mag=mag, objId=ssmId)
+        toRet[diaId] = [diaId, ra, decl, MJD, mag, ssmId]
+        line = f.readline()
+        count += 1
+        if count % 100000 == 0:
+            print "Read ", count, " dias so far..."
+    print "Done reading diaSources."
+    f.close()
+    return toRet
 
 
 def fetchAllDiasFromDb(cursor, diasDb, diasTable):
@@ -107,7 +141,12 @@ def fetchAllDiasFromDb(cursor, diasDb, diasTable):
 
 def lookUpDia(allDias, diaId, cursor=None, diasDb=None, diasTable=None):
     if PRELOAD_DIAS:
-        return allDias[diaId]
+        if PRELOAD_DIAS_FROM_FILE:
+            [diaId, ra, dec, mjd, mag, objId] = allDias[diaId]
+            d = Detection(diaId=diaId, ra=ra, dec=dec, mjd=mjd, mag=mag, objId=objId)
+            return d
+        else:
+            return allDias[diaId]
     else:
         if None in [cursor, diasDb, diasTable]:
             raise Exception("lookUpDia: If dias are not preloaded, you must specify a cursor, dias table and dias DB name")
@@ -160,14 +199,17 @@ def getRemainingObsHistsForNight(nightNumToObsHists, assignedObsHists, nightNum)
 
 
 def makeLinkTrackletsInfiles(dbcurs, trackletsByObsHistDir, 
-                             outputLinkTrackletsInfilesDir, diasDb, diasTable, 
+                             outputLinkTrackletsInfilesDir, diasDb, diasTableOrFile, 
                              trackingWindowDays):
 
     # fetch all dias into memory (just use DB). This will be fasted in
     # the long run than doing lots of cross-language/client-server
     # calls to the DB when we need them.
     if PRELOAD_DIAS:
-        allDias = fetchAllDiasFromDb(dbcurs, diasDb, diasTable)
+        if PRELOAD_DIAS_FROM_FILE:
+            allDias = fetchAllDiasFromFile(diasTableOrFile)
+        else:
+            allDias = fetchAllDiasFromDb(dbcurs, diasDb, diasTableOrFile)
     else:
         allDias = None
 
@@ -225,7 +267,7 @@ def makeLinkTrackletsInfiles(dbcurs, trackletsByObsHistDir,
         if len(supportObsHists) > 0:
             writeOutputFiles(allDias, dbcurs, obsHistsThisDataSet, supportObsHists, obsHistToExpMjd, 
                              obsHistToFieldId, outputLinkTrackletsInfilesDir, trackletsByObsHistDir, 
-                             diasDb, diasTable)
+                             diasDb, diasTableOrFile)
 
 
 
@@ -428,12 +470,15 @@ if __name__=="__main__":
     # place to put .miti files for input to c linkTracklets
     outputLinkTrackletsInfilesDir=appendSlashIfNeeded(sys.argv[2])
     diasDb = sys.argv[3]
-    diasTable = sys.argv[4]
+    diasTableOrDiasFile = sys.argv[4]
     trackingWindowDays = int(sys.argv[5])
 
     print "Reading tracklets from ", trackletsByObsHistDir
     print "Writing linkTracklets infiles to ", outputLinkTrackletsInfilesDir
-    print "Reading diaSources from: ", diasDb , ".", diasTable
+    if PRELOAD_DIAS_FROM_FILE:
+        print "Reading diaSources from: ", diasTableOrDiasFile
+    else:
+        print "Reading diaSources from: ", diasDb , ".", diasTable
     print "Reading image info from: ", mopsDatabases.OPSIM_DB , ".", mopsDatabases.OPSIM_TABLE
     print "Writing C-style MITI files: ", WRITE_C_INFILES
     print "Writing C++ style dets/ids files: ", WRITE_CPP_INFILES
@@ -447,5 +492,5 @@ if __name__=="__main__":
     else:
         dbcurs = mopsDatabases.getCursor(useSSCursor=False)        
     makeLinkTrackletsInfiles(dbcurs, trackletsByObsHistDir, outputLinkTrackletsInfilesDir, 
-                             diasDb, diasTable, trackingWindowDays)
+                             diasDb, diasTableOrDiasFile, trackingWindowDays)
     print "DONE."

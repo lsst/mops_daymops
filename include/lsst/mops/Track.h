@@ -81,6 +81,10 @@ public:
      if calculateBestFitQuadratic has not been called.*/
     void predictLocationAtTime(const double mjd, double &ra, double &dec) const;
     
+    /* use best-fit quadratic to predict location uncertainty at time mjd. will return WRONG VALUES
+     if calculateBestFitQuadratic has not been called.*/
+    void predictLocationUncertaintyAtTime(const double mjd, double &raUnc, double &decUnc) const;
+    
     /* you MUST call calculateBestFitQuadratic before calling this. */
     void getBestFitQuadratic(double &epoch,
                              double &ra0, double &raV, double &raAcc,
@@ -121,6 +125,8 @@ private:
     std::set<unsigned int> componentDetectionDiaIds;
     Eigen::VectorXd raFunc;
     Eigen::VectorXd decFunc;
+    Eigen::MatrixXd raCov;
+    Eigen::MatrixXd decCov;
     double chisqRa;
     double chisqDec;
     double probChisqRa;

@@ -143,8 +143,8 @@ void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets,
 	decA(i, 0) = 1.0;
 	decB(i) = dec;
 
-	raE(i) = raErr;
-	decE(i) = decErr;
+	raE(i) = 1.0/raErr; // these should be per-measurement values instead of global
+	decE(i) = 1.0/decErr;
 
     }
 
@@ -163,17 +163,23 @@ void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets,
 
     if (raFuncLen==5) {
 	raA.col(3).array() = raA.col(2).array() * raA.col(1).array(); 
-	raA.col(4).array() = raCorr.array() - raCorr.array().mean();
 	decA.col(3) = raA.col(3);
+	meanTopoCorr = raCorr.array().mean();
+	raA.col(4).array() = raCorr.array() - meanTopoCorr;
     }
 
 // Solve in a least squares sense, raA * raFunc = raB, and similarly for dec
 // raX and decX should be members of Track
-// NOTE:  need to make this be weighted lsq - leave for the moment
+
+    raA = (raE.asDiagonal()) * raA;
+    raB = raB.array() * raE.array();
 
     Eigen::JacobiSVD<Eigen::MatrixXd> raSvd = raA.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV);
     Eigen::VectorXd raSingularValues = raSvd.singularValues();
     raFunc = raSvd.solve(raB);
+
+    decA = (decE.asDiagonal()) * decA;
+    decB = decB.array() * decE.array();
 
     Eigen::JacobiSVD<Eigen::MatrixXd> decSvd = decA.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV);
     Eigen::VectorXd decSingularValues = decSvd.singularValues();
@@ -182,12 +188,10 @@ void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets,
 // Calculate the residuals
 
     Eigen::VectorXd raResid = raB - raA * raFunc;
-    Eigen::VectorXd raWtResid = raResid.array() / raE.array();
-    chisqRa = raWtResid.dot(raWtResid);
+    chisqRa = raResid.dot(raResid);
 
     Eigen::VectorXd decResid = decB - decA * decFunc;
-    Eigen::VectorXd decWtResid = decResid.array() / decE.array();
-    chisqDec = decWtResid.dot(decWtResid);
+    chisqDec = decResid.dot(decResid);
 
 // Calculate the prob(chisq), which will be the quality measure of the fit
 
@@ -271,7 +275,7 @@ void Track::predictLocationAtTime(const double mjd, double &ra, double &dec) con
 	 MopsDetection tmpDet(0, mjd, ra, dec);
 	 tmpDet.calculateTopoCorr();  
 	 double raTopoCorr = tmpDet.getRaTopoCorr();
-	 ra = raFunc.head(4).dot(tPowersCubic) + raFunc(4)*raTopoCorr;
+	 ra = raFunc.head(4).dot(tPowersCubic) + raFunc(4)*(raTopoCorr-meanTopoCorr);
     } else {
 	 ra = raFunc.head(3).dot(tPowersCubic.head(3));
     }
@@ -291,7 +295,7 @@ void Track::predictLocationAtTime(const double mjd, double &ra, double &dec) con
 #endif
 }
 
-void Track::predictLocationUncertaintyAtTime(const double mjd, double &raUnc, double &decUnc) const
+    void Track::predictLocationUncertaintyAtTime(const double mjd, double &raUnc, double &decUnc) const
 {
 
     double t = mjd - epoch;
@@ -310,8 +314,7 @@ void Track::predictLocationUncertaintyAtTime(const double mjd, double &raUnc, do
 	 gVecRa(1)=t;
 	 gVecRa(2)=t*t;
 	 gVecRa(3)=t*t*t;
-	 gVecRa(4)=raTopoCorr;
-
+	 gVecRa(4)=raTopoCorr - meanTopoCorr;
     } else {
 	 gVecRa.resize(3);
 	 gVecRa(0)=1.0;
@@ -319,8 +322,8 @@ void Track::predictLocationUncertaintyAtTime(const double mjd, double &raUnc, do
 	 gVecRa(2)=t*t;
     }
     
-    tmp = gVecRa * raCov * gVecRa.transpose();
-    raUnc = tmp(0,0);
+    tmp = gVecRa.transpose() * raCov * gVecRa;
+    raUnc = sqrt(tmp(0,0));
 
     
     if (decFunc.size() == 4) {
@@ -336,8 +339,8 @@ void Track::predictLocationUncertaintyAtTime(const double mjd, double &raUnc, do
 	 gVecDec(1)=t;
 	 gVecDec(2)=t*t;
     }
-    tmp = gVecRa * raCov * gVecRa.transpose();
-    decUnc = tmp(0,0);
+    tmp = gVecDec.transpose() * decCov * gVecDec;
+    decUnc = sqrt(tmp(0,0));
 }
 
 void Track::getBestFitQuadratic(double &epoch, double &ra0, double &raV, double &raAcc,

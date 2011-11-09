@@ -132,6 +132,7 @@ private:
     double probChisqRa;
     double probChisqDec;
     double epoch;
+    double meanTopoCorr;
 };
 
 }} // close lsst::mops namespace

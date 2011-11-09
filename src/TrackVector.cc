@@ -97,12 +97,13 @@ void TrackVector::writeTracksAndStatsToFile(std::string outFileName,
      for (unsigned int i = 0; i < contents.size(); i++) {
          Track curTrack = this->at(i);
          writeSet(&outFile, curTrack.getComponentDetectionDiaIds());
-         curTrack.calculateBestFitQuadratic(allDets, true);
+         curTrack.calculateBestFitQuadratic(allDets, true, &outFile);
          double epoch, ra0, raV, raAcc, dec0, decV, decAcc;
          curTrack.getBestFitQuadratic(epoch, ra0, raV, raAcc, 
                                       dec0, decV, decAcc);
          double chisqR = curTrack.getProbChisqRa();
          double chisqD = curTrack.getProbChisqDec();
+
          outFile << " epoch:" << std::scientific << epoch
                  << " Best-fit RA p0, v, acc: " 
                  << ra0 << " " 
@@ -119,6 +120,17 @@ void TrackVector::writeTracksAndStatsToFile(std::string outFileName,
                  << chisqD << " "
                  << chisqR*chisqD 
                  << "\n";
+
+         double raUnc, decUnc;
+         curTrack.predictLocationUncertaintyAtTime(epoch, raUnc, decUnc);
+         outFile << "Prediction uncertainty, mid track (as): " << raUnc*3600.0 << " " << decUnc*3600.0 << "\n";
+         curTrack.predictLocationUncertaintyAtTime(epoch+5.0, raUnc, decUnc);
+         outFile << "Prediction uncertainty, mid track +5 (as): " << raUnc*3600.0 << " " << decUnc*3600.0 << "\n";
+         curTrack.predictLocationUncertaintyAtTime(epoch+15.0, raUnc, decUnc);
+         outFile << "Prediction uncertainty, mid track +15 (as): " << raUnc*3600.0 << " " << decUnc*3600.0 << "\n";
+         curTrack.predictLocationUncertaintyAtTime(epoch+30.0, raUnc, decUnc);
+         outFile << "Prediction uncertainty, mid track +30 (as): " << raUnc*3600.0 << " " << decUnc*3600.0 << "\n";
+
      }
 }
 

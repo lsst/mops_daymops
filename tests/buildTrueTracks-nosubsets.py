@@ -332,10 +332,7 @@ def findTracklets(objectDets, velocityLimit, trackletTimeLimit, trackletMinTime)
     for i in range(len(objectDets)):
         isInTrackletAlready.append(False)
     for i in range(len(objectDets)):
-        # simulate "deep stacks" or whatever by clumping together all
-        # detections from the same night into one giant tracklet
-
-        #this isn't quite ideal but it should be good enough, I guess...
+        
         if not isInTrackletAlready[i]:
             if DEBUG:
                 print "Attempting to build a tracklet starting at ", objectDets[i].time, objectDets[i].ra, objectDets[i].dec
@@ -353,8 +350,10 @@ def findTracklets(objectDets, velocityLimit, trackletTimeLimit, trackletMinTime)
                     if trackletVelocity <= velocityLimit:
                         if DEBUG:
                             print "Added it to tracklet."
-                        output.append([i,j])
+                        newTracklet.append(j)
                         isInTrackletAlready[j] = True
+            if len(newTracklet) >= 2:
+                output.append(newTracklet)
     return output
 
 
@@ -435,12 +434,15 @@ if __name__ == "__main__":
             #    print data.objId, data.time, data.ra, data.dec, data.detId
             #sys.exit(1)
             
-
+            #print "Examining object ", curObject
+            #if curObject == 1537: 
+            #    DEBUG=True
             nTracks, trackletStartTimes, curTrackId = writeTracks(curObjectData, velocityLimit, trackletTimeLimit,
                                                                   trackletMinTime,
                                                                   raAccelerationLimit, decAccelerationLimit,
                                                                   linkTrackletsTimeWindow, tracksOutfile, findableOutfile,
                                                                   curTrackId, minObs, minNights)
+            #print "Found ", nTracks, " tracks for object." 
             for trackletStartTime in trackletStartTimes:
                 if imgTimesToTrackCounts.has_key(trackletStartTime):
                     imgTimesToTrackCounts[trackletStartTime] += 1

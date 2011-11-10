@@ -97,7 +97,7 @@ void TrackVector::writeTracksAndStatsToFile(std::string outFileName,
      for (unsigned int i = 0; i < contents.size(); i++) {
          Track curTrack = this->at(i);
          writeSet(&outFile, curTrack.getComponentDetectionDiaIds());
-         curTrack.calculateBestFitQuadratic(allDets, true, &outFile);
+         curTrack.calculateBestFitQuadratic(allDets, true, false, &outFile);
          double epoch, ra0, raV, raAcc, dec0, decV, decAcc;
          curTrack.getBestFitQuadratic(epoch, ra0, raV, raAcc, 
                                       dec0, decV, decAcc);

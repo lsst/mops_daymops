@@ -91,18 +91,26 @@ int Track::getObjectId(std::vector<MopsDetection> allDets)
 
 
 void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets, 
-				      const bool useFullRaFit, std::ostream *outFile)
+				      const bool useFullRaFit, const bool forceQuadratic, std::ostream *outFile)
 {
+    float covRatioMax = 100.0;
+
     int trackLen = componentDetectionIndices.size();
 
 // A is a matrix with one row per MopsDetection, with the values of the fitting
 // functions at the time of that detection.
 
     int raFuncLen, decFuncLen;
-    if (useFullRaFit && trackLen >= 6) {
+
+    if (forceQuadratic) {
+      raFuncLen = 3;
+      decFuncLen = 3;
+    }
+    else if (useFullRaFit && trackLen >= 6) {
 	 raFuncLen = 5;
 	 decFuncLen = 4;
-    } else {
+    } 
+    else {
 	 raFuncLen = 3;
 	 decFuncLen = 3;
     }
@@ -154,7 +162,7 @@ void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets,
     raA.col(1).array() -= epoch;
     decA.col(1) = raA.col(1);
 
-// calculate needed powers of t
+// calculate needed powers of t up through quadratic
 
     raA.col(2).array() = raA.col(1).array() * raA.col(1).array();
     decA.col(2) = raA.col(2);
@@ -163,10 +171,14 @@ void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets,
 
     if (raFuncLen==5) {
 	raA.col(3).array() = raA.col(2).array() * raA.col(1).array(); 
-	decA.col(3) = raA.col(3);
 	meanTopoCorr = raCorr.array().mean();
 	raA.col(4).array() = raCorr.array() - meanTopoCorr;
     }
+
+    if (decFuncLen==4) {
+	decA.col(3).array() = decA.col(2).array() * decA.col(1).array(); 
+    }
+      
 
 // Solve in a least squares sense, raA * raFunc = raB, and similarly for dec
 // raX and decX should be members of Track
@@ -227,6 +239,29 @@ void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets,
       }
     }
 
+// Now compare the location uncertainty from the covariance matrix with the average
+// residual.   If too big, means that the order of fit is unjustified:  back off
+
+    double raUnc, decUnc;
+    predictLocationUncertaintyAtTime(epoch, raUnc, decUnc);
+
+    double ratioRa, ratioDec;
+    ratioRa = raUnc*raE.mean()/sqrt(chisqRa/raB.rows());
+    ratioDec = decUnc*decE.mean()/sqrt(chisqDec/decB.rows());
+    
+    bool badCov = (ratioRa>covRatioMax) || (ratioDec>covRatioMax);
+
+    if (outFile) {
+	*outFile << "\nratioRa: " << ratioRa << " ratioDec: " << ratioDec << '\n';
+    }      
+    if (badCov && (raFuncLen>3 || decFuncLen>3)){
+      if (outFile) {
+	*outFile << "Backing off to quadratic.\n";
+      }
+      calculateBestFitQuadratic(allDets, false, true, outFile);
+      return;
+    }
+
 #ifdef DEBUG
 
     if (outFile) {
@@ -237,6 +272,7 @@ void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets,
 	      *outFile << "raE: \n" << raE << '\n';
 	      *outFile << "raA: \n" << raA << '\n';
 	      *outFile << "raSVD: \n" << raSingularValues << '\n';
+	      *outFile << "raV: \n" << raV << '\n';
 	      *outFile << "raCov: \n" << raCov << '\n';
 	      *outFile << "raFunc: \n" << raFunc << '\n';
 	      *outFile << "raResid: \n" << raResid << '\n';
@@ -246,6 +282,7 @@ void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets,
 	      *outFile << "decE: \n" << decE << '\n';
 	      *outFile << "decA: \n" << decA << '\n';
 	      *outFile << "decSVD: \n" << decSingularValues << '\n';
+	      *outFile << "decV: \n" << decV << '\n';
 	      *outFile << "decCov: \n" << decCov << '\n';
 	      *outFile << "decFunc: \n" << decFunc << '\n';
 	      *outFile << "decResid: \n" << decResid << '\n';

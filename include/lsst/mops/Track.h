@@ -44,6 +44,15 @@
 namespace lsst { namespace mops {
 
 class Track {
+private:
+
+    void calculateBestFitRa(const std::vector<MopsDetection> &allDets,
+                            const int forceOrder = -1,
+                            std::ostream *outFile = NULL);
+    
+    void calculateBestFitDec(const std::vector<MopsDetection> &allDets,
+                            const int forceOrder = -1,
+                                    std::ostream *outFile = NULL);
 public:
 
     Track();
@@ -78,13 +87,6 @@ public:
                                    const int forceOrder = -1,
                                    std::ostream *outFile = NULL);
 
-    void calculateBestFitRa(const std::vector<MopsDetection> &allDets,
-                            const int forceOrder = -1,
-                            std::ostream *outFile = NULL);
-    
-    void calculateBestFitDec(const std::vector<MopsDetection> &allDets,
-                            const int forceOrder = -1,
-                                    std::ostream *outFile = NULL);
     
     /* use best-fit quadratic to predict location at time mjd. will return WRONG VALUES
      if calculateBestFitQuadratic has not been called.*/

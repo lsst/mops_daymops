@@ -123,6 +123,8 @@ void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets,
 
     if (raFuncLen==5) {
       raFuncPolyLen = 4;
+    } else if (raFuncLen==4){
+      raFuncPolyLen = 3;
     } else {
       raFuncPolyLen = raFuncLen;
     }
@@ -149,7 +151,7 @@ void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets,
 	
 	raA(i, 0) = 1.0;
 	raA(i, 1) = t;
-	if (raFuncLen==5) {
+	if (raFuncLen>=4) {
 	     raCorr(i) = curDet->getRaTopoCorr();	
 	}
 	raB(i) = ra;
@@ -172,9 +174,9 @@ void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets,
 
 // demean the raCorr column, if used, to avoid degeneracy with the constant term in the fit
 
-    if (raFuncLen==5) {
+    if (raFuncLen>=4) {
 	meanTopoCorr = raCorr.array().mean();
-	raA.col(4).array() = raCorr.array() - meanTopoCorr;
+	raA.col(raFuncLen-1).array() = raCorr.array() - meanTopoCorr;
     }
 
 // Solve in a least squares sense, raA * raFunc = raB, and similarly for dec
@@ -419,6 +421,13 @@ void Track::predictLocationAtTime(const double mjd, double &ra, double &dec) con
 	 tmpDet.calculateTopoCorr();  
 	 double raTopoCorr = tmpDet.getRaTopoCorr();
 	 ra = raFunc.head(4).dot(tPowersCubic) + raFunc(4)*(raTopoCorr-meanTopoCorr);
+    } else if (raFunc.size() == 4) {
+         ra = raFunc.head(3).dot(tPowersCubic.head(3));
+	 dec = decFunc.head(3).dot(tPowersCubic.head(3));
+	 MopsDetection tmpDet(0, mjd, ra, dec);
+	 tmpDet.calculateTopoCorr();  
+	 double raTopoCorr = tmpDet.getRaTopoCorr();
+	 ra = raFunc.head(3).dot(tPowersCubic.head(3)) + raFunc(3)*(raTopoCorr-meanTopoCorr);
     } else {
 	 ra = raFunc.head(3).dot(tPowersCubic.head(3));
     }
@@ -459,6 +468,17 @@ void Track::predictLocationUncertaintyAtTime(const double mjd, double &raUnc, do
 	      gVecRa(2)=t*t;
 	      gVecRa(3)=t*t*t;
 	      gVecRa(4)=raTopoCorr - meanTopoCorr;
+	 } else if (raFunc.size() == 4) {
+	      double ra, dec;
+	      predictLocationAtTime(mjd, ra, dec);
+	      MopsDetection tmpDet(0, mjd, ra, dec);
+	      tmpDet.calculateTopoCorr();  
+	      double raTopoCorr = tmpDet.getRaTopoCorr();
+	      gVecRa.resize(4);
+	      gVecRa(0)=1.0;
+	      gVecRa(1)=t;
+	      gVecRa(2)=t*t;
+	      gVecRa(3)=raTopoCorr - meanTopoCorr;
 	 } else {
 	      gVecRa.resize(raFunc.size());
 	      gVecRa(0)=1.0;

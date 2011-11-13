@@ -91,8 +91,17 @@ int Track::getObjectId(std::vector<MopsDetection> allDets)
 
 
 void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets, 
-				      const bool useFullRaFit, const bool forceQuadratic, std::ostream *outFile)
+				      const int forceOrder, std::ostream *outFile)
 {
+     // the order here is important!
+
+  calculateBestFitDec(allDets, forceOrder, outFile);
+  calculateBestFitRa(allDets, forceOrder, outFile);
+}
+
+    void Track::calculateBestFitRa(const std::vector<MopsDetection> &allDets, 
+				      const int forceOrder, std::ostream *outFile)
+    {
     float covRatioMax = 100.0;
 
     int trackLen = componentDetectionIndices.size();
@@ -100,35 +109,35 @@ void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets,
 // A is a matrix with one row per MopsDetection, with the values of the fitting
 // functions at the time of that detection.
 
-    int raFuncLen, decFuncLen;
+    int raFuncLen, raFuncPolyLen;
 
-    if (forceQuadratic) {
-      raFuncLen = 3;
-      decFuncLen = 3;
+    if (forceOrder>0) {
+      raFuncLen = forceOrder;
     }
-    else if (useFullRaFit && trackLen >= 6) {
+    else if (trackLen >= 6) {
 	 raFuncLen = 5;
-	 decFuncLen = 4;
     } 
     else {
 	 raFuncLen = 3;
-	 decFuncLen = 3;
     }
+
+    if (raFuncLen==5) {
+      raFuncPolyLen = 4;
+    } else {
+      raFuncPolyLen = raFuncLen;
+    }
+
 
     Eigen::MatrixXd raA(trackLen, raFuncLen);
     Eigen::VectorXd raCorr(trackLen);
-    Eigen::MatrixXd decA(trackLen, decFuncLen);
 
 // b is a vector with the measured values, either ra or dec, for each MopsDetection
 
     Eigen::VectorXd raB(trackLen);
-    Eigen::VectorXd decB(trackLen);
 
 // vectors of measurement errors
 
     Eigen::VectorXd raE(trackLen);
-    Eigen::VectorXd decE(trackLen);
-
 
     int i = 0;
     for (std::set<unsigned int>::const_iterator detIndIt = componentDetectionIndices.begin();
@@ -136,49 +145,37 @@ void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets,
         const MopsDetection* curDet = &allDets.at(*detIndIt);
 	double t = curDet->getEpochMJD();
 	double ra = curDet->getRA();
-	double dec = curDet->getDec();
-	double raTopoCorr = curDet->getRaTopoCorr();
 	double raErr = curDet->getRaErr();
-	double decErr = curDet->getDecErr();
 	
 	raA(i, 0) = 1.0;
 	raA(i, 1) = t;
 	if (raFuncLen==5) {
-	     raCorr(i) = raTopoCorr;
+	     raCorr(i) = curDet->getRaTopoCorr();	
 	}
 	raB(i) = ra;
 
-	decA(i, 0) = 1.0;
-	decB(i) = dec;
-
 	raE(i) = 1.0/raErr; // these should be per-measurement values instead of global
-	decE(i) = 1.0/decErr;
 
     }
+
 
 // demean t, to reduce condition number.  Member 'epoch' is mean(t) - should rename
 
     epoch = raA.col(1).mean();
     raA.col(1).array() -= epoch;
-    decA.col(1) = raA.col(1);
 
 // calculate needed powers of t up through quadratic
 
-    raA.col(2).array() = raA.col(1).array() * raA.col(1).array();
-    decA.col(2) = raA.col(2);
+    for (int i=2; i<raFuncPolyLen; i++) {
+      raA.col(i).array() = raA.col(i-1).array() * raA.col(1).array();
+    }
 
 // demean the raCorr column, if used, to avoid degeneracy with the constant term in the fit
 
     if (raFuncLen==5) {
-	raA.col(3).array() = raA.col(2).array() * raA.col(1).array(); 
 	meanTopoCorr = raCorr.array().mean();
 	raA.col(4).array() = raCorr.array() - meanTopoCorr;
     }
-
-    if (decFuncLen==4) {
-	decA.col(3).array() = decA.col(2).array() * decA.col(1).array(); 
-    }
-      
 
 // Solve in a least squares sense, raA * raFunc = raB, and similarly for dec
 // raX and decX should be members of Track
@@ -190,25 +187,16 @@ void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets,
     Eigen::VectorXd raSingularValues = raSvd.singularValues();
     raFunc = raSvd.solve(raB);
 
-    decA = (decE.asDiagonal()) * decA;
-    decB = decB.array() * decE.array();
-
-    Eigen::JacobiSVD<Eigen::MatrixXd> decSvd = decA.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV);
-    Eigen::VectorXd decSingularValues = decSvd.singularValues();
-    decFunc = decSvd.solve(decB);
 
 // Calculate the residuals
 
     Eigen::VectorXd raResid = raB - raA * raFunc;
     chisqRa = raResid.dot(raResid);
 
-    Eigen::VectorXd decResid = decB - decA * decFunc;
-    chisqDec = decResid.dot(decResid);
 
 // Calculate the prob(chisq), which will be the quality measure of the fit
 
     probChisqRa = gsl_cdf_chisq_Q(chisqRa, trackLen);
-    probChisqDec = gsl_cdf_chisq_Q(chisqDec, trackLen);
 
 // Calculate the covariance matrices of the least squares solutions for ra and dec - based on Numerical
 // Recipes eqn 15.4.20
@@ -225,6 +213,134 @@ void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets,
 	if (j<i) raCov(j,i) = raCov(i,j);
       }
     }
+
+// Now compare the location uncertainty from the covariance matrix with the average
+// residual.   If too big, means that the order of fit is unjustified:  back off
+
+    double raUnc, decUnc;
+    predictLocationUncertaintyAtTime(epoch, raUnc, decUnc, true, false);
+
+    double ratioRa;
+    ratioRa = raUnc*raE.mean()/sqrt(chisqRa/raB.rows());
+    
+    bool badCov = (ratioRa>covRatioMax);
+
+    if (outFile) {
+	*outFile << "\nratioRa: " << ratioRa<< '\n';
+    }      
+    if (badCov && (raFuncLen>3)) {
+      if (outFile) {
+	*outFile << "Backing off to order " << raFuncLen-1 << "\n";
+      }
+      calculateBestFitRa(allDets, raFuncLen-1, outFile);
+      return;
+    }
+
+#ifdef DEBUG
+
+    if (outFile) {
+	 double raCondNumber = raSingularValues(0)/raSingularValues(raSingularValues.rows()-1);
+	      *outFile << "raB: \n" << raB << '\n';
+	      *outFile << "raE: \n" << raE << '\n';
+	      *outFile << "raA: \n" << raA << '\n';
+	      *outFile << "raSVD: \n" << raSingularValues << '\n';
+	      *outFile << "raV: \n" << raV << '\n';
+	      *outFile << "raCov: \n" << raCov << '\n';
+	      *outFile << "raFunc: \n" << raFunc << '\n';
+	      *outFile << "raResid: \n" << raResid << '\n';
+	      *outFile << "ra: chisq prob dof " << chisqRa << " " << probChisqRa << " " << trackLen << '\n';
+	      *outFile << "ra npts, probChisq, condNum, : " << raB.rows() << " " << probChisqRa << " " << raCondNumber << '\n';
+    }
+#endif
+    }
+
+
+    void Track::calculateBestFitDec(const std::vector<MopsDetection> &allDets, 
+				      const int forceOrder, std::ostream *outFile)
+    {
+    float covRatioMax = 100.0;
+
+    int trackLen = componentDetectionIndices.size();
+
+// A is a matrix with one row per MopsDetection, with the values of the fitting
+// functions at the time of that detection.
+
+    int decFuncLen, decFuncPolyLen;
+
+    if (forceOrder>0) {
+      decFuncLen = forceOrder;
+    }
+    else if (trackLen >= 6) {
+	 decFuncLen = 4;
+    } 
+    else {
+	 decFuncLen = 3;
+    }
+
+
+    decFuncPolyLen = decFuncLen;
+
+    Eigen::MatrixXd decA(trackLen, decFuncLen);
+
+// b is a vector with the measured values, either ra or dec, for each MopsDetection
+
+    Eigen::VectorXd decB(trackLen);
+
+// vectors of measurement errors
+
+    Eigen::VectorXd decE(trackLen);
+
+
+    int i = 0;
+    for (std::set<unsigned int>::const_iterator detIndIt = componentDetectionIndices.begin();
+         detIndIt != componentDetectionIndices.end(); detIndIt++, i++) {
+        const MopsDetection* curDet = &allDets.at(*detIndIt);
+	double t = curDet->getEpochMJD();
+	double dec = curDet->getDec();
+	double decErr = curDet->getDecErr();
+	
+	decA(i, 0) = 1.0;
+	decA(i, 1) = t;
+	decB(i) = dec;
+
+	decE(i) = 1.0/decErr;
+
+    }
+
+// demean t, to reduce condition number.  Member 'epoch' is mean(t) - should rename
+
+    epoch = decA.col(1).mean();
+    decA.col(1).array() -= epoch;
+
+// calculate needed powers of t
+
+    for (int i=2; i<decFuncPolyLen; i++) {
+      decA.col(i).array() = decA.col(i-1).array() * decA.col(1).array();
+    }
+
+
+// Solve in a least squares sense, raA * raFunc = raB, and similarly for dec
+// raX and decX should be members of Track
+
+
+    decA = (decE.asDiagonal()) * decA;
+    decB = decB.array() * decE.array();
+
+    Eigen::JacobiSVD<Eigen::MatrixXd> decSvd = decA.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV);
+    Eigen::VectorXd decSingularValues = decSvd.singularValues();
+    decFunc = decSvd.solve(decB);
+
+// Calculate the residuals
+
+    Eigen::VectorXd decResid = decB - decA * decFunc;
+    chisqDec = decResid.dot(decResid);
+
+// Calculate the prob(chisq), which will be the quality measure of the fit
+
+    probChisqDec = gsl_cdf_chisq_Q(chisqDec, trackLen);
+
+// Calculate the covariance matrices of the least squares solutions for ra and dec - based on Numerical
+// Recipes eqn 15.4.20
 
     decCov.resize(decFuncLen, decFuncLen);
     Eigen::MatrixXd decV = decSvd.matrixV();
@@ -243,41 +359,30 @@ void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets,
 // residual.   If too big, means that the order of fit is unjustified:  back off
 
     double raUnc, decUnc;
-    predictLocationUncertaintyAtTime(epoch, raUnc, decUnc);
+    predictLocationUncertaintyAtTime(epoch, raUnc, decUnc, false, true);
 
-    double ratioRa, ratioDec;
-    ratioRa = raUnc*raE.mean()/sqrt(chisqRa/raB.rows());
+    double ratioDec;
     ratioDec = decUnc*decE.mean()/sqrt(chisqDec/decB.rows());
     
-    bool badCov = (ratioRa>covRatioMax) || (ratioDec>covRatioMax);
+    bool badCov = (ratioDec>covRatioMax);
 
     if (outFile) {
-	*outFile << "\nratioRa: " << ratioRa << " ratioDec: " << ratioDec << '\n';
+	*outFile << "\nratioDec: " << ratioDec << '\n';
     }      
-    if (badCov && (raFuncLen>3 || decFuncLen>3)){
+    if (badCov && (decFuncLen>3)) {
       if (outFile) {
-	*outFile << "Backing off to quadratic.\n";
+	*outFile << "Backing off to order " << decFuncLen-1 << "\n";
       }
-      calculateBestFitQuadratic(allDets, false, true, outFile);
+      calculateBestFitDec(allDets, decFuncLen-1, outFile);
       return;
     }
+
 
 #ifdef DEBUG
 
     if (outFile) {
-	 double raCondNumber = raSingularValues(0)/raSingularValues(raSingularValues.rows()-1);
 	 double decCondNumber = decSingularValues(0)/decSingularValues(decSingularValues.rows()-1);
-
-	      *outFile << "raB: \n" << raB << '\n';
-	      *outFile << "raE: \n" << raE << '\n';
-	      *outFile << "raA: \n" << raA << '\n';
-	      *outFile << "raSVD: \n" << raSingularValues << '\n';
-	      *outFile << "raV: \n" << raV << '\n';
-	      *outFile << "raCov: \n" << raCov << '\n';
-	      *outFile << "raFunc: \n" << raFunc << '\n';
-	      *outFile << "raResid: \n" << raResid << '\n';
-	      *outFile << "ra: chisq prob dof " << chisqRa << " " << probChisqRa << " " << trackLen << '\n';
-	      *outFile << "ra npts, probChisq, condNum, : " << raB.rows() << " " << probChisqRa << " " << raCondNumber << '\n';
+;
 	      *outFile << "decB: \n" << decB << '\n';
 	      *outFile << "decE: \n" << decE << '\n';
 	      *outFile << "decA: \n" << decA << '\n';
@@ -290,7 +395,8 @@ void Track::calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets,
 	      *outFile << "dec npts, probChisq, condNum, : " << decB.rows() << " " << probChisqDec << " " << decCondNumber << '\n';
     }
 #endif
-}
+
+    }
 
 
 
@@ -332,7 +438,7 @@ void Track::predictLocationAtTime(const double mjd, double &ra, double &dec) con
 #endif
 }
 
-    void Track::predictLocationUncertaintyAtTime(const double mjd, double &raUnc, double &decUnc) const
+void Track::predictLocationUncertaintyAtTime(const double mjd, double &raUnc, double &decUnc, const bool calcRa, const bool calcDec) const
 {
 
     double t = mjd - epoch;
@@ -340,44 +446,50 @@ void Track::predictLocationAtTime(const double mjd, double &ra, double &dec) con
     Eigen::VectorXd gVecDec;
     Eigen::MatrixXd tmp;
 
-    if (raFunc.size() == 5) {
-         double ra, dec;
-	 predictLocationAtTime(mjd, ra, dec);
-	 MopsDetection tmpDet(0, mjd, ra, dec);
-	 tmpDet.calculateTopoCorr();  
-	 double raTopoCorr = tmpDet.getRaTopoCorr();
-	 gVecRa.resize(5);
-	 gVecRa(0)=1.0;
-	 gVecRa(1)=t;
-	 gVecRa(2)=t*t;
-	 gVecRa(3)=t*t*t;
-	 gVecRa(4)=raTopoCorr - meanTopoCorr;
-    } else {
-	 gVecRa.resize(3);
-	 gVecRa(0)=1.0;
-	 gVecRa(1)=t;
-	 gVecRa(2)=t*t;
-    }
-    
+    if (calcRa) {
+	 if (raFunc.size() == 5) {
+	      double ra, dec;
+	      predictLocationAtTime(mjd, ra, dec);
+	      MopsDetection tmpDet(0, mjd, ra, dec);
+	      tmpDet.calculateTopoCorr();  
+	      double raTopoCorr = tmpDet.getRaTopoCorr();
+	      gVecRa.resize(5);
+	      gVecRa(0)=1.0;
+	      gVecRa(1)=t;
+	      gVecRa(2)=t*t;
+	      gVecRa(3)=t*t*t;
+	      gVecRa(4)=raTopoCorr - meanTopoCorr;
+	 } else {
+	      gVecRa.resize(raFunc.size());
+	      gVecRa(0)=1.0;
+	      gVecRa(1)=t;
+	      for (int i=2; i<raFunc.size(); i++) {
+		   gVecRa(i)=t*gVecRa(i-1);
+	      }
+	 }
     tmp = gVecRa.transpose() * raCov * gVecRa;
     raUnc = sqrt(tmp(0,0));
-
-    
-    if (decFunc.size() == 4) {
-	 gVecDec.resize(4);
-	 gVecDec(0)=1.0;
-	 gVecDec(1)=t;
-	 gVecDec(2)=t*t;
-	 gVecDec(3)=t*t*t;
-
-    } else {
-	 gVecDec.resize(3);
-	 gVecDec(0)=1.0;
-	 gVecDec(1)=t;
-	 gVecDec(2)=t*t;
     }
-    tmp = gVecDec.transpose() * decCov * gVecDec;
-    decUnc = sqrt(tmp(0,0));
+    
+    if (calcDec) {
+	 if (decFunc.size() == 4) {
+	      gVecDec.resize(4);
+	      gVecDec(0)=1.0;
+	      gVecDec(1)=t;
+	      gVecDec(2)=t*t;
+	      gVecDec(3)=t*t*t;
+	      
+	 } else {
+	      gVecDec.resize(decFunc.size());
+	      gVecDec(0)=1.0;
+	      gVecDec(1)=t;
+	      for (int i=2; i<decFunc.size(); i++) {
+		   gVecDec(i)=t*gVecDec(i-1);
+	      }
+	 }
+	 tmp = gVecDec.transpose() * decCov * gVecDec;
+	 decUnc = sqrt(tmp(0,0));
+    }
 }
 
 void Track::getBestFitQuadratic(double &epoch, double &ra0, double &raV, double &raAcc,
@@ -403,5 +515,4 @@ double Track::getFitRange() const {
      }
 }
 
-
-}};
+} } // closing namespace

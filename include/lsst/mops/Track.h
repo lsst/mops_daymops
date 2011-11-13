@@ -75,8 +75,16 @@ public:
        calling before using predictLocationAtTime() or getBestFitQuadratic().
      */
     void calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets,
-                                   const bool useFullRaFit=false, 
-                                   const bool forceQuadratic=false, std::ostream *outFile = NULL);
+                                   const int forceOrder = -1,
+                                   std::ostream *outFile = NULL);
+
+    void calculateBestFitRa(const std::vector<MopsDetection> &allDets,
+                            const int forceOrder = -1,
+                            std::ostream *outFile = NULL);
+    
+    void calculateBestFitDec(const std::vector<MopsDetection> &allDets,
+                            const int forceOrder = -1,
+                                    std::ostream *outFile = NULL);
     
     /* use best-fit quadratic to predict location at time mjd. will return WRONG VALUES
      if calculateBestFitQuadratic has not been called.*/
@@ -84,7 +92,7 @@ public:
     
     /* use best-fit quadratic to predict location uncertainty at time mjd. will return WRONG VALUES
      if calculateBestFitQuadratic has not been called.*/
-    void predictLocationUncertaintyAtTime(const double mjd, double &raUnc, double &decUnc) const;
+    void predictLocationUncertaintyAtTime(const double mjd, double &raUnc, double &decUnc, const bool calcRa=true, const bool calcDec=true) const;
     
     /* you MUST call calculateBestFitQuadratic before calling this. */
     void getBestFitQuadratic(double &epoch,

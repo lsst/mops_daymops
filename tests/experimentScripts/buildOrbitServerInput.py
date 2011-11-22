@@ -46,8 +46,8 @@ OPSIM_DB='opsim_3_61'
 OPSIM_TABLE='output_opsim3_61'
 #DIAS_DB='mops_noDeepAstromError'
 #DIAS_TABLE='fullerDiaSource'
-DIAS_DB='fullSkyOneMonth'
-DIAS_TABLE='mopsDetections'
+DIAS_DB='mops_fullSky_year5'
+DIAS_TABLE='fullerDiaSource'
 
 MAX_TRACKLETS_PER_FILE=50000
 MAX_TRACKS_PER_FILE=24000
@@ -99,28 +99,29 @@ class Track(object):
         self.dias = dias
         self._isTrue = isKnownToBeTrue
 
-    def isTrue(self, dets=None):        
-        if self._isTrue != None:
-            return self._isTrue
-        else:
-            if dets == None:
-                raise Exception("Can't tell if this is a true track unless it can see the dets, \
-                                       or you specified at __init__-time.")
+    # def isTrue(self, dets=None):        
+    #     # this code is BROKEN and OUTDATED
+    #     if self._isTrue != None:
+    #         return self._isTrue
+    #     else:
+    #         if dets == None:
+    #             raise Exception("Can't tell if this is a true track unless it can see the dets, \
+    #                                    or you specified at __init__-time.")
             
-            myName = lookUpDet(dets, self.dias[0]).objId
-            if myName == 'NS':
-                self._isTrue = False
-                return False
+    #         myName = lookUpDet(dets, [self.dias[0]])[0].objId
+    #         if myName == 'NS':
+    #             self._isTrue = False
+    #             return False
 
-            for dia in self.dias:
-                if lookUpDet(dets, dia).objId != myName:
-                    # this is inconsistent, we are not a true track
-                    self._isTrue = False
-                    return False
+    #         for dia in self.dias:
+    #             if lookUpDet(dets, [dia])[0].objId != myName:
+    #                 # this is inconsistent, we are not a true track
+    #                 self._isTrue = False
+    #                 return False
 
-            # we didn't find any inconsistency, we are a true track
-            self._isTrue = True
-            return True
+    #         # we didn't find any inconsistency, we are a true track
+    #         self._isTrue = True
+    #         return True
 
     def isSubset(self, otherTrack):
         myDiasSet = set(self.dias)
@@ -136,30 +137,37 @@ def taiToUtc(taiTime):
     return d.mjd(DateTime.UTC)
 
 
-def lookUpDet(dbCursor, diaId):
+def lookUpDets(dbCursor, diaIds):
     """ fetches the following from DB, given a DiaID, doing a little calculation as
     needed: utcMjd, ra, dec, mag, astromErr, snr, groundTruthId
     """
-        
-    sql = """ SELECT taiMidPoint, ra, decl, mag, opSimId, snr, ssmId
-                  FROM %s.%s WHERE diaSourceId=%d ; """ % \
-        (DIAS_DB, DIAS_TABLE, diaId)
-    res = ui.sqlQuery(dbCursor, sql, verbose=False)
-    #print res
-    [taiTime, ra, dec, mag, opSimId, snr, groundTruthId] = res[0]
-    #print taiTime, ra, dec, mag, opSimId, snr, groundTruthId
-    sql = "select 5sigma_ps, seeing from %s.%s where obsHistID=%d" %(OPSIM_DB, OPSIM_TABLE, opSimId)
-    [sigma5_ps, seeing] = ui.sqlQuery(cursor, sql, verbose=False)[0]
-    
-    astromErr = astrom.calcAstrometricError(mag, sigma5_ps, seeing)
+    print "Querying DB for ", len(diaIds), " diaSources..."
+    sql = """ SELECT diaSourceId, taiMidPoint, ra, decl, mag, opSimId, snr, ssmId, seeing, 5sigma_ps                  
+                  FROM %s.%s AS d JOIN %s.%s AS o ON d.opSimId=o.obsHistId WHERE diaSourceId IN ( """ % \
+        (DIAS_DB, DIAS_TABLE, OPSIM_DB, OPSIM_TABLE)
 
-    #print "callint taiToUtc(", taiTime, ")"
-    #utcMjd = taiToUtc(taiTime)
-    #print " calling DateTime(", taiTime, ", DateTime.TAI)"
-    d = DateTime(taiTime, DateTime.MJD, DateTime.TAI)
-    utcMjd = d.mjd(DateTime.UTC)
-    #print "got tai ", taiTime, " = utc ", utcMjd
-    return utcMjd, ra, dec, mag, astromErr, snr, groundTruthId
+    for i in range(len(diaIds)):
+        if i > 0 :
+            sql += ", "
+        diaId = diaIds[i]
+        sql += "%d" % diaId
+    sql += ");"
+
+    allRes = ui.sqlQuery(dbCursor, sql, verbose=False)    
+    toRet = []
+    for res in allRes:
+        [diaSourceId, taiTime, ra, dec, mag, opSimId, snr, groundTruthId, seeing, sigma5_ps] = res
+        #print taiTime, ra, dec, mag, opSimId, snr, groundTruthId
+    
+        astromErr = astrom.calcAstrometricError(mag, sigma5_ps, seeing)
+        #print "callint taiToUtc(", taiTime, ")"
+        #utcMjd = taiToUtc(taiTime)
+        #print " calling DateTime(", taiTime, ", DateTime.TAI)"
+        d = DateTime(taiTime, DateTime.MJD, DateTime.TAI)
+        utcMjd = d.mjd(DateTime.UTC)
+        #print "got tai ", taiTime, " = utc ", utcMjd
+        toRet.append([diaSourceId, utcMjd, ra, dec, mag, astromErr, snr, groundTruthId])
+    return toRet
 
 
 
@@ -172,8 +180,9 @@ def writeDiasToDesTrackletsFile(diasToWrite, outFile, dbCursor):
     write have the same IDs as the DiaIds on the detections from the
     input file. easy peasy!
     """
-    for diaId in diasToWrite:
-        utcMjd, ra, dec, mag, astromErr, snr, groundTruthId = lookUpDet(dbCursor, diaId)
+    allDias = lookUpDets(dbCursor, list(diasToWrite))
+    for dia in allDias:
+        diaId, utcMjd, ra, dec, mag, astromErr, snr, groundTruthId = dia
 
         #TBD: RA astrometric error is not == astromErr, it's something else - cos(radians(dec))* astromErr?
         #   add this in later. For now on the ecliptic it won't really matter.

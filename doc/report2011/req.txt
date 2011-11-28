@@ -1,0 +1,75 @@
+# This was an old draft of things I thought might be required from
+  MOPS for PDR. Might be useful to compare our present list to, which
+  is why it's still here. 
+
+How do CPU, memory and storage requirements for nightly linking / findTracklets scale with: 
+ * density of diasources (increase potential matches for false tracklets)
+ * area of sky (increase number of diasources but not density -- increase output number of tracklets)
+ * ? actual time interval between observations in a single night (decreases potential matches for false tracklets)
+ * time window limits (increases search load; increases potential matches for false tracklets)
+ * number of observations required per tracklet (decreases likelihood of false tracklets)
+ * velocity limits (increases search load; increases potential matches for false tracklets) 
+
+And how do related metrics 
+ * number of simulated objects found in this night
+ * number of simulated objects findable but missed in this night 
+ * in process of defining others
+change with 
+ * increasing density of diasources which are moving objects (may be same as next)
+ * increasing density of diasources which are not moving objects 
+ * typical LSST astrometric error or an increased astrometric error
+ * time window limits
+ * number of observations required per tracklet
+ * velocity limits
+
+
+How do CPU, memory and storage requirements for internightly linking / linkTracklets scale with: 
+ * density of diasources (increases potential matches for false tracks) 
+ * area of sky (increases potential sky-coverage / length of tracks as well as increase raw output number)
+ * ? actual time interval between observations (decreases false tracks)
+ * allowable time window (increases number of tracks that must be searched; increases false tracks)
+ * number of observations required in a track (increases search load (?); decreases false tracks)
+ * acceleration limits (increases search load; increases false tracks)
+
+And how do the related metrics 
+ * number of simulated objects found in this window
+ * number of simulated objects findable but missed in this window
+ * total number of output tracks
+ * in process of defining others
+change with 
+ * increasing density of diasources, whether moving objects or non-moving
+ * typical LSST astrometric error or an increased astrometric error
+ * time window limits
+ * number of observations required per track
+ * acceleration limits
+
+
+What are the resulting CPU, memory and storage requirements for orbit fitting given varieties of the expected range of linkTracklets?
+ * how does this scale with astrometric error? 
+ * using OpenOrb or OrbFit
+ * potential for creating new orbit fitting software
+
+
+What is the plan for attribution, and how do the CPU/memory/data access requirements scale for attribution 
+ * with number of detected orbits?
+ * with astrometric error?
+
+
+What are the final output catalogs? 
+ * how many objects are found?
+ * how many objects are 'found' but not real? 
+ * how many objects are not found & do they follow any particular orbital parameter space? 
+ * how many detections (out of how many possible detections) of an object are linked? 
+ * how accurate are the orbits?
+
+
+
+** Do we also need to evaluate a MOPS run with random orbits to answer 'how many objects are not found & do they fall into any particular orbital parameter space?' ? 
+** notice this doesn't say anything about the magnitudes reported at any stage. 
+
+
+
+--------
+
+Depending on the answers to various questions above, we can devise an estimate of the requirements for running MOPS at estimated LSST densities / sky coverage / time intervals. We can also develop a plan for a fallback -- how can we scale back? Presumably the easiest way to do this would be to just raise the SNR cutoff. We could also look at not doing attribution, if attribution scales badly. 
+

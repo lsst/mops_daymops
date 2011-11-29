@@ -1086,8 +1086,8 @@ void buildTracksAddToResults(
             newTrack.addTracklet(secondEndpointTrackletIndex, 
                                  allTracklets.at(secondEndpointTrackletIndex),
                                  allDetections);
-            // the 3 here says do NOT use the full form for ra and dec fit - use quadratic
-            newTrack.calculateBestFitQuadratic(allDetections, 3);
+            // the 'false' here says do NOT use the full form for ra fit
+            newTrack.calculateBestFitQuadratic(allDetections, false);
 
             if (endpointTrackletsAreCompatible(allDetections, 
                                                newTrack,

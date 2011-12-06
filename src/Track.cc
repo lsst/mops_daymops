@@ -4,7 +4,7 @@
 #include "lsst/mops/Track.h"
 #include "lsst/mops/Exceptions.h"
 
-#define DEBUG
+#undef DEBUG
 
 namespace lsst { namespace mops {
 

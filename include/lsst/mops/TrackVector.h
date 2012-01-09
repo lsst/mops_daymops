@@ -50,12 +50,6 @@ public:
     /* write just the diaIds for each track. */
     void writeTracksToFile(std::string outFileName); 
     
-    /* use allDets to calculate the best-fit quadratic, determine
-     * whether tracks are true, and write those stats alongside the
-     * diaSources. */
-    void writeTracksAndStatsToFile(std::string outFileName,
-                                   const std::vector<MopsDetection> &allDets);
-
     ~TrackVector() {};
 
     void debugPrint();

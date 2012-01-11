@@ -105,7 +105,7 @@ public:
     }
 
 
-    int getObjectId(std::vector<MopsDetection> allDets);
+    int getObjectId(const std::vector<MopsDetection> &allDets);
         
 
     /* the results of this comparison are probably not meaningful to a human but

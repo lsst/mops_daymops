@@ -66,7 +66,7 @@ Track & Track::operator= (const Track &other) {
 
 
 
-int Track::getObjectId(std::vector<MopsDetection> allDets) 
+int Track::getObjectId(const std::vector<MopsDetection> &allDets) 
 {
      if (componentDetectionIndices.size() == 0) {
 	  throw LSST_EXCEPT(UninitializedException, 

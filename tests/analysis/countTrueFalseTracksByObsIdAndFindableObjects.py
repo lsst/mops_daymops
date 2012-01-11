@@ -81,6 +81,12 @@ def readDias(diasDataFile):
     obsHistId for every diaSource.  Returns a dict mapping diaId to
     data."""
     idToDias = {}
+    ## create a list of lists of the appropriate size
+    #idToDias = []
+    #while diasDataFile.readline() != "":
+    #    idToDias.append([])
+    ## now populate it
+    #diasDataFile.seek(0)
     line = diasDataFile.readline()
     while line != "":
         [diaId, obsHistId, ssmId, ra, decl, expMjd, mag, SNR] = line.split()
@@ -88,7 +94,7 @@ def readDias(diasDataFile):
         expMjd = float(expMjd)
         obsHistId = int(obsHistId)
         
-        idToDias[diaId] = diaSource(diaId=diaId, obsTime=expMjd, ssmId=ssmId, obsHistId=obsHistId)
+        idToDias[diaId] = [diaId, expMjd, ssmId, obsHistId]
         
         line = diasDataFile.readline()
 
@@ -98,7 +104,12 @@ def readDias(diasDataFile):
 
 def lookUpDias(diasLookupTool, diaIds):
     if PRELOAD_DIAS_FROM_FILE:
-        return map(lambda x: diasLookupTool[x], diaIds)
+        res = []
+        for x in diaIds:
+            [diaId, expMjd, ssmId, obsHistId] = diasLookupTool[x]
+            d = diaSource(diaId=diaId, obsTime=expMjd, ssmId=ssmId, obsHistId=obsHistId)
+            res.append(d)
+        return res
     else:
         [cursor, diasDb, diasTable] = diasLookupTool
         sql = """ SELECT diaSourceId, taiMidPoint, ssmId, opSimId FROM %s.%s 

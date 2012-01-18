@@ -55,8 +55,4 @@ void TrackVector::populateFromFile(std::string fileName,
 }
 
 
-
-
-
-
 }} // close namespace lsst::mops

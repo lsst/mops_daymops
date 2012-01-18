@@ -44,6 +44,15 @@
 namespace lsst { namespace mops {
 
 class Track {
+private:
+
+    void calculateBestFitRa(const std::vector<MopsDetection> &allDets,
+                            const int forceOrder = -1,
+                            std::ostream *outFile = NULL);
+    
+    void calculateBestFitDec(const std::vector<MopsDetection> &allDets,
+                            const int forceOrder = -1,
+                                    std::ostream *outFile = NULL);
 public:
 
     Track();
@@ -75,11 +84,17 @@ public:
        calling before using predictLocationAtTime() or getBestFitQuadratic().
      */
     void calculateBestFitQuadratic(const std::vector<MopsDetection> &allDets,
-                                   const bool useFullRaFit=false, std::ostream *outFile = NULL);
+                                   const int forceOrder = -1,
+                                   std::ostream *outFile = NULL);
+
     
     /* use best-fit quadratic to predict location at time mjd. will return WRONG VALUES
      if calculateBestFitQuadratic has not been called.*/
     void predictLocationAtTime(const double mjd, double &ra, double &dec) const;
+    
+    /* use best-fit quadratic to predict location uncertainty at time mjd. will return WRONG VALUES
+     if calculateBestFitQuadratic has not been called.*/
+    void predictLocationUncertaintyAtTime(const double mjd, double &raUnc, double &decUnc, const bool calcRa=true, const bool calcDec=true) const;
     
     /* you MUST call calculateBestFitQuadratic before calling this. */
     void getBestFitQuadratic(double &epoch,
@@ -121,11 +136,14 @@ private:
     std::set<unsigned int> componentDetectionDiaIds;
     Eigen::VectorXd raFunc;
     Eigen::VectorXd decFunc;
+    Eigen::MatrixXd raCov;
+    Eigen::MatrixXd decCov;
     double chisqRa;
     double chisqDec;
     double probChisqRa;
     double probChisqDec;
     double epoch;
+    double meanTopoCorr;
 };
 
 }} // close lsst::mops namespace

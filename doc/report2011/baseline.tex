@@ -290,7 +290,23 @@ using a closed-source ephemeris generation tool.
 \section{Linking of Detections}
 \label{linking}
 
+\subsection{Approximate Models of Asteroid Motion}
+Because of the complexity of the full heliocentric orbital
+approximation of asteroid motion, DayMOPS uses simplified models based
+on sky-plane motion of asteroid behavior.  
 
+\subsubsection{Real Heliocentric Orbits}
+Do we need this?
+
+\subsubsection{Linear and Quadratic Models}
+
+\subsubsection{Higher-order Sky-Plane Models}
+Tim's methods go here - the assumed topocentric distance, topocentric correction, higher-order fits
+
+\subsection{The Linking Pipeline}
+Add an illustration of the various stages and a short piece of
+introductory text.  Also perhaps useful: show one object's detections
+and its various states of linkage. (detections, tracklets, merged tracklets, track(s))
 
 \subsection{Building Tracklets}
 
@@ -339,6 +355,21 @@ these redundant tracklets into larger tracklets, improving the linear
 position/velocity fits of the tracklets and reducing the number of
 tracklets passed downstream.
 
+\subsubsection{The findTracklets Software}
+Cover the code, its status, what routines do what in the psuedocode, etc.
+
+\subsection{Improving and Filtering Tracklets}
+CollapseTracklets issues go here - linking tracklets into longer
+tracklets, etc, perhaps some advice on why we do this.
+
+\subsubsection{The collapseTracklets Software}
+Cover the code, its status, what routines do what in the psuedocode, etc.
+
+\subsubsection{Tracklet Filtering Software}
+What filters we use, and why. Add some information on the code and
+status.  Cover RemoveSubsets here.
+
+
 \subsection{Building Tracks}
 
 Over the course of roughly one month, solar system objects tend to
@@ -380,7 +411,14 @@ Determination.  Investigation into ideal higher-order fits and
 quality-of-fit metrics is ongoing, but as of this writing a filter on
 minimum chi-squared probability appears to be the best option.
 
+\subsubsection{The linkTracklets Software}
+Cover the code, its status, what routines do what in the psuedocode, etc.
 
+
+\subsection{Filtering of Tracks}
+Some more information on implementation of Tim's fitting and
+chi-squared filter and the software. Stats on ground-truth fitting,
+possible needs for improvements.
 
 
 \subsection{Metrics \& Scaling of Sky-Plane Linking Methods}

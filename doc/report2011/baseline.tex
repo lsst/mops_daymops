@@ -92,23 +92,45 @@ figure \ref{mopsWithinLsst}.
 % sky-plane vs. orbit-space illustration
 
 The DayMOPS is responsible for discovering moving objects in source
-catalogs.  To accomplish this, the system initially finds sets of
-detections which follow a sky-plane path roughly consistent with
-asteroid motion; these sets of detections and their fitted paths are
-called \textbf{tracks}.  This same method is the basis for asteroid
-discovery used in the PanSTARRS Moving Object Pipeline System
-\citep{psMOPSDesign}.  A set of algorithms for the discovery of
-sky-plane tracks in dense data are presented in
+catalogs.  The task of discovering and tracking asteroids has been
+performed by humans since hundreds of years ago, but automated systems
+for asteroid discovery and tracking remain relatively uncommon.  Other
+surveys have often mixed human and computerized approaches -
+\textbf{can we get some more history here?}.
+
+
+For the LSST DayMOPS, we have chosen to follow the model of the
+PanSTARRS Moving Object Pipeline System \citep{psMOPSDesign}.  The
+approach used here is to first find sets of detections with sky-plane
+paths consistent with asteroid behaviour; these sets of detections and
+their fitted paths are called \textbf{tracks}.  A set of algorithms
+for the discovery of sky-plane tracks in dense data are presented in
 \citet{Kubica:2005:MTA:1081870.1081889}; these algorithms are used in
-the PanSTARRS MOPS as well.  Because of the loose approximations used,
-some of the tracks will be mislinkages, combining detections which are
-not attributable to the same source, but virtually all objects for
-which a true (correctly-linked) track could be generated will get some
-correct track.  LSST Data Management has developed additional
-processing phases and filters which can improve the performance of the
-system and reduce the computational costs by managing the number of
-untrue or redundant tracks throughout the various phases of
-processing.
+the PanSTARRS MOPS and the basis of the linking methods for the
+current LSST DayMOPS.  
+
+The tracking methods used are based on a tiered approach; first two or
+more detections from a single night are linked into
+\textbf{tracklets}, which represent a hypothetical object and a linear
+approximation of its sky-plane motion.  These tracklets are later
+joined into larger tracks.  To suit the needs of orbit fitting, we are
+generally only interested in tracks containing tracklets from at least
+three nights, and because of the increasing complexity of sky-plane
+motion over time, we are generally interested in tracks which span no
+more than 15-30 days of observation time.
+
+The PanSTARRS MOPS uses a fairly loose and generous approximation of
+asteroid motion.  This allows for many mislinkages or \textbf{false
+  tracks}, combining detections which are not attributable to the same
+source, but virtually all objects for which a true (correctly-linked)
+track could be generated will get some correct track.  With LSST's
+expected density of detections, we found that this glut of false
+tracks was generally too painful.  As a result, our methods diverge
+from those of PanSTARRS as we introduce some more strict filters on
+tracks, reducing the number of mislinkages at the expense of
+potentially missing some true tracks.  The algorithms, their
+implementations, the additional filters, and their behaviors are
+presented thoroughly in Chapter \ref{linking}.
 
 Once tracks are discovered, they are sent to the Orbit Determination
 phase. The Orbit Determination phase takes these sets of sky-plane
@@ -152,93 +174,6 @@ flows are illustrated in figure \ref{mopsDiagram}.
 
 
 
-\subsubsection{Building Tracklets}
-
-% possible illustration: show Dec/time for two images, then tracklets in Dec/time
-
-\textbf{Tracklets} are the building blocks of the sky-plane
-\textbf{tracks} used by DayMOPS.  Tracklets are linkages between
-DiaSource detections occuring within the same night; during this time
-period, solar system object motion is linear or near-linear on the
-sky. By creating tracklets, DayMOPS can find sky-plane position and
-velocity estimates for sets of detections which may belong to solar
-system objects.  This filters out many detections of non-solar system
-objects, as they are less likely to generate tracklets.  The use of
-tracklets also simplifies the downstream work of track generation,
-which attempts to find sets of detections with a good
-position/velocity/acceleration fit on the sky-plane; since tracklets
-have known position and velocity, the track generation phase needs
-only to find those tracklets compatible within some acceleration
-factor.
-
-In order to ensure that tracklet-generating images are acquired, it is
-necessary to ensure that regions of the sky are visited two or more
-times within an accepted time period each night.  Currently, we
-require that sky fields be revisited within a fairly short time period
-($\leq 90$ minutes is the current rule) in order to constrain the
-maximum apparent motion of solar system objects and thus also
-constrain the number of tracklets.
-
-The discovery of tracklets can be accomplished efficiently using
-KD-Tree structures \citep{bentley_kdtrees} and methods from
-\citet{kubica_thesis}.  DayMOPS will build a 2-dimensional (RA, Dec)
-KD-Tree for each image, using the tree to hold the detections found in
-that image.  Because KD-Trees allow quick range searches of
-arbitrary-dimensional spatial data, it is possible to efficiently
-perform searches over the detections to find pairs of detections
-sufficiently close within time and within limits on apparent
-velocity. These pairs of detections are linked to generate tracklets.
-% TBD: Is this clear?!
-
-% psuedo code?
-
-Further refinements of tracklets are possible with additional
-processing. If an object gets more than one tracklet, it is possible
-to use methods similar to the Hough transform to identify and merge
-these redundant tracklets into larger tracklets, improving the linear
-position/velocity fits of the tracklets and reducing the number of
-tracklets passed downstream.
-
-\subsubsection{Building Tracks}
-
-Over the course of roughly one month, solar system objects tend to
-follow a roughly quadratic path on the sky-plane
-\citep{kubica_thesis}.  The track generation phase of DayMOPS will
-attempt to find sets of tracklets (which have position and velocity
-estimates) which were observed within one month of each other and are
-compatible within some acceleration range.  Tracks which are
-suitable for generating a reasonable orbital fit are sent to the Orbit
-Determination phase.
-
-The methods used for tracklet-to-tracklet linking are described in
-\citet{kubica_thesis} and \citet{Kubica:2005:MTA:1081870.1081889}.
-The methods described attempt to efficiently find sets of tracklets
-which are \textit{compatible} in the sense that they could be joined
-to form a track: that is, tracklets which span multiple nights and
-have positions and velocities which are consistent with a fixed
-acceleration.  
-
-To perform this work efficiently, these methods use four-dimensional
-KD-Trees over \textit{tracklet-space}, or (RA position, Dec position,
-RA velocity, Dec velocity). One tree is created per image, and holds
-each tracklet which has its first detection in that image.  A
-multi-tree walk is performed using a clever algorithm, efficiently
-discovering all regions of tracklet-space which could contain sets of
-tracklets that are compatible, while avoiding visits to tracklet-space
-regions which are not compatible and could not generate a track.  This
-is performed recursively until leaf nodes of the KD-Trees are reached.
-
-% illustration from Kubica?
-
-When the algorithm encounters a set of leaf nodes in the KD-Trees, it
-attempts to build a track using the detections held in the tracklets
-at the leaf nodes.  A quadratic fit, or a higher-order fit if
-possible, to the detections will be attempted.  Then a quality-of-fit
-assessment is used to determine whether the track is considered
-sufficiently well-fitted to pass downstream to the Orbit
-Determination.  Investigation into ideal higher-order fits and
-quality-of-fit metrics is ongoing, but as of this writing a filter on
-minimum chi-squared probability appears to be the best option.
 
 
 \subsubsection{Orbit Fitting}
@@ -278,46 +213,6 @@ for the next few months \citep{basicSolarSystem}.
 
 
 
-\subsubsection{Cadence Requirements Imposed by Sky-Plane Linking Methods}
-\label{cadenceRequirements}
-The multi-tiered approach we describe imposes certain requirements on
-telescope cadence.  For example, we cannot generate a tracklet for an
-object unless it is observed twice on a given night; a track cannot be
-generated for an object unless it generates multiple tracklets within
-a reasonable period of time.
-
-Further practical considerations impose further requirements on
-cadence. Even if an object is observed twice within a night, it may
-not be practical to generate a tracklet for that object if the time
-interval between observations is too large.  This is because within a
-large time period, objects can move a significant distance, and the
-search space for tracklet generation can become very large, leading to
-large numbers of mislinkages.  A casual study in \citet{kubica_thesis}
-and experiences related to us from work on the PanSTARRS MOPS both
-state an upper time limit of 90 minutes is necessary to prevent
-excessively high numbers of mislinkages. A 15-minute lower limit was
-also suggested as a minimum for most objects to generate useful
-apparent motion relative to astrometric errors. Similarly, the
-quadratic approximation of asteroid sky-plane motion breaks down after
-periods longer than roughly one month \citep{kubica_thesis}.  As a
-result, it is not possible to form tracks from tracklets separated by
-greater than one month of observation time.
-
-As mentioned in \ref{orbitFitting}, it is generally held that most
-orbit determination methods can generate a reliable orbit given six
-detections of an object occuring on at least three distinct nights.
-As a general rule, the telescope cadence will attempt to revisit
-fields of sky twice on a single night within the aforementioned 15-90
-minute interval; it will then attempt to revisit these fields again on
-two more nights within a span of 30 days or less.  In this way, and
-objects in that field will be observed a total of at least six times
-on at least three different nights, generating three or more tracklets
-sufficient for linking into a track.
-
-
-The current implementation of simulated telescope operations
-take into account these requirements when generating simulated sets of
-telescope pointings. 
 
 
 \subsubsection{Sky-Plane Motion Limits Imposed by Sky-Plane Linking Methods}
@@ -392,8 +287,103 @@ using a closed-source ephemeris generation tool.
 
 
 
+\section{Linking of Detections}
+\label{linking}
 
-\section{MOPS Metrics \& Scaling}
+
+
+\subsection{Building Tracklets}
+
+% possible illustration: show Dec/time for two images, then tracklets in Dec/time
+
+\textbf{Tracklets} are the building blocks of the sky-plane
+\textbf{tracks} used by DayMOPS.  Tracklets are linkages between
+DiaSource detections occuring within the same night; during this time
+period, solar system object motion is linear or near-linear on the
+sky. By creating tracklets, DayMOPS can find sky-plane position and
+velocity estimates for sets of detections which may belong to solar
+system objects.  This filters out many detections of non-solar system
+objects, as they are less likely to generate tracklets.  The use of
+tracklets also simplifies the downstream work of track generation,
+which attempts to find sets of detections with a good
+position/velocity/acceleration fit on the sky-plane; since tracklets
+have known position and velocity, the track generation phase needs
+only to find those tracklets compatible within some acceleration
+factor.
+
+In order to ensure that tracklet-generating images are acquired, it is
+necessary to ensure that regions of the sky are visited two or more
+times within an accepted time period each night.  Currently, we
+require that sky fields be revisited within a fairly short time period
+($\leq 90$ minutes is the current rule) in order to constrain the
+maximum apparent motion of solar system objects and thus also
+constrain the number of tracklets.
+
+The discovery of tracklets can be accomplished efficiently using
+KD-Tree structures \citep{bentley_kdtrees} and methods from
+\citet{kubica_thesis}.  DayMOPS will build a 2-dimensional (RA, Dec)
+KD-Tree for each image, using the tree to hold the detections found in
+that image.  Because KD-Trees allow quick range searches of
+arbitrary-dimensional spatial data, it is possible to efficiently
+perform searches over the detections to find pairs of detections
+sufficiently close within time and within limits on apparent
+velocity. These pairs of detections are linked to generate tracklets.
+% TBD: Is this clear?!
+
+% psuedo code?
+
+Further refinements of tracklets are possible with additional
+processing. If an object gets more than one tracklet, it is possible
+to use methods similar to the Hough transform to identify and merge
+these redundant tracklets into larger tracklets, improving the linear
+position/velocity fits of the tracklets and reducing the number of
+tracklets passed downstream.
+
+\subsection{Building Tracks}
+
+Over the course of roughly one month, solar system objects tend to
+follow a roughly quadratic path on the sky-plane
+\citep{kubica_thesis}.  The track generation phase of DayMOPS will
+attempt to find sets of tracklets (which have position and velocity
+estimates) which were observed within one month of each other and are
+compatible within some acceleration range.  Tracks which are
+suitable for generating a reasonable orbital fit are sent to the Orbit
+Determination phase.
+
+The methods used for tracklet-to-tracklet linking are described in
+\citet{kubica_thesis} and \citet{Kubica:2005:MTA:1081870.1081889}.
+The methods described attempt to efficiently find sets of tracklets
+which are \textit{compatible} in the sense that they could be joined
+to form a track: that is, tracklets which span multiple nights and
+have positions and velocities which are consistent with a fixed
+acceleration.  
+
+To perform this work efficiently, these methods use four-dimensional
+KD-Trees over \textit{tracklet-space}, or (RA position, Dec position,
+RA velocity, Dec velocity). One tree is created per image, and holds
+each tracklet which has its first detection in that image.  A
+multi-tree walk is performed using a clever algorithm, efficiently
+discovering all regions of tracklet-space which could contain sets of
+tracklets that are compatible, while avoiding visits to tracklet-space
+regions which are not compatible and could not generate a track.  This
+is performed recursively until leaf nodes of the KD-Trees are reached.
+
+% illustration from Kubica?
+
+When the algorithm encounters a set of leaf nodes in the KD-Trees, it
+attempts to build a track using the detections held in the tracklets
+at the leaf nodes.  A quadratic fit, or a higher-order fit if
+possible, to the detections will be attempted.  Then a quality-of-fit
+assessment is used to determine whether the track is considered
+sufficiently well-fitted to pass downstream to the Orbit
+Determination.  Investigation into ideal higher-order fits and
+quality-of-fit metrics is ongoing, but as of this writing a filter on
+minimum chi-squared probability appears to be the best option.
+
+
+
+
+\subsection{Metrics \& Scaling of Sky-Plane Linking Methods}
 
 Current development efforts have focused on the sky-plane tracking
 phase of DayMOPS, as all later processing is dependant on its
@@ -421,9 +411,9 @@ of performing OD on its output.
 
 
 
-\subsection{Experiments And Results}
+\subsubsection{Experiments And Results}
 
-\subsubsection{Metrics for End-to-end Evaluation of Sky-plane Linking}
+\subsubsubsection{Metrics for End-to-end Evaluation of Sky-plane Linking}
 MOPS can generate a useful orbit, and thus a Moving Object, for an
 object if it is observed sufficiently for OD to be performed (see
 \ref{cadenceRequirements} for details) and a track containing those
@@ -475,7 +465,7 @@ as input to the track generation software and to OD.
 
 
 
-\subsection{Results From Main-Belt and Distant Object Searching On Ecliptic}
+\subsubsection{Results From Main-Belt and Distant Object Searching On Ecliptic}
 
 The ecliptic plane is the most densely-populated region of the sky,
 and main-belt asteroids generate the vast majority of detected objects
@@ -490,7 +480,7 @@ Further, because our software looks for objects moving or accelerating
 \textit{below} a set threshold, objects moving and accelerating more
 slowly than main-belters were also found.
 
-\subsubsection{Choosing the Linking Time-Window}
+\subsubsubsection{Choosing the Linking Time-Window}
 
 As expected in production, we attempted to generate tracklets between
 any pair of images separated by more than 15 minutes and less than
@@ -501,7 +491,7 @@ numbers should be consistently true across all experiments presented
 here.
 
 
-\subsubsection{Choosing Velocity and Acceleration Limits}
+\subsubsubsection{Choosing Velocity and Acceleration Limits}
 \label{velAccLimits}
 \begin{figure}[ht!]
   \centering
@@ -558,7 +548,7 @@ detections on an object-per-object basis, we calculated that among the
 %% see mops64: /mnt/raid/jmyers/variousDensities/fullDensity/maxV.5_15days/trueTracks/*.log
 
 
-\subsubsection{About the Simulated Source Catalog}
+\subsubsubsection{About the Simulated Source Catalog}
 \label{sourceCatalog}
 The simulated asteroid catalog was generated using the cadence of a
 simulated survey conducted using the LSST Operations Simulator.  A set
@@ -588,7 +578,7 @@ affect the conclusions reached from our experiments.
 
 
 
-\subsubsection{Results}
+\subsubsubsection{Results}
 
 
 
@@ -657,7 +647,7 @@ were underrepresented due to their high velocities; see
 
 
 
-\subsection{Scaling On Solar System Model Density}
+\subsubsection{Scaling On Solar System Model Density}
 
 To test the scaling of the system as density increases, we generated
 ``reduced-density'' catalogs.  We randomly chose a subset of the
@@ -727,7 +717,7 @@ results.
 
 
 
-\subsection{Scaling On Non-Solar System Detection Density}
+\subsubsection{Scaling On Non-Solar System Detection Density}
 
 Even after removal of background stars, actual observational data will
 include a variety of non-asteroid sources, including transient
@@ -798,6 +788,55 @@ imposed a significant cost.
 
 
 
+
+
+
+
+
+
+\section{Implications for Telescope Cadence}
+\label{cadenceRequirements}
+
+\subsection{Cadence Requirements Imposed by Sky-Plane Linking Methods}
+
+The multi-tiered approach we describe imposes certain requirements on
+telescope cadence.  For example, we cannot generate a tracklet for an
+object unless it is observed twice on a given night; a track cannot be
+generated for an object unless it generates multiple tracklets within
+a reasonable period of time.
+
+Further practical considerations impose further requirements on
+cadence. Even if an object is observed twice within a night, it may
+not be practical to generate a tracklet for that object if the time
+interval between observations is too large.  This is because within a
+large time period, objects can move a significant distance, and the
+search space for tracklet generation can become very large, leading to
+large numbers of mislinkages.  A casual study in \citet{kubica_thesis}
+and experiences related to us from work on the PanSTARRS MOPS both
+state an upper time limit of 90 minutes is necessary to prevent
+excessively high numbers of mislinkages. A 15-minute lower limit was
+also suggested as a minimum for most objects to generate useful
+apparent motion relative to astrometric errors. Similarly, the
+quadratic approximation of asteroid sky-plane motion breaks down after
+periods longer than roughly one month \citep{kubica_thesis}.  As a
+result, it is not possible to form tracks from tracklets separated by
+greater than one month of observation time.
+
+As mentioned in \ref{orbitFitting}, it is generally held that most
+orbit determination methods can generate a reliable orbit given six
+detections of an object occuring on at least three distinct nights.
+As a general rule, the telescope cadence will attempt to revisit
+fields of sky twice on a single night within the aforementioned 15-90
+minute interval; it will then attempt to revisit these fields again on
+two more nights within a span of 30 days or less.  In this way, and
+objects in that field will be observed a total of at least six times
+on at least three different nights, generating three or more tracklets
+sufficient for linking into a track.
+
+
+The current implementation of simulated telescope operations
+take into account these requirements when generating simulated sets of
+telescope pointings. 
 
 
 

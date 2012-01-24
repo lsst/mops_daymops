@@ -3,6 +3,7 @@
 \usepackage{natbib}
 \usepackage{graphicx}
 \usepackage{subfig}
+\usepackage{appendix}
 %\usepackage{fixltx2e}
 
 
@@ -176,65 +177,6 @@ flows are illustrated in figure \ref{mopsDiagram}.
 
 
 
-\subsubsection{Orbit Fitting}
-\label{orbitFitting}
-
-Orbits are 6 parameter Keplerian orbits fit to the set of observations
-linked during the track building phase. The Keplerian orbit sets
-tighter and more complicated constraints on the linkages than the
-previous quadratic approximation to this motion, and thus provides a
-final filter on linkages which can correspond to true, physical
-objects. Using a well-determined orbit, we can predict the location of
-an object at arbitrary times.
-
-Orbit fitting can be accomplished using either traditional geometric
-methods, where an ellipse or parabola consistent with movement in the
-gravitational field of the sun is fit to the set of detections, or
-with statistical ranging, where a wide range of potential orbits are
-evaluated against the set of detections to search for those with
-the lowest residuals. Traditional methods are typically much speedier,
-and are available to LSST through the OrbFit software from Milani
-\citep{Milani2006}. Statistical ranging methods are more accurate in
-exploring the full range of orbital uncertainties for each object,
-which can be particularly important for objects observed near 60--90
-degrees from the Sun where NEO and MBA exhibit similar apparent
-motions, and are available in the OpenOrb software from Granvik
-\citep{OpenOrb2009}.
-
-In general, orbit fitting is split into two conceptual pieces - an
-``initial orbit determination'' stage, where approximate orbits are
-calculated, and a ``differential correction'' stage, where
-perturbations on the initial orbit are evaluated to find the best fit
-and uncertainty. With six observations on three different nights, most
-real moving objects will pass both initial orbit determination and
-differential correction with an orbit accurate enough to generate
-predicted positions with uncertainties of less than a few arcminutes
-for the next few months \citep{basicSolarSystem}.
-
-
-
-
-
-\subsubsection{Sky-Plane Motion Limits Imposed by Sky-Plane Linking Methods}
-
-Practical considerations necessitate that we set upper bounds on
-tracklet velocity and track acceleration in order to restrict the
-number of potential mislinkages. Existing methods attempt to find all
-tracklets or tracks within specified velocity and acceleration limits;
-as velocity and acceleration limits are raised, the number of
-tracklets and tracks can grow quickly.  As a result, the choice of
-velocity and acceleration limits is important, as it significantly
-impacts the objects found as well as the cost of running the software.
-
-Generally, all types of solar system objects except for the fastest of
-near-earth asteroids tend to have reasonably low sky-plane velocity
-and acceleration. It is expected that the fastest-moving objects will
-leave visible trails in images; these may be used to isolate
-detections which could be attributable to fast-movers and restrict the
-potential search space for linking these detections.  See section
-\ref{neosTrailing} for more information on future plans for
-approaching this problem.  
-
 
 
 
@@ -287,7 +229,7 @@ using a closed-source ephemeris generation tool.
 
 
 
-\section{Linking of Detections}
+\section{DayMOPS}
 \label{linking}
 
 \subsection{Approximate Models of Asteroid Motion}
@@ -421,7 +363,71 @@ chi-squared filter and the software. Stats on ground-truth fitting,
 possible needs for improvements.
 
 
-\subsection{Metrics \& Scaling of Sky-Plane Linking Methods}
+\subsection{Orbit Fitting}
+\label{orbitFitting}
+
+Orbits are 6 parameter Keplerian orbits fit to the set of observations
+linked during the track building phase. The Keplerian orbit sets
+tighter and more complicated constraints on the linkages than the
+previous quadratic approximation to this motion, and thus provides a
+final filter on linkages which can correspond to true, physical
+objects. Using a well-determined orbit, we can predict the location of
+an object at arbitrary times.
+
+Orbit fitting can be accomplished using either traditional geometric
+methods, where an ellipse or parabola consistent with movement in the
+gravitational field of the sun is fit to the set of detections, or
+with statistical ranging, where a wide range of potential orbits are
+evaluated against the set of detections to search for those with
+the lowest residuals. Traditional methods are typically much speedier,
+and are available to LSST through the OrbFit software from Milani
+\citep{Milani2006}. Statistical ranging methods are more accurate in
+exploring the full range of orbital uncertainties for each object,
+which can be particularly important for objects observed near 60--90
+degrees from the Sun where NEO and MBA exhibit similar apparent
+motions, and are available in the OpenOrb software from Granvik
+\citep{OpenOrb2009}.
+
+In general, orbit fitting is split into two conceptual pieces - an
+``initial orbit determination'' stage, where approximate orbits are
+calculated, and a ``differential correction'' stage, where
+perturbations on the initial orbit are evaluated to find the best fit
+and uncertainty. With six observations on three different nights, most
+real moving objects will pass both initial orbit determination and
+differential correction with an orbit accurate enough to generate
+predicted positions with uncertainties of less than a few arcminutes
+for the next few months \citep{basicSolarSystem}.
+
+
+
+
+
+\subsection{Sky-Plane Motion Limits Imposed by Sky-Plane Linking Methods}
+
+Practical considerations necessitate that we set upper bounds on
+tracklet velocity and track acceleration in order to restrict the
+number of potential mislinkages. Existing methods attempt to find all
+tracklets or tracks within specified velocity and acceleration limits;
+as velocity and acceleration limits are raised, the number of
+tracklets and tracks can grow quickly.  As a result, the choice of
+velocity and acceleration limits is important, as it significantly
+impacts the objects found as well as the cost of running the software.
+
+Generally, all types of solar system objects except for the fastest of
+near-earth asteroids tend to have reasonably low sky-plane velocity
+and acceleration. It is expected that the fastest-moving objects will
+leave visible trails in images; these may be used to isolate
+detections which could be attributable to fast-movers and restrict the
+potential search space for linking these detections.  See section
+\ref{neosTrailing} for more information on future plans for
+approaching this problem.  
+
+
+
+
+
+
+\section{Metrics \& Scaling of DayMOPS}
 
 Current development efforts have focused on the sky-plane tracking
 phase of DayMOPS, as all later processing is dependant on its
@@ -449,9 +455,9 @@ of performing OD on its output.
 
 
 
-\subsubsection{Experiments And Results}
+\subsection{Experiments And Results}
 
-\subsubsubsection{Metrics for End-to-end Evaluation of Sky-plane Linking}
+\subsubsection{Metrics for End-to-end Evaluation of Sky-plane Linking}
 MOPS can generate a useful orbit, and thus a Moving Object, for an
 object if it is observed sufficiently for OD to be performed (see
 \ref{cadenceRequirements} for details) and a track containing those
@@ -503,7 +509,7 @@ as input to the track generation software and to OD.
 
 
 
-\subsubsection{Results From Main-Belt and Distant Object Searching On Ecliptic}
+\subsection{Results From Main-Belt and Distant Object Searching On Ecliptic}
 
 The ecliptic plane is the most densely-populated region of the sky,
 and main-belt asteroids generate the vast majority of detected objects
@@ -518,7 +524,7 @@ Further, because our software looks for objects moving or accelerating
 \textit{below} a set threshold, objects moving and accelerating more
 slowly than main-belters were also found.
 
-\subsubsubsection{Choosing the Linking Time-Window}
+\subsubsection{Choosing the Linking Time-Window}
 
 As expected in production, we attempted to generate tracklets between
 any pair of images separated by more than 15 minutes and less than
@@ -529,7 +535,7 @@ numbers should be consistently true across all experiments presented
 here.
 
 
-\subsubsubsection{Choosing Velocity and Acceleration Limits}
+\subsubsection{Choosing Velocity and Acceleration Limits}
 \label{velAccLimits}
 \begin{figure}[ht!]
   \centering
@@ -586,7 +592,7 @@ detections on an object-per-object basis, we calculated that among the
 %% see mops64: /mnt/raid/jmyers/variousDensities/fullDensity/maxV.5_15days/trueTracks/*.log
 
 
-\subsubsubsection{About the Simulated Source Catalog}
+\subsubsection{About the Simulated Source Catalog}
 \label{sourceCatalog}
 The simulated asteroid catalog was generated using the cadence of a
 simulated survey conducted using the LSST Operations Simulator.  A set
@@ -616,7 +622,7 @@ affect the conclusions reached from our experiments.
 
 
 
-\subsubsubsection{Results}
+\subsection{Results}
 
 
 
@@ -685,7 +691,7 @@ were underrepresented due to their high velocities; see
 
 
 
-\subsubsection{Scaling On Solar System Model Density}
+\subsection{Scaling On Solar System Model Density}
 
 To test the scaling of the system as density increases, we generated
 ``reduced-density'' catalogs.  We randomly chose a subset of the
@@ -755,7 +761,7 @@ results.
 
 
 
-\subsubsection{Scaling On Non-Solar System Detection Density}
+\subsection{Scaling On Non-Solar System Detection Density}
 
 Even after removal of background stars, actual observational data will
 include a variety of non-asteroid sources, including transient
@@ -815,12 +821,6 @@ Noise Points / Image &   \% Noise & \#Tracklets & \#Tracks  & Linking Runtime (s
 
 
 
-\subsection{NightMOPS Resource Usage}
-
-The costs of running NightMOPS are expected to be negligable compared
-with the costs of running DayMOPS.  NightMOPS (fed from a database of
-real known objects) has been run in past data challenges and has not
-imposed a significant cost. 
 
 
 
@@ -832,49 +832,6 @@ imposed a significant cost.
 
 
 
-\section{Implications for Telescope Cadence}
-\label{cadenceRequirements}
-
-\subsection{Cadence Requirements Imposed by Sky-Plane Linking Methods}
-
-The multi-tiered approach we describe imposes certain requirements on
-telescope cadence.  For example, we cannot generate a tracklet for an
-object unless it is observed twice on a given night; a track cannot be
-generated for an object unless it generates multiple tracklets within
-a reasonable period of time.
-
-Further practical considerations impose further requirements on
-cadence. Even if an object is observed twice within a night, it may
-not be practical to generate a tracklet for that object if the time
-interval between observations is too large.  This is because within a
-large time period, objects can move a significant distance, and the
-search space for tracklet generation can become very large, leading to
-large numbers of mislinkages.  A casual study in \citet{kubica_thesis}
-and experiences related to us from work on the PanSTARRS MOPS both
-state an upper time limit of 90 minutes is necessary to prevent
-excessively high numbers of mislinkages. A 15-minute lower limit was
-also suggested as a minimum for most objects to generate useful
-apparent motion relative to astrometric errors. Similarly, the
-quadratic approximation of asteroid sky-plane motion breaks down after
-periods longer than roughly one month \citep{kubica_thesis}.  As a
-result, it is not possible to form tracks from tracklets separated by
-greater than one month of observation time.
-
-As mentioned in \ref{orbitFitting}, it is generally held that most
-orbit determination methods can generate a reliable orbit given six
-detections of an object occuring on at least three distinct nights.
-As a general rule, the telescope cadence will attempt to revisit
-fields of sky twice on a single night within the aforementioned 15-90
-minute interval; it will then attempt to revisit these fields again on
-two more nights within a span of 30 days or less.  In this way, and
-objects in that field will be observed a total of at least six times
-on at least three different nights, generating three or more tracklets
-sufficient for linking into a track.
-
-
-The current implementation of simulated telescope operations
-take into account these requirements when generating simulated sets of
-telescope pointings. 
 
 
 
@@ -882,10 +839,14 @@ telescope pointings.
 
 
 
+\section{Implications for Survey Performance}
+Talk here about OpSim, cadence, software limitations and science requirements.
 
 
 
-\section{Development Plan}
+
+
+\section{Risk Reduction}
 
 Though the core algorithms of MOPS have been implemented in
 LSST-appropriate style, further research and development are needed.
@@ -916,8 +877,9 @@ require either significant compute-resources or improved tools for
 generating input catalogs.
 
 
+\subsection{Future Software Development Tasks}
 
-\subsection{Filtering on Trailing for Near-Earth-Object Searching}
+\subsubsection{Filtering on Trailing for Near-Earth-Object Searching}
 
 \label{neosTrailing}
 
@@ -942,7 +904,7 @@ of image processing algorithms may be neccesary.
 
 
 
-\subsection{Distribution/Parallelization of Software}
+\subsubsection{Distribution/Parallelization of Software}
 
 Current software implementations and simulations presented in this
 document use only a single processor.  Performance has been
@@ -965,7 +927,17 @@ poorly load-balanced workloads.  We plan to investigate this method,
 but leave open the possibility of attempting other approaches as well.
 
 
+
+\appendix
+\section{Helpful Metrics and Software Tools}
+\subsection{Studying OpSim}
+\subsection{Studying Tracks}
+
+
 \bibliographystyle{apj}
 \bibliography{baseline}
+
+
+
 
 \end{document}

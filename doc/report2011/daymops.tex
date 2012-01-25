@@ -1,0 +1,196 @@
+\section{DayMOPS}
+\label{linking}
+
+\subsection{Approximate Models of Asteroid Motion}
+Because of the complexity of the full heliocentric orbital
+approximation of asteroid motion, DayMOPS uses simplified models based
+on sky-plane motion of asteroid behavior.  
+
+\subsubsection{Real Heliocentric Orbits}
+Do we need this?
+
+\subsubsection{Linear and Quadratic Models}
+Put Yusra's findings here as well
+
+\subsubsection{Higher-order Sky-Plane Models}
+Tim's methods go here - the assumed topocentric distance, topocentric correction, higher-order fits
+
+\subsection{The Linking Pipeline}
+Add an illustration of the various stages and a short piece of
+introductory text.  Also perhaps useful: show one object's detections
+and its various states of linkage. (detections, tracklets, merged tracklets, track(s))
+
+\subsection{Building Tracklets}
+
+% possible illustration: show Dec/time for two images, then tracklets in Dec/time
+
+\textbf{Tracklets} are the building blocks of the sky-plane
+\textbf{tracks} used by DayMOPS.  Tracklets are linkages between
+DiaSource detections occuring within the same night; during this time
+period, solar system object motion is linear or near-linear on the
+sky. By creating tracklets, DayMOPS can find sky-plane position and
+velocity estimates for sets of detections which may belong to solar
+system objects.  This filters out many detections of non-solar system
+objects, as they are less likely to generate tracklets.  The use of
+tracklets also simplifies the downstream work of track generation,
+which attempts to find sets of detections with a good
+position/velocity/acceleration fit on the sky-plane; since tracklets
+have known position and velocity, the track generation phase needs
+only to find those tracklets compatible within some acceleration
+factor.
+
+In order to ensure that tracklet-generating images are acquired, it is
+necessary to ensure that regions of the sky are visited two or more
+times within an accepted time period each night.  Currently, we
+require that sky fields be revisited within a fairly short time period
+($\leq 90$ minutes is the current rule) in order to constrain the
+maximum apparent motion of solar system objects and thus also
+constrain the number of tracklets.
+
+The discovery of tracklets can be accomplished efficiently using
+KD-Tree structures \citep{bentley_kdtrees} and methods from
+\citet{kubica_thesis}.  DayMOPS will build a 2-dimensional (RA, Dec)
+KD-Tree for each image, using the tree to hold the detections found in
+that image.  Because KD-Trees allow quick range searches of
+arbitrary-dimensional spatial data, it is possible to efficiently
+perform searches over the detections to find pairs of detections
+sufficiently close within time and within limits on apparent
+velocity. These pairs of detections are linked to generate tracklets.
+% TBD: Is this clear?!
+
+% psuedo code?
+
+Further refinements of tracklets are possible with additional
+processing. If an object gets more than one tracklet, it is possible
+to use methods similar to the Hough transform to identify and merge
+these redundant tracklets into larger tracklets, improving the linear
+position/velocity fits of the tracklets and reducing the number of
+tracklets passed downstream.
+
+\subsubsection{The findTracklets Software}
+Cover the code, its status, what routines do what in the psuedocode, etc.
+
+\subsection{Improving and Filtering Tracklets}
+CollapseTracklets issues go here - linking tracklets into longer
+tracklets, etc, perhaps some advice on why we do this.
+
+\subsubsection{The collapseTracklets Software}
+Cover the code, its status, what routines do what in the psuedocode, etc.
+
+\subsubsection{Tracklet Filtering Software}
+What filters we use, and why. Add some information on the code and
+status.  Cover RemoveSubsets here.
+
+
+\subsection{Building Tracks}
+
+Over the course of roughly one month, solar system objects tend to
+follow a roughly quadratic path on the sky-plane
+\citep{kubica_thesis}.  The track generation phase of DayMOPS will
+attempt to find sets of tracklets (which have position and velocity
+estimates) which were observed within one month of each other and are
+compatible within some acceleration range.  Tracks which are
+suitable for generating a reasonable orbital fit are sent to the Orbit
+Determination phase.
+
+The methods used for tracklet-to-tracklet linking are described in
+\citet{kubica_thesis} and \citet{Kubica:2005:MTA:1081870.1081889}.
+The methods described attempt to efficiently find sets of tracklets
+which are \textit{compatible} in the sense that they could be joined
+to form a track: that is, tracklets which span multiple nights and
+have positions and velocities which are consistent with a fixed
+acceleration.  
+
+To perform this work efficiently, these methods use four-dimensional
+KD-Trees over \textit{tracklet-space}, or (RA position, Dec position,
+RA velocity, Dec velocity). One tree is created per image, and holds
+each tracklet which has its first detection in that image.  A
+multi-tree walk is performed using a clever algorithm, efficiently
+discovering all regions of tracklet-space which could contain sets of
+tracklets that are compatible, while avoiding visits to tracklet-space
+regions which are not compatible and could not generate a track.  This
+is performed recursively until leaf nodes of the KD-Trees are reached.
+
+% illustration from Kubica?
+
+When the algorithm encounters a set of leaf nodes in the KD-Trees, it
+attempts to build a track using the detections held in the tracklets
+at the leaf nodes.  A quadratic fit, or a higher-order fit if
+possible, to the detections will be attempted.  Then a quality-of-fit
+assessment is used to determine whether the track is considered
+sufficiently well-fitted to pass downstream to the Orbit
+Determination.  Investigation into ideal higher-order fits and
+quality-of-fit metrics is ongoing, but as of this writing a filter on
+minimum chi-squared probability appears to be the best option.
+
+\subsubsection{The linkTracklets Software}
+Cover the code, its status, what routines do what in the psuedocode,
+etc.  Also cover hotspots, sensitive areas, and parameters which have
+big impacts on behavior here.
+
+
+\subsection{Filtering of Tracks}
+Some more information on implementation of Tim's fitting and
+chi-squared filter and the software. Stats on ground-truth fitting,
+possible needs for improvements.
+
+
+\subsection{Orbit Fitting}
+\label{orbitFitting}
+
+Orbits are 6 parameter Keplerian orbits fit to the set of observations
+linked during the track building phase. The Keplerian orbit sets
+tighter and more complicated constraints on the linkages than the
+previous quadratic approximation to this motion, and thus provides a
+final filter on linkages which can correspond to true, physical
+objects. Using a well-determined orbit, we can predict the location of
+an object at arbitrary times.
+
+Orbit fitting can be accomplished using either traditional geometric
+methods, where an ellipse or parabola consistent with movement in the
+gravitational field of the sun is fit to the set of detections, or
+with statistical ranging, where a wide range of potential orbits are
+evaluated against the set of detections to search for those with
+the lowest residuals. Traditional methods are typically much speedier,
+and are available to LSST through the OrbFit software from Milani
+\citep{Milani2006}. Statistical ranging methods are more accurate in
+exploring the full range of orbital uncertainties for each object,
+which can be particularly important for objects observed near 60--90
+degrees from the Sun where NEO and MBA exhibit similar apparent
+motions, and are available in the OpenOrb software from Granvik
+\citep{OpenOrb2009}.
+
+In general, orbit fitting is split into two conceptual pieces - an
+``initial orbit determination'' stage, where approximate orbits are
+calculated, and a ``differential correction'' stage, where
+perturbations on the initial orbit are evaluated to find the best fit
+and uncertainty. With six observations on three different nights, most
+real moving objects will pass both initial orbit determination and
+differential correction with an orbit accurate enough to generate
+predicted positions with uncertainties of less than a few arcminutes
+for the next few months \citep{basicSolarSystem}.
+
+
+
+
+
+\subsection{Sky-Plane Motion Limits Imposed by Sky-Plane Linking Methods}
+
+Practical considerations necessitate that we set upper bounds on
+tracklet velocity and track acceleration in order to restrict the
+number of potential mislinkages. Existing methods attempt to find all
+tracklets or tracks within specified velocity and acceleration limits;
+as velocity and acceleration limits are raised, the number of
+tracklets and tracks can grow quickly.  As a result, the choice of
+velocity and acceleration limits is important, as it significantly
+impacts the objects found as well as the cost of running the software.
+
+Generally, all types of solar system objects except for the fastest of
+near-earth asteroids tend to have reasonably low sky-plane velocity
+and acceleration. It is expected that the fastest-moving objects will
+leave visible trails in images; these may be used to isolate
+detections which could be attributable to fast-movers and restrict the
+potential search space for linking these detections.  See section
+\ref{neosTrailing} for more information on future plans for
+approaching this problem.  
+

@@ -51,6 +51,7 @@ LSST-MOPS package
 
 
 SConscript(['src/SConscript',
-            'lib/SConscript'])
+            'lib/SConscript',
+            'doc/SConscript'])
 
  

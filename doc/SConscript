@@ -1,0 +1,9 @@
+# -*- python -*-
+import os
+Import('env')
+
+doxy = env.Doxygen("doxygen.conf")
+
+# the following is what base does. it does not work for us...
+#from lsst.SConsUtils import scripts
+#scripts.BasicSConscript.doc(inputs=["#include", "#src"])

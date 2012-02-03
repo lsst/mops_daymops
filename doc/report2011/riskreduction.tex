@@ -1,0 +1,83 @@
+\section{Risk Reduction}
+
+Though the core algorithms of MOPS have been implemented in
+LSST-appropriate style, further research and development are needed.
+
+
+
+\subsection{Long Duration Survey Performance}
+
+Current simulations cover fairly short time periods, and therefore
+emphasize the problem of initial object discovery.  In the course of
+the full survey, we expect that many detected sources will be
+attributed to already-discovered objects.  Because initial object
+discovery phases are relatively expensive and ephemeris calculation is
+relatively fast, we expect that the resource usage of the system will
+decline over time, as more objects are discovered and the size of
+input catalogs is reduced.  This expectation needs to be verified and
+quantified.
+
+Attribution, precovery and Moving Object management and refinement of the
+Moving Object table are not yet implemented in LSST-compliant software.
+Developing this software should be a significant development task.
+However, we hope that by using the algorithms from the PanSTARRS MOPS
+we can avoid any significant research tasks.
+
+To test this software, we will need to generate simulated input
+catalogs which span longer time periods.  Accomplishing this will
+require either significant compute-resources or improved tools for
+generating input catalogs.
+
+
+\subsection{Future Software Development Tasks}
+
+\subsubsection{Filtering on Trailing for Near-Earth-Object Searching}
+
+\label{neosTrailing}
+
+Near-Earth Objects tend to have the highest sky-plane velocity.  This
+presents a significant challenge; as we increase the maximum velocity
+limit of our tracklet generation, the potential for mislinkage
+increases significantly, leading to higher numbers of tracklets and
+increased costs.  
+
+Fortunately, fast-moving NEOs will generate visible trails in our
+images.  By requiring all tracklets to show trails consistent with
+their apparent sky-plane velocity, we expect that it will be possible
+to filter most false tracklet linkages, thus rendering the problem of
+NEO searching manageable.
+
+The ability to filter on trailing is dependent almost entirely on our
+ability to correctly identify trails in images.  Currently, the
+ability of image processing to detect trails is not well quantified.  To
+remedy this, we will need to generate simulated images which include
+asteroid trails and send them to image processing; further refinement
+of image processing algorithms may be neccesary.
+
+
+
+\subsubsection{Distribution/Parallelization of Software}
+
+Current software implementations and simulations presented in this
+document use only a single processor.  Performance has been
+sufficiently fast for this to be reasonable; however, as we increase
+the size of the simulated sky, extend the linking window, and increase
+non-asteroid source density, it will likely become necessary to
+parallelize some core algorithms.
+
+The PanSTARRS MOPS can inform our decisions on parallelization and
+distribution.  Some phases of processing are trivially parallel, such
+as Initial Orbit Determination, in which the same operations are
+performed to a large variety of tracks; this should be very easy to
+accomplish in using LSST Pipeline Middleware.  
+
+Other tasks will be more difficult; in distributing sky-plane linking,
+PanSTARRS MOPS divides up the data by field of view and distributes
+the workload along this axis.  This has the advantage of distributing
+the workload in a straightforward way, but potentially generating
+poorly load-balanced workloads.  We plan to investigate this method,
+but leave open the possibility of attempting other approaches as well.
+
+\subsubsubsection{Parallel FindTracklets}
+\subsubsubsection{Parallel LinkTracklets}
+\subsubsubsection{Distributed LinkTracklets}

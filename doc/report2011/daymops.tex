@@ -142,7 +142,24 @@ by collapseTracklets and additional filters.
 
 The findTracklets software is responsible for finding pairs of
 detections which occur within a fixed time threshold, and have
-apparent velocity below a given threshold.  Fortunately, this can be
+apparent velocity below a given threshold.  For a given detection and
+a set of image times, one can calculate the maximum distance an object
+could have travelled at each time using the velocity limit.  To find
+detections with which the query detection could be linked, one can
+imagine searching a circular region in the later images based on this
+distance.
+
+\begin{figure}[ht!]
+  \centering
+    \includegraphics[width=6cm]{illustrations/findTracklets-onequery.png}
+    \caption{ An example of searching for compatible second endpoints
+      for a given detection.  The first detection and each of the
+      second endpoints will be used to create a new tracklet.}
+\label{findTrackletsIllustrated}
+\end{figure}
+
+
+Fortunately, this can be
 accomplished in a fairly straightforward way through the use of
 KD-Trees.  KD-Trees are a data structure which allows for quickly and
 efficiently performing range searches on points in space
@@ -154,6 +171,7 @@ containing detections from later images, we can use range searches to
 quickly find nearby detections in those later images and use them for
 the creation of tracklets.
 
+\begin{figure}[ht!]
 \begin{algorithmic}
 \REQUIRE $I$ is a set of images, each of which has an associated exposure time and contains a set of detections
 \STATE \COMMENT{Create a 2D KD-Tree for each image, holding detections from that image.}
@@ -183,15 +201,148 @@ the creation of tracklets.
 \RETURN{$tracklets$}
 \end{algorithmic}
 
+\caption{Pseudo-code for the findTracklets algorithm.  2D (RA, Dec)
+  trees are created for each image; for each detection, later trees
+  are searched for nearby detections. }
+ \label{findTrackletsAlgorithm}
+\end{figure}
 
-Cover the code, its status, what routines do what in the psuedocode, etc.
+
+Note that because the sky is a sphere, notions of ``distance'' and
+``velocity'' can become slightly confusing, especially near the poles.
+Fortunately, both the KD-Tree library used and the findTracklets
+software are sufficiently clever to use actual great-circle distance
+and velocity for their queries, so that tracklets near the poles are
+not missed.  The software should also be impervious to wrap-around
+errors - objects which move between, say, $359.9 \degree$ in RA and
+$.01 \degree$ in RA will be detected.  The Appendix \ref{kdTreeLib}
+explains the KD-Tree library used in greater detail.  
+
+\paragraph{Code and Usage}
+Aside from the KD-Tree library, findTracklets is implemented by {\tt
+  findTracklets.h}, {\tt findTracklets.cc } and a command-line
+interface is provided by {\tt findTrackletsMain.cc}.  When calling the
+function {\tt findTracklets()} programmatically (e.g. inside an LSST
+Pipeline), use an instance of the {\tt findTrackletsConfig} to set the
+values of all options (including max velocity and min/max time
+threshold as well as others) and pass this to the {\tt
+  findTracklets()} function.  See comments in {\tt findTracklets.h}
+for documentation on the {\tt findTrackletsConfig} class.  Also see
+\ref{largeData} for additional information on output methods.
+
+The command-line {\tt findTracklets} program will take command-line
+flags and use them to instantiate a {\tt findTrackletsConfig} which is
+then used to call the actual {\tt findTracklets()} function.  Use {\tt
+  \$findTracklets -h} for an overview of the options.
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
+%% COLLAPSE TRACKLETS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
+
 
 \subsection{Improving and Filtering Tracklets} \label{collapseTracklets}
-CollapseTracklets issues go here - linking tracklets into longer
-tracklets, etc, perhaps some advice on why we do this.
+If a field of the sky gets multiple revisits, or more than two visits
+within the time window, it is possible that findTracklets will find
+more than one true tracklet associated with that object.  This can
+generated needless downstream work, because the number of tracklets is
+larger, and if the multiple true intra-nightly tracklets are never
+linked together, then useful data (additional detections of the
+object) can be lost, or may need to be pieced back together later.
+
+In particular, in ``deep drilling'' operations, the telescope will
+repeatedly image the same field of sky many times in a short period.
+In these fields, the number of tracklets generated for an object will
+grow like $O(n^2)$ where $n$ is the number of times the object is
+seen, as each possible pair of detections will be linked.  This can
+generate a huge number of tracklets, making later work exceptionally,
+and needlessly, difficult.
+
+The tracklet improvement and filtering stage attempts to remedy this
+problem by joining together colinear 2-detection tracklets into
+higher-cardinality (3 detections or more) tracklets.
+
+
+\paragraph{Special Considerations}
+There is a small risk that occasionally, a true 2-detection tracklet
+be merged into a larger tracklet which is mislinked.  This is rare, as
+it can only occur when a true tracklet is colinear with a mislinked
+tracklet, but it is not strictly impossible.
+
+
 
 \subsubsection{The collapseTracklets Software} 
-Cover the code, its status, what routines do what in the psuedocode, etc.
+
+The tracklet refinement and filtering stage actually consists of
+several steps, which can be iterated as necessary.  The first and most
+important stage is the collapseTracklets stage, which finds roughly
+colinear tracklets and merges them.  
+
+To accomplish this, a method similar to the Hough transform is used.
+An intermediate time, $t_c$ is selected (we use the average time of
+the first and last detections) and use the apparent linear motion of
+the tracklets to project their location at $t_c$.  We then store these
+projected (RA,Dec) locations and the angle/velocity of each tracklet.
+At this point, colinear tracklets should have similar positions and
+motion vectors, making them easy to find.  This is accomplished with a
+series of range searches, which of course can be implemented with 4-D
+(RA, Dec, angle, velocity) KD-Trees.  The full pseudo-code is
+presented in Figure \ref{collapseTrackletsAlgorithm}.
+
+\begin{figure}[ht!]
+\begin{algorithmic}
+  \REQUIRE $T$ is a set of intra-nightly tracklets, $D$ is the set of nightly detections from which $T$ was created, $range$ is a 4-tuple of tolerances for RA, Dec, angle and velocity.
+  \STATE $t_c \gets midpoint(\{ d_{time} : d \in D \})$
+  \FOR {$t \in T$}
+    \STATE Calculate $t$'s predicted location at time $t_c$, its motion angle and velocity
+  \ENDFOR
+  \STATE \COMMENT{Create a 4D KD-Tree of the tracklets on their projected RA, Dec position and motion angle/velocity.}
+  \STATE $tree \gets$ Make4DTree$(T)$
+  \STATE $outTracklets = \{\}$
+  \FOR {$t \in T,\ t$ has not already merged with another tracklet}
+    \STATE \COMMENT{Find tracklets with projected location, motion similar to that of $t$}
+     \STATE $outTracklets = outTracklets \cup tree.$rangeSearch$(t_{projected\ position}, t_{angle}, t_{velocity}, range)$
+  \ENDFOR
+  \RETURN{$outTracklets$}
+\end{algorithmic}
+
+\caption{Pseudo-code for the collapseTracklets algorithm. A 4-D KD-Tree over RA, Dec, angle, velocity is constructed using the projected locations and motion of the tracklets.  Tracklets which are similar in this 4-D space are roughly colinear, so they are merged and written to output}
+
+\label{collapseTrackletsAlgorithm}
+
+\end{figure}
+
+Currently, collapseTracklets handles wrap-around, but otherwise treats
+the sky as a flat (RA, Dec) plane when calculating the projected
+positions of tracklets.  This is acceptable for tracklets close to the
+ecliptic, but not sufficient closer to the poles.  This should be
+fixed when possible.
+
+Because the collapseTracklets algorithm does linking in
+parameter-space, it is sometimes possible that the resulting tracklets
+contain detections which are not quite colinear.  Also, some tracklets
+may contain a superset of the detections present in other tracklets.  To address these, additional filtering stages are present.
+
+\paragraph{Code and Usage}
+The collapseTracklets algorithm is implemented in {\tt
+  collapseTracklets.h} and {\tt collapseTracklets.cc}.  A command-line
+interface is implemented in {\tt collapseTrackletsMain.cc}.  Note that
+collapseTracklets expects an array of detections and an array of
+tracklets as inputs; it expects that these tracklets will be expressed
+as sets indices into the detections array.  That is, if tracklet $t$
+holds the integers $\{0, 37\}$ then we trust it is a tracklet
+comprised of $\{detections[0], detections[37]\}$.  This is true of the
+input files expected by the command-line {\tt collapseTracklets} as
+well; since the command-line {\tt findTracklets} writes its output as
+sets of detection IDs (which may not start at zero) it may be
+neccessary to use the script $idsToIndices.py$ to translate the
+tracklets files before sending them to {\tt collapseTracklets}.
+
+
 
 \subsubsection{Tracklet Filtering Software}
 What filters we use, and why. Add some information on the code and
@@ -249,6 +400,51 @@ big impacts on behavior here.
 Some more information on implementation of Tim's fitting and
 chi-squared filter and the software. Stats on ground-truth fitting,
 possible needs for improvements.
+
+
+\subsection{Notes on the Linking Software}
+
+\subsubsection{Accomodations for Large Data Sets}
+\label{largeData}
+Over the course of our experiments, we discovered that under some
+circumstances, tools may return some very large data sets - larger
+than the memory available on our development machines.  Though RAM
+sizes may grow over time, it is likely that DayMOPS users will
+continue to experiment with increasingly dense noise or loose limits,
+resulting in increasingly large numbers of tracklets or tracks.
+
+To help deal with this problem, the {\tt  findTracklets} and
+{\tt linkTracklets} functions can be configured to output their results
+in various ways; they can be configured either to store their results
+in memory and return them (much like a normal function call) or to
+return nothing and write results directly to file.  If the user is
+confident that the data set to be returned will fit in memory, the
+former is more elegant, but for our experiments we always write to
+file first, in case the number of tracklets or tracks discovered is
+large.
+
+The {\tt findTracklets} and {\tt linkTracklets} functions each take as
+an argument an object of type {\tt findTrackletsConfig} or
+{\tt linkTrackletsConfig}; each type has a public member variable
+called {\tt outputMethod} which can be set.  {\tt findTracklets.h} and
+{\tt linkTracklets.h} each contain enum types which can be used to set
+these flags.
+
+Dealing with larger-than-memory data sets as input to our software
+tools is a more significant problem.  We generally assume that the
+number of input detections will fit in memory, and that KD-Trees of
+these detections will also fit in memory.  This has always been the
+case, and fortunately it is easy to predict whether a set of
+detections will fit in memory or not.  However, the number of
+tracklets or tracks may, depending on the data and configuration of
+the software, grow to be quite large, and is not trivially
+predictable.  For software which uses tracklets or tracks as its input
+data and operates on them in bulk (including {\tt collapseTracklets},
+{\tt removeSubsets}, and {\tt linkTracklets}), this may be problematic;
+see section \ref{parallelization} for more information on this
+problem.
+
+
 
 
 \subsection{Orbit Fitting}

@@ -325,31 +325,71 @@ fixed when possible.
 Because the collapseTracklets algorithm does linking in
 parameter-space, it is sometimes possible that the resulting tracklets
 contain detections which are not quite colinear.  Also, some tracklets
-may contain a superset of the detections present in other tracklets.  To address these, additional filtering stages are present.
+may contain a superset of the detections present in other tracklets.
+To address these, additional filtering stages are present.
 
 \paragraph{Code and Usage}
 The collapseTracklets algorithm is implemented in {\tt
   collapseTracklets.h} and {\tt collapseTracklets.cc}.  A command-line
-interface is implemented in {\tt collapseTrackletsMain.cc}.  Note that
-collapseTracklets expects an array of detections and an array of
-tracklets as inputs; it expects that these tracklets will be expressed
-as sets indices into the detections array.  That is, if tracklet $t$
-holds the integers $\{0, 37\}$ then we trust it is a tracklet
-comprised of $\{detections[0], detections[37]\}$.  This is true of the
-input files expected by the command-line {\tt collapseTracklets} as
-well; since the command-line {\tt findTracklets} writes its output as
-sets of detection IDs (which may not start at zero) it may be
-neccessary to use the script $idsToIndices.py$ to translate the
-tracklets files before sending them to {\tt collapseTracklets}.
+interface is implemented in {\tt collapseTrackletsMain.cc}.  Run {\tt
+  collapseTracklets -h} for usage hints.
+
+
+
 
 
 
 \subsubsection{Tracklet Filtering Software}
-What filters we use, and why. Add some information on the code and
-status.  Cover RemoveSubsets here.
+The collapseTracklets algorithm attempts linking in parameter-space;
+as a result, it is possible that tracklets which are not entirely
+colinear may be merged.  This can be rectified using the
+purifyTracklets algorithm, which removes detections from tracklets if
+they are sufficiently off the best-fit line.  
+
+Further, it is sometimes possible that a tracklet may link together a
+set of detections already present in another, higher-cardinality
+tracklet.  These ``subset tracklets'' are almost universally
+unhelpful, and the removeSubsets algorithm may be used to efficiently
+find and remove them from the active set of tracklets.
+
+
+\begin{figure}[ht!]
+\begin{algorithmic}
+  \REQUIRE $T$ is a set of tracklets, $rmsMax$ is a maximum root-mean
+  squared residual on the tracklet's best-fit function to its
+  detections
+
+  \FOR {$t \in T$}
+    \STATE $rms = RMS(t)$
+    \WHILE {$rms > maxRms, |t| > 2$} 
+      \STATE remove the worst-fitting detection from $t$
+      \STATE $rms = RMS(t)$
+    \ENDWHILE
+  \ENDFOR
+  \RETURN{$outTracklets$}
+\end{algorithmic}
+
+\caption{In purifyTracklets, poorly-fitted detections are ``pruned''
+  from tracklets. In certain degenerate cases, we may prune tracklets
+  down to only two detections, in which case the pruning is
+  abandoned.}
+
+\label{purifyTrackletsAlgorithm}
+
+\end{figure}
+
+
+The subset removal algorithm can be used for tracklets as well as
+tracks.  It is presented in \ref{subsetRemoval}.
+
+
 
 
 \subsection{Building Tracks}
+
+Each tracklet represents a possible object on a given night, and the
+position and velocity of that object.  The track generation phase uses
+these tracklets to find tracks, which present a hypothetical object with 
 
 Over the course of roughly one month, solar system objects tend to
 follow a roughly quadratic path on the sky-plane

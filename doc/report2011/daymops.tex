@@ -1,13 +1,26 @@
 \section{DayMOPS}
 \label{linking}
 
-\subsection{Approximate Models of Asteroid Motion}
-Because of the complexity of the full heliocentric orbital
-approximation of asteroid motion, DayMOPS uses simplified models based
-on sky-plane motion of asteroid behavior.  
+Sufficiently bright moving objects which are observed by the LSST
+telescope will generate DiaSource detections, stored in the LSST
+DiaSource detection catalog.  The LSST DiaSource detection catalog
+will also detections from a variety of other non-moving object
+sources, including transient phenomena and artifacts of image
+processing.
+
+The LSST DayMOPS system is responsible for finding previously unknown
+moving objects within the LSST DiaSource catalog.  Due to the large
+number of detections expected, and the sometimes-unpredictable
+behavior of asteroids with unknown orbits, a structured and
+carefully-designed system is necessary to perform this searching and
+discovery in a computationally efficient manner.
 
 
-\subsubsection{Real Heliocentric Orbits}
+
+
+
+
+\subsection{Orbits}
 Heliocentric orbits describe an orbit around the Sun.  Generally,
 asteroids, planets and other solar system objects follow elliptical
 paths, centered on the Sun.  These paths are described (in general
@@ -18,9 +31,29 @@ For purposes of DayMOPS and NightMOPS, we assume that a well-fitted
 Kepler orbit should be sufficient to predict the location of an object
 well into the future or past.  
 
-\textbf{BD: Illustration of a Kepler orbit - Wikipedia has a good one.}
+\textbf{TBD: Illustration of a Kepler orbit - Wikipedia has a good one.}
 
 
+\subsection{Orbit Determination and The Linking Problem}
+Orbit determination refers to the problem of identifying an object's
+orbit given a well-spaced set of detections of that object.  The
+problem of orbit determination has been studied extensively \textbf{
+  CITATIONS HERE }, and several software tools exist which can, given
+a set of detections, identify an orbit which could have generated them
+or identify that no such orbit could exist.We entrust that a suitable
+outside tool will be chosen to handle this problem.
+
+This leads to the non-trivial problem of correctly identifying that a
+set of detections belonged to an unknown object and providing these
+detections (and only those detections) to an orbit determination tool.
+This is the \textbf{ linking problem}.  The majority of efforts in
+the DayMOPS system have been directed at constraining the number of
+linkages which are passed to the orbit determination tool, and at
+methods for discovering those linkages quickly.
+
+Fortunately, existing rules of thumb and approximations of asteroid
+motion can be used both to predict possible linkages, and reject those
+which are obviously untenable.
 
 \subsubsection{Linear and Quadratic Models}
 In order to discover and identify new objects, astronomers have
@@ -35,8 +68,7 @@ contain some error.
 
 Given many detections which may or may not be attributable to one or
 more asteroids, these approximations are used to help determine which
-detections could plausibly be linked (that is, which detections could
-be attributable to the same object).  If several detections over the
+detections could plausibly be linked.  If several detections over the
 course of a single night do not follow a roughly linear path, we trust
 that they could not have been attributable to the same object; if
 several detections over the course of a month do not follow a roughly
@@ -47,40 +79,35 @@ investigate.
 
 Of course, since these are merely approximations, it is almost
 inevitable that some correct linkages will be rejected.  In
-particular, near-Earth-objects (NEOs) may exhibit sky-plane behaviour
-not consistent with these rules of thumb.
+particular, some near-Earth-objects (NEOs) may exhibit sky-plane
+behaviour not consistent with these rules of thumb.
 
-\textbf{TBD: Put Yusra's findings here as well}
 
 \subsubsection{Higher-order Sky-Plane Models}
 \textbf{TBD: Tim's methods go here - the assumed topocentric distance, topocentric correction, higher-order fits}
 
+
 \subsection{The Linking Pipeline}
+The linking pipeline is responsible for finding sets of detections
+which may be attributable to the same moving object and sending them
+to the Orbit Determination stage, which will either accept them as a
+true linkage with an associated orbit or reject them as incorrectly
+linked.  
+
+To deal with the scale and complexity of discovering plausible
+multi-night linkages for unknown objects, the DayMOPS system is
+designed as a pipeline of several stages, building increasingly
+sophisticated linkages at each step until multi-night linkages
+suitable for orbit determination are discovered.  Specifically, we
+move from individual detections to nightly, linear \textbf{tracklets},
+to eventual multi-night \textbf{tracks} suitable for orbit
+determination.  These tracks are filtered using a slightly more
+sophisticated (but simpler than full orbit-space) model of asteroid
+motion, to more quickly reject the (often numerous) mislinked tracks.
+
 \textbf{TBD: Add an illustration of the various stages and a short piece of
 introductory text.  Also perhaps useful: show one object's detections and its various states of linkage. (detections, tracklets, merged tracklets, track(s))}
 
-The LSST DayMOPS system is responsible for finding previously unknown
-moving objects in a set of detections.  It takes as input a set of
-DiaSource detections with unknown origin.  At output, it should
-identify orbits and associated detections for newly-discovered objects
-found in the set of input detections.  
-
-The DayMOPS system achieves this through a pipeline approach, building
-increasingly sophisticated linkages at each step.  A linkage between a
-set of detections represents the hypothesis that these detections
-\textit{may} be attributable to the same object.  Unattributed
-detections are first linked into nightly linear \textbf{tracklets}.
-These tracklets are sets of two or more detections which are roughly
-colinear, and have an associated initial sky-plane position and
-velocity.  These tracklets are passed forward are passed forward to be
-linked into quadratic \textbf{tracks}, each of which contains several
-tracklets from multiple nights.  To handle the often large number of
-mislinked tracks, a higher-order model is fit the to the detections in
-each track and and used to filter them more aggressively.  Those
-tracks which survive the filtering are then sent to a full orbit
-fitting tool, which should authoritatively reject mislinked sets of
-detections and find preliminary orbits associated with
-correctly-linked tracks.
 
 Note that tracklets and tracks represent hypothetical linkages, many
 of which may be correct.  A single detection may exist in several
@@ -90,6 +117,8 @@ tracklet; some tracklets will never be linked into any track.  The
 DayMOPS system is built using methods and algorithms intended to
 efficiently find plausible hypothetical linkages without wasting much
 computational time or storage on finding unlikely linkages.
+
+
 
 \subsection{Building Tracklets}
 
@@ -334,10 +363,13 @@ The collapseTracklets algorithm is implemented in {\tt
 interface is implemented in {\tt collapseTrackletsMain.cc}.  Run {\tt
   collapseTracklets -h} for usage hints.
 
-
-
-
-
+Choosing an appropriate set of thresholds for collapseTracklets may be
+difficult; with variable time between images, the amount of error on
+velocity may differ from tracklet to tracklet.  Other factors come
+into play as well; higher thresholds will lead to more correct
+linkages as well as more incorrect linkages - which, as described in
+the following section, can be ``undone'' later by purifyTracklets.  We
+arrived at our current thresholds through simple trial and error.
 
 \subsubsection{Tracklet Filtering Software}
 The collapseTracklets algorithm attempts linking in parameter-space;
@@ -383,13 +415,146 @@ The subset removal algorithm can be used for tracklets as well as
 tracks.  It is presented in \ref{subsetRemoval}.
 
 
+\paragraph{Code and Usage}
+We should really just kill off these silly sections and condense them
+somewhere; everything has a foo.cc, foo.h and fooMain.h and a USAGE
+string and a command-line calling convention and a library-style
+calling convention, why repeat this everywhere?
+
 
 
 \subsection{Building Tracks}
 
+With tracklets already assembled, we should have many linkages
+representing the position, location, and velocity of the various
+objects observed, as well as ``false'', mislinked tracklets.  Making
+use of the quadratic approximation of motion, valid for approximately
+one month, we can move a sliding window of about 30 days over the
+data, looking for tracklets which could be linked by some quadratic
+acceleration factor.  As we find these linkages, we will also apply
+some additional filters to avoid reporting those which are considered
+too implausible (this will be described in \ref{trackFilters}.
+
+Generally, the track generation phase is the most computationally
+expensive task in DayMOPS processing; note that unlike other stages,
+which consider only a night's-worth of data at a time, it must
+consider tracklets from many nights and find linkages between them.
+This task becomes far more difficult if the number of tracklets is
+very large, either because the source data was very dense or the
+thresholds were set very high, or because of poor refinement/merging
+of intra-nightly tracklets.  Further, the relative looseness of the
+quadratic approximation and the relative scarcity of data can make
+track generation yet more difficult, as many plausible tracks may be
+discovered.
+
+Fortunately, a very clever algorithm for performing this track
+discovery was presented by Kubica et al. (\citet{kubica_thesis},
+\citet{Kubica:2005:MTA:1081870.1081889}).  In essence, the idea behind
+the algorithm is to build per-image 4D-Trees of (RA position, Dec
+position, RA velocity, Dec velocity), and use these to hold the
+tracklets, indexed by position/velocity.  We then imagine the KD-Trees
+as hierarchical bounding boxes, and consider sets of bounding boxes,
+calculating whether they could be linked by some acceleration factor
+less than our maximum acceleration threshold.  If the boxes could be
+linked, then a track may exist within their contents and we continue
+searching bounding boxes lower in the tree hierarchy; if not, we know
+that no track of interest to us could pass through the boxes and we
+can abandon searching immediately.  By using the hierarchical
+structure of the KD-Trees, we can avoid searching in large areas of
+tracklet-space where no track could ever exist, greatly reducing our
+workload.
+
+
+\subsubsection{Search Pruning}
+
+A KD-Tree node can be thought of as representing a bounding box in (RA
+position, Dec position, RA velocity, Dec velocity) space.  When
+examining a pair of KD-Tree nodes, we wish to answer the question:
+could a tracklet from the first node ever enter the second, within a
+fixed min/max acceleration? Considering RA and Dec seperately, we can
+calculate the minimum and maximum accelerations needed for a point in
+the first bounding box to reach the second.  If the acceleration is
+too high or low (say, $>.02 deg/day^2$ or $<-.02 deg/day^2$, then we
+know that no track of interest to us could pass from the first node to
+the second.
+
+When we consider two KD-Tree nodes, $Node1$ and $Node2$, each
+encompassing a region of position/velocity space, we can calculate the
+possible range of accelerations in RA and Dec which could connect
+points in $Node1$ to points in $Node2$, through formulae derived from
+$p = p0 + vt + frac{1}{2}at^2$.  Further, since we are only interested
+in tracks with a given velocity range, we also have a user-specified
+minimum/maximum acceleration range; since the bounding boxes/KD-Tree
+nodes are hierarchical, we can constrain the allowable acceleration
+bounds by the bounds of the parent boxes of $Node1$ and $Node2$.  We
+calculate the acceleration bounds using the following equation, with
+the variables $parentMinAcc$ and $parentMaxAcc$ representing the
+inherited min/max bounds from the parent or, in the case that the
+nodes have no parents, the user-specified min/max accelerations:
+
+\begin{equation}
+maxAcc = \min \left(\begin{array}{ccc} & \displaystyle parentMaxAcc, \\
+& \displaystyle \frac{Node2.maxV - Node1.minV}{dt} \\
+& \displaystyle \frac{2}{dt^2} \bigg(Node2.maxP_0 - Node1.minP_0 - Node1.minV \times dt \bigg) \\
+& \displaystyle \frac{2}{dt^2} \bigg(Node1.maxP_0 - Node2.minP_0 + Node2.maxV \times dt \bigg) \end{array}\right)
+\end{equation}
+
+\begin{equation}
+minAcc  = \max \left(\begin{array}{ccc} & parentMinAcc,\\
+& \displaystyle \frac{Node2.minV - Node1.maxV}{dt},\\
+& \displaystyle \frac{2}{dt^2} \bigg( Node2.minP_0 - Node1.maxP_0 - \displaystyle Node1.maxV \times dt\bigg), \\
+& \displaystyle \frac{2}{dt^2} \bigg(Node1.minP_0 - Node2.maxP_0 + Node2.minV \times dt\bigg) \end{array} \right)
+\end{equation}
+
+Note that this approach simplifies the problem by treating the sky as
+a Cartesian plane, which will be problematic near the poles.  However,
+the above calculation appears to be the ``hot spot'' of the
+linkTracklets algorithm and accounts for most of the computation time,
+and so simplifying to reduce floating point costs affords far better
+performance.
+
+In the code, this calculation is performed by the function {\tt
+  updateAccBoundsReturnValidity} in {\tt linkTracklets.cc}.
+
+\subsubsection{Recursive Tree-walk Using Pruning}
+
+support trees here?  maybe algorithm with and without support trees?
+
+psuedocode basically like Kubica's, note location in code
+
+\subsubsection{Terminal Processing - Actual Track Generation}
+
+give a forward-reference to track filtering methods, note location in code
+
+\subsubsection{Overall Algorithm}
+
+Note location in code
+
+\subsubsection{Subtle Quirks}
+
+Astrometric error on detections will affect both the position and
+velocities of true tracklets.  As a result, bounding boxes must be
+extended to encompass not just the tracklets which they hold, but the
+surrounding error bars.  As a result, tracklet bounding boxes (KD-Tree
+nodes) are extended using the following equation, where $dt$ is the
+\textit{shortest} time span of any tracklet in the bounding box:
+
+\begin{eqnarray}
+minP_0 = P_0 - astrom\_err \\
+maxP_0 = P_0 + astrom\_err \\
+minV = (deltaP - 2\times astrom\_err)/dt  \\
+maxV = (deltaP + 2\times astrom\_err /dt
+\end{eqnarray}
+
+
+
+
+
+
 Each tracklet represents a possible object on a given night, and the
 position and velocity of that object.  The track generation phase uses
-these tracklets to find tracks, which present a hypothetical object with 
+these tracklets to find tracks, which present a hypothetical object
+with
 
 Over the course of roughly one month, solar system objects tend to
 follow a roughly quadratic path on the sky-plane
@@ -437,6 +602,7 @@ big impacts on behavior here.
 
 
 \subsection{Filtering of Tracks}
+\label{trackFilters}
 Some more information on implementation of Tim's fitting and
 chi-squared filter and the software. Stats on ground-truth fitting,
 possible needs for improvements.

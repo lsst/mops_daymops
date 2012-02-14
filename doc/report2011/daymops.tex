@@ -509,57 +509,56 @@ algorithm and accounts for most of the computation time, and so
 simplifying to reduce floating point costs greatly improves
 performance.
 
-In the code, this calculation is performed by the function {\tt
-  updateAccBoundsReturnValidity} in {\tt linkTracklets.cc}.
+In the code, this calculation is performed by the function 
+{\tt updateAccBoundsReturnValidity} in {\tt linkTracklets.cc}.
 
 \subsubsection{Recursive Tree-walk Using Pruning}
 
 The linkTracklets algorithm makes use of pruning to quickly avoid
 searching in areas where no track of interest could exist.  This can
 be accomplished with a recursive walk over two KD-Trees representing
-tracklets from different images; see \figure{linkTrackletsSimplified}
+tracklets from different images; see \ref{linkTrackletsSimplified}
 for a simplified example which finds compatible tracklets from
 KD-Trees on different nights.
 
 \begin{figure}[ht!]
 \begin{algorithmic}
-
-\REQUIRE{$nodeA$ and $nodeB$ are KD-Tree nodes which hold tracklets
-  from two different images on different nights, $minAcc$ and $maxAcc$
-  specify the limits of accelerations which the user finds
-  interesting.}
-
-\STATE $accRange = $ min/max acceleration to move from $nodeA$ to $nodeB$
-\IF{$accRange$ does not overlap $(minAcc, maxAcc)$}
-    \RETURN $\{\}$
+  \REQUIRE{$nodeA$ and $nodeB$ are KD-Tree nodes which hold tracklets
+    from two different images on different nights, $minAcc$ and $maxAcc$
+    specify the limits of accelerations which the user finds
+    interesting.}
+  
+  \STATE $accRange = $ min/max acceleration to move from $nodeA$ to $nodeB$
+  \IF{$accRange$ does not overlap $(minAcc, maxAcc)$}
+  \RETURN $\{\}$
   \ELSE
-    \IF{$nodeA$ and $nodeB$ are leaf nodes}
-
-    \STATE \COMMENT{When we hit a pair of terminal nodes, and their
-         acceleration bounds are interesting, then we have found a set
-         of tracklets which may be sufficient to create a track.}
-
-       \RETURN $\{$tryToBuildATrack($nodeA$.tracklet, $nodeB$.tracklet)$\}$
+  \IF{$nodeA$ and $nodeB$ are leaf nodes}
+  
+  \STATE \COMMENT{When we hit a pair of terminal nodes, and their
+    acceleration bounds are interesting, then we have found a set
+      of tracklets which may be sufficient to create a track.}
+    
+    \RETURN $\{$tryToBuildATrack($nodeA$.tracklet, $nodeB$.tracklet)$\}$
     \ELSE
-
-       \STATE \COMMENT{In order to ensure that this function sees
-         nodes which are roughly the same size, we choose the larger
-         node and ``split'' that one, recursing on its children.}
-
-       \STATE $largerNode, smallerNode \gets $orderBySize$(nodeA, nodeB)$
-       \RETURN $recurse(largerNode.\text{leftChild}, smallerNode) \cup recurse(largerNode.\text{rightChild}, smallerNode)$
-  \ENDIF
-\ENDIF
-
-\end{algorithmic}
-\caption{A simplified version of the linkTracklets algorithm.  Note
-  that if two nodes have no chance at holding a compatible tracklet
-  (first ``if'' check) then their children are never searched; only if
-  they may hold an interesting track are the children searched.  In
-  this way, the algorithm avoids even examining a great number of
-  KD-Tree node pairs.}
-
- \label{simplifiedLinkTracklets}
+    
+    \STATE \COMMENT{In order to ensure that this function sees
+      nodes which are roughly the same size, we choose the larger
+      node and ``split'' that one, recursing on its children.}
+    
+    \STATE $largerNode, smallerNode \gets $orderBySize$(nodeA, nodeB)$
+    \RETURN $recurse(largerNode.\text{leftChild}, smallerNode) \cup recurse(largerNode.\text{rightChild}, smallerNode)$
+    \ENDIF
+    \ENDIF
+    
+  \end{algorithmic}
+  \caption{A simplified version of the linkTracklets algorithm.  Note
+    that if two nodes have no chance at holding a compatible tracklet
+    (first ``if'' check) then their children are never searched; only if
+    they may hold an interesting track are the children searched.  In
+    this way, the algorithm avoids even examining a great number of
+    KD-Tree node pairs.}
+  
+  \label{simplifiedLinkTracklets}
 \end{figure}
 
 

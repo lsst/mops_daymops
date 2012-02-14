@@ -100,7 +100,7 @@ designed as a pipeline of several stages, building increasingly
 sophisticated linkages at each step until multi-night linkages
 suitable for orbit determination are discovered.  Specifically, we
 move from individual detections to nightly, linear \textbf{tracklets},
-to eventual multi-night \textbf{tracks} suitable for orbit
+to eventual multi-night, quadratic \textbf{tracks} suitable for orbit
 determination.  These tracks are filtered using a slightly more
 sophisticated (but simpler than full orbit-space) model of asteroid
 motion, to more quickly reject the (often numerous) mislinked tracks.
@@ -110,13 +110,15 @@ introductory text.  Also perhaps useful: show one object's detections and its va
 
 
 Note that tracklets and tracks represent hypothetical linkages, many
-of which may be correct.  A single detection may exist in several
+of which may be incorrect.  A single detection may exist in several
 tracklets and/or several tracks.  A given tracklet may be found in
 multiple tracks.  Some detections may never be linked into any
-tracklet; some tracklets will never be linked into any track.  The
-DayMOPS system is built using methods and algorithms intended to
-efficiently find plausible hypothetical linkages without wasting much
-computational time or storage on finding unlikely linkages.
+tracklet; some tracklets will never be linked into any track.  
+
+%The
+%DayMOPS system is built using methods and algorithms intended to
+%efficiently find plausible hypothetical linkages without wasting much
+%computational time or storage on finding unlikely linkages.
 
 
 
@@ -467,50 +469,44 @@ workload.
 
 \subsubsection{Search Pruning}
 
-A KD-Tree node can be thought of as representing a bounding box in (RA
-position, Dec position, RA velocity, Dec velocity) space.  When
-examining a pair of KD-Tree nodes, we wish to answer the question:
-could a tracklet from the first node ever enter the second, within a
-fixed min/max acceleration? Considering RA and Dec seperately, we can
-calculate the minimum and maximum accelerations needed for a point in
-the first bounding box to reach the second.  If the acceleration is
-too high or low (say, $>.02 deg/day^2$ or $<-.02 deg/day^2$, then we
-know that no track of interest to us could pass from the first node to
-the second.
+In the linkTracklets algorithm, all tracklets starting in a given
+image are placed in a single 4D-Tree over (RA position, Dec position,
+RA velocity, Dec velocity)-space.  
 
-When we consider two KD-Tree nodes, $Node1$ and $Node2$, each
-encompassing a region of position/velocity space, we can calculate the
-possible range of accelerations in RA and Dec which could connect
-points in $Node1$ to points in $Node2$, through formulae derived from
-$p = p0 + vt + frac{1}{2}at^2$.  Further, since we are only interested
-in tracks with a given velocity range, we also have a user-specified
-minimum/maximum acceleration range; since the bounding boxes/KD-Tree
-nodes are hierarchical, we can constrain the allowable acceleration
-bounds by the bounds of the parent boxes of $Node1$ and $Node2$.  We
-calculate the acceleration bounds using the following equation, with
-the variables $parentMinAcc$ and $parentMaxAcc$ representing the
-inherited min/max bounds from the parent or, in the case that the
-nodes have no parents, the user-specified min/max accelerations:
+A KD-Tree node can be thought of as representing a bounding box in (RA
+position, Dec position, RA velocity, Dec velocity) space.  Thus, it is
+possible to calculate the acceleration needed for an object in one
+bounding box in one tree to reach the second bounding box in a later
+tree.  Because we are generally interested in tracks which have
+acceleration within a fixed range (e.g. between $>.02 deg/day^2$ and
+$<-.02 deg/day^2$), we can abandon searching at a given pair of
+bounding boxes if the necessary acceleration is outside our range of
+interest.
+
+The minimum and maximum acceleration connecting two bounding boxes is
+currently calculated as follows:
+
 
 \begin{equation}
-maxAcc = \min \left(\begin{array}{ccc} & \displaystyle parentMaxAcc, \\
-& \displaystyle \frac{Node2.maxV - Node1.minV}{dt} \\
+maxAcc = \min  \left(\begin{array}{ccc} & \displaystyle \frac{Node2.maxV - Node1.minV}{dt} \\
 & \displaystyle \frac{2}{dt^2} \bigg(Node2.maxP_0 - Node1.minP_0 - Node1.minV \times dt \bigg) \\
 & \displaystyle \frac{2}{dt^2} \bigg(Node1.maxP_0 - Node2.minP_0 + Node2.maxV \times dt \bigg) \end{array}\right)
+% & \displaystyle parentMaxAcc, \\ jeremy says this shouldn't happen, even though it's in the code
 \end{equation}
 
 \begin{equation}
-minAcc  = \max \left(\begin{array}{ccc} & parentMinAcc,\\
-& \displaystyle \frac{Node2.minV - Node1.maxV}{dt},\\
+minAcc  = \max  \left(\begin{array}{ccc} & \displaystyle \frac{Node2.minV - Node1.maxV}{dt},\\
 & \displaystyle \frac{2}{dt^2} \bigg( Node2.minP_0 - Node1.maxP_0 - \displaystyle Node1.maxV \times dt\bigg), \\
 & \displaystyle \frac{2}{dt^2} \bigg(Node1.minP_0 - Node2.maxP_0 + Node2.minV \times dt\bigg) \end{array} \right)
+%   & parentMinAcc, jeremy says this shouldn't happen, even though its in the code.
 \end{equation}
 
+
 Note that this approach simplifies the problem by treating the sky as
-a Cartesian plane, which will be problematic near the poles.  However,
-the above calculation appears to be the ``hot spot'' of the
-linkTracklets algorithm and accounts for most of the computation time,
-and so simplifying to reduce floating point costs affords far better
+a flat plane, which will be problematic near the poles.  However, the
+above calculation appears to be the ``hot spot'' of the linkTracklets
+algorithm and accounts for most of the computation time, and so
+simplifying to reduce floating point costs greatly improves
 performance.
 
 In the code, this calculation is performed by the function {\tt
@@ -518,9 +514,110 @@ In the code, this calculation is performed by the function {\tt
 
 \subsubsection{Recursive Tree-walk Using Pruning}
 
-support trees here?  maybe algorithm with and without support trees?
+The linkTracklets algorithm makes use of pruning to quickly avoid
+searching in areas where no track of interest could exist.  This can
+be accomplished with a recursive walk over two KD-Trees representing
+tracklets from different images; see \figure{linkTrackletsSimplified}
+for a simplified example which finds compatible tracklets from
+KD-Trees on different nights.
 
-psuedocode basically like Kubica's, note location in code
+\begin{figure}[ht!]
+\begin{algorithmic}
+
+\REQUIRE{$nodeA$ and $nodeB$ are KD-Tree nodes which hold tracklets
+  from two different images on different nights, $minAcc$ and $maxAcc$
+  specify the limits of accelerations which the user finds
+  interesting.}
+
+\STATE $accRange = $ min/max acceleration to move from $nodeA$ to $nodeB$
+\IF{$accRange$ does not overlap $(minAcc, maxAcc)$}
+    \RETURN $\{\}$
+  \ELSE
+    \IF{$nodeA$ and $nodeB$ are leaf nodes}
+
+    \STATE \COMMENT{When we hit a pair of terminal nodes, and their
+         acceleration bounds are interesting, then we have found a set
+         of tracklets which may be sufficient to create a track.}
+
+       \RETURN $\{$tryToBuildATrack($nodeA$.tracklet, $nodeB$.tracklet)$\}$
+    \ELSE
+
+       \STATE \COMMENT{In order to ensure that this function sees
+         nodes which are roughly the same size, we choose the larger
+         node and ``split'' that one, recursing on its children.}
+
+       \STATE $largerNode, smallerNode \gets $orderBySize$(nodeA, nodeB)$
+       \RETURN $recurse(largerNode.\text{leftChild}, smallerNode) \cup recurse(largerNode.\text{rightChild}, smallerNode)$
+  \ENDIF
+\ENDIF
+
+\end{algorithmic}
+\caption{A simplified version of the linkTracklets algorithm.  Note
+  that if two nodes have no chance at holding a compatible tracklet
+  (first ``if'' check) then their children are never searched; only if
+  they may hold an interesting track are the children searched.  In
+  this way, the algorithm avoids even examining a great number of
+  KD-Tree node pairs.}
+
+ \label{simplifiedLinkTracklets}
+\end{figure}
+
+
+For Orbit Determination, we require detections on at least three
+nights.  This fact can be exploited to further speed up searching by
+demanding that we do not search for tracks beginning and ending
+between $nodeA$ and $nodeB$ unless there exists at least one
+intermediate ``support'' node $nodeS$ between them.  We demand that
+there must exist some acceleration values which could ``connect''
+tracklets in $nodeA$, $nodeS$ and $nodeB$; otherwise we know that no
+track with sufficient tracklets and consistent, interesting
+acceleration could pass from $nodeA$ to $nodeB$.  This leads to the full linkTracklets algorithm, presented in
+\ref{linkTrackletsAlgorithm}.
+
+
+\begin{figure}[ht!]
+\begin{algorithmic}
+
+\REQUIRE{$nodeA$ and $nodeB$ are KD-Tree nodes which hold tracklets
+  from two different images on different nights, $minAcc$ and $maxAcc$
+  specify the limits of accelerations which the user finds
+  interesting.  $supportNodes$ is a set of nodes from itermediate
+  images between $nodeA$ and $nodeB$.}
+
+\STATE $accRange = $ min/max acceleration to move from $nodeA$ to $nodeB$
+\IF{$accRange$ does not overlap $(minAcc, maxAcc)$}
+    \RETURN $\{\}$
+  \ELSE
+    \IF{$nodeA$ and $nodeB$ are leaf nodes}
+
+    \STATE \COMMENT{When we hit a pair of terminal nodes, and their
+         acceleration bounds are interesting, then we have found a set
+         of tracklets which may be sufficient to create a track.}
+
+       \RETURN $\{$tryToBuildATrack($nodeA$.tracklet, $nodeB$.tracklet)$\}$
+    \ELSE
+
+       \STATE \COMMENT{In order to ensure that this function sees
+         nodes which are roughly the same size, we choose the larger
+         node and ``split'' that one, recursing on its children.}
+
+       \STATE $largerNode, smallerNode \gets $orderBySize$(nodeA, nodeB)$
+       \RETURN $recurse(largerNode.\text{leftChild}, smallerNode) \cup recurse(largerNode.\text{rightChild}, smallerNode)$
+  \ENDIF
+\ENDIF
+
+\end{algorithmic}
+\caption{A simplified version of the linkTracklets algorithm.  Note
+  that if two nodes have no chance at holding a compatible tracklet
+  (first ``if'' check) then their children are never searched; only if
+  they may hold an interesting track are the children searched.  In
+  this way, the algorithm avoids even examining a great number of
+  KD-Tree node pairs.}
+
+ \label{linkTrackletsAlgorithm}
+\end{figure}
+
+
 
 \subsubsection{Terminal Processing - Actual Track Generation}
 
@@ -531,6 +628,8 @@ give a forward-reference to track filtering methods, note location in code
 Note location in code
 
 \subsubsection{Subtle Quirks}
+
+\paragraph{Min-Max KD-Trees} \textbf{TBD}Explain why the subtlety of how we build a tree makes a big difference.
 
 Astrometric error on detections will affect both the position and
 velocities of true tracklets.  As a result, bounding boxes must be

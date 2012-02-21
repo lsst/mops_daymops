@@ -4,9 +4,8 @@
 Sufficiently bright moving objects which are observed by the LSST
 telescope will generate DiaSource detections, stored in the LSST
 DiaSource detection catalog.  The LSST DiaSource detection catalog
-will also detections from a variety of other non-moving object
-sources, including transient phenomena and artifacts of image
-processing.
+will also hold detections from a variety of non-moving object sources,
+including transient phenomena and artifacts of image processing.
 
 The LSST DayMOPS system is responsible for finding previously unknown
 moving objects within the LSST DiaSource catalog.  Due to the large
@@ -121,6 +120,12 @@ tracklet; some tracklets will never be linked into any track.
 %computational time or storage on finding unlikely linkages.
 
 
+%% TBD: Describing topocentric correction goes here?  It has to go
+%% somewhere.  It is only performed on the data sent to linkTracklets,
+%% but this isn't really central to understanding the vtrees algorithm
+%% - though it does effect the data ``seen'' by linkTracklets
+%% throughout.
+
 
 \subsection{Building Tracklets}
 
@@ -180,7 +185,7 @@ detections with which the query detection could be linked, one can
 imagine searching a circular region in the later images based on this
 distance.
 
-\begin{figure}[ht!]
+\begin{figure}[ht]
   \centering
     \includegraphics[width=6cm]{illustrations/findTracklets-onequery.png}
     \caption{ An example of searching for compatible second endpoints
@@ -202,18 +207,18 @@ containing detections from later images, we can use range searches to
 quickly find nearby detections in those later images and use them for
 the creation of tracklets.
 
-\begin{figure}[ht!]
+\begin{figure}[ht]
 \begin{algorithmic}
 \REQUIRE $I$ is a set of images, each of which has an associated exposure time and contains a set of detections
 \STATE \COMMENT{Create a 2D KD-Tree for each image, holding detections from that image.}
-\STATE $T \gets \{\}$
+\STATE $T \gets \emptyset$
 \FOR {$i \in I$}
   \STATE $t \gets$ Make2DTree$(i.detections)$
   \STATE $t.time \gets i.time$
   \STATE $T \gets T \cup \{t\}$
 \ENDFOR
 \STATE \COMMENT{Use these trees to discover the actual tracklets.}
-\STATE $tracklets \gets \{\}$
+\STATE $tracklets \gets \emptyset$
 \FOR {$t_1 \in T$}
   \STATE $later \gets \{t_i \in T : 0 < t_i.time - t_1.time < maxDt\}$
   \FOR{$d \in t_1.detections$}
@@ -324,7 +329,7 @@ series of range searches, which of course can be implemented with 4-D
 (RA, Dec, angle, velocity) KD-Trees.  The full pseudo-code is
 presented in Figure \ref{collapseTrackletsAlgorithm}.
 
-\begin{figure}[ht!]
+\begin{figure}[ht]
 \begin{algorithmic}
   \REQUIRE $T$ is a set of intra-nightly tracklets, $D$ is the set of nightly detections from which $T$ was created, $range$ is a 4-tuple of tolerances for RA, Dec, angle and velocity.
   \STATE $t_c \gets midpoint(\{ d_{time} : d \in D \})$
@@ -333,7 +338,7 @@ presented in Figure \ref{collapseTrackletsAlgorithm}.
   \ENDFOR
   \STATE \COMMENT{Create a 4D KD-Tree of the tracklets on their projected RA, Dec position and motion angle/velocity.}
   \STATE $tree \gets$ Make4DTree$(T)$
-  \STATE $outTracklets = \{\}$
+  \STATE $outTracklets = \emptyset$
   \FOR {$t \in T,\ t$ has not already merged with another tracklet}
     \STATE \COMMENT{Find tracklets with projected location, motion similar to that of $t$}
      \STATE $outTracklets = outTracklets \cup tree.$rangeSearch$(t_{projected\ position}, t_{angle}, t_{velocity}, range)$
@@ -435,7 +440,7 @@ one month, we can move a sliding window of about 30 days over the
 data, looking for tracklets which could be linked by some quadratic
 acceleration factor.  As we find these linkages, we will also apply
 some additional filters to avoid reporting those which are considered
-too implausible (this will be described in \ref{trackFilters}.
+too implausible (this will be described in \ref{trackFilters}).
 
 Generally, the track generation phase is the most computationally
 expensive task in DayMOPS processing; note that unlike other stages,
@@ -455,25 +460,26 @@ discovery was presented by Kubica et al. (\citet{kubica_thesis},
 the algorithm is to build per-image 4D-Trees of (RA position, Dec
 position, RA velocity, Dec velocity), and use these to hold the
 tracklets, indexed by position/velocity.  We then imagine the KD-Trees
-as hierarchical bounding boxes, and consider sets of bounding boxes,
-calculating whether they could be linked by some acceleration factor
-less than our maximum acceleration threshold.  If the boxes could be
-linked, then a track may exist within their contents and we continue
-searching bounding boxes lower in the tree hierarchy; if not, we know
-that no track of interest to us could pass through the boxes and we
-can abandon searching immediately.  By using the hierarchical
-structure of the KD-Trees, we can avoid searching in large areas of
-tracklet-space where no track could ever exist, greatly reducing our
-workload.
+as hierarchical bounding boxes, and consider pairs of bounding boxes
+from different nights, calculating whether they could be linked by
+some acceleration factor less than our maximum acceleration threshold.
+If the boxes could be linked, then a track may exist within their
+contents and we continue searching bounding boxes lower in the tree
+hierarchy; if not, we know that no track of interest to us could pass
+through the boxes and we can abandon searching immediately.  By using
+the hierarchical structure of the KD-Trees, we can avoid searching in
+large areas of tracklet-space where no track could ever exist, greatly
+reducing our workload.
 
 
 \subsubsection{Search Pruning}
-
+\label{searchPruning}
 In the linkTracklets algorithm, all tracklets starting in a given
 image are placed in a single 4D-Tree over (RA position, Dec position,
-RA velocity, Dec velocity)-space.  
+RA velocity, Dec velocity)-space.  One tree is created for each of the
+images.
 
-A KD-Tree node can be thought of as representing a bounding box in (RA
+Each KD-Tree node can be thought of as representing a bounding box in (RA
 position, Dec position, RA velocity, Dec velocity) space.  Thus, it is
 possible to calculate the acceleration needed for an object in one
 bounding box in one tree to reach the second bounding box in a later
@@ -517,9 +523,10 @@ In the code, this calculation is performed by the function
 The linkTracklets algorithm makes use of pruning to quickly avoid
 searching in areas where no track of interest could exist.  This can
 be accomplished with a recursive walk over two KD-Trees representing
-tracklets from different images; see \ref{linkTrackletsSimplified}
-for a simplified example which finds compatible tracklets from
-KD-Trees on different nights.
+tracklets from different images.  As a simplified introduction to the
+full algorithm, see \ref{simplifiedLinkTracklets} for a
+two-tracklet-linking, ``endpoint-only'' version of the algorithm which
+finds pairs of compatible tracklets on different nights.
 
 \begin{figure}[ht!]
 \begin{algorithmic}
@@ -530,7 +537,7 @@ KD-Trees on different nights.
   
   \STATE $accRange = $ min/max acceleration to move from $nodeA$ to $nodeB$
   \IF{$accRange$ does not overlap $(minAcc, maxAcc)$}
-  \RETURN $\{\}$
+  \RETURN $\emptyset$
   \ELSE
   \IF{$nodeA$ and $nodeB$ are leaf nodes}
   
@@ -551,84 +558,172 @@ KD-Trees on different nights.
     \ENDIF
     
   \end{algorithmic}
-  \caption{A simplified version of the linkTracklets algorithm.  Note
-    that if two nodes have no chance at holding a compatible tracklet
-    (first ``if'' check) then their children are never searched; only if
-    they may hold an interesting track are the children searched.  In
-    this way, the algorithm avoids even examining a great number of
-    KD-Tree node pairs.}
+  \caption{A precursor, two-tracklet version of the linkTracklets
+    algorithm.  Note that if two nodes have no chance at holding a
+    compatible tracklet (first ``if'' check) then their children are
+    never searched; only if they may hold an interesting track are the
+    children searched.  In this way, the algorithm avoids even
+    examining a great number of KD-Tree node pairs and thus the pairs
+    tracklets contained therein.}
   
   \label{simplifiedLinkTracklets}
 \end{figure}
 
+\paragraph{Support Tracklets, Support Nodes, and the Full LinkTracklets Algorithm}
 
 For Orbit Determination, we require detections on at least three
-nights.  This fact can be exploited to further speed up searching by
-demanding that we do not search for tracks beginning and ending
-between $nodeA$ and $nodeB$ unless there exists at least one
-intermediate ``support'' node $nodeS$ between them.  We demand that
-there must exist some acceleration values which could ``connect''
-tracklets in $nodeA$, $nodeS$ and $nodeB$; otherwise we know that no
-track with sufficient tracklets and consistent, interesting
-acceleration could pass from $nodeA$ to $nodeB$.  This leads to the full linkTracklets algorithm, presented in
-\ref{linkTrackletsAlgorithm}.
+nights.  The endpoint-only algorithm in \ref{simplifiedLinkTracklets}
+will only attempt to find pairs of tracklets, giving tracks with only
+two nights of observational data.  In practice, we seek to find tracks
+with tracklets from three unique nights.  This could be accomplished
+using various extensions to the endpoint-only algorithm, but it is
+argued in \citet{kubica_thesis} and
+\citet{Kubica:2005:MTA:1081870.1081889} that by far the most efficient
+of these variants is called the algorithm called the {\bf vtrees} (for
+``variable trees'') algorithm.
+
+In the vtrees algorithm, we search for tracks with one or more
+intermediate ``support'' tracklets in between the ``endpoint'' or
+``model'' tracklets (the first and last tracklet).  To accomplish
+this, the vtrees algorithm searches for compatible endpoint nodes as
+in \ref{simplifiedLinkTracklets} but, as search progresses, maintains
+a list of compatible ``support'' nodes - nodes which could hold useful
+intermediate tracklets between the tracklets in the endpoint nodes.
+These are filtered at each step, using the same equations presented in
+section \ref{searchPruning}.  As the search descends through the
+possible valid combinations of endpoint nodes, the support list is
+filtered and refined.  When search terminates at a pair of leaf nodes,
+the support nodes are used to find possible support tracklets.  If the
+support list ever becomes empty, we can prune the searching at this
+point, since we know no useful track could exist between the endpoint
+nodes.
+
+The full vtrees algorithm is presented in
+Figure~\ref{linkTrackletsAlgorithm}.  This is the actual algorithm
+implemented by the function {\tt doLinkingRecurse} from {\tt linkTracklets.cc}
 
 
 \begin{figure}[ht!]
 \begin{algorithmic}
 
 \REQUIRE{$nodeA$ and $nodeB$ are KD-Tree nodes which hold tracklets
-  from two different images on different nights, $minAcc$ and $maxAcc$
-  specify the limits of accelerations which the user finds
-  interesting.  $supportNodes$ is a set of nodes from itermediate
-  images between $nodeA$ and $nodeB$.}
+  from two different images on different nights, $S$ holds a series of
+  nodes from images take on nights in between $nodeA.time$ and
+  $nodeB.time$, $minAcc$ and $maxAcc$ specify the limits of
+  accelerations which the user finds interesting.}
 
 \STATE $accRange = $ min/max acceleration to move from $nodeA$ to $nodeB$
 \IF{$accRange$ does not overlap $(minAcc, maxAcc)$}
-    \RETURN $\{\}$
+    \RETURN $\emptyset$
   \ELSE
+  
+  \FOR{$supportNode \in S$}
+  \IF{$supportNode$ represents an awkwardly large portion of tracklet-space relative to $nodeA$ and $nodeB$}
+    \STATE replace $supportNode$ with $supportNode.rightChild$ and $supportNode.leftChild$, coming back to them later
+    \ELSE
+    \IF{no track with acceleration within $accRange$ could pass from $nodeA$ through $supportNode$ and into $nodeB$}
+      \STATE remove $supportNode$ from $S$
+    \ENDIF
+  \ENDIF
+
+  \IF{$S$ is empty}
+    \RETURN $\emptyset$ \COMMENT{There is no way to build a three-tracklet track using the contents of these nodes, so abandon searching.}
+  \ENDIF
+
+  \ENDFOR
     \IF{$nodeA$ and $nodeB$ are leaf nodes}
 
-    \STATE \COMMENT{When we hit a pair of terminal nodes, and their
-         acceleration bounds are interesting, then we have found a set
-         of tracklets which may be sufficient to create a track.}
+    \STATE \COMMENT{Again, try to build a track, this time using $S$ for intermediate tracklets}
 
-       \RETURN $\{$tryToBuildATrack($nodeA$.tracklet, $nodeB$.tracklet)$\}$
+       \RETURN $\{$tryToBuildATrack($nodeA$.tracklet, $nodeB$.tracklet, $S$)$\}$
     \ELSE
 
-       \STATE \COMMENT{In order to ensure that this function sees
-         nodes which are roughly the same size, we choose the larger
-         node and ``split'' that one, recursing on its children.}
-
        \STATE $largerNode, smallerNode \gets $orderBySize$(nodeA, nodeB)$
-       \RETURN $recurse(largerNode.\text{leftChild}, smallerNode) \cup recurse(largerNode.\text{rightChild}, smallerNode)$
+       \RETURN $recurse(largerNode.\text{leftChild}, smallerNode, S) \cup recurse(largerNode.\text{rightChild}, smallerNode, S)$
   \ENDIF
 \ENDIF
 
 \end{algorithmic}
-\caption{A simplified version of the linkTracklets algorithm.  Note
-  that if two nodes have no chance at holding a compatible tracklet
-  (first ``if'' check) then their children are never searched; only if
-  they may hold an interesting track are the children searched.  In
-  this way, the algorithm avoids even examining a great number of
-  KD-Tree node pairs.}
-
+\caption{The full vtrees algorithm, the actual algorithm implemented
+  in linkTracklets.  At each recursion, $S$, the set of support nodes,
+  is split based on the position, velocity, and acceleration range
+  implied by the $nodeA$ and $nodeB$, the two endpoint nodes.  Note
+  that if support nodes are periodically ``split'' and replaced with
+  their chidlren if they too large relative to $nodeA$ and $nodeB$.}
  \label{linkTrackletsAlgorithm}
 \end{figure}
 
+In the algorithm, support nodes are filtered and possibly split (and
+their children filtered) at each recursive step.  Choosing when to
+split the support nodes is an important performance question.  If we
+split too aggressively, then we will add more items to $S$ and be
+required to filter a larger number of nodes at each recursion, which
+will increase cost at each step.  If we rarely split support nodes too
+rarely, then the support nodes may become very large relative to the
+endpoint nodes and we will often find that we have some compatible
+support node, and thus continue searching - even in cases where, had
+we split the support nodes, we would have seen that none of the leaf
+nodes held by the larger box were consistent with our
+position/velocity/acceleration range.  This leads to needless
+searching when we should have simply terminated.
+
+Currently, the cutoff for splitting is based on the spatial size of
+the support node relative to that of the two endpoint nodes.  First
+a weighting factor, $\alpha$, is calculated:
+
+\begin{equation}
+\alpha = \frac{supportNode.time - nodeA.time}{supportNode.time - nodeB.time}
+\end{equation}
+
+We then split the node if, for \textit{any} of the spatial axes (RA position, Dec position, RA velocity, or Dec velocity):
+
+\begin{equation}
+\bigg(\frac{width(nodeA.axis)}{\alpha} + \alpha \x width(nodeB.axis)\bigg) < 4 \x width(supportNode.axis)
+\end{equation}
+
+Where $width$ is the spatial extent of the node.
+
+The splitting and filtering of the support trees is implemented by
+{\tt splitSupportRecursively} in {\tt linkTracklets.cc}.  This
+function uses several helper functions, including the same {\tt
+  updateAccBoundsReturnValidity} function used to check the
+compatibility of endpoint nodes.
 
 
 \subsubsection{Terminal Processing - Actual Track Generation}
 
-give a forward-reference to track filtering methods, note location in code
+Once a pair of endpoint tracklets and one or more support tracklets
+have been found via the vtrees algorithm, we may attempt to finally
+build a track from them.  This is relatively straightforward; three or
+more tracklets with compatible acceleration, from three or more
+nights, have already been found.  However, this acceleration factor is
+rather approximate, as it is based on the position and velocity
+estimate of the tracklets, not the best-fit to the detections held in
+the tracklet.  Thus, at this point we actually start examining the
+detections themselves.
 
-\subsubsection{Overall Algorithm}
+First, we attempt to fit a simple quadratic to the detections in the
+endpoint tracklets.  We reject the track if the best-fit acceleration
+is too high or too low.  Next, we use the best-fit quadratic to
+predict the locations of the hypothetical object at the time of each
+support detection, and find those detections within some
+user-specified threshold of the predicted location.  In the event that
+there are multiple possible support detections at one of these image
+times, the best-fitting detection is chosen.  If an insufficient
+number of valid detections are found, we reject and do not build a
+track.
 
-Note location in code
+If the nascent track has survived these initial filters, we pass it
+onward to the more precise higher-order chi-squared-probability filter
+described in \ref{trackFilters}.  
+
 
 \subsubsection{Subtle Quirks}
 
-\paragraph{Min-Max KD-Trees} \textbf{TBD}Explain why the subtlety of how we build a tree makes a big difference.
+\paragraph{Min-Max KD-Trees} 
+
+\textbf{TBD}Explain why the subtlety of how we build a tree makes a
+big difference.
 
 Astrometric error on detections will affect both the position and
 velocities of true tracklets.  As a result, bounding boxes must be
@@ -647,51 +742,6 @@ maxV = (deltaP + 2\times astrom\_err /dt
 
 
 
-
-
-Each tracklet represents a possible object on a given night, and the
-position and velocity of that object.  The track generation phase uses
-these tracklets to find tracks, which present a hypothetical object
-with
-
-Over the course of roughly one month, solar system objects tend to
-follow a roughly quadratic path on the sky-plane
-\citep{kubica_thesis}.  The track generation phase of DayMOPS will
-attempt to find sets of tracklets (which have position and velocity
-estimates) which were observed within one month of each other and are
-compatible within some acceleration range.  Tracks which are
-suitable for generating a reasonable orbital fit are sent to the Orbit
-Determination phase.
-
-The methods used for tracklet-to-tracklet linking are described in
-\citet{kubica_thesis} and \citet{Kubica:2005:MTA:1081870.1081889}.
-The methods described attempt to efficiently find sets of tracklets
-which are \textit{compatible} in the sense that they could be joined
-to form a track: that is, tracklets which span multiple nights and
-have positions and velocities which are consistent with a fixed
-acceleration.  
-
-To perform this work efficiently, these methods use four-dimensional
-KD-Trees over \textit{tracklet-space}, or (RA position, Dec position,
-RA velocity, Dec velocity). One tree is created per image, and holds
-each tracklet which has its first detection in that image.  A
-multi-tree walk is performed using a clever algorithm, efficiently
-discovering all regions of tracklet-space which could contain sets of
-tracklets that are compatible, while avoiding visits to tracklet-space
-regions which are not compatible and could not generate a track.  This
-is performed recursively until leaf nodes of the KD-Trees are reached.
-
-% illustration from Kubica?
-
-When the algorithm encounters a set of leaf nodes in the KD-Trees, it
-attempts to build a track using the detections held in the tracklets
-at the leaf nodes.  A quadratic fit, or a higher-order fit if
-possible, to the detections will be attempted.  Then a quality-of-fit
-assessment is used to determine whether the track is considered
-sufficiently well-fitted to pass downstream to the Orbit
-Determination.  Investigation into ideal higher-order fits and
-quality-of-fit metrics is ongoing, but as of this writing a filter on
-minimum chi-squared probability appears to be the best option.
 
 \subsubsection{The linkTracklets Software}
 Cover the code, its status, what routines do what in the psuedocode,

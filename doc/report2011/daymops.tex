@@ -22,13 +22,18 @@ discovery in a computationally efficient manner.
 \subsection{Orbits}
 Heliocentric orbits describe an orbit around the Sun.  Generally,
 asteroids, planets and other solar system objects follow elliptical
-paths, centered on the Sun.  These paths are described (in general
+paths, with the Sun as their focal point.  These paths are described (in general
 practice as well as the LSST Moving Objects catalog) with a Kepler
 orbit, which describes an ellipse using six parameters. 
 
 For purposes of DayMOPS and NightMOPS, we assume that a well-fitted
 Kepler orbit should be sufficient to predict the location of an object
 well into the future or past.  
+
+To simplify the problem, we will not attempt to deal with objects
+which do not follow conventional heliocentric orbits, such as
+loosely-coupled binaries or planetary satellites.
+
 
 \textbf{TBD: Illustration of a Kepler orbit - Wikipedia has a good one.}
 
@@ -42,19 +47,32 @@ a set of detections, identify an orbit which could have generated them
 or identify that no such orbit could exist.We entrust that a suitable
 outside tool will be chosen to handle this problem.
 
-This leads to the non-trivial problem of correctly identifying that a
-set of detections belonged to an unknown object and providing these
-detections (and only those detections) to an orbit determination tool.
-This is the \textbf{ linking problem}.  The majority of efforts in
-the DayMOPS system have been directed at constraining the number of
-linkages which are passed to the orbit determination tool, and at
-methods for discovering those linkages quickly.
+This leads to the non-trivial problem of correctly grouping sets of
+detections by the unknown object which generated them, and reporting
+these detections to an orbit determination tool.  This is the \textbf{
+  linking problem}.  The majority of efforts in the DayMOPS system
+have been directed at constraining the number of linkages which are
+passed to the orbit determination tool, and at methods for discovering
+those linkages quickly.
 
-Fortunately, existing rules of thumb and approximations of asteroid
+Fortunately, the well-known linear and quadratic approximations of asteroid
 motion can be used both to predict possible linkages, and reject those
-which are obviously untenable.
+which are obviously untenable.  
 
 \subsubsection{Linear and Quadratic Models}
+
+\begin{figure}[ht]
+  \centering
+    \includegraphics[width=10cm]{illustrations/4.png}
+    \caption{ A plot of simulated observations of object 40185 on the
+      sky.  Though the observations span only one week, a pronounced
+      quadratic path is visible.  Note that the object is observed two
+      or more times on each night.}
+\label{objectPlotted}
+\end{figure}
+
+
+
 In order to discover and identify new objects, astronomers have
 traditionally used sky-plane approximations to predict and model the
 behavior of solar system objects for which a true orbit is not yet
@@ -63,7 +81,8 @@ known.  As a general rule of thumb, objects are said to move linearly
 a single night and quadratically (having velocity and some
 acceleration) in RA and Dec over the course of a month.  These are, of
 course, approximations, and linear and quadratic fits will inevitably
-contain some error.
+contain some error.  An example of one object with a clear quadratic
+path over seven days is show in Figure~\ref{objectPlotted}.
 
 Given many detections which may or may not be attributable to one or
 more asteroids, these approximations are used to help determine which
@@ -103,6 +122,7 @@ to eventual multi-night, quadratic \textbf{tracks} suitable for orbit
 determination.  These tracks are filtered using a slightly more
 sophisticated (but simpler than full orbit-space) model of asteroid
 motion, to more quickly reject the (often numerous) mislinked tracks.
+
 
 \textbf{TBD: Add an illustration of the various stages and a short piece of
 introductory text.  Also perhaps useful: show one object's detections and its various states of linkage. (detections, tracklets, merged tracklets, track(s))}
@@ -254,22 +274,6 @@ errors - objects which move between, say, $359.9 \degree$ in RA and
 $.01 \degree$ in RA will be detected.  The Appendix \ref{kdTreeLib}
 explains the KD-Tree library used in greater detail.  
 
-\paragraph{Code and Usage}
-Aside from the KD-Tree library, findTracklets is implemented by {\tt
-  findTracklets.h}, {\tt findTracklets.cc } and a command-line
-interface is provided by {\tt findTrackletsMain.cc}.  When calling the
-function {\tt findTracklets()} programmatically (e.g. inside an LSST
-Pipeline), use an instance of the {\tt findTrackletsConfig} to set the
-values of all options (including max velocity and min/max time
-threshold as well as others) and pass this to the {\tt
-  findTracklets()} function.  See comments in {\tt findTracklets.h}
-for documentation on the {\tt findTrackletsConfig} class.  Also see
-\ref{largeData} for additional information on output methods.
-
-The command-line {\tt findTracklets} program will take command-line
-flags and use them to instantiate a {\tt findTrackletsConfig} which is
-then used to call the actual {\tt findTracklets()} function.  Use {\tt
-  \$findTracklets -h} for an overview of the options.
 
 
 
@@ -296,7 +300,9 @@ In these fields, the number of tracklets generated for an object will
 grow like $O(n^2)$ where $n$ is the number of times the object is
 seen, as each possible pair of detections will be linked.  This can
 generate a huge number of tracklets, making later work exceptionally,
-and needlessly, difficult.
+and needlessly, difficult.  Even in more conventional cadences, in
+which an object gets two or more tracklets per night, combining those
+tracklets can significantly decrease downstream workload.
 
 The tracklet improvement and filtering stage attempts to remedy this
 problem by joining together colinear 2-detection tracklets into
@@ -410,8 +416,8 @@ find and remove them from the active set of tracklets.
 
 \caption{In purifyTracklets, poorly-fitted detections are ``pruned''
   from tracklets. In certain degenerate cases, we may prune tracklets
-  down to only two detections, in which case the pruning is
-  abandoned.}
+  down to only two detections, in which case the two-detection
+  tracklet is kept.}
 
 \label{purifyTrackletsAlgorithm}
 
@@ -419,28 +425,35 @@ find and remove them from the active set of tracklets.
 
 
 The subset removal algorithm can be used for tracklets as well as
-tracks.  It is presented in \ref{subsetRemoval}.
+tracks.  It is presented in section~\ref{subsetRemoval}.
 
 
-\paragraph{Code and Usage}
-We should really just kill off these silly sections and condense them
-somewhere; everything has a foo.cc, foo.h and fooMain.h and a USAGE
-string and a command-line calling convention and a library-style
-calling convention, why repeat this everywhere?
 
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%          LINKTRACKLETS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 \subsection{Building Tracks}
 
 With tracklets already assembled, we should have many linkages
 representing the position, location, and velocity of the various
-objects observed, as well as ``false'', mislinked tracklets.  Making
-use of the quadratic approximation of motion, valid for approximately
-one month, we can move a sliding window of about 30 days over the
-data, looking for tracklets which could be linked by some quadratic
-acceleration factor.  As we find these linkages, we will also apply
-some additional filters to avoid reporting those which are considered
-too implausible (this will be described in \ref{trackFilters}).
+objects observed, as well as ``false'', mislinked tracklets.  While
+tracklets have only linear motion, tracks have quadratic paths; in the
+track building phase, this is always calculated as a pair of quadratic
+functions in RA and Dec, rather than a single motion vector.  By
+making use of this quadratic approximation of motion, valid for
+approximately one month, we can move a sliding window of about 30 days
+over the data, looking for tracklets which could be linked by some
+quadratic acceleration factor.  As we find these linkages, we will
+also apply some additional filters to avoid reporting those which are
+considered too implausible (this will be described in
+\ref{trackFilters}).
 
 Generally, the track generation phase is the most computationally
 expensive task in DayMOPS processing; note that unlike other stages,
@@ -498,6 +511,7 @@ maxAcc = \min  \left(\begin{array}{ccc} & \displaystyle \frac{Node2.maxV - Node1
 & \displaystyle \frac{2}{dt^2} \bigg(Node2.maxP_0 - Node1.minP_0 - Node1.minV \times dt \bigg) \\
 & \displaystyle \frac{2}{dt^2} \bigg(Node1.maxP_0 - Node2.minP_0 + Node2.maxV \times dt \bigg) \end{array}\right)
 % & \displaystyle parentMaxAcc, \\ jeremy says this shouldn't happen, even though it's in the code
+\label{maxAcc}
 \end{equation}
 
 \begin{equation}
@@ -505,6 +519,7 @@ minAcc  = \max  \left(\begin{array}{ccc} & \displaystyle \frac{Node2.minV - Node
 & \displaystyle \frac{2}{dt^2} \bigg( Node2.minP_0 - Node1.maxP_0 - \displaystyle Node1.maxV \times dt\bigg), \\
 & \displaystyle \frac{2}{dt^2} \bigg(Node1.minP_0 - Node2.maxP_0 + Node2.minV \times dt\bigg) \end{array} \right)
 %   & parentMinAcc, jeremy says this shouldn't happen, even though its in the code.
+\label{minAcc}
 \end{equation}
 
 
@@ -524,7 +539,7 @@ The linkTracklets algorithm makes use of pruning to quickly avoid
 searching in areas where no track of interest could exist.  This can
 be accomplished with a recursive walk over two KD-Trees representing
 tracklets from different images.  As a simplified introduction to the
-full algorithm, see \ref{simplifiedLinkTracklets} for a
+full algorithm, see Figure~\ref{simplifiedLinkTracklets} for a
 two-tracklet-linking, ``endpoint-only'' version of the algorithm which
 finds pairs of compatible tracklets on different nights.
 
@@ -558,13 +573,13 @@ finds pairs of compatible tracklets on different nights.
     \ENDIF
     
   \end{algorithmic}
-  \caption{A precursor, two-tracklet version of the linkTracklets
-    algorithm.  Note that if two nodes have no chance at holding a
-    compatible tracklet (first ``if'' check) then their children are
-    never searched; only if they may hold an interesting track are the
-    children searched.  In this way, the algorithm avoids even
-    examining a great number of KD-Tree node pairs and thus the pairs
-    tracklets contained therein.}
+  \caption{An endpoint-matching, two-tracklet version of the
+    linkTracklets algorithm.  Note that if two nodes have no chance at
+    holding a compatible tracklet (first ``if'' check) then their
+    children are never searched; only if they may hold an interesting
+    track are the children searched.  In this way, the algorithm
+    avoids even examining a great number of KD-Tree node pairs and
+    thus the pairs tracklets contained therein.}
   
   \label{simplifiedLinkTracklets}
 \end{figure}
@@ -589,8 +604,8 @@ this, the vtrees algorithm searches for compatible endpoint nodes as
 in \ref{simplifiedLinkTracklets} but, as search progresses, maintains
 a list of compatible ``support'' nodes - nodes which could hold useful
 intermediate tracklets between the tracklets in the endpoint nodes.
-These are filtered at each step, using the same equations presented in
-section \ref{searchPruning}.  As the search descends through the
+These are filtered at each step, again using the equations
+\ref{maxAcc} and \ref{minAcc}.  As the search descends through the
 possible valid combinations of endpoint nodes, the support list is
 filtered and refined.  When search terminates at a pair of leaf nodes,
 the support nodes are used to find possible support tracklets.  If the
@@ -658,7 +673,7 @@ their children filtered) at each recursive step.  Choosing when to
 split the support nodes is an important performance question.  If we
 split too aggressively, then we will add more items to $S$ and be
 required to filter a larger number of nodes at each recursion, which
-will increase cost at each step.  If we rarely split support nodes too
+will increase cost at each step.  If we split support nodes too
 rarely, then the support nodes may become very large relative to the
 endpoint nodes and we will often find that we have some compatible
 support node, and thus continue searching - even in cases where, had
@@ -681,7 +696,10 @@ We then split the node if, for \textit{any} of the spatial axes (RA position, De
 \bigg(\frac{width(nodeA.axis)}{\alpha} + \alpha \x width(nodeB.axis)\bigg) < 4 \x width(supportNode.axis)
 \end{equation}
 
-Where $width$ is the spatial extent of the node.
+Where $width$ is the spatial extent of the node.  This approach was
+developed by Jeremy Kubica through empirical testing, and may or may
+not be optimal for our data; however, in our experience, it seems to
+be effective.
 
 The splitting and filtering of the support trees is implemented by
 {\tt splitSupportRecursively} in {\tt linkTracklets.cc}.  This
@@ -715,48 +733,229 @@ track.
 
 If the nascent track has survived these initial filters, we pass it
 onward to the more precise higher-order chi-squared-probability filter
-described in \ref{trackFilters}.  
+described in \ref{trackFilters}.  If the track passes this final
+filter, then at last it is added to our output set.
 
 
 \subsubsection{Subtle Quirks}
 
-\paragraph{Min-Max KD-Trees} 
+\paragraph{Topocentric Correction}
+As will be described in \ref{trackFilters}, we can generate more
+precise fits and do more aggressive filtering if we first apply a
+topocentric correction to the detections, converting from topocentric
+coordinates to geocentric coordinates based on an assumed topocentric
+distance.  For this reason, before the positions/velocities of the
+tracklets are calculated, the trees are built or the linking algorithm
+is run, topocentric correction is applied to the detections.  This
+will have some (usually small) impact on all aspects of the search,
+but will mostly be noticeable when filtering tracks.  
 
-\textbf{TBD}Explain why the subtlety of how we build a tree makes a
-big difference.
+
+
+\paragraph{Spherical Geometry Issues}
+Currently, the tracklet tree constructor in {\tt TrackletTree.cc} will
+alter RA (and if needed, Dec) values so that all RA (and possibly)
+values are stored on a contiguous 180-degree region.  This simplifies
+the critical ``hot-spot'' calculations in {\tt
+  updateAccBoundsReturnValidity}, since we do not need to check for
+values which cross over the 0/360 line in RA.  However, this means
+that if the input data covers too large an area of the sky then the
+acceleration range calculation will likely fail, and thus the whole
+algorithm will misbehave.
+
+Further, As mentioned in section \ref{searchPruning}, we simplify the
+math throughout track generation by treating the sky as a flat plane,
+which will lead to significant distortion near the poles.  This
+problem is often addressed by rotating the data in question so that it
+is centered on the RA, Dec origin (0,0), where polar distortions are
+minimal.  This could be done for the entire input set of detections,
+but if the detections cover a sufficiently large area of the sky then
+we will not significantly reduce the problem.  Temporarily
+re-centering the relevant points at each call to {\tt
+  updateAccBoundsReturnValidity} would likely work, but would probably
+be quite expensive.  This is a problem which needs to be addressed
+eventually, perhaps by changing the equations used in
+\ref{searchPruning}, or per by rotating the bounding boxes per-query,
+so that the endpoint images will always be roughly centered over the
+origin.
+
+
+\paragraph{Special Considerations of KD-Tree Construction} 
 
 Astrometric error on detections will affect both the position and
 velocities of true tracklets.  As a result, bounding boxes must be
 extended to encompass not just the tracklets which they hold, but the
-surrounding error bars.  As a result, tracklet bounding boxes (KD-Tree
-nodes) are extended using the following equation, where $dt$ is the
-\textit{shortest} time span of any tracklet in the bounding box:
+surrounding error bars.  Each tracklet will have a unique error bar on
+its velocity, as tracklets will span different distances in RA and Dec
+($dp$) and may also span different numbers of images and thus have
+different $dt$:
+
+\begin{eqnarray}
+minV = (dp - 2\times astrom\_err)/dt  \\
+maxV = (dp + 2\times astrom\_err /dt
+\end{eqnarray}
+
+Thus, each node in the tracklet KD-Tree will have its position range extended by:
 
 \begin{eqnarray}
 minP_0 = P_0 - astrom\_err \\
-maxP_0 = P_0 + astrom\_err \\
-minV = (deltaP - 2\times astrom\_err)/dt  \\
-maxV = (deltaP + 2\times astrom\_err /dt
+maxP_0 = P_0 + astrom\_err  
 \end{eqnarray}
+\\ and its velocity range will be extended to encompass the $minV$ and
+$maxV$ of all its child tracklets.  These rules apply to leaf nodes as
+well as non-leaf nodes, which must have bounds at least as great as
+their child nodes.  Note that as a result of expanding the boxes
+around tracklets, KD-Tree nodes may actually overlap.
+
+Note that for linkTracklets, a leaf node's bounds should only extend
+as far as the error bars around their tracklets, and the leaf non-leaf
+nodes should encompass only the area around their children's bounds.
+One of our early implementations did not follow this rule, and instead
+partitioned the space in a ``top-down'' fashion as in the left side of
+Figure~\ref{trackletTree}, and it then handled the issue of error bars
+in the acceleration calculation function.  This was technically
+correct, but lead to horrific performance - 1,000 or 10,000 times
+slower than the current version, illustrated on the right side of
+Figure~\ref{trackletTree}.  This is because the earlier version had
+nodes which encompassed larger areas of tracklet-space and thus sets
+of nodes were more likely to appear compatible, which results in less
+search pruning.
+
+\begin{figure}[ht!]
+\centering
+\includegraphics[width=10cm]{illustrations/kdTree_trackletTree.png}
+\caption{Two possible ways of constructing a KD-Tree over four points.}
+\label{trackletTree}
+\end{figure}
+
+The former type of tree is simpler to construct (and perhaps easier to
+visualize when debugging).  This is the type of tree used in most the
+other algorithms, which perform range searches and thus can extend
+handle their error bars per-query by extending their ranges as needed.
+However, the latter type of tree is the one needed for linkTracklets,
+and is implemented by the KD-Tree subclass {\tt TrackletTree} in {\tt
+  TrackletTree.cc}.
+
+
+\paragraph{Performance Enhancements for Acceleration Range Calculation}
+As noted earlier, the function {\tt updateAccBoundsReturnValidity},
+which implements the equations \ref{maxAcc} and \ref{minAcc},
+accounts for most of the CPU time spent in linkTracklets.  Thus,
+optimizing performance in this section of code is critical.
+
+Rather than evaluate all arguments to $\min$ and $\max$ functions at
+the outset, the code attempts to evaluate each possible argument. If
+it becomes clear at any point that inevitably $minAcc > maxAcc$, then
+we know that the search can be pruned and the function returns
+immediately.
+
+As an additional optimization, we start with $minAcc$ and $maxAcc$ set
+to the values used by our caller in the recursive searching. We know
+that the caller was examining two endpoint nodes which were either
+equal to or a parent of our current nodes, and thus our parents
+$(minAcc, maxAcc)$ range will be greater than the one we
+calculate. (For the initial start of the recursion, we use the
+user-specified min/max acceleration thresholds, because we do not care
+about any values outside this range anyway.)  By doing this, we
+actually have a $maxAcc$ value available as soon as we calculate our
+first possible $minAcc$ value and vice-versa; this allows the earliest
+possible termination.  However, it does make the code somewhat more
+confusing to read.
+
+This confusion is somewhat amplified by the fact that this same {\tt
+  updateAccBoundsReturnValidity} function is used for filtering
+support nodes.  In this case, the initial $minAcc$ and $maxAcc$ values
+are taken from the acceleration range calculated when examining the
+endpoint nodes $nodeA$ and $nodeB$, since we are not interested in
+finding acceleration values which connect $nodeA$ and a support node
+unless they also connect the support node to $nodeB$.
 
 
 
 
 
-\subsubsection{The linkTracklets Software}
-Cover the code, its status, what routines do what in the psuedocode,
-etc.  Also cover hotspots, sensitive areas, and parameters which have
-big impacts on behavior here.
 
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%      TRACK FILTERING
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Filtering of Tracks}
+\subsubsection{Higher-Order Fits and Chi-Squared Probability Filtering}
 \label{trackFilters}
 Some more information on implementation of Tim's fitting and
 chi-squared filter and the software. Stats on ground-truth fitting,
 possible needs for improvements.
 
+\subsubsection{Subset Removal}
+\label{subsetRemoval}
+Some tracks are {\bf subset tracks} of other tracks; that is,
+occasionally detections linked by one track found by linkTracklets
+will be a subset of those linked by another track in the same output
+set.  This can arise for a variety of reasons, but occurs most
+commonly when a real object generates tracklets on four or more nights
+within a linking period. We generally expect that these subset tracks
+are unhelpful, and because they increase the size of the set of tracks
+sent to orbit determination, they are possibly costly.
 
-\subsection{Notes on the Linking Software}
+Finding and removing subset tracks could be accomplished with a very
+naive double-for loop over the set of tracks, but of course this does
+not scale to larger data sets ($O(n^2)$ for $n$ tracks).  A more
+efficient algorithm uses a detection-to-track ``reverse-map'' $R$,
+which maps from each detection to the set of tracks holding that
+detection.  This is easy to construct for a set of tracks $T$:
+
+\begin{algorithmic}
+  \FOR{$t_i \in T$}
+  \STATE $R[d_j] = \{\}$
+  \ENDFOR
+  \FOR{$d_j \in t_i$}
+  \STATE $R[d_j] = R[d_j] \cup t_i$
+  \ENDFOR
+\end{algorithmic}
+
+We may then use the algorithm from
+Figure~\ref{subsetRemovalAlgorithm}, which makes use of this
+reverse-map.  The underlying idea is this: for each track $t_i$, we
+seek to find any track containing all the detections in $t_i$; any
+track containing all these detections must be equal to or a superset
+of $t_i$.
+
+\begin{figure}[h!]
+\begin{algorithmic}
+\FOR{$t_i \in T$}
+  \STATE candidates = $T$
+  \FOR{$d_j \in t_i$}
+    \STATE candidates = candidates $\cap$ $R[d_j]$
+  \ENDFOR
+  \IF{$|$candidates$| >$ 1}
+    \STATE $t_i$ is a subset of some other $t_j \in T$; discard it
+  \ELSE 
+    \STATE keep $t_i$
+  \ENDIF
+\ENDFOR
+\end{algorithmic}
+\caption{Psuedocode for the subset removal algorithm}
+
+\label{subsetRemovalAlgorithm}
+\end{figure}
+
+Subset tracklets can also occur when collapseTracklets is used.  The
+same algorithm and software can be used to remove subset tracklets
+from a set of tracklets as well.
+
+The reverse-map is implemented with a C++ {\tt std::map}, allowing
+logarithmic-time lookups, and its contents are C++ {\tt std::set}s,
+which allowing linear-time intersection calculations.  However, both
+structures are implemented with trees; between the tracks themselves
+and these tree structures, this algorithm can require significant
+amounts of memory, and no distributed-memory equivalent is currently
+known to us.  Fortunately, we have had good luck with distributed
+shared-memory approaches for large data sets {\bf self-cite?}.
+
+
+
+\subsection{Notes on Software Interfaces}
 
 \subsubsection{Accomodations for Large Data Sets}
 \label{largeData}
@@ -801,54 +1000,6 @@ problem.
 
 
 
-\subsection{Orbit Fitting}
-\label{orbitFitting}
-
-Orbit fitting can be accomplished using either traditional geometric
-methods, where an ellipse or parabola consistent with movement in the
-gravitational field of the sun is fit to the set of detections, or
-with statistical ranging, where a wide range of potential orbits are
-evaluated against the set of detections to search for those with
-the lowest residuals. Traditional methods are typically much speedier,
-and are available to LSST through the OrbFit software from Milani
-\citep{Milani2006}. Statistical ranging methods are more accurate in
-exploring the full range of orbital uncertainties for each object,
-which can be particularly important for objects observed near 60--90
-degrees from the Sun where NEO and MBA exhibit similar apparent
-motions, and are available in the OpenOrb software from Granvik
-\citep{OpenOrb2009}.
-
-In general, orbit fitting is split into two conceptual pieces - an
-``initial orbit determination'' stage, where approximate orbits are
-calculated, and a ``differential correction'' stage, where
-perturbations on the initial orbit are evaluated to find the best fit
-and uncertainty. With six observations on three different nights, most
-real moving objects will pass both initial orbit determination and
-differential correction with an orbit accurate enough to generate
-predicted positions with uncertainties of less than a few arcminutes
-for the next few months \citep{basicSolarSystem}.
 
 
-
-
-
-\subsection{Sky-Plane Motion Limits Imposed by Sky-Plane Linking Methods}
-
-Practical considerations necessitate that we set upper bounds on
-tracklet velocity and track acceleration in order to restrict the
-number of potential mislinkages. Existing methods attempt to find all
-tracklets or tracks within specified velocity and acceleration limits;
-as velocity and acceleration limits are raised, the number of
-tracklets and tracks can grow quickly.  As a result, the choice of
-velocity and acceleration limits is important, as it significantly
-impacts the objects found as well as the cost of running the software.
-
-Generally, all types of solar system objects except for the fastest of
-near-earth asteroids tend to have reasonably low sky-plane velocity
-and acceleration. It is expected that the fastest-moving objects will
-leave visible trails in images; these may be used to isolate
-detections which could be attributable to fast-movers and restrict the
-potential search space for linking these detections.  See section
-\ref{neosTrailing} for more information on future plans for
-approaching this problem.  
 

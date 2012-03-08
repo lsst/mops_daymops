@@ -91,9 +91,9 @@ coordinates are degrees, and degree measures must fall along $[0,
 360)$.  This is the type of searching used in the {\tt
 collapseTracklets} implementation, which searches for similar points
 in (RA, Dec, velocity and motion angle).  Unfortunately, this type of
-searching treats each axis as independent, which can be problematic
+searching considers each axis independently, which can be problematic
 when dealing with a pair of axes which describe points on a sphere,
-because polar distortions may occur.
+where polar distortions may occur.  
 
 To deal with coordinates on a sphere and intelligently account for
 both wraparound and polar distortion, the library provides the

@@ -124,8 +124,20 @@ sophisticated (but simpler than full orbit-space) model of asteroid
 motion, to more quickly reject the (often numerous) mislinked tracks.
 
 
-\textbf{TBD: Add an illustration of the various stages and a short piece of
-introductory text.  Also perhaps useful: show one object's detections and its various states of linkage. (detections, tracklets, merged tracklets, track(s))}
+\begin{figure}[ht]
+  \centering
+    \includegraphics[width=10cm]{illustrations/oneObjectMops.png}
+    \caption{ An illustration of how DayMOPS linkage might be applied
+      to a single object.  In $i$, the object is observed on three
+      nights; on the first and last night, it gets two detections per
+      night, but on the second night it gets four.  In $ii$, initial
+      tracklets are generated; time separation of visits on the second
+      night is such that we get two tracklets.  In $iii$, we merge the
+      tracklets from the second night so there are only three
+      tracklets.  In $iv$, we attempt inter-nightly linking and
+      generate a single track.}
+\label{objectPlotted}
+\end{figure}
 
 
 Note that tracklets and tracks represent hypothetical linkages, many

@@ -31,21 +31,22 @@ def writeOutput(trackId, trackDias, orbit, dias):
 
     trackId is really only used for debug purposes.
     """
-    if orbit==None:
-        print "IOD failed for track ", trackId
+    # each d in dias is [diaId, mjd, ssmId]
+    tds = map(lambda x: dias[x], trackDias)
+    mjds = map(lambda x: x[1], tds)
+    #print tds
+    ssmIds = map(lambda x: x[2], tds)
+    if len(set(ssmIds)) > 1:
+        ssmId = -1
     else:
-        # each d in dias is [diaId, mjd, ssmId]
-        tds = map(lambda x: dias[x], trackDias)
-        mjds = map(lambda x: x[1], tds)
-        print tds
-        ssmIds = map(lambda x: x[2], tds)
-        if len(set(ssmIds)) > 1:
-            ssmId = -1
-        else:
-            ssmId = ssmIds[0]
-        dt = max(mjds) - min(mjds)
-        t0 = min(mjds)
-        print "track %d: objId = %d, dt=%f, t0=%f orbit: %s" % (trackId,ssmId, dt, t0, orbit)
+        ssmId = ssmIds[0]
+    dt = max(mjds) - min(mjds)
+    t0 = min(mjds)
+    if orbit==None:
+        print "track %d: objId = %d, dt=%f, t0=%f orbit: %s" % (trackId,ssmId, dt, t0, "IOD_FAILED")
+
+    else:
+        print "track %d: objId = %d, dt=%f, t0=%f orbit: %s" % (trackId,ssmId, dt, t0, orbit.rstrip())
     
 
 
@@ -94,11 +95,14 @@ def getNextOrbit(orbitsFiles):
             # we just hit the end of a file.  throw away this file,
             # then get the next one
             orbitsFiles = orbitsFiles[1:]
-            #print "moving on to next file, ", orbitsFiles[0], "... there are now ", \
-            #    len(orbitsFiles), " files to look in"
-            f = orbitsFiles[0]
-            l = f.readline()
-
+            if orbitsFiles == []:
+                print "DONE. No more orbits files left."
+                sys.exit(0)
+            else:
+                #print "moving on to next file, ", orbitsFiles[0], "... there are now ", \
+                #    len(orbitsFiles), " files to look in"
+                f = orbitsFiles[0]
+                l = f.readline()
 
 def ingestOrbits(tracksFile, orbitsFiles, dias):
     """ REQUIRE and ASSUME that orbitsFiles are sorted; that is,
@@ -123,14 +127,14 @@ def ingestOrbits(tracksFile, orbitsFiles, dias):
             while curTrack == curOrbitTrack: 
                 # sometimes we get multiple orbit solutions for a
                 # single track
-                writeOutput(curTrack, track=trackDias, \
+                writeOutput(curTrack, trackDias=trackDias, \
                                 orbit=curOrbit, dias=dias)
 
                 curOrbit, orbitsFiles = getNextOrbit(orbitsFiles)            
                 curOrbitTrack = int(curOrbit.split()[0])
         else:
             # IOD failed for this track
-            writeOutput(curTrack, track=trackDias, orbit=None, dias=dias)
+            writeOutput(curTrack, trackDias=trackDias, orbit=None, dias=dias)
         trackLine = tracksFile.readline()
         curTrack += 1
     print "DONE.  Saw ", curTrack+1, " tracks"
@@ -149,6 +153,7 @@ def readDias(diasDataFile):
             line.split()
         diaId = int(diaId)
         expMjd = float(expMjd)
+        ssmId = int(ssmId)
         
         idToDias[diaId] = [diaId, expMjd, ssmId]
         

@@ -1,5 +1,168 @@
 \appendix
 \section{About the KD-Tree Library}
+\label{kdTreeLib}
+
+The findTracklets, collapseTracklets, and linkTracklets algorithms
+used in DayMOPS all require the use of KD-Trees for different types of
+data.  FindTracklets needs an (RA, Dec) tree of detections,
+collapseTracklets needs an (RA, Dec, velocity, angle) tree of
+tracklets, and linkTracklets needs a specialized (RA, Dec, RA vel,
+Dec vel) tree of tracklets.  Other ``helper'' tools not described in
+this document have been constructed using trees over various types of
+data (such as collections of Kepler orbits).
+
+To suit the needs of our various algorithms, and to prepare for the
+possibility of new algorithms, we chose to create our own KD-Tree
+library.  The design is intended to fulfill the following needs:
+
+\begin{itemize}
+\item Hold spatial points in arbitrary-dimensional space, with each point mapped to an arbitrary piece of non-spatial data
+\item Deal with spatial axes which hold real-number values
+\item Deal with spatial axes which hold degree or radian values on a circle
+\item Deal with pairs of axes which may describe points on a sphere
+\item Allow range searching in circular, spherical or flat Euclidean space
+\end{itemize}
+
+The {\tt KDTree} class we have created suits all of these needs.
+These features are sufficient for almost all our algorithms.  However,
+linkTracklets uses trees in unusual ways and its performance is
+closely related to the characteristics of the tree it uses; in order
+to allow linkTracklets' special needs, we also created a class called
+{\tt TrackletTree} used only for linkTracklets.  Both {\tt KDTree} and
+{\tt TrackletTree} derive from a common base class {\tt BaseKDTree}
+which implements memory management and other common features.
+
+\subsection{Representing Data Items: PointAndValue Class}
+
+Most DayMOPS algorithms deal with identifying groups of data items
+based on their spatial location in some coordinate system.  To
+represent a data item and its spatial location, we have created a
+template class called {\tt PointAndValue}.  A {\tt PointAndValue}
+holds a point in an arbitrary-dimensional coordinate system,
+represented as a {\tt std::vector} of {\tt double} values.  The
+coordinate system may be arbitrary-dimensional, and may also be
+heterogenous; that is, some axes may be Euclidean (having arbitrary
+values) but others may be circular, or two axes may describe a sphere.
+The ``value'' may be anything - this is a templatized data type.  In
+our code, it usually holds an integer, representing the location of a
+detection or tracklet in an array.  Using a {\tt PointAndValue}
+instance, one can represent any data object (the ``value'' of
+arbitrary type) and a location of that data object.
+
+\subsection{Tree Construction and Searching}
+
+{\tt KDTree} instances are constructed from a {\tt std::vector} of
+{\tt PointAndValue} instances.  The $k$ value (the dimensionality of
+the tree) must be specified at construction-time.  Each ``point''
+vector used to build the tree must, of course, have at least $k$
+elements, though the software will allow ``points'' with $>k$
+elements, in which case only the first $k$ are used.  
+
+When providing the data for points used in tree construction, it is up
+to the user to ensure that any value intended to represent a
+measurement in degrees must fall along $[0,360)$.  Failure to do so
+will lead to an exception later.
+
+If you wish to treat your spatial points as all Euclidean, it is
+possible to perform a conventional range search, which searches for
+all points in the tree within a given distance of a query point using
+{\tt KDTree::rangeSearch}.  However, if your axes use differing units,
+or one or more describe points on a circle, range search will not be
+suitable, as it does not handle wrap-around in degree units.  This
+type of searching is provided by the library, but is not used within
+DayMOPS.
+
+In order to deal with data points which may not be in a Euclidean
+space, the library provides rectangular (or hyper-rectangular)
+searches are supported for searching on mixtures of Euclidean and/or
+circular axes.  A query point is provided in each axis, and a query
+range around that point, and any point which is within the query range
+of the query point in each axis is returned.  This is suitable when
+searching, for example, for motion vectors, which have a velocity and
+angle of motion; specify a range of velocities, and a range of angles,
+and the tree library will find motion vectors which fall within the
+given range.  Wraparound will be handled intelligently (that is, the
+code will recognize that .1 and 359.9 degrees are separated by .2
+degrees, not 359.7.)  To use this type of searching, use the {\tt
+KDTree::hyperRectangleSearch} method. Note that it will be necessary
+to inform the tree of which axes are Euclidean, and which are
+circular.  Currently, the only supported units for circular
+coordinates are degrees, and degree measures must fall along $[0,
+360)$.  This is the type of searching used in the {\tt
+collapseTracklets} implementation, which searches for similar points
+in (RA, Dec, velocity and motion angle).  Unfortunately, this type of
+searching considers each axis independently, which can be problematic
+when dealing with a pair of axes which describe points on a sphere,
+where polar distortions may occur.  
+
+To deal with coordinates on a sphere and intelligently account for
+both wraparound and polar distortion, the library provides the
+function {\tt KDTree::RADecRangeSearch}.  This function performs a
+range search on the surface of a sphere; it also allows rectangular
+searching of other axes if needed.  The types of the axes should be
+specified at searching time as in {\tt KDTree::hyperRectangleSearch},
+if any.  This is the search function used by findTracklets, which
+represents points as simple RA, Dec coordinates.  It would probably be
+wise to change collapseTracklets to use this function as well, though
+this has not yet been done.
+
+
+\subsection{TrackletTree}
+
+The linkTracklets algorithm uses KD-Trees in an unusual fashion, and
+is highly sensitive to their construction.  It also requires the
+spatial regions held by each tree node be extended to account for
+error bars on the tracklets.  For these reasons, linkTracklets does
+not use the normal {\tt KDTree} class used by other algorithms, but a
+sibling class called {\tt TrackletTree}.  These classes share the
+common ancestor {\tt BaseKDTree}, which handles memory management, but
+otherwise they share relatively little.  {\tt TrackletTree} calculates
+the extents of the nodes differently than {\tt KDTree}, and it
+implements no range searching.  
+
+{\tt KDTree} and {\tt TrackletTree} hold references to the head of the
+actual tree nodes, implemented by {\tt KDTreeNode} and {\tt
+TrackletTreeNode}.  In {\tt KDTree} these child nodes are not visible
+to the user; all communication is done with the {\tt KDTree}, which in
+turn communicates with the {\tt KDTreeNode}s.  This allows easier
+memory management, as an outside tool cannot hold a reference to a
+dynamically-allocated child.  However, in linkTracklets these children
+must be visible to linkTracklets, as it explicitly traverses the tree.  
+
+{\tt TrackletTreeNode} also has a few methods for studying performance:
+{\tt TrackletTreeNode::addVisit} and {\tt TrackletTreeNode::getNumVisits} can
+be used to count the number of times a node is examined by
+linkTracklets.  Eventually, it may be wise to remove these in order to
+conserve memory.
+
+
+\subsection{BaseKDTree and Memory Management}
+
+{\tt KDTree} and {\tt TrackletTree} represent a whole tree, not the
+individual nodes which make up the tree.  {\tt KDTree} then provides
+an interface to the querying of the tree, while {\tt TrackletTree}
+provides accessors allowing an outside class to see the actual tree
+nodes.  
+
+Both classes derive from {\tt BaseKDTree} which handles the mundane
+work of a C++ class: construction, copying, and detruction, etc. {\tt
+BaseKDTree} handles copying of a tree by incrementing a refcount on
+the child nodes; once those nodes hit a refcount of zero, then the
+nodes are deleted.  This approach works well, provided no outside
+class holds on to references to a tree's nodes after destroying the
+tree itself.
+
+
+
+
+\subsection{Needed Improvements}
+The KD-Tree nodes at present use quite a bit of memory because they
+use {\tt std::vector} where a set of pointers or C-style array would
+probably be better-suited.  This is particularly noteworthy in the
+case of {\tt TrackletTreeNode}, since trees given to linkTracklets can
+be very large.
+
+
 
 \section{Helpful Metrics and Software Tools}
 \subsection{Studying OpSim}

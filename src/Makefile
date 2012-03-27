@@ -16,7 +16,7 @@ BASEINC=-I ../include/
 MOPSINC=../include/lsst/mops/
 MOPSHEADERS= ${MOPSINC}*.h ${MOPSINC}daymops/findTracklets/*.h ${MOPSINC}daymops/collapseTrackletsAndPostfilters/*.h 
 
-all:	../bin/findTracklets ../bin/collapseTracklets
+all:	../bin/findTracklets ../bin/collapseTracklets ../bin/purifyTracklets ../bin/removeSubsets
 
 
 MopsDetection.o: MopsDetection.cc ${MOPSHEADERS}
@@ -53,3 +53,12 @@ findTracklets/findTracklets.cc findTracklets/findTrackletsMain.cc -o ../bin/find
 MopsDetection.o PointAndValue.o common.o Tracklet.o Track.o TrackletVector.o fileUtils.o rmsLineFit.o \
 collapseTrackletsAndPostfilters/collapseTracklets.cc collapseTrackletsAndPostfilters/collapseTrackletsMain.cc -o ../bin/collapseTracklets
 
+../bin/purifyTracklets: collapseTrackletsAndPostfilters/purifyTracklets.cc  MopsDetection.o common.o Tracklet.o TrackletVector.o fileUtils.o rmsLineFit.o ${MOPSHEADERS}
+	g++ ${OPT} ${BASEINC} ${EXTINCLUDES} ${EXTLIBDIRS} ${EXTLIBS} \
+MopsDetection.o PointAndValue.o common.o Tracklet.o Track.o TrackletVector.o fileUtils.o rmsLineFit.o \
+collapseTrackletsAndPostfilters/purifyTracklets.cc -o ../bin/purifyTracklets
+
+../bin/removeSubsets: removeSubsets.cc removeSubsetsMain.cc MopsDetection.o common.o Tracklet.o fileUtils.o ${MOPSHEADERS}
+	g++ ${OPT} ${BASEINC} ${EXTINCLUDES} ${EXTLIBDIRS} ${EXTLIBS} \
+MopsDetection.o common.o Tracklet.o fileUtils.o \
+removeSubsets.cc removeSubsetsMain.cc -o ../bin/removeSubsets

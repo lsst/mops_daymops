@@ -99,7 +99,7 @@ void TrackletVector::push_back(const Tracklet &newTracklet) {
 Tracklet TrackletVector::at(unsigned int i) const {
 
     if (useCache) {
-        throw LSST_EXCEPT(lsst::pex::exceptions::Exception, 
+      throw LSST_EXCEPT(KnownShortcomingException,  
                           "trackletVector: Cannot call do random access via at() when using output cacheing.");
     }
 
@@ -113,7 +113,7 @@ Tracklet TrackletVector::at(unsigned int i) const {
 unsigned int TrackletVector::size() const {
 
     if (useCache) {
-        throw LSST_EXCEPT(lsst::pex::exceptions::Exception, 
+        throw LSST_EXCEPT(KnownShortcomingException, 
                           "trackletVector: Cannot request 'size' when using cacheing.");
     }
 
@@ -126,7 +126,7 @@ unsigned int TrackletVector::size() const {
 bool TrackletVector::isSubsetOf(const TrackletVector &other) const {
 
     if (useCache) {
-        throw LSST_EXCEPT(lsst::pex::exceptions::Exception, 
+      throw LSST_EXCEPT(KnownShortcomingException, 
                           "trackletVector: Cannot call isSubsetOf when using cacheing.");
     }
 
@@ -162,7 +162,7 @@ bool TrackletVector::isSubsetOf(const TrackletVector &other) const {
 bool TrackletVector::operator==(const TrackletVector &other) const {
 
     if (useCache) {
-        throw LSST_EXCEPT(lsst::pex::exceptions::Exception, 
+        throw LSST_EXCEPT(KnownShortcomingException, 
                           "trackletVector: Cannot call == when using cacheing.");
     }
 
@@ -175,7 +175,7 @@ bool TrackletVector::operator==(const TrackletVector &other) const {
 bool TrackletVector::operator!=(const TrackletVector &other) const {
 
     if (useCache) {
-        throw LSST_EXCEPT(lsst::pex::exceptions::Exception, 
+        throw LSST_EXCEPT(KnownShortcomingException, 
                           "trackletVector: Cannot call != when using cacheing.");
     }
 

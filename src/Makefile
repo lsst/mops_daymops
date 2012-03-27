@@ -16,7 +16,7 @@ BASEINC=-I ../include/
 MOPSINC=../include/lsst/mops/
 MOPSHEADERS= ${MOPSINC}*.h ${MOPSINC}daymops/findTracklets/*.h ${MOPSINC}daymops/collapseTrackletsAndPostfilters/*.h 
 
-all:	../bin/findTracklets 
+all:	../bin/findTracklets ../bin/collapseTracklets
 
 
 MopsDetection.o: MopsDetection.cc ${MOPSHEADERS}
@@ -40,8 +40,16 @@ TrackletVector.o: TrackletVector.cc ${MOPSHEADERS}
 fileUtils.o: fileUtils.cc ${MOPSHEADERS}
 	g++ ${OPT} -c fileUtils.cc ${EXTINCLUDES} ${BASEINC}
 
+rmsLineFit.o: rmsLineFit.cc ${MOPSHEADERS}
+	g++ ${OPT} -c rmsLineFit.cc ${EXTINCLUDES} ${BASEINC}
+
 ../bin/findTracklets: findTracklets/findTracklets.cc findTracklets/findTrackletsMain.cc MopsDetection.o PointAndValue.o common.o Tracklet.o Track.o TrackletVector.o fileUtils.o ${MOPSHEADERS}
 	g++ ${OPT} ${BASEINC} ${EXTINCLUDES} ${EXTLIBDIRS} ${EXTLIBS} \
 MopsDetection.o PointAndValue.o common.o Tracklet.o Track.o TrackletVector.o fileUtils.o \
 findTracklets/findTracklets.cc findTracklets/findTrackletsMain.cc -o ../bin/findTracklets
+
+../bin/collapseTracklets: collapseTrackletsAndPostfilters/collapseTracklets.cc collapseTrackletsAndPostfilters/collapseTrackletsMain.cc MopsDetection.o PointAndValue.o common.o Tracklet.o Track.o TrackletVector.o fileUtils.o rmsLineFit.o ${MOPSHEADERS}
+	g++ ${OPT} ${BASEINC} ${EXTINCLUDES} ${EXTLIBDIRS} ${EXTLIBS} \
+MopsDetection.o PointAndValue.o common.o Tracklet.o Track.o TrackletVector.o fileUtils.o rmsLineFit.o \
+collapseTrackletsAndPostfilters/collapseTracklets.cc collapseTrackletsAndPostfilters/collapseTrackletsMain.cc -o ../bin/collapseTracklets
 

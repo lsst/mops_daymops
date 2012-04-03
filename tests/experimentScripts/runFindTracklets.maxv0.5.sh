@@ -3,8 +3,8 @@
 
 FINDTRACKLETS=$MOPS_DAYMOPS_DIR/bin/findTracklets
 
-NIGHTLY_DIASOURCES=$PWD/*miti
-OUTPUT_DIR=$PWD/tracklets 
+NIGHTLY_DIASOURCES=$PWD/../*miti
+OUTPUT_DIR=$PWD
 
 echo "Placing output data in $OUTPUT_DIR"
 

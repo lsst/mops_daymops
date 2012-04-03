@@ -54,4 +54,6 @@ SConscript(['src/SConscript',
             'lib/SConscript',
             'doc/SConscript'])
 
+SConscript('doc/SConscript')
+
  

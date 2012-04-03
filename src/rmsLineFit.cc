@@ -78,7 +78,7 @@ namespace lsst {
         double *arrayMJDs = (double*)malloc(sizeof(double) * numDets);
 
         if ((arrayRAs == NULL) || (arrayDecs == NULL) || (arrayMJDs == NULL)) {
-            throw LSST_EXCEPT(pexExcept::MemoryException, "Malloc returned NULL on a very small malloc. System out of memory or something very odd.\n");
+            throw LSST_EXCEPT(MemoryException, "Malloc returned NULL on a very small malloc. System out of memory or something very odd.\n");
         }
         
         for (unsigned int i = 0; i < numDets; i++) {

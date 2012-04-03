@@ -4,16 +4,10 @@
 
 jmyers may 11 2010
 
-Split up the "simplified" DIAsources by night and put them in separate
-files.  These are assumed to have a temporary format of
+march 29 2012: no longer write output in MITI, get rid of MITI forever!
 
-ID obshistid SSM_ID RA DECL MJD MAG sn
-
-as created by running < dias_nodeep_pt1 awk '{print $2, $6, $10, $13,
-$36, $39, $59}' > dias.short and then using addUniqueIds.py to add an
-initial ID column.
-
-lower-case items are ignored.  
+Split up the "fullerDiaSource"-format DIAsources by night and put them in separate
+files.  
 
 """
 
@@ -28,6 +22,8 @@ lower-case items are ignored.
 night_start = -0.35
 night_end = 0.65
 
+OBSCODE='807'
+
 import sys
 
 def getNightNum(mjd):
@@ -40,7 +36,7 @@ if __name__=="__main__":
 
 
     if len(sys.argv)<2:
-        print "Usage: splitByNight.py filename [start night] [end night]"
+        print "Usage: splitByNight.py filename <[start night] [end night]>"
         print "  where filename = the input diasource file "
         print "  and start/end night are optional"
         print "   (but equal to the MJD nightNum of the interval you want to extract)."
@@ -61,15 +57,14 @@ if __name__=="__main__":
         diaId, obshistId, ssmId, ra, decl, MJD, mag, snr = line.split()
         diaId, ssmId = map(int, [diaId, ssmId])
         ra, decl, MJD, mag = map(float, [ra, decl, MJD, mag])
-        # Create output line in MITI format.
-        mitiLine = "%i %f %f %f %f 807 %i 0. 0." \
-            % (diaId, MJD, ra, decl, mag, ssmId)
         # Determine the night number of this particular diasource.
         nightNum = getNightNum(MJD)
         if (nightNum >= start_interval) & (nightNum <= stop_interval):
             # Open new output file if needed.
             if nightNum != prev_night:
-                outfile = open(str(nightNum) + ".miti", "aw")
+                outfile = open(str(nightNum) + ".dias", "aw")
+                outfile2 = open(str(nightNum) + ".miti", "aw")
                 prev_night = nightNum
             # Write output line.
-            print>>outfile, mitiLine
+            print>>outfile, line.rstrip()
+            print>>outfile2, "%d %f %f %f %f %s %d 0.0 0.0 " % (diaId, MJD, ra, decl, mag, OBSCODE, ssmId)

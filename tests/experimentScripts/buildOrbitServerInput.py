@@ -46,7 +46,7 @@ OPSIM_DB='opsim_3_61'
 OPSIM_TABLE='output_opsim3_61'
 #DIAS_DB='mops_noDeepAstromError'
 #DIAS_TABLE='fullerDiaSource'
-DIAS_DB='mops_fullSky_year5'
+DIAS_DB='fullSkyYear5'
 DIAS_TABLE='fullerDiaSource'
 
 MAX_TRACKLETS_PER_FILE=50000

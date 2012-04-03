@@ -9,6 +9,7 @@
 #ifndef LSST_TRACKLET_H
 #define LSST_TRACKLET_H
 #include <set>
+#include <vector>
 #include "lsst/mops/MopsDetection.h"
 #include "lsst/mops/Exceptions.h"
 

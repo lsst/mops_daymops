@@ -38,12 +38,12 @@ env.Program('../bin/readTracksWriteStats',
 Export("common_libs")
 #Export("ext_libs")
 
-env.Program('../tests/utilities-unitTests', ['generalUnitTests.cc'] + common_libs, 
-            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
+#env.Program('../tests/utilities-unitTests', ['generalUnitTests.cc'] + common_libs, 
+#            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
 
-env.Program('../tests/Track-unitTests', 
-            ['Track-unitTests.cc', 'Track.o', 'TrackSet.o'] + common_libs,
-            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
+#env.Program('../tests/Track-unitTests', 
+#            ['Track-unitTests.cc', 'Track.o', 'TrackSet.o'] + common_libs,
+#            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
 
 
 
@@ -51,9 +51,10 @@ SConscript(os.path.join('findTracklets','SConscript'))
 SConscript(os.path.join('collapseTrackletsAndPostfilters','SConscript'))
 SConscript(os.path.join('linkTracklets','SConscript'))
 
-SConscript(os.path.join('detectionProximity','SConscript'))
-SConscript(os.path.join('fieldProximity','SConscript'))
-SConscript(os.path.join('orbitProximity','SConscript'))
+# we really never got to use these... and they slow down builds.
+#SConscript(os.path.join('detectionProximity','SConscript'))
+#SConscript(os.path.join('fieldProximity','SConscript'))
+#SConscript(os.path.join('orbitProximity','SConscript'))
 
 
 # swig wrappers

@@ -4,10 +4,12 @@
 
 jmyers may 11 2010
 
-march 29 2012: no longer write output in MITI, get rid of MITI forever!
+march 29 2012: Get rid of MITI format and write things in fullerDiaSource format.
 
 Split up the "fullerDiaSource"-format DIAsources by night and put them in separate
 files.  
+
+apr. 3 2012: Also, write out a per-obsHist file which holds all dias from a given image.
 
 """
 
@@ -25,6 +27,7 @@ night_end = 0.65
 OBSCODE='807'
 
 import sys
+import os.path
 
 def getNightNum(mjd):
     """Determine night number for any MJD."""
@@ -36,35 +39,33 @@ if __name__=="__main__":
 
 
     if len(sys.argv)<2:
-        print "Usage: splitByNight.py filename <[start night] [end night]>"
+        print "Usage: splitByNight.py filename nightlyOutputDir byObsHistOutputDir"
         print "  where filename = the input diasource file "
-        print "  and start/end night are optional"
-        print "   (but equal to the MJD nightNum of the interval you want to extract)."
-        sys.exit()
+        print "  dia sources broken up by night will go in nightlyOutputDir"
+        print "  dia sources broken up by image will go in byObsHistOutputDir"
+        sys.exit(1)
 
     infile = open(sys.argv[1], 'r')
-    
-    start_interval = -99
-    stop_interval = 1e10
-    if len(sys.argv) > 2:
-        start_interval = int(sys.argv[2])
-        stop_interval = int(sys.argv[3])
+    outDir1 = sys.argv[2]
+    outDir2 = sys.argv[3]
 
-    prev_night = -99
+    prev_night = None
 
     # Read diasources from input file.
     for line in infile:
         diaId, obshistId, ssmId, ra, decl, MJD, mag, snr = line.split()
-        diaId, ssmId = map(int, [diaId, ssmId])
+        diaId, obshistId, ssmId = map(int, [diaId, obshistId, ssmId])
         ra, decl, MJD, mag = map(float, [ra, decl, MJD, mag])
-        # Determine the night number of this particular diasource.
+
+        # Determine the night number of this particular diasource and write to that file.
         nightNum = getNightNum(MJD)
-        if (nightNum >= start_interval) & (nightNum <= stop_interval):
-            # Open new output file if needed.
-            if nightNum != prev_night:
-                outfile = open(str(nightNum) + ".dias", "aw")
-                outfile2 = open(str(nightNum) + ".miti", "aw")
-                prev_night = nightNum
-            # Write output line.
-            print>>outfile, line.rstrip()
-            print>>outfile2, "%d %f %f %f %f %s %d 0.0 0.0 " % (diaId, MJD, ra, decl, mag, OBSCODE, ssmId)
+        # Open new output file if needed.
+        if nightNum != prev_night:
+            outfile = open(os.path.join(outDir1, str(nightNum) + ".dias"), "aw")
+            prev_night = nightNum
+        # Write output line.
+        print>>outfile, line.rstrip()
+
+        # now write to a by-obshist dir
+        outfile2 = open(os.path.join(outDir2, str(obshistId) + ".dias"), "aw")
+        print>>outfile2, line.rstrip()

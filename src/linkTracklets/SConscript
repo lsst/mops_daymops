@@ -26,10 +26,10 @@ env.Library('../../lib/linkTracklets',
             + common_libs + [TrackletTreeNode, TrackletTree], 
             LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
 
-env.Program('../../tests/linkTracklets-unitTests', 
-            ['linkTracklets-unittests.cc', 'linkTracklets.o']
-            + common_libs + [TrackletTreeNode, TrackletTree],
-            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
+#env.Program('../../tests/linkTracklets-unitTests', 
+#            ['linkTracklets-unittests.cc', 'linkTracklets.o']
+#            + common_libs + [TrackletTreeNode, TrackletTree],
+#            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
 
 
 env.Program('../../bin/linkTracklets', 

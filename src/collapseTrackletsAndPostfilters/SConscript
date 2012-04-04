@@ -9,8 +9,8 @@ Import("common_libs")
 
 
 
-env.Program('../../tests/collapseTracklets-unitTests', ['unitTests.cc', 'collapseTracklets'] + common_libs,
-            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
+#env.Program('../../tests/collapseTracklets-unitTests', ['unitTests.cc', 'collapseTracklets']# + common_libs,
+#            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
 
 ct = env.Library('../../lib/collapseTracklets', ['collapseTracklets.cc'] + common_libs,
                  LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))

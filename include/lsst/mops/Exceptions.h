@@ -109,6 +109,9 @@ LSST_EXCEPTION_TYPE(BadIndexException, lsst::pex::exceptions::Exception,
 LSST_EXCEPTION_TYPE(KnownShortcomingException, lsst::pex::exceptions::Exception,
                     lsst::mops::KnownShortcomingException)
 
+LSST_EXCEPTION_TYPE(MemoryException, lsst::pex::exceptions::Exception,
+                    lsst::mops::MemoryException)
+
 
 
 

@@ -80,7 +80,7 @@ int main(int argc, char* argv[])
     std::ifstream detsFile(inFileName.c_str());
     
     populateDetVectorFromFile(detsFile, myDets);
-    
+
     lsst::mops::findTrackletsConfig config;
     config.maxV = maxVelocity;
     config.minV = minVelocity;

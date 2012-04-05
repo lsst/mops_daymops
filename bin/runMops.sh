@@ -36,6 +36,7 @@ eups list | tee -a mopsSetup.log
 
 # split up the giant input file into manageable chunks.
 mkdir diasByObsHist/
+DIAS_BY_IMG=$PWD/diasByObsHist
 python $MOPS_DAYMOPS_DIR/bin/splitByNight.py $DIAS_FILE ./ diasByObsHist/
 
 
@@ -56,12 +57,12 @@ do
     python $MOPS_DAYMOPS_DIR/bin/binTrackletsByStartImage_noDb.py $TRACKLETS $DIASFILE byObsHistId/ 
 done
 
-exit 0
-
 mkdir linkTrackletsInfiles
 
 python $MOPS_DAYMOPS_DIR/bin/makeLinkTrackletsInput_byImages.py \
- $PWD/byObsHistId/ $PWD/linkTrackletsInfiles/ $DIAS_DB $DIAS_TABLE $WINDOW_SIZE
+ $PWD/byObsHistId/ $DIAS_BY_IMG $PWD/linkTrackletsInfiles/ $WINDOW_SIZE
+
+
 
 cd linkTrackletsInfiles
 mkdir tracks
@@ -74,5 +75,5 @@ do
 done
 
 # grade the tracks we got out 
-python $MOPS_DAYMOPS_DIR/bin/../analysis/countTrueFalseTracksByObsIdAndFindableObjects.py $DIAS_FILE \*.tracks 
+python $MOPS_DAYMOPS_DIR/tests/analysis/countTrueFalseTracksByObsIdAndFindableObjects.py $DIAS_FILE \*.tracks 
 

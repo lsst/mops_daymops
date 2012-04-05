@@ -42,12 +42,6 @@ ASSUMED_OBS_TYPE='O'
 ASSUMED_FILTER='r'
 ASSUMED_OBSERVATORY=807
 ASSUMED_RMS_MAG=1.
-OPSIM_DB='opsim_3_61'
-OPSIM_TABLE='output_opsim3_61'
-#DIAS_DB='mops_noDeepAstromError'
-#DIAS_TABLE='fullerDiaSource'
-DIAS_DB='fullSkyYear5'
-DIAS_TABLE='fullerDiaSource'
 
 MAX_TRACKLETS_PER_FILE=50000
 MAX_TRACKS_PER_FILE=24000
@@ -58,7 +52,7 @@ MAX_TRACKS_PER_FILE=24000
 MAX_TRACKS=-1
 
 import add_astrometric_noise as astrom
-import useful_input as ui
+import mopsDatabases
 from lsst.daf.base.baseLib import DateTime
 
 
@@ -99,34 +93,6 @@ class Track(object):
         self.dias = dias
         self._isTrue = isKnownToBeTrue
 
-    # def isTrue(self, dets=None):        
-    #     # this code is BROKEN and OUTDATED
-    #     if self._isTrue != None:
-    #         return self._isTrue
-    #     else:
-    #         if dets == None:
-    #             raise Exception("Can't tell if this is a true track unless it can see the dets, \
-    #                                    or you specified at __init__-time.")
-            
-    #         myName = lookUpDet(dets, [self.dias[0]])[0].objId
-    #         if myName == 'NS':
-    #             self._isTrue = False
-    #             return False
-
-    #         for dia in self.dias:
-    #             if lookUpDet(dets, [dia])[0].objId != myName:
-    #                 # this is inconsistent, we are not a true track
-    #                 self._isTrue = False
-    #                 return False
-
-    #         # we didn't find any inconsistency, we are a true track
-    #         self._isTrue = True
-    #         return True
-
-    def isSubset(self, otherTrack):
-        myDiasSet = set(self.dias)
-        otherTrackDiasSet = set(otherTrack.dias)
-        return myDiasSet.issubset(otherTrackDiasSet)
 
 
 
@@ -137,42 +103,11 @@ def taiToUtc(taiTime):
     return d.mjd(DateTime.UTC)
 
 
-def lookUpDets(dbCursor, diaIds):
-    """ fetches the following from DB, given a DiaID, doing a little calculation as
-    needed: utcMjd, ra, dec, mag, astromErr, snr, groundTruthId
-    """
-    print "Querying DB for ", len(diaIds), " diaSources..."
-    sql = """ SELECT diaSourceId, taiMidPoint, ra, decl, mag, opSimId, snr, ssmId, seeing, 5sigma_ps                  
-                  FROM %s.%s AS d JOIN %s.%s AS o ON d.opSimId=o.obsHistId WHERE diaSourceId IN ( """ % \
-        (DIAS_DB, DIAS_TABLE, OPSIM_DB, OPSIM_TABLE)
-
-    for i in range(len(diaIds)):
-        if i > 0 :
-            sql += ", "
-        diaId = diaIds[i]
-        sql += "%d" % diaId
-    sql += ");"
-
-    allRes = ui.sqlQuery(dbCursor, sql, verbose=False)    
-    toRet = []
-    for res in allRes:
-        [diaSourceId, taiTime, ra, dec, mag, opSimId, snr, groundTruthId, seeing, sigma5_ps] = res
-        #print taiTime, ra, dec, mag, opSimId, snr, groundTruthId
-    
-        astromErr = astrom.calcAstrometricError(mag, sigma5_ps, seeing)
-        #print "callint taiToUtc(", taiTime, ")"
-        #utcMjd = taiToUtc(taiTime)
-        #print " calling DateTime(", taiTime, ", DateTime.TAI)"
-        d = DateTime(taiTime, DateTime.MJD, DateTime.TAI)
-        utcMjd = d.mjd(DateTime.UTC)
-        #print "got tai ", taiTime, " = utc ", utcMjd
-        toRet.append([diaSourceId, utcMjd, ra, dec, mag, astromErr, snr, groundTruthId])
-    return toRet
 
 
 
 
-def writeDiasToDesTrackletsFile(diasToWrite, outFile, dbCursor):
+def writeDiasToDesTrackletsFile(diasToWrite, outFile, diasDict, imageDict):
     """ reads a set of dias from the DB and writes them to the
     "tracklets" file. we don't really write tracklets at all -
     orbit_server.x will actually allow 'singleton' tracklets of size
@@ -180,10 +115,12 @@ def writeDiasToDesTrackletsFile(diasToWrite, outFile, dbCursor):
     write have the same IDs as the DiaIds on the detections from the
     input file. easy peasy!
     """
-    allDias = lookUpDets(dbCursor, list(diasToWrite))
+    allDias = map(lambda x: diasDict[x], diasToWrite)
     for dia in allDias:
-        diaId, utcMjd, ra, dec, mag, astromErr, snr, groundTruthId = dia
-
+        diaId, obsHistId, groundTruthId, ra, dec, utcMjd, mag, snr = dia
+        #need to calculate astrom error for this dia source.
+        ps, seeing = imageDict[obsHistId]
+        astromErr = astrom.calcAstrometricError(mag, ps, seeing)
         #TBD: RA astrometric error is not == astromErr, it's something else - cos(radians(dec))* astromErr?
         #   add this in later. For now on the ecliptic it won't really matter.
 
@@ -208,12 +145,6 @@ def writeTrackToRequestFile(diaIds, requestFile, trackName):
         diaIds = newDias
         if len(diaIds) > 18: 
             print "whoops! programmer error in writeTracksToRequestFile"
-    #outputTrack = True
-    #if TRUE_TRACKS_ONLY == True:
-    #    outputTrack = t.isTrue(allDets)
-    #if FALSE_TRACKS_ONLY== True:
-    #    outputTrack = not t.isTrue(allDets)
-    #if outputTrack:
     requestFile.write("%s" % trackName)
     requestFile.write(" %d" % len(diaIds))
     for dia in diaIds:
@@ -250,8 +181,12 @@ def createNewFiles(outPrefix, outputNumber):
 
 
 
-def writeOrbitServerInputFiles(inTracksFile, outPrefix, cursor, maxTrackletsPerFile, maxTracksPerFile):
-    """writes sets of input files for orbit_server.x. create as many sets of output files as needed"""
+def writeOrbitServerInputFiles(inTracksFile, outPrefix, 
+                               imageDict, diasDict, 
+                               maxTrackletsPerFile, maxTracksPerFile):
+    """writes sets of input files for orbit_server.x. It will get
+    buffer overflow if there are too many dets or tracklets in an
+    input file, so create as many sets of output files as needed"""
     curFileSetNum = 0
     totalTracksWritten = 0
     requestFile, trackletsFile = createNewFiles(outPrefix, curFileSetNum)
@@ -280,7 +215,8 @@ def writeOrbitServerInputFiles(inTracksFile, outPrefix, cursor, maxTrackletsPerF
                 (MAX_TRACKS > 0 and totalTracksWritten == MAX_TRACKS):
 
             # if we're done with this set of files, start a new set of files.
-            writeDiasToDesTrackletsFile(diasNeededForThisOutfile, trackletsFile, cursor)
+            writeDiasToDesTrackletsFile(diasNeededForThisOutfile, trackletsFile, 
+                                        diasDict, imageDict)
             requestFile.close()
             trackletsFile.close()
             print "Successfully wrote output files for %s" % (outPrefix + "_" + str(curFileSetNum))
@@ -305,12 +241,71 @@ def writeOrbitServerInputFiles(inTracksFile, outPrefix, cursor, maxTrackletsPerF
     trackletsFile.close()
 
 
+
+def oneRequest(curs, imageIds, output):
+    """helper function for getImageData."""
+    s = """ SELECT obsHistId, 5sigma_ps, seeing FROM %s.%s 
+  WHERE obsHistId IN (""" % (mopsDatabases.OPSIM_DB, mopsDatabases.OPSIM_TABLE)
+    first = True
+    for imageId in imageIds:
+        if first:
+            s += "%d" % imageId
+            first = False
+        else:
+            s += ", %d" % imageId
+    s += ");"
+    curs.execute(s)
+    res = curs.fetchall()
+    for r in res:
+        output[r[0]] = [r[1], r[2]]
+
+        
+
+def getImageData(curs, allObsHists):
+    """ use database to find 5sigma_ps and seeing for requested image;
+    return a dictionary from obsHistsId to image seeing data """
+    resDict = {}
+
+    # bundle up 10k or so dias and then do a request for just those.
+    curWorkload = []
+    for oh in allObsHists:
+        curWorkload.append(oh)
+        if len(curWorkload) >= 10000:
+            oneRequest(curs, curWorkload, resDict)
+            curWorkload = []
+    if len(curWorkload) > 0:
+        oneRequest(curs, curWorkload, resDict)
+    return resDict
+            
+
+
 if __name__=="__main__":
     import sys
-    inTracks= file(sys.argv[1],'r')
-    outPrefix=sys.argv[2]
 
-    conn,cursor = ui.sqlConnect(hostname='localhost', username='jmyers', passwdname='jmyers', dbname='opsim_3_61')
+
+    inDets = file(sys.argv[1],'r')
+    inTracks= file(sys.argv[2],'r')
+    outPrefix=sys.argv[3]
+
+    # read all dets, find images referenced therein.
+    allObsHists = set()
+    # also keep track of all the dias by ID.
+    allDias = {}
+    line = inDets.readline()
+    while line != "":
+        diaSourceId, obsHist, ssmId, ra, decl, mjd, mag, snr = line.split()
+        diaSourceId, obsHist, ssmId = map(int, [diaSourceId, obsHist, ssmId])
+        ra, decl, mjd, mag, snr = map(float, [ra, decl, mjd, mag, snr])
+        allDias[diaSourceId] = [diaSourceId, obsHist, ssmId, ra, decl, mjd, mag, snr]
+        allObsHists.add(obsHist)
+        line = inDets.readline()
     
-    writeOrbitServerInputFiles(inTracks, outPrefix, cursor, MAX_TRACKLETS_PER_FILE, MAX_TRACKS_PER_FILE)
+    # fetch seeing, 5sigma_ps for those images (use DB). keep that
+    # data for later.
+    curs = mopsDatabases.getCursor()
+    imageDict = getImageData(curs, allObsHists)
+
+    # read through tracks file and do the real work
+    writeOrbitServerInputFiles(inTracks, outPrefix, imageDict, allDias,
+                               MAX_TRACKLETS_PER_FILE, MAX_TRACKS_PER_FILE)
     print "done writing output files."

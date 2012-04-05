@@ -1,5 +1,5 @@
 import numpy
-import useful_input as ui
+#import useful_input as ui
 import sys
 
 def calcAstrometricError(mag, m5, seeing, systematic_error=0.1):

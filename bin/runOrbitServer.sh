@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 
 ORBFIT=/home/jmyers/orb401/src/panst/orbit_server.x
 

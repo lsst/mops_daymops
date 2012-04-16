@@ -6,26 +6,18 @@
 #include <fstream>
 #include <getopt.h>
 #include <iomanip>
-
+#include <ctime>
+#include <time.h>
 
 #include "lsst/mops/daymops/linkTracklets/linkTracklets.h"
 #include "lsst/mops/fileUtils.h"
 
 
 
-#define PRINT_TIMING_INFO true
-
-#ifdef PRINT_TIMING_INFO
-#include <ctime>
-#endif
 
 namespace lsst {
      namespace mops {
 
-double timeElapsed(clock_t priorEvent)
-{
-     return ( std::clock() - priorEvent ) / (double)CLOCKS_PER_SEC;
-}
 
 
 
@@ -33,6 +25,10 @@ double timeElapsed(clock_t priorEvent)
 
 int main(int argc, char* argv[])
 {
+
+     clock_t start;
+     double dif;
+     start = std::clock();
 
      lsst::mops::linkTrackletsConfig searchConfig; 
 
@@ -175,11 +171,6 @@ int main(int argc, char* argv[])
      searchConfig.outputMethod = lsst::mops::IDS_FILE_WITH_CACHE;
      searchConfig.outputBufferSize = bufferSize;
      
-     clock_t last;
-     double dif;
-     if(PRINT_TIMING_INFO) {     
-	  last = std::clock();
-     }
      
      const double astromErr =  searchConfig.defaultAstromErr;
      std::cerr << "Using defaultAstromErr " << astromErr << '\n';
@@ -187,36 +178,23 @@ int main(int argc, char* argv[])
      calculateTopoCorr(allDets, searchConfig);
      populatePairsVectorFromFile(trackletsFileName, allTracklets);
 
-     if(PRINT_TIMING_INFO) {     	  
-	  dif = lsst::mops::timeElapsed(last);
-	  std::cout << "Reading input took " << std::fixed << std::setprecision(10) 
-		    <<  dif  << " seconds." <<std::endl;     
-     }
+     dif = lsst::mops::timeElapsed(start);
+     std::cout << "Reading input took " << std::fixed << std::setprecision(10) 
+	       <<  dif  << " seconds." <<std::endl;     
 
      
-     if(PRINT_TIMING_INFO) {     
-	  last = std::clock();
-     }
 
      resultTracks = lsst::mops::linkTracklets(allDets, allTracklets, searchConfig);
 
-
-     if(PRINT_TIMING_INFO) {     
-	  last = std::clock();
-     }
      
      resultTracks->purgeToFile();
      std::cout << "Results successfully written to disk." << std::endl;
      
-
-     if(PRINT_TIMING_INFO) {     	  
-	  dif = lsst::mops::timeElapsed(last);
-	  std::cout << "Writing output took " << std::fixed << std::setprecision(10) 
-		    <<  dif  << " seconds." <<std::endl;     
-     }
-
      std::cout << "Done. Exiting successfully." << std::endl;
 
+     dif = lsst::mops::timeElapsed(start);
+     std::cout << "Completed after " << std::fixed << std::setprecision(10) 
+	       <<  dif  << " seconds." <<std::endl;     
      lsst::mops::printMemUse();
      return 0;
 

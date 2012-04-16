@@ -12,6 +12,8 @@
 
 #include <vector>
 #include <cmath>
+#include <ctime>
+#include <time.h>
 
 #include <string>
 
@@ -35,6 +37,9 @@ namespace mops {
         double deg_to_rad()  { return M_PI / 180.; };
 
     };
+
+    /* return time since priorEvent (in seconds). */
+    double timeElapsed(clock_t priorEvent);
 
     /* O(n)-time implementation returns median value of fv */
     double fastMedian(std::vector<double> fv);

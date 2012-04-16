@@ -77,3 +77,16 @@ done
 # grade the tracks we got out 
 python $MOPS_DAYMOPS_DIR/tests/analysis/countTrueFalseTracksByObsIdAndFindableObjects.py $DIAS_FILE \*.tracks 
 
+# now actually run IOD
+mkdir orbits
+cd orbits
+for TRACKS in ../*.tracks
+do
+    BN=`basename $TRACKS .cpp.tracks`
+    DETS=../../`basename $TRACKS .cpp.tracks`.dets
+    $MOPS_DAYMOPS_DIR/bin/buildOrbitServerInput.py $DETS $TRACKS ${BN}_
+done
+
+echo "Running IOD at " `date`
+${MOPS_DAYMOPS_DIR}/bin/runOrbitServer.sh
+echo "Finished running IOD at " `date`

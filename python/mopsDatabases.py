@@ -4,13 +4,6 @@ import MySQLdb.cursors as cursors
 OPSIM_DB="opsim_3_61"
 OPSIM_TABLE="output_opsim3_61"
 
-DIAS_DB="mops_noDeepAstromError"
-DIAS_TABLE="fullerDiaSource"
-#DIAS_TABLE="diaSources_threeQuartersDensity"
-#DIAS_TABLE="diaSources_quarterDensityMoreRandom"
-#DIAS_TABLE="diaSources_halfDensity"
-#DIAS_TABLE="diasUnattributedAfterSlowMoverPass_plusNoise10000PerImage"
-
 DB_USER="jmyers"
 DB_PASS="jmyers"
 DB_HOST="localhost"

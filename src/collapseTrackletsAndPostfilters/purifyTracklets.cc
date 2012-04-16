@@ -4,6 +4,7 @@
 /* jmyers 8/18/08 
  */
 
+#include <iomanip>
 #include <sstream>
 
 #include <unistd.h>
@@ -31,6 +32,8 @@ namespace lsst {
      * help you find one tracklet, anyway.
      */
     int rmsPurifyMain(int argc, char** argv) {
+        clock_t start = std::clock();
+
         std::string USAGE("USAGE: purifyTracklets --detsFile <detections file> --pairsFile <tracklets (pairs) file) --maxRMS --outFile <output tracklets (pairs) file>");
         char* pairsFileName = NULL;
         char* detsFileName = NULL;
@@ -132,6 +135,9 @@ namespace lsst {
         std::cout << "Reading tracklets (pairs) file...." << std::endl;
         populatePairsVectorFromFile(pairsFile, trackletsVector);
         std::cout << "Done!" << std::endl;
+        double dif = lsst::mops::timeElapsed(start);
+        std::cout << "Reading input took " << std::fixed << std::setprecision(10) 
+                  <<  dif  << " seconds." <<std::endl;             
 
         if (!isSane(detsVector.size(), &trackletsVector)) {
             throw LSST_EXCEPT(InputFileFormatErrorException, 
@@ -147,6 +153,9 @@ namespace lsst {
         std::cout << "Done. Writing output." << std::endl;
         writeTrackletsToOutFile(&postFilteredTracklets, outFile);
 
+        std::cout << "Done!" << std::endl;
+        std::cout << "Completed after " << std::fixed << std::setprecision(10) 
+                  <<  dif  << " seconds." <<std::endl;
         printMemUse();
         return 0;
     }

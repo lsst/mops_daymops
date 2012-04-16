@@ -1,6 +1,7 @@
 // -*- LSST-C++ -*-
 /* jonathan myers */
 
+#include <iomanip>
 #include <sstream>
 
 #include <unistd.h>
@@ -45,6 +46,7 @@ namespace lsst {
 
     int collapseTrackletsMain(int argc, char** argv)
     {        
+        clock_t start = std::clock();
         std::string USAGE("USAGE: collapseTracklets [options] <detsFile> <pairsFile> <RA Tolerance> <Dec Tolerance> <angular tolerance> <velocity tolerance> <outFile>\n\
 options:  \n\
 =================================================\n\
@@ -219,6 +221,11 @@ Only used if useRMSfilt == true.  Describes the function for RMS filtering.  Tra
         TrackletCollapser myTC;
         populateDetVectorFromFile(detsFile, detections);
         populatePairsVectorFromFile(pairsFile, pairs);
+        
+        double dif = lsst::mops::timeElapsed(start);
+        std::cout << "Reading input took " << std::fixed << std::setprecision(10) 
+                  <<  dif  << " seconds." <<std::endl;             
+
         // TBD: use proper LSST logs, too...
         std::cout << "Found " << detections.size() << " detections\n";
         std::cout << "Found " << pairs.size() << " pairs.\n";
@@ -245,11 +252,13 @@ Only used if useRMSfilt == true.  Describes the function for RMS filtering.  Tra
         /*collapsedPairs = removeSubsets(&collapsedPairs);  for now, do this in a separate program.*/
         writeTrackletsToOutFile(&collapsedPairs, outFile);
         /* close all files. */
-        std::cout << "Done!" << std::endl;
         detsFile.close();
         pairsFile.close();
         outFile.close();	
 
+        std::cout << "Done!" << std::endl;
+        std::cout << "Completed after " << std::fixed << std::setprecision(10) 
+                  <<  dif  << " seconds." <<std::endl;
         printMemUse();
         return 0;
     }

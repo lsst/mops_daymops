@@ -11,6 +11,7 @@
 #include <sstream>
 #include <math.h>
 
+#include "lsst/mops/common.h"
 #include "lsst/mops/MopsDetection.h"
 #include "lsst/mops/fileUtils.h"
 #include "lsst/mops/daymops/findTracklets/findTracklets.h"
@@ -22,6 +23,7 @@
  *****************************************************************/
 int main(int argc, char* argv[])
 {
+    clock_t start = std::clock();
     //list of all detections
     std::vector <lsst::mops::MopsDetection> myDets; 
 
@@ -81,6 +83,11 @@ int main(int argc, char* argv[])
     
     populateDetVectorFromFile(detsFile, myDets);
 
+    double dif = lsst::mops::timeElapsed(start);
+    std::cout << "Reading input took " << std::fixed << std::setprecision(10) 
+              <<  dif  << " seconds." <<std::endl;     
+
+
     lsst::mops::findTrackletsConfig config;
     config.maxV = maxVelocity;
     config.minV = minVelocity;
@@ -91,6 +98,9 @@ int main(int argc, char* argv[])
     // since we set up IDS_FILE_WITH_CACHE, output will be written automatically
     lsst::mops::findTracklets(myDets, config);
     
+    dif = lsst::mops::timeElapsed(start);
+    std::cout << "Completed after " << std::fixed << std::setprecision(10) 
+              <<  dif  << " seconds." <<std::endl;     
     lsst::mops::printMemUse();
     return 0;
  }

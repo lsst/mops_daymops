@@ -1,6 +1,8 @@
 // -*- LSST-C++ -*-
 /* jonathan myers */
 
+#include <iomanip>
+
 #include <unistd.h>
 #include <getopt.h>
 
@@ -15,6 +17,7 @@ namespace mops {
   extern std::string curTime();
 
     int removeSubsetsMain(int argc, char** argv) {
+        clock_t start = std::clock();
 
         /* read pairs from a file, do the removal, and write the output */
         std::string USAGE("USAGE: removeSubsets --inFile <input pairfile> --outFile <output pairfile> [--removeSubsets <TRUE/FALSE> --keepOnlyLongest <TRUE/FALSE>]");
@@ -105,6 +108,9 @@ namespace mops {
 	std::cout << "Reading infile, starting at " << curTime() << std::endl;
         populatePairsVectorFromFile(inFile, *pairsVector);
 	std::cout << "Finished reading infile at " << curTime() << std::endl;
+        double dif = lsst::mops::timeElapsed(start);
+        std::cout << "Reading input took " << std::fixed << std::setprecision(10) 
+                  <<  dif  << " seconds." <<std::endl;             
 
         /* do the actual work */
 
@@ -137,6 +143,10 @@ namespace mops {
             delete outputVector;
         }
         delete pairsVector;
+
+        std::cout << "Completed after " << std::fixed << std::setprecision(10) 
+                  <<  dif  << " seconds." <<std::endl;
+
 	if (outFile.good()) {
 	  std::cout << "Finished successfully finished at " << curTime() << std::endl;
           printMemUse();

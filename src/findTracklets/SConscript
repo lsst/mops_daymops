@@ -15,9 +15,23 @@ env.Library('../../lib/findTracklets', ['findTracklets.cc'] + common_libs,
 #            ['findTracklets-unittests.cc', 'findTracklets'] +  common_libs, 
 #            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
 
+
+env.StaticLibrary('findTrackletsMain.o',
+                  ['findTrackletsMain.cc']             
+                  + common_libs, 
+                  LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
+
 env.Program('../../bin/findTracklets', 
-            ['findTrackletsMain.cc', 'findTracklets'] + common_libs, 
+            ['findTrackletsMain.o', 'findTracklets'] + common_libs, 
             LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
+
+ompEnv = env.Clone()
+ompEnv['CCFLAGS'] += '-fopenmp'
+
+ompEnv.Program('../../bin/findTrackletsOMP', 
+            ['findTrackletsMain.o', 'findTrackletsOMP.cc'] + common_libs,
+            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")) 
+               + ['gomp'])
 
 
 #env.LoadableModuleIncomplete("_findTracklets", Split("findTracklets.i"), 

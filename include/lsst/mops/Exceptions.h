@@ -10,18 +10,18 @@
  */
 
 
-#ifndef LSST_PANSTARRS_INTERIM_EXCEPTION
-#define LSST_PANSTARRS_INTERIM_EXCEPTION
+#ifndef LSST_NOPEX_INTERIM_EXCEPTION
+#define LSST_NOPEX_INTERIM_EXCEPTION
 
 
 
 
-#ifdef PANSTARRS
+#ifdef NOPEX
 // use the really naive exceptions, not the LSST pex exceptions
 #include <exception>
 #include <string>
 #include <iostream>
-
+#include <cstdlib>
        
 
 #define LSST_EXCEPT(class, str)                 \
@@ -71,7 +71,7 @@
 
 
 #else
-// this is not for PANSTARRS - use real LSST pex exceptions
+// use real LSST pex exceptions
 
 
 #include <string>

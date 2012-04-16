@@ -4,20 +4,27 @@
 # -DPANSTARRS: build our own Exceptions which derive from
 # std::exception, not LSST's pex_exception. This way we avoid needing
 # any LSST packages at all!
-OPT=-O3 -DPANSTARRS
-THIRD=~/thirdPartyPrecompiled/
+OPT=-O3 -DNOPEX
+#if not using EUPS, then you'll probably uncomment these
+#THIRD=~/thirdPartyPrecompiled/
+#SLALIB_DIR=${THIRD}/slalib/
+#EIGEN_DIR=${THIRD}/eigen/3.0.0
+#BOOST_DIR=${THIRD}1.37.0+2
+#GSL_DIR=${THIRD}/gsl/1.8/
 
-EXTINCLUDES=-I ${THIRD}eigen/3.0.0/include/ -I ${THIRD}1.37.0+2/include/ -I ~/build/include/ -I ${THIRD}slalib/include/
-EXTLIBDIRS=-L ${THIRD}boost/1.37.0+2/lib -L ~/build/lib -L ${THIRD}slalib/lib -L /opt/atlas/gnu/lib/
-EXTLIBS=-lgsl -lcblas -latlas ${THIRD}slalib/src/*.o
+EXTINCLUDES=-I ${EIGEN_DIR}/include/ -I ${BOOST_DIR}/include/ -I ${SLALIB_DIR}/include/ -I ${GSL_DIR}/include
+EXTLIBDIRS=-L ${BOOST_DIR}/lib -L ${SLALIB_DIR}/lib -L ${GSL_DIR}/lib
+EXTLIBS=-lgsl -lgslcblas ${SLALIB_DIR}/src/*.o
 
 #we are being really suboptimal here and just recompiling EVERYTHING if any header changes. Fix this someday if it gets too painful
 BASEINC=-I ../include/
 MOPSINC=../include/lsst/mops/
 MOPSHEADERS= ${MOPSINC}*.h ${MOPSINC}daymops/findTracklets/*.h ${MOPSINC}daymops/collapseTrackletsAndPostfilters/*.h 
 
-all:	../bin/findTracklets ../bin/collapseTracklets ../bin/purifyTracklets ../bin/removeSubsets
+all:	../bin/findTracklets ../bin/collapseTracklets ../bin/purifyTracklets ../bin/removeSubsets ../bin/findTrackletsOMP ../bin/linkTracklets
 
+clean: 
+	rm -f *.o */*.o ../bin/findTracklets ../bin/collapseTracklets ../bin/purifyTracklets ../bin/removeSubsets ../bin/findTrackletsOMP ../bin/linkTracklets ../bin/linkTrackletsOMP
 
 MopsDetection.o: MopsDetection.cc ${MOPSHEADERS}
 	g++ ${OPT} -c  MopsDetection.cc ${EXTINCLUDES} ${BASEINC}
@@ -43,10 +50,25 @@ fileUtils.o: fileUtils.cc ${MOPSHEADERS}
 rmsLineFit.o: rmsLineFit.cc ${MOPSHEADERS}
 	g++ ${OPT} -c rmsLineFit.cc ${EXTINCLUDES} ${BASEINC}
 
+TrackletTree.o: linkTracklets/TrackletTree.cc ${MOPSHEADERS}
+	g++ ${OPT} -c linkTracklets/TrackletTree.cc ${EXTINCLUDES} ${BASEINC}
+
+TrackletTreeNode.o: linkTracklets/TrackletTreeNode.cc ${MOPSHEADERS}
+	g++ ${OPT} -c linkTracklets/TrackletTreeNode.cc ${EXTINCLUDES} ${BASEINC}
+
+TrackSet.o: TrackSet.cc ${MOPSHEADERS}
+	g++ ${OPT} -c TrackSet.cc ${EXTINCLUDES} ${BASEINC}
+
 ../bin/findTracklets: findTracklets/findTracklets.cc findTracklets/findTrackletsMain.cc MopsDetection.o PointAndValue.o common.o Tracklet.o Track.o TrackletVector.o fileUtils.o ${MOPSHEADERS}
 	g++ ${OPT} ${BASEINC} ${EXTINCLUDES} ${EXTLIBDIRS} ${EXTLIBS} \
 MopsDetection.o PointAndValue.o common.o Tracklet.o Track.o TrackletVector.o fileUtils.o \
 findTracklets/findTracklets.cc findTracklets/findTrackletsMain.cc -o ../bin/findTracklets
+
+../bin/findTrackletsOMP: findTracklets/findTrackletsOMP.cc findTracklets/findTrackletsMain.cc MopsDetection.o PointAndValue.o common.o Tracklet.o Track.o TrackletVector.o fileUtils.o ${MOPSHEADERS}
+	g++ ${OPT} ${BASEINC} ${EXTINCLUDES} ${EXTLIBDIRS} ${EXTLIBS} \
+MopsDetection.o PointAndValue.o common.o Tracklet.o Track.o TrackletVector.o fileUtils.o \
+-lgomp -fopenmp \
+findTracklets/findTrackletsOMP.cc findTracklets/findTrackletsMain.cc -o ../bin/findTrackletsOMP
 
 ../bin/collapseTracklets: collapseTrackletsAndPostfilters/collapseTracklets.cc collapseTrackletsAndPostfilters/collapseTrackletsMain.cc MopsDetection.o PointAndValue.o common.o Tracklet.o Track.o TrackletVector.o fileUtils.o rmsLineFit.o ${MOPSHEADERS}
 	g++ ${OPT} ${BASEINC} ${EXTINCLUDES} ${EXTLIBDIRS} ${EXTLIBS} \
@@ -62,3 +84,8 @@ collapseTrackletsAndPostfilters/purifyTracklets.cc -o ../bin/purifyTracklets
 	g++ ${OPT} ${BASEINC} ${EXTINCLUDES} ${EXTLIBDIRS} ${EXTLIBS} \
 MopsDetection.o common.o Tracklet.o fileUtils.o \
 removeSubsets.cc removeSubsetsMain.cc -o ../bin/removeSubsets
+
+../bin/linkTracklets: linkTracklets/linkTracklets.cc linkTracklets/linkTrackletsMain.cc TrackletTree.o TrackletTreeNode.o TrackSet.o Tracklet.o Track.o MopsDetection.o common.o fileUtils.o rmsLineFit.o ${MOPSHEADERS}
+	g++ ${OPT} ${BASEINC} ${EXTINCLUDES} ${EXTLIBDIRS} ${EXTLIBS} \
+TrackletTree.o TrackletTreeNode.o TrackSet.o Tracklet.o Track.o MopsDetection.o common.o fileUtils.o rmsLineFit.o \
+linkTracklets/linkTracklets.cc linkTracklets/linkTrackletsMain.cc -o ../bin/linkTracklets

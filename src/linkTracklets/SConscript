@@ -43,13 +43,14 @@ env.Program('../../bin/linkTracklets',
              'TrackletTree', 'TrackletTreeNode'] + common_libs,
             LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
 
-env.Program('../../bin/linkTrackletsOMP', 
+ompEnv = env.Clone()
+ompEnv['CCFLAGS'] = '-fopenmp'
+
+ompEnv.Program('../../bin/linkTrackletsOMP', 
             ['linkTrackletsMain.o', 'linkTrackletsOMP.o',
              'TrackletTree', 'TrackletTreeNode'] + common_libs,
-            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")) \
-            + ['gomp'],
-               CPPFLAGS='-fopenmp')
-
+            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")) 
+               + ['gomp'])
 
 
 

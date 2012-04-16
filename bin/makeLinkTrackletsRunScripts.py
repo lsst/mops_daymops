@@ -19,22 +19,6 @@ OUTF_FOR_INFILE=lambda inf: os.path.basename(inf[:-4] + "c.cmd.sh")
 VTREE_THRESH=.0004
 
 
-def writeRunScript(infile, startTRangeFile, vtree_thresh):
-    outf = file(OUTF_FOR_INFILE(infile),'w')
-    outS = """#!/usr/bin/bash
-
-
-BN=""" + BASENAME_FOR_INFILE(infile) + """
-
-CMD="$AUTON_DIR/linkTracklets_modified/linkTracklets_modified file ../$BN.miti indicesfile $BN.c.tracks.byIndices start_t_range `cat ../$BN.start_t_range`   acc_r 0.02 acc_d 0.02 fit_thresh  0.000000250000 min_sup 3 min_obs 6 plate_width .00000001 vtree_thresh """ + str(vtree_thresh) + """ "
-
-echo Running: $CMD
-
-/usr/bin/time -o $BN.c.linkTracklets.runtime $CMD | tee $BN.c.linkTracklets.runlog
-"""
-    outf.write(outS)
-    outf.close()
-
 
 def writeCppRunScript(infile, startTRangeFile, vtree_thresh):
     outf = file(CPP_OUTF_FOR_INFILE(infile),'w')
@@ -42,7 +26,6 @@ def writeCppRunScript(infile, startTRangeFile, vtree_thresh):
     ids = CPP_IDS_FOR_INFILE(infile)
     tracks = CPP_TRACKS_FOR_INFILE(infile)
     startRange = CPP_START_T_RANGE_FOR_INFILE(infile)
-    timeFile = BASENAME_FOR_INFILE(infile) + ".cpp.runtime"
     logFile = BASENAME_FOR_INFILE(infile) + ".cpp.runlog"
 
     args = "-d " + dets + " -t " + ids + " -o " + tracks + " -F `cat " + startRange + "`" + " -e " + str(vtree_thresh)
@@ -54,7 +37,7 @@ CMD="$MOPS_DAYMOPS_DIR/bin/linkTracklets """ + args + """ "
 
 echo Running: $CMD
 
-/usr/bin/time -o """ + timeFile + " $CMD | tee " + logFile + """
+$CMD | tee """ + logFile + """
 """
     outf.write(outS)
     outf.close()
@@ -66,5 +49,4 @@ if __name__=="__main__":
         startTRangeFile = START_T_RANGE_FOR_INFILE(infile)
         print startTRangeFile
         
-        #writeRunScript(infile, startTRangeFile, VTREE_THRESH)
         writeCppRunScript(infile, startTRangeFile, VTREE_THRESH)

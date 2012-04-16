@@ -23,7 +23,7 @@ do
     CMD="$FINDTRACKLETS -i $NIGHTLY -o $OUTPUT_DIR/`basename $NIGHTLY .dias`.tracklets -v ${MAXV} -m 0.0"
     echo running $CMD
     LOGFILE=$OUTPUT_DIR/`basename $NIGHTLY .miti`.findTracklets.log
-    /usr/bin/time -o $OUTPUT_DIR/`basename $NIGHTLY .miti`.findTracklets.time $CMD  | tee $LOGFILE
+    $CMD  | tee $LOGFILE
     echo ""
     echo ""
 done

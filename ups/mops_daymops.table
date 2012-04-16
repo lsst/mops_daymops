@@ -1,6 +1,7 @@
 setupRequired("scons")
 setupRequired("swig")
 setupRequired("gsl")
+setupRequired("daf_base")
 setupRequired(pex_exceptions)
 setupRequired("slalib")
 setupRequired("eigen" >=3.0.0)

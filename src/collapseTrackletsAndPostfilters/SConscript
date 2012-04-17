@@ -12,14 +12,31 @@ Import("common_libs")
 #env.Program('../../tests/collapseTracklets-unitTests', ['unitTests.cc', 'collapseTracklets']# + common_libs,
 #            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
 
-ct = env.Library('../../lib/collapseTracklets', ['collapseTracklets.cc'] + common_libs,
-                 LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
+ompEnv = env.Clone()
+ompEnv['CCFLAGS'] += '-fopenmp'
+
+env.StaticLibrary('collapseTrackletsMain.o',
+                  ['collapseTrackletsMain.cc'] + common_libs,
+                  LIBS=filter(lambda x: x!= "mops_daymops", env.getlibs("mops_daymops")))
                  
-env.Program('../../bin/collapseTracklets', ['collapseTrackletsMain.cc', ct] + common_libs,
+env.Program('../../bin/collapseTracklets', 
+            ['collapseTrackletsMain.o', 'collapseTracklets.cc'] + common_libs,
             LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
-                             
+
+ompEnv.Program('../../bin/collapseTrackletsOMP', 
+               ['collapseTrackletsMain.o', 'collapseTrackletsOMP.cc'] + common_libs,
+               LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")) 
+               + ['gomp'])
+
+
+
 env.Program('../../bin/purifyTracklets', ['purifyTracklets.cc'] + common_libs,
             LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
+
+env.Program('../../bin/purifyTrackletsOMP', ['purifyTrackletsOMP.cc'] + common_libs,
+            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops"))
+            + ['gomp'])
+
 
 
 

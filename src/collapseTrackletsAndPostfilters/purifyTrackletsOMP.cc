@@ -7,6 +7,7 @@
 #include <iomanip>
 #include <sstream>
 
+
 #include <unistd.h>
 #include <getopt.h>
 
@@ -15,7 +16,6 @@
 
 namespace lsst {
     namespace mops {    
-
 
 
     Tracklet purifyTracklet(const Tracklet *t, const std::vector<MopsDetection>* allDets, 
@@ -66,16 +66,20 @@ namespace lsst {
                               "purifyTracklets: output vector not empty\n");
         }
         
-        std::vector<Tracklet>::const_iterator tIter;
-        for (tIter = trackletsVector->begin(); tIter != trackletsVector->end(); tIter++) {
-            Tracklet tmp = purifyTracklet(&(*tIter), detsVector, maxRMS);
+#pragma omp parallel for schedule(dynamic, 128)
+        for (int i = 0; i < trackletsVector->size(); i++) {
+            Tracklet tmp = purifyTracklet(&(*trackletsVector)[i], detsVector, maxRMS);
             if (tmp.indices.size() >= minObs) {
-                output.push_back(tmp);
+#pragma omp critical(writeResults)
+                {
+                    output.push_back(tmp);
+                }
             }
         }        
     
         
     }
+
 
 
 

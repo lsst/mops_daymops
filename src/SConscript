@@ -25,10 +25,24 @@ common_libs.append(env.StaticLibrary('rmsLineFit',
 common_libs.append(env.StaticLibrary('fileUtils', ['fileUtils.cc', 'MopsDetection','Tracklet']))
 
 
+ompEnv = env.Clone()
+ompEnv['CCFLAGS'] += '-fopenmp'
+
+ompEnv.StaticLibrary('removeSubsetsOMP.o', ['removeSubsetsOMP.cc'] + 
+                  filter(lambda x: x!='removeSubsets', common_libs))
+
+ompEnv.StaticLibrary('removeSubsetsMainOMP.o', ['removeSubsetsMainOMP.cc'] + common_libs)
+
+ompEnv.Program('../bin/removeSubsetsOMP', 
+               ['removeSubsetsOMP.o', 'removeSubsetsMainOMP.o'] + common_libs,
+               LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")) 
+               + ['gomp'])
+
+
 common_libs.append(env.StaticLibrary('removeSubsets',  ['removeSubsets.cc'] + common_libs))
 
 
-env.Program('../bin/removeSubsets',  ['removeSubsetsMain.cc'] + common_libs,
+env.Program('../bin/removeSubsets',  ['removeSubsetsMain.o'] + common_libs,
             LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
 
 env.Program('../bin/readTracksWriteStats', 

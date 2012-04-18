@@ -7,10 +7,10 @@
 OPT=-O3 -DNOPEX
 #if not using EUPS, then you'll probably uncomment these
 #THIRD=~/thirdPartyPrecompiled/
-#SLALIB_DIR=${THIRD}/slalib/
-#EIGEN_DIR=${THIRD}/eigen/3.0.0
-#BOOST_DIR=${THIRD}1.37.0+2
-#GSL_DIR=${THIRD}/gsl/1.8/
+#SLALIB_DIR=${THIRD}slalib/
+#EIGEN_DIR=${THIRD}eigen/3.0.0
+#BOOST_DIR=${THIRD}boost/1.37.0+2
+#GSL_DIR=${THIRD}gsl/1.8/
 
 EXTINCLUDES=-I ${EIGEN_DIR}/include/ -I ${BOOST_DIR}/include/ -I ${SLALIB_DIR}/include/ -I ${GSL_DIR}/include
 EXTLIBDIRS=-L ${BOOST_DIR}/lib -L ${SLALIB_DIR}/lib -L ${GSL_DIR}/lib

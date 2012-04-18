@@ -12,6 +12,7 @@
 #include <sstream>
 #include <math.h>
 
+#include "lsst/mops/common.h"
 #include "lsst/mops/KDTree.h"
 #include "lsst/mops/MopsDetection.h"
 #include "lsst/mops/daymops/findTracklets/findTracklets.h"
@@ -181,6 +182,7 @@ void getTracklets(TrackletVector &results,
 		  const std::vector<MopsDetection> &queryPoints,
 		  findTrackletsConfig config)
 {
+  clock_t start = std::clock();
     // vectors of RADecRangeSearch parameters we search exclusively in RA, Dec;
     // the "otherDims" parameters sent to KDTree range search are empty.
     std::vector<double> otherDimsTolerances;
@@ -264,6 +266,11 @@ void getTracklets(TrackletVector &results,
             }
         }
     }
+
+    double dif = lsst::mops::timeElapsed(start);
+    std::cout << "Linking took " << std::fixed << std::setprecision(10)
+	      << dif << " seconds." << std::endl;
+
 }
 
 

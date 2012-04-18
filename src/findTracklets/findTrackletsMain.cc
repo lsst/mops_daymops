@@ -93,7 +93,8 @@ int main(int argc, char* argv[])
     config.minV = minVelocity;
     config.outputMethod = lsst::mops::IDS_FILE_WITH_CACHE;
     config.outputFile = outFileName;
-    config.outputBufferSize = 10000;    
+    // hold up to 1 GB before purging.
+    config.outputBufferSize = 1073741824;
     
     // since we set up IDS_FILE_WITH_CACHE, output will be written automatically
     lsst::mops::findTracklets(myDets, config);

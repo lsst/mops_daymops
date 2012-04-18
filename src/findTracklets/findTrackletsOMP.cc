@@ -1,5 +1,7 @@
 // -*- LSST-C++ -*-
 #include <stdlib.h>
+#include <stdio.h> 
+#include <stdlib.h>
 #include <algorithm>
 #include <iostream>
 #include <iomanip>
@@ -13,6 +15,7 @@
 #include <math.h>
 #include <omp.h>
 
+#include "lsst/mops/common.h"
 #include "lsst/mops/KDTree.h"
 #include "lsst/mops/MopsDetection.h"
 #include "lsst/mops/daymops/findTracklets/findTracklets.h"
@@ -182,19 +185,21 @@ void getTracklets(TrackletVector &results,
 		  const std::vector<MopsDetection> &queryPoints,
 		  findTrackletsConfig config)
 {
-    std::vector<GeometryType> myGeos;
-    // we search RA, Dec only.
-    myGeos.push_back(RA_DEGREES);
-    myGeos.push_back(DEC_DEGREES);
-
-    int nthreads, tid;
-    
+  clock_t start = std::clock();
+  int nthreads, tid;
+  char* chunkSizeStr = NULL;
+  int chunkSize = 4096;
+  chunkSizeStr = getenv ("CHUNK_SIZE");
+  if (chunkSizeStr!=NULL)
+    { chunkSize = atoi(chunkSizeStr); }
+  
 #pragma omp parallel private(nthreads, tid)
     {
       nthreads = omp_get_num_threads();
       tid = omp_get_thread_num();
       if(tid == 0) {
 	std::cout << "Number of threads " << nthreads << std::endl;
+	std::cout << "Chunk size " << chunkSize << std::endl;
       }
     }
 
@@ -202,12 +207,16 @@ void getTracklets(TrackletVector &results,
     // iterate through list of collected Detections, as read from input
     // file, and search over them
     
-    // jmyers: i'm initially guessing 128 is a good chunk size per thread...
-#pragma omp parallel for schedule(dynamic, 128)
+#pragma omp parallel for schedule(static, chunkSize)
     for(unsigned int i=0; i<queryPoints.size(); i++){
+      std::vector<GeometryType> myGeos;
+      // we search RA, Dec only.
+      myGeos.push_back(RA_DEGREES);
+      myGeos.push_back(DEC_DEGREES);
 
-        // vectors of RADecRangeSearch parameters we search exclusively in RA, Dec;
-        // the "otherDims" parameters sent to KDTree range search are empty.
+        // vectors of RADecRangeSearch parameters we search
+        // exclusively in RA, Dec; the "otherDims" parameters sent to
+        // KDTree range search are empty.
         std::vector<double> otherDimsTolerances;
         std::vector<double> otherDimsPt;
         
@@ -271,16 +280,20 @@ void getTracklets(TrackletVector &results,
                     newTracklet.indices.insert(curQuery->getID());               
                     newTracklet.indices.insert(closeEnoughResults.at(ii));
 #pragma omp critical(writeResults)
-                    {
-                        results.push_back(newTracklet);
-                    }
-                }
+		    {
+		      results.push_back(newTracklet);
+		    }
+		}
                 
                 queryResults.clear();
                 queryPt.clear();
             }
         }
+
     }
+    double dif = lsst::mops::timeElapsed(start);
+    std::cout << "Linking took " << std::fixed << std::setprecision(10)
+	      << dif << " seconds." << std::endl;
 }
 
 

@@ -42,7 +42,7 @@ ompEnv.Program('../bin/removeSubsetsOMP',
 common_libs.append(env.StaticLibrary('removeSubsets',  ['removeSubsets.cc'] + common_libs))
 
 
-env.Program('../bin/removeSubsets',  ['removeSubsetsMain.o'] + common_libs,
+env.Program('../bin/removeSubsets',  ['removeSubsetsMain.cc'] + common_libs,
             LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
 
 env.Program('../bin/readTracksWriteStats', 

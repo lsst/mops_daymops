@@ -7,6 +7,7 @@
 #include <iostream>
 #include <sstream>
 
+#include "lsst/mops/common.h"
 #include "lsst/mops/removeSubsetsOMP.h"
 
 
@@ -18,46 +19,6 @@ namespace lsst {
 namespace mops {
 
 
-
-        // helper for guessBollFromStringOrGiveErr
-        std::string stringToLower(std::string strToConvert)
-        {
-            for(unsigned int i=0; i<strToConvert.length(); i++)
-            {
-                strToConvert[i] = tolower(strToConvert[i]);
-            }
-            return strToConvert;//return the converted string
-        }
-
-
-        std::string boolToString(bool b) {
-            if (b == true) {
-                return std::string("true");
-            }
-            else {
-                return std::string("false");
-            }
-        }
-    
-
-
-        bool guessBoolFromStringOrGiveErr(std::string guessStr, std::string errStr) {
-            if ((guessStr == "1") ||
-                (stringToLower(guessStr) == "true") ||
-                (stringToLower(guessStr) == "t")) {
-                return true;
-            }
-            else if ((guessStr == "0") ||
-                     (stringToLower(guessStr) == "false") ||
-                     (stringToLower(guessStr) == "f")) {
-                return false;
-            }
-            else {
-                throw LSST_EXCEPT(CommandlineParseErrorException, errStr);
-            }
-            
-        }
-        
 
 
 

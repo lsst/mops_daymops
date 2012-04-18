@@ -5,6 +5,7 @@
 #include <cmath>
 #include <istream>
 #include <sstream>
+#include <omp.h>
 
 #include "lsst/mops/daymops/collapseTrackletsAndPostfilters/collapseTracklets.h"
 #include "lsst/mops/rmsLineFit.h"
@@ -241,6 +242,18 @@ namespace lsst {
             std::cout << "done." << std::endl;
             std::cout << "Doing many, many tree queries and collapses..." << std::endl;
         }
+
+    int nthreads, tid;
+    
+#pragma omp parallel private(nthreads, tid)
+    {
+      nthreads = omp_get_num_threads();
+      tid = omp_get_thread_num();
+      if(tid == 0) {
+	std::cout << "Number of threads " << nthreads << std::endl;
+      }
+    }
+
 #pragma omp parallel for schedule(dynamic, 128)
         for (unsigned int ti = 0; ti < trackletsForTree.size(); ti++) {
             

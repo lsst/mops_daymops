@@ -11,6 +11,7 @@
 #include <string>
 #include <sstream>
 #include <math.h>
+#include <omp.h>
 
 #include "lsst/mops/KDTree.h"
 #include "lsst/mops/MopsDetection.h"
@@ -185,6 +186,17 @@ void getTracklets(TrackletVector &results,
     // we search RA, Dec only.
     myGeos.push_back(RA_DEGREES);
     myGeos.push_back(DEC_DEGREES);
+
+    int nthreads, tid;
+    
+#pragma omp parallel private(nthreads, tid)
+    {
+      nthreads = omp_get_num_threads();
+      tid = omp_get_thread_num();
+      if(tid == 0) {
+	std::cout << "Number of threads " << nthreads << std::endl;
+      }
+    }
 
 
     // iterate through list of collected Detections, as read from input

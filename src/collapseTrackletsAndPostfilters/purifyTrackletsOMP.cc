@@ -10,6 +10,7 @@
 
 #include <unistd.h>
 #include <getopt.h>
+#include <omp.h>
 
 #include "lsst/mops/fileUtils.h"
 #include "lsst/mops/rmsLineFit.h"
@@ -65,6 +66,18 @@ namespace lsst {
             throw LSST_EXCEPT(BadParameterException, 
                               "purifyTracklets: output vector not empty\n");
         }
+
+    int nthreads, tid;
+    
+#pragma omp parallel private(nthreads, tid)
+    {
+      nthreads = omp_get_num_threads();
+      tid = omp_get_thread_num();
+      if(tid == 0) {
+	std::cout << "Number of threads " << nthreads << std::endl;
+      }
+    }
+
         
 #pragma omp parallel for schedule(dynamic, 128)
         for (int i = 0; i < trackletsVector->size(); i++) {

@@ -1969,7 +1969,17 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
         }
     }
 
+        int nthreads, tid;
     
+#pragma omp parallel private(nthreads, tid)
+    {
+      nthreads = omp_get_num_threads();
+      tid = omp_get_thread_num();
+      if(tid == 0) {
+	std::cout << "Number of threads " << nthreads << std::endl;
+      }
+    }
+
 #pragma omp parallel for schedule(dynamic, 1)
     for (uint i = 0; i < allWork.size(); i++) {
         doLinkingRecurse(allDetections,

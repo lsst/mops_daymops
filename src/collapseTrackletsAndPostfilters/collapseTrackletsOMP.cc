@@ -264,7 +264,7 @@ namespace lsst {
       }
     }
 
-#pragma omp parallel for schedule(static, chunkSize)
+#pragma omp parallel for schedule(dynamic, chunkSize)
         for (unsigned int ti = 0; ti < trackletsForTree.size(); ti++) {
             
             PointAndValue<unsigned int>* curTracklet = &(trackletsForTree[ti]);

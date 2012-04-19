@@ -14,6 +14,9 @@
 #include <sstream>
 #include <math.h>
 #include <omp.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 
 #include "lsst/mops/common.h"
 #include "lsst/mops/KDTree.h"
@@ -185,145 +188,115 @@ void getTracklets(TrackletVector &results,
 		  const std::vector<MopsDetection> &queryPoints,
 		  findTrackletsConfig config)
 {
-  clock_t start = std::clock();
-  int nthreads, tid;
-  
+    int nthreads, tid;
+    
+    char* chunkSizeStr = NULL;
+    int chunkSize = 4096;
+    chunkSizeStr = getenv ("CHUNK_SIZE");
+    if (chunkSizeStr!=NULL)
+    { chunkSize = atoi(chunkSizeStr); }
+    
 #pragma omp parallel private(nthreads, tid)
     {
-      nthreads = omp_get_num_threads();
-      tid = omp_get_thread_num();
-      unsigned int workloadSize = queryPoints.size() / nthreads;
-      unsigned int myStart = tid*workloadSize;
-      unsigned int myEnd = (tid+1)*workloadSize;
-      if (tid == nthreads - 1) { myEnd = queryPoints.size();}
-#pragma omp critical(stdout)
-      {
-	if(tid == 0) {
-	  std::cout << "Number of threads " << nthreads << std::endl;
-	  std::cout << "Number of work items: " << queryPoints.size() << std::endl;
-	  std::cout << "Work/CPU: " << workloadSize << std::endl;
-	}	
-	std::cout << "Thread " << tid << " working on items " << myStart 
-		  << " through " << myEnd << std::endl;
-      }
+        nthreads = omp_get_num_threads();
+        tid = omp_get_thread_num();
+        
+        if(tid == 0) {
+            std::cout << "Number of threads " << nthreads << std::endl;
+            std::cout << "Chunk size " << chunkSize << std::endl;
+        }	
+    }
 
-      std::cout << "Thread " << tid << " starting work... " << std::endl;
-      clock_t threadStart = std::clock();
-      unsigned int count = 0;
-
-      std::vector<Tracklet> localResults;
-      std::vector<GeometryType> myGeos;
-      // we search RA, Dec only.
-      myGeos.push_back(RA_DEGREES);
-      myGeos.push_back(DEC_DEGREES);
-
-      clock_t queryTime = 0;
-
-      for(unsigned int i=myStart; i<myEnd; i++){
-	count++;
-	if (count % (workloadSize / 4) == 0) {
-	  std::cout << "Thread " << tid << " has finished " 
-		    << 100.*(1.0*count) / (1.0*workloadSize) << "% of its work\n";
-	}
-	
-	// vectors of RADecRangeSearch parameters we search
-	// exclusively in RA, Dec; the "otherDims" parameters sent to
-	// KDTree range search are empty.
-	std::vector<double> otherDimsTolerances;
-	std::vector<double> otherDimsPt;
-	
-	  const MopsDetection * curQuery = &(queryPoints.at(i));
-	  double queryRA = convertToStandardDegrees(curQuery->getRA());
-	  double queryDec = convertToStandardDegrees(curQuery->getDec());
-	  double queryMJD = curQuery->getEpochMJD();
-	  
-	  // iterate through each KDTree of detections, where each KDTree
-	  // represents a unique MJD
-	  std::map<double, KDTree<long int> >::const_iterator iter;
-	  for(iter = myTreeMap.begin(); iter != myTreeMap.end(); iter++) {
-	    
+#pragma omp parallel for schedule(dynamic, chunkSize) 
+    
+    for(unsigned int i=0; i<queryPoints.size(); i++) {
+        
+        std::vector<GeometryType> myGeos;
+        // we search RA, Dec only.
+        myGeos.push_back(RA_DEGREES);
+        myGeos.push_back(DEC_DEGREES);
+        
+        // vectors of RADecRangeSearch parameters we search
+        // exclusively in RA, Dec; the "otherDims" parameters sent to
+        // KDTree range search are empty.
+        std::vector<double> otherDimsTolerances;
+        std::vector<double> otherDimsPt;
+        
+        const MopsDetection * curQuery = &(queryPoints.at(i));
+        double queryRA = convertToStandardDegrees(curQuery->getRA());
+        double queryDec = convertToStandardDegrees(curQuery->getDec());
+        double queryMJD = curQuery->getEpochMJD();
+        
+        // iterate through each KDTree of detections, where each KDTree
+        // represents a unique MJD
+        std::map<double, KDTree<long int> >::const_iterator iter;
+        for(iter = myTreeMap.begin(); iter != myTreeMap.end(); iter++) {
+            
             double curMJD = iter->first;     //map key
             const KDTree<long int> *curTree = &(iter->second); //value associated with key
-	    
+            
             //only consider this tree if it contains detections
             //that occurred after the current one
             if ((curMJD > queryMJD) && 
                 (curMJD - queryMJD >= config.minDt) && 
                 (curMJD - queryMJD <= config.maxDt)) {
-	      
-	      double maxVelocity = config.maxV;
-	      double minVelocity = config.minV;
-	      
-	      double maxDistance = (curMJD - queryMJD) * maxVelocity;
-	      double minDistance = (curMJD - queryMJD) * minVelocity;
-	      std::vector<double> queryPt;
-	      queryPt.push_back(queryRA);
-	      queryPt.push_back(queryDec);
-	      
-	      std::vector<PointAndValue<long int> > queryResults;
-	      
-	      // do a rectangular search around this point. note that we 
-	      // use the haversine great-circle distance in the tree, so we are
-	      // sure that we get any object within maxDistance (and a few others)
-	      clock_t startQuery = std::clock();
-	      queryResults = curTree->RADecRangeSearch(queryPt, maxDistance,
-						       otherDimsPt, otherDimsTolerances,
-						       myGeos);
-	      queryTime += std::clock() - startQuery;
-	      // filter the results, getting the items which are actually within
-	      // the circle we are searching, not the rectangle enclosing it.
-	      std::vector<long int> closeEnoughResults;
-              
-	      for (unsigned int ii = 0; ii < queryResults.size(); ii++) {
-		PointAndValue<long int> * curResult = &(queryResults.at(ii));
-		double resultRa = curResult->getPoint().at(0);
-		double resultDec = curResult->getPoint().at(1);
-		double properDistance =  angularDistanceRADec_deg(queryRA, 
-								  queryDec, 
-								  resultRa,
-								  resultDec);
-		if ((properDistance <= maxDistance) && (properDistance >= minDistance)) {
-		  closeEnoughResults.push_back(curResult->getValue());
-		}
-	      }
-	      
-	      for (unsigned int ii = 0; ii < closeEnoughResults.size(); ii++) {
-		// collect results for each query point's results for each MJD
-		Tracklet newTracklet;
-		newTracklet.indices.insert(curQuery->getID());               
-		newTracklet.indices.insert(closeEnoughResults.at(ii));
-		// copy results to local vector, avoid overhead of a
-		// critical section till done searching
-		localResults.push_back(newTracklet);
-	      }
-	      
-	      queryResults.clear();
-	      queryPt.clear();
-	    }
-	  }
-      }
-
-      std::cout << "Thread " << tid << " finished " << count << " items after " << std::fixed 
-		<< std::setprecision(10) << timeElapsed(threadStart) << " sec." 
-		<< "  Spent " << std::fixed << std::setprecision(10) 
-		<< 1.0*queryTime / (1.0*CLOCKS_PER_SEC) << " sec on tree queries." << std::endl;
-      
-
-      // now copy results to output to the shared result vector.
+                
+                double maxVelocity = config.maxV;
+                double minVelocity = config.minV;
+                
+                double maxDistance = (curMJD - queryMJD) * maxVelocity;
+                double minDistance = (curMJD - queryMJD) * minVelocity;
+                std::vector<double> queryPt;
+                queryPt.push_back(queryRA);
+                queryPt.push_back(queryDec);
+                
+                std::vector<PointAndValue<long int> > queryResults;
+                
+                // do a rectangular search around this point. note that we 
+                    // use the haversine great-circle distance in the tree, so we are
+                    // sure that we get any object within maxDistance (and a few others)
+                queryResults = curTree->RADecRangeSearch(queryPt, maxDistance,
+                                                         otherDimsPt, otherDimsTolerances,
+                                                         myGeos);
+                // filter the results, getting the items which are actually within
+                // the circle we are searching, not the rectangle enclosing it.
+                std::vector<long int> closeEnoughResults;
+                
+                for (unsigned int ii = 0; ii < queryResults.size(); ii++) {
+                    PointAndValue<long int> * curResult = &(queryResults.at(ii));
+                    double resultRa = curResult->getPoint().at(0);
+                    double resultDec = curResult->getPoint().at(1);
+                    double properDistance =  angularDistanceRADec_deg(queryRA, 
+                                                                      queryDec, 
+                                                                          resultRa,
+                                                                      resultDec);
+                    if ((properDistance <= maxDistance) && (properDistance >= minDistance)) {
+                        closeEnoughResults.push_back(curResult->getValue());
+                    }
+                }
+                
+                for (unsigned int ii = 0; ii < closeEnoughResults.size(); ii++) {
+                    // collect results for each query point's results for each MJD
+                    Tracklet newTracklet;
+                    newTracklet.indices.insert(curQuery->getID());               
+                    newTracklet.indices.insert(closeEnoughResults.at(ii));
+                    // copy results to local vector, avoid overhead of a
+                    // critical section till done searching
 #pragma omp critical(writeResults)
-      {
-	for (unsigned int i = 0; i < localResults.size(); i++) {
-	  results.push_back(localResults[i]);
-	}
-      }
+                    {
+                        results.push_back(newTracklet);
+                    }
+                }
+                
+                queryResults.clear();
+                queryPt.clear();
+            }
+        }
+    }
+    
+    
 
-    } // end parallel section.
 
-
-
-    double dif = lsst::mops::timeElapsed(start);
-    std::cout << "Linking took " << std::fixed << std::setprecision(10)
-	      << dif << " seconds." << std::endl;
 }
 
 

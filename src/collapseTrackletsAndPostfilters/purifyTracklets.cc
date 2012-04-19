@@ -90,7 +90,7 @@ namespace lsst {
      * help you find one tracklet, anyway.
      */
     int rmsPurifyMain(int argc, char** argv) {
-        clock_t start = std::clock();
+      time_t start = time(NULL);
 
         std::string USAGE("USAGE: purifyTracklets --detsFile <detections file> --pairsFile <tracklets (pairs) file) --maxRMS --outFile <output tracklets (pairs) file>");
         char* pairsFileName = NULL;

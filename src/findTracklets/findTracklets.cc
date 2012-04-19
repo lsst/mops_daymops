@@ -182,7 +182,7 @@ void getTracklets(TrackletVector &results,
 		  const std::vector<MopsDetection> &queryPoints,
 		  findTrackletsConfig config)
 {
-  clock_t start = std::clock();
+  time_t start = time(NULL);
     // vectors of RADecRangeSearch parameters we search exclusively in RA, Dec;
     // the "otherDims" parameters sent to KDTree range search are empty.
     std::vector<double> otherDimsTolerances;

@@ -45,8 +45,8 @@ namespace lsst {
 
 
     int collapseTrackletsMain(int argc, char** argv)
-    {        
-        clock_t start = std::clock();
+    { 
+      time_t start = time(NULL);
         std::string USAGE("USAGE: collapseTracklets [options] <detsFile> <pairsFile> <RA Tolerance> <Dec Tolerance> <angular tolerance> <velocity tolerance> <outFile>\n\
 options:  \n\
 =================================================\n\

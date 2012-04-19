@@ -11,9 +11,10 @@
 namespace lsst {
 namespace mops {
 
-double timeElapsed(clock_t priorEvent)
+double timeElapsed(time_t priorEvent)
 {
-     return ( std::clock() - priorEvent ) / (double)CLOCKS_PER_SEC;
+  time_t curTime = time(NULL);
+  return ( curTime - priorEvent );
 }
 
 

@@ -6,6 +6,8 @@
 #include <istream>
 #include <sstream>
 #include <omp.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "lsst/mops/daymops/collapseTrackletsAndPostfilters/collapseTracklets.h"
 #include "lsst/mops/rmsLineFit.h"
@@ -215,6 +217,8 @@ namespace lsst {
         bool useRMSFilt,
         double maxRMS, bool beVerbose) {
 
+
+      time_t linkingStart = time(NULL);
         /* each t in trackletsForTree maps tracklet physical parameters (RA0,
          * Dec0, angle, vel.) to an index into pairs. */
         std::vector<PointAndValue <unsigned int> >
@@ -244,17 +248,23 @@ namespace lsst {
         }
 
     int nthreads, tid;
-    
+    char* chunkSizeStr = NULL;
+    int chunkSize = 4096;
+    chunkSizeStr = getenv ("CHUNK_SIZE");
+    if (chunkSizeStr!=NULL)
+      { chunkSize = atoi(chunkSizeStr); }
+
 #pragma omp parallel private(nthreads, tid)
     {
       nthreads = omp_get_num_threads();
       tid = omp_get_thread_num();
       if(tid == 0) {
 	std::cout << "Number of threads " << nthreads << std::endl;
+	std::cout << "Chunk size: " << chunkSize << std::endl;
       }
     }
 
-#pragma omp parallel for schedule(dynamic, 128)
+#pragma omp parallel for schedule(static, chunkSize)
         for (unsigned int ti = 0; ti < trackletsForTree.size(); ti++) {
             
             PointAndValue<unsigned int>* curTracklet = &(trackletsForTree[ti]);
@@ -434,8 +444,8 @@ namespace lsst {
                     collapsedPairs.push_back(newTracklet);
                 }                
             } /* end 'if (pairs[curTracklet->getValue().isCollapsed == false) */
-        
         } /* end 'for (curTracklet in trackletsForTree... ) */
+	std::cout << "Linking took " << timeElapsed(linkingStart) << " sec." << std::endl;
         
     }
     

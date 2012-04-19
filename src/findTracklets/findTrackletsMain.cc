@@ -23,7 +23,7 @@
  *****************************************************************/
 int main(int argc, char* argv[])
 {
-    clock_t start = std::clock();
+    time_t start = time(NULL);
     //list of all detections
     std::vector <lsst::mops::MopsDetection> myDets; 
 
@@ -97,7 +97,12 @@ int main(int argc, char* argv[])
     config.outputBufferSize = 1073741824;
     
     // since we set up IDS_FILE_WITH_CACHE, output will be written automatically
+    time_t linkingStart = time(NULL);
     lsst::mops::findTracklets(myDets, config);
+    //double linkingDif = lsst::mops::timeElapsed(linkingStart);
+    double linkingDif = (time(NULL) - linkingStart);
+    std::cout << "Linking took " << std::fixed << std::setprecision(10)
+	      << linkingDif << " seconds." << std::endl;
     
     dif = lsst::mops::timeElapsed(start);
     std::cout << "Completed after " << std::fixed << std::setprecision(10) 

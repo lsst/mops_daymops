@@ -17,7 +17,7 @@ namespace mops {
   extern std::string curTime();
 
     int removeSubsetsMain(int argc, char** argv) {
-        clock_t start = std::clock();
+      time_t start = time(NULL);
 
         /* read pairs from a file, do the removal, and write the output */
         std::string USAGE("USAGE: removeSubsets --inFile <input pairfile> --outFile <output pairfile> [--removeSubsets <TRUE/FALSE> --keepOnlyLongest <TRUE/FALSE>]");

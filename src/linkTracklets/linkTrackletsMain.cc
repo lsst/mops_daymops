@@ -26,9 +26,8 @@ namespace lsst {
 int main(int argc, char* argv[])
 {
 
-     clock_t start;
      double dif;
-     start = std::clock();
+     time_t start = time(NULL);
 
      lsst::mops::linkTrackletsConfig searchConfig; 
 

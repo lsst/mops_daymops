@@ -8,6 +8,7 @@
 #include <time.h>
 #include <algorithm>
 
+
 #include "lsst/mops/rmsLineFit.h"
 #include "lsst/mops/daymops/linkTracklets/linkTracklets.h"
 #include "lsst/mops/Exceptions.h"
@@ -329,34 +330,27 @@ void recenterDetections(std::vector<MopsDetection> &allDetections,
                         const linkTrackletsConfig &searchConfig)
 {
     if (allDetections.size() < 1) return;
-    /* first, make sure that all data falls along a contiguous
-     * region.  this will probably cause downstream failures in
-     * subtle, hard-to-find ways if we start using full-sky data,
-     * because our accBounds and areMutuallyCompatible math
-     * doesn't deal with wrap-around. Please don't use this code
-     * after DC3. */
-    
-    double firstRa, firstDec;
-    firstRa = allDetections[0].getRA();
-    firstDec = allDetections[0].getDec();
-    double minRa = firstRa;
-    double maxRa = firstRa;
-    double minDec = firstDec;
-    double maxDec = firstDec;
+
+    double centerRa = searchConfig.skyCenterRa;
+    double centerDec = searchConfig.skyCenterDec;
+    double minRa = centerRa;
+    double maxRa = centerRa;
+    double minDec = centerDec;
+    double maxDec = centerDec;
     for (unsigned int i = 1; i < allDetections.size(); i++) {
         double thisRa, thisDec;
         thisRa  = allDetections[i].getRA();
         thisDec = allDetections[i].getDec();
-        while (firstRa - thisRa > 180.) {
+        while (centerRa - thisRa > 180.) {
             thisRa += 360.;
         }
-        while (firstRa - thisRa < -180.) {
+        while (centerRa - thisRa < -180.) {
             thisRa -= 360.;
         }
-        while (firstDec - thisDec > 180.) {
+        while (centerDec - thisDec > 180.) {
             thisDec += 360.;
         }
-        while (firstDec - thisDec < -180.) {
+        while (centerDec - thisDec < -180.) {
             thisDec -= 360.;
         }
         allDetections[i].setRA(thisRa);
@@ -367,12 +361,6 @@ void recenterDetections(std::vector<MopsDetection> &allDetections,
 
         minDec = minOfTwo(thisDec, minDec);
         maxDec = maxOfTwo(thisDec, maxDec);
-    }
-
-    if ((maxRa - minRa >= 180.) || 
-        (maxDec - minDec >= 180.)) {
-        LSST_EXCEPT(KnownShortcomingException,
-                    "Detections do not fall on contiguous (180,180) degree range. Math is known to fail in this case.");
     }
 
     if (searchConfig.myVerbosity.printBoundsInfo) {

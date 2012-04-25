@@ -116,6 +116,17 @@ public:
             // min prob(Chisq) of the fit of model to track points to consider a candidate track further
             trackMinProbChisq = 0.98;
 
+
+            // when recentering detections, get everything within 180
+            // degrees of this point.  This should be the "center of
+            // the sky" for the observer.  Objects which are exactly
+            // opposite this point will not be found - but that
+            // direction should be un-viewable (because it is looking
+            // straight down at the earth)
+
+            skyCenterRa = 340.;
+            skyCenterDec = -15.;
+
         }
 
     /* acceleration terms are in degrees/(day^2)
@@ -245,6 +256,10 @@ public:
     double defaultAstromErr;
 
     double trackMinProbChisq;
+
+    double skyCenterRa;
+    double skyCenterDec;
+
 };
 
 

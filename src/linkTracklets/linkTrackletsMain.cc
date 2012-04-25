@@ -173,8 +173,11 @@ int main(int argc, char* argv[])
      
      const double astromErr =  searchConfig.defaultAstromErr;
      std::cerr << "Using defaultAstromErr " << astromErr << '\n';
+     std::cout << "Reading detections file " << std::endl;
      populateDetVectorFromFile(detectionsFileName, allDets, astromErr);
+     std::cout << "Calculating topocentric correction " << std::endl;
      calculateTopoCorr(allDets, searchConfig);
+     std::cout << "Reading tracklets file " << std::endl;
      populatePairsVectorFromFile(trackletsFileName, allTracklets);
 
      dif = lsst::mops::timeElapsed(start);

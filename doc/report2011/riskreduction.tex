@@ -55,8 +55,147 @@ asteroid trails and send them to image processing; further refinement
 of image processing algorithms may be neccesary.
 
 
+\subsubsubsection{Distributed LinkTracklets} 
+
+In case the implicit memory sharing is not sufficient (say, because
+distributed shared memory systems do not provide adequate
+performance), it may be necessary to write an explicitly distributed
+linkTracklets.  This was attempted by a CS Master's student, Matt
+Cleveland, working with Prof. Dave Lowenthal.  The design was
+well-thought out but complex, leading to slow implementation.  The
+distributed version was forked off before a variety of changes to the
+serial version were made, and never merged with those changes.
+
+The distributed linkTracklets, the master node held only the tracklets
+of the endpoint trees, and the higher levels of the endpoint and
+support trees.  The master node would attempt the linking algorithm on
+the higher levels of the tree until it reached a terminal point; it
+would then attempt to predict the amount of work needed to complete
+the linking and save the state of the searching and estimated cost to
+a buffer.  Periodically, the work items in the buffer are distributed
+to worker nodes, with attention given to load distribution as well as
+cache issues, attempting to minimize the amount of data which must be
+transferred to worker nodes.
+
+
+\subsubsection{Trivial Code Changes}
+\paragraph{Reducing Memory Bloat in KD-Tree Libraries}
+
+Because of the size of the data sets in MOPS, memory consumption is a
+frequent problem.  Though this cannot necessarily be addressed
+exclusively through improvements in software implementation alone, the
+overhead could be reduced significantly.
+
+Lack of attention to the memory size in the initial implementation of
+the KD-Tree library have resulted in needless memory bloat of the
+trees.  Each node uses a series of \texttt{std::vector}s which could
+be easily replaced with pointers or C-style arrays.  On a 64-bit
+architecture, \texttt{std::vector} has an overhead of at least 24
+bytes, where pointers and fixed-size arrays have an overhead of just 8
+bytes.  Currently, KD-Trees use four vectors, meaning an overhead of
+96 bytes per node.
+
+Further modification could further reduce the size of KD-Tree nodes;
+for instance, rather than storing $k$ in an integer, it could made a
+template argument so the constant is ``baked in'' at compile time and
+would not need to be stored.  
+
+\paragraph{Removing Critical Sections in Parallel Implementations}
+In all the multithreaded software, we maintain a single output vector
+(or set) to which all threads write.  To prevent conflicts, these
+writes must be wrapped in critical sections.  Critical sections impose
+synchronization costs, which may become significant when threads
+execute on separate boards and must communicate over the network (as
+in vSMP or other OS-level distributed shared memory systems).
+
+To reduce overhead, each thread should really maintain its own output
+vector, which could be used without any critical section and merged
+later, after all worker threads have completed.  This can be
+accomplished in the master thread before the parallel section, by by
+using \texttt{omp\_get\_num\_threads} to determine the number of
+threads, and then allocating one result vector per thread.  Then, the
+individual worker threads should write to their allocated results
+vector and these can be accumulated later.  For reasons of time, this
+has not yet been implemented, but could be done quickly.
+
+\subsubsection{Significant Changes in CollapseTracklets}
+\paragraph{Motion Vectors} 
+Currently, collapseTracklets parameterizes motion using location,
+angle, and velocity.  However, for low-speed objects which have
+significant observational error, the angle can be affected by
+significant error.  This means that setting a threshold for angle
+tolerance can be difficult; if set too low, then tracklets from
+slow-moving objects may not be merged, and if set too high, then
+tracklets from fast-moving objects may be mislinked.
+
+This problem would likely be less severe if motion angle and velocity
+were replaced by per-axis velocity in RA and declination.  However,
+after making this change, it will be necessary to develop
+experimentally determine some effective thresholds, which can be a
+time-consuming process.
+
+\paragraph{Polar Distortion}
+When projecting the locations and motion vectors of objects to a
+common time, the current collapseTracklets implementation currently
+treats celestial coordinates as though they were planar.  This is
+fairly effective close to the ecliptic, but near the poles it will be
+problematic.  Fixing this should be relatively trivial, but it has not
+yet been done.
+
+\paragraph{Exploring Parallelism and Cacheing of Flags}
+As mentioned in \ref{parallelization}, there are several possible
+methods for dealing with the per-tracklet ``already merged'' flags.
+Currently, the implementation does not explicitly address the issue,
+and no attempt has been made to compare various approaches and their
+performance.
+
+Currently, there is no explicit cacheing of the ``already merged''
+flags, and all threads modify them without regard for locking.  On a
+true large-memory, single-board system, this should be fine:
+integer-sized reads should be atomic, meaning no partially-written
+results could be read, and only in very unusual cases could a stale
+value be read. However, in systems with CC-NUMA systems, likely
+including vSMP systems such as SDSC's Gordon cluster, it is possible
+that stale reads could occur when threads from the same process
+execute on multiple boards.
+
+
+\subsubsection{Dealing with Near-Pole Distortion in LinkTracklets}
+
+The math used in linkTracklets to determine acceleration is almost
+certain to break down on near-pole cases.  Further, the chi-squared
+probability fitting and filtering has not yet been tested heavily off
+the ecliptic, much less in cases of near-pole objects, and will likely
+reject true tracks at an increasing rate as it sees objects further
+from ecliptic.
+
+To deal with the acceleration pruning near poles, it may be wise to
+modify the core piece of code to rotate pairs of nodes to near the
+origin at each pruning check; however, this may be too computationally
+costly to insert into the ``hot spot'' of the program.  Another
+solution would be to abandon celestial coordinates and instead use
+full (x,y,z) Cartesian coordinates on a unit sphere.  This will
+require new math be used for calculating acceleration and pruning, as
+well as for tree construction.  It is unclear how performance will be
+affected by the change.
+
+Additional evaluation will be needed before it becomes clear whether
+the higher-order fitting code and chi squared probability filter will
+be needed whether changes are necessary. 
+
+
+
 \subsubsection{Dense and Clustered Noise}
 
-\textbf{TBD}
+The rate of false tracklet generation increases quadratically on the
+density of detections. Issues with image processing can lead to dense
+clusters of false detections packed in a small area.  This could lead
+to spectacularly painful growth in false tracklets.  
+
+Additional experimentation will be needed to determine how sever this
+problem could be.  If it becomes an issue, it may be necessary to
+identify regions with unusually high rates of false detections and
+simply remove all detections from this region before the data is fed
+to MOPS.
 
 

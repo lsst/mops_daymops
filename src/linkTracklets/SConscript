@@ -6,13 +6,6 @@ Import("env")
 Import("common_libs")
 #Import("ext_libs")
 
-doExtras = True
-
-
-Import("env")
-Import("common_libs")
-#Import("ext_libs")
-
 
 
 TrackletTreeNode = env.StaticLibrary('TrackletTreeNode',
@@ -21,25 +14,43 @@ TrackletTreeNode = env.StaticLibrary('TrackletTreeNode',
 TrackletTree = env.StaticLibrary('TrackletTree',
                                  'TrackletTree.cc')
 
+
+
 env.Library('../../lib/linkTracklets', 
             ['linkTracklets.cc']             
             + common_libs + [TrackletTreeNode, TrackletTree], 
             LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
 
-env.Program('../../tests/linkTracklets-unitTests', 
-            ['linkTracklets-unittests.cc', 'linkTracklets.o']
-            + common_libs + [TrackletTreeNode, TrackletTree],
-            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
+env.Library('../../lib/linkTrackletsOMP', 
+            ['linkTrackletsOMP.cc']             
+            + common_libs + [TrackletTreeNode, TrackletTree], 
+            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")) ,
+               CPPFLAGS='-fopenmp')
 
+#env.Program('../../tests/linkTracklets-unitTests', 
+#            ['linkTracklets-unittests.cc', 'linkTracklets.o']
+#            + common_libs + [TrackletTreeNode, TrackletTree],
+#            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
+
+
+env.StaticLibrary('linkTrackletsMain.o',
+                  ['linkTrackletsMain.cc']             
+                  + common_libs + [TrackletTreeNode, TrackletTree], 
+                  LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
 
 env.Program('../../bin/linkTracklets', 
-            ['linkTrackletsMain.cc', 'linkTracklets.o',
+            ['linkTrackletsMain.o', 'linkTracklets.o',
              'TrackletTree', 'TrackletTreeNode'] + common_libs,
             LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
 
+ompEnv = env.Clone()
+ompEnv['CCFLAGS'] = '-fopenmp'
+
+ompEnv.Program('../../bin/linkTrackletsOMP', 
+            ['linkTrackletsMain.o', 'linkTrackletsOMP.o',
+             'TrackletTree', 'TrackletTreeNode'] + common_libs,
+            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")) 
+               + ['gomp'])
 
 
 
-#if doExtras:
-#    env.Program('findLinkableObjects', ['findLinkableObjects.cc'] + common_libs, 
-#				       LIBS=ext_libs)

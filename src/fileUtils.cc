@@ -70,7 +70,7 @@ void populateDetVectorFromFile(std::ifstream &detsFile, std::vector <MopsDetecti
      line.clear();
      std::getline(detsFile, line);
      while (detsFile.fail() == false) {
-	  tmpDet.fromMITIString(line);
+	  tmpDet.fromString(line);
           tmpDet.setRaErr(astromErr);
           tmpDet.setDecErr(astromErr);
 	  myDets.push_back(tmpDet);

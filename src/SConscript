@@ -25,6 +25,20 @@ common_libs.append(env.StaticLibrary('rmsLineFit',
 common_libs.append(env.StaticLibrary('fileUtils', ['fileUtils.cc', 'MopsDetection','Tracklet']))
 
 
+ompEnv = env.Clone()
+ompEnv['CCFLAGS'] += '-fopenmp'
+
+ompEnv.StaticLibrary('removeSubsetsOMP.o', ['removeSubsetsOMP.cc'] + 
+                  filter(lambda x: x!='removeSubsets', common_libs))
+
+ompEnv.StaticLibrary('removeSubsetsMainOMP.o', ['removeSubsetsMainOMP.cc'] + common_libs)
+
+ompEnv.Program('../bin/removeSubsetsOMP', 
+               ['removeSubsetsOMP.o', 'removeSubsetsMainOMP.o'] + common_libs,
+               LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")) 
+               + ['gomp'])
+
+
 common_libs.append(env.StaticLibrary('removeSubsets',  ['removeSubsets.cc'] + common_libs))
 
 
@@ -38,12 +52,12 @@ env.Program('../bin/readTracksWriteStats',
 Export("common_libs")
 #Export("ext_libs")
 
-env.Program('../tests/utilities-unitTests', ['generalUnitTests.cc'] + common_libs, 
-            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
+#env.Program('../tests/utilities-unitTests', ['generalUnitTests.cc'] + common_libs, 
+#            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
 
-env.Program('../tests/Track-unitTests', 
-            ['Track-unitTests.cc', 'Track.o', 'TrackSet.o'] + common_libs,
-            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
+#env.Program('../tests/Track-unitTests', 
+#            ['Track-unitTests.cc', 'Track.o', 'TrackSet.o'] + common_libs,
+#            LIBS=filter(lambda x: x != "mops_daymops", env.getlibs("mops_daymops")))
 
 
 
@@ -51,9 +65,10 @@ SConscript(os.path.join('findTracklets','SConscript'))
 SConscript(os.path.join('collapseTrackletsAndPostfilters','SConscript'))
 SConscript(os.path.join('linkTracklets','SConscript'))
 
-SConscript(os.path.join('detectionProximity','SConscript'))
-SConscript(os.path.join('fieldProximity','SConscript'))
-SConscript(os.path.join('orbitProximity','SConscript'))
+# we really never got to use these... and they slow down builds.
+#SConscript(os.path.join('detectionProximity','SConscript'))
+#SConscript(os.path.join('fieldProximity','SConscript'))
+#SConscript(os.path.join('orbitProximity','SConscript'))
 
 
 # swig wrappers

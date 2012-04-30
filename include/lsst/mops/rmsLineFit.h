@@ -67,18 +67,23 @@ namespace mops {
                                           double maxRMS,
                                           std::vector<Tracklet> &output);
     
-    
+    // fetch all the detections and put them in a fresh vector.
+    std::vector<MopsDetection> getTrackletDets(const Tracklet *t, 
+                                               const std::vector<MopsDetection>* allDets);
 
-    class TrackletPurifier {
-    public:
-        Tracklet purifyTracklet(const Tracklet *t, const std::vector<MopsDetection> *allDets, 
-                                double maxRMS);
+    /*
+     * given a pair of functions relating MJD to RA, Dec s.t. RA =
+     * RASlope*(MJD - tOffset) + RAintercept and the similarly for
+     * declination, return a map which relates indices of *t to
+     * squared distance to the projected point.
+     */
+    std::map <unsigned int, double> 
+    getPerDetSqDistanceToLine(const Tracklet *t, const std::vector<MopsDetection>* allDets, 
+                              double RASlope, double RAIntercept, 
+                              double DecSlope, double DecIntercept, 
+                              double tOffset);
 
-        void purifyTracklets(const std::vector<Tracklet> *trackletsVector,
-                             const std::vector<MopsDetection> *detsVector,
-                             double maxRMS, unsigned int minObs,
-                             std::vector<Tracklet> &output);
-    };
+
 
 
 }} // close lsst::mops

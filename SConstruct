@@ -5,6 +5,7 @@
 import glob, os.path, re, os
 import lsst.SConsUtils as scons
 
+
 env = scons.makeEnv("mops_daymops", 
                    r"$HeadURL: svn+ssh://svn.lsstcorp.org/DMS/mops/daymops/trunk/SConstruct $",
                    [["boost", "boost/version.hpp", "boost_system:C++"],
@@ -51,6 +52,9 @@ LSST-MOPS package
 
 
 SConscript(['src/SConscript',
-            'lib/SConscript'])
+            'lib/SConscript',
+            'doc/SConscript'])
+
+SConscript('doc/SConscript')
 
  

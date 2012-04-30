@@ -14,8 +14,14 @@
 #include "MopsDetection.h"
 #include "Tracklet.h"
 
-/* A track is really a set of *DETECTIONS*.  We also allow the user to track the
-   *tracklets* which were used to build the track, but this is just for their
+
+namespace lsst { namespace mops {
+
+/** \class Track Track.h "lsst/mops/Track.h"
+    \brief A linked set of detections which span multiple nights; possibly an asteroid
+    
+    A track is really a set of *DETECTIONS*.  We also allow the user to track the
+    *tracklets* which were used to build the track, but this is just for their
    reference.
 
    note that a track is this is not merely the union of the detections
@@ -41,7 +47,6 @@
 
 */
 
-namespace lsst { namespace mops {
 
 class Track {
 private:

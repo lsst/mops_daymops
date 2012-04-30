@@ -78,7 +78,7 @@ namespace lsst {
         double *arrayMJDs = (double*)malloc(sizeof(double) * numDets);
 
         if ((arrayRAs == NULL) || (arrayDecs == NULL) || (arrayMJDs == NULL)) {
-            throw LSST_EXCEPT(pexExcept::MemoryException, "Malloc returned NULL on a very small malloc. System out of memory or something very odd.\n");
+            throw LSST_EXCEPT(MemoryException, "Malloc returned NULL on a very small malloc. System out of memory or something very odd.\n");
         }
         
         for (unsigned int i = 0; i < numDets; i++) {
@@ -263,64 +263,6 @@ namespace lsst {
 
 
     
-    Tracklet TrackletPurifier::purifyTracklet(const Tracklet *t, const std::vector<MopsDetection>* allDets, 
-                                              double maxRMS) {
-        Tracklet curTracklet = *t;
-        bool isClean = false;
-
-        while (isClean == false) {
-            double t0 = (*allDets)[*(curTracklet.indices.begin())].getEpochMJD();
-            std::vector<MopsDetection> curTrackletDets = getTrackletDets(&curTracklet, allDets);
-            std::vector<double> RASlopeAndOffset, DecSlopeAndOffset;
-            leastSquaresSolveForRADecLinear(&curTrackletDets, RASlopeAndOffset, 
-                                                 DecSlopeAndOffset, t0);
-            std::map<unsigned int, double> indexToSqDist = 
-                getPerDetSqDistanceToLine(&curTracklet, allDets, RASlopeAndOffset[0], RASlopeAndOffset[1],
-                                          DecSlopeAndOffset[0], DecSlopeAndOffset[1], t0);
-
-            isClean = true;
-            double worstDetVal = 0.0;
-            unsigned int worstDetIndex = 0;
-            for (std::map<unsigned int, double>::iterator distIter = indexToSqDist.begin();
-                 distIter != indexToSqDist.end(); distIter++) {
-                double distMax = maxRMS;
-                if ((distIter->second > distMax*distMax) && (distIter->second > worstDetVal)) {
-                    worstDetVal = distIter->second;
-		    if (worstDetVal > 1) {
-                        std::cerr << "Warning: detection point to projected point is improbably large distance: " << worstDetVal << std::endl;
-		    }
-                    worstDetIndex = distIter->first;
-                    isClean = false;
-                }
-            }
-            if (isClean == false) {
-                curTracklet.indices.erase(worstDetIndex);
-            }
-        }
-        return curTracklet;
-    }
-
-
-    void TrackletPurifier::purifyTracklets(const std::vector<Tracklet> *trackletsVector,
-                                           const std::vector<MopsDetection> *detsVector,
-                                           double maxRMS, unsigned int minObs,
-                                           std::vector<Tracklet> &output)
-    {
-        if (output.size() != 0) {
-            throw LSST_EXCEPT(BadParameterException, 
-                              "purifyTracklets: output vector not empty\n");
-        }
-        
-        std::vector<Tracklet>::const_iterator tIter;
-        for (tIter = trackletsVector->begin(); tIter != trackletsVector->end(); tIter++) {
-            Tracklet tmp = purifyTracklet(&(*tIter), detsVector, maxRMS);
-            if (tmp.indices.size() >= minObs) {
-                output.push_back(tmp);
-            }
-        }        
-    
-        
-    }
 
 
     }} // close lsst::mops namespace

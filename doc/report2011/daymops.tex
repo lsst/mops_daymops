@@ -240,7 +240,7 @@ quickly find nearby detections in those later images and use them for
 the creation of tracklets.
 
 \begin{figure}[ht]
-\begin{algorithmic}
+\begin{algorithmic}[5]
 \REQUIRE $I$ is a set of images, each of which has an associated exposure time and contains a set of detections
 \STATE \COMMENT{Create a 2D KD-Tree for each image, holding detections from that image.}
 \STATE $T \gets \emptyset$
@@ -348,7 +348,7 @@ series of range searches, which of course can be implemented with 4-D
 presented in Figure \ref{collapseTrackletsAlgorithm}.
 
 \begin{figure}[ht]
-\begin{algorithmic}
+\begin{algorithmic}[5]
   \REQUIRE $T$ is a set of intra-nightly tracklets, $D$ is the set of nightly detections from which $T$ was created, $range$ is a 4-tuple of tolerances for RA, Dec, angle and velocity.
   \STATE $t_c \gets midpoint(\{ d_{time} : d \in D \})$
   \FOR {$t \in T$}
@@ -359,7 +359,15 @@ presented in Figure \ref{collapseTrackletsAlgorithm}.
   \STATE $outTracklets = \emptyset$
   \FOR {$t \in T,\ t$ has not already merged with another tracklet}
     \STATE \COMMENT{Find tracklets with projected location, motion similar to that of $t$}
-     \STATE $outTracklets = outTracklets \cup tree.$rangeSearch$(t_{projected\ position}, t_{angle}, t_{velocity}, range)$
+    \STATE $candidates \gets tree.$rangeSearch$(t_{projected\ position}, t_{angle}, t_{velocity}, range)$
+    \FOR {$c \in candidates$} 
+      \IF{$c$ and $t$ do not contain different detections from the same image}
+        \STATE $t.detections \gets t.detections \cup c.detections$
+        \STATE mark $c$ as already merged
+      \ENDIF
+    \ENDFOR
+    \STATE mark $t$ as already merged
+    \STATE $outTracklets \gets outTracklets \cup t$
   \ENDFOR
   \RETURN{$outTracklets$}
 \end{algorithmic}
@@ -411,7 +419,7 @@ find and remove them from the active set of tracklets.
 
 
 \begin{figure}[ht!]
-\begin{algorithmic}
+\begin{algorithmic}[5]
   \REQUIRE $T$ is a set of tracklets, $rmsMax$ is a maximum root-mean
   squared residual on the tracklet's best-fit function to its
   detections
@@ -556,7 +564,7 @@ two-tracklet-linking, ``endpoint-only'' version of the algorithm which
 finds pairs of compatible tracklets on different nights.
 
 \begin{figure}[ht!]
-\begin{algorithmic}
+\begin{algorithmic}[5]
   \REQUIRE{$nodeA$ and $nodeB$ are KD-Tree nodes which hold tracklets
     from two different images on different nights, $minAcc$ and $maxAcc$
     specify the limits of accelerations which the user finds
@@ -631,7 +639,7 @@ implemented by the function {\tt doLinkingRecurse} from {\tt linkTracklets.cc}
 
 
 \begin{figure}[ht!]
-\begin{algorithmic}
+\begin{algorithmic}[5]
 
 \REQUIRE{$nodeA$ and $nodeB$ are KD-Tree nodes which hold tracklets
   from two different images on different nights, $S$ holds a series of
@@ -917,7 +925,7 @@ efficient algorithm uses a detection-to-track ``reverse-map'' $R$,
 which maps from each detection to the set of tracks holding that
 detection.  This is easy to construct for a set of tracks $T$:
 
-\begin{algorithmic}
+\begin{algorithmic}[5]
   \FOR{$t_i \in T$}
   \STATE $R[d_j] = \{\}$
   \ENDFOR
@@ -934,7 +942,7 @@ track containing all these detections must be equal to or a superset
 of $t_i$.
 
 \begin{figure}[h!]
-\begin{algorithmic}
+\begin{algorithmic}[5]
 \FOR{$t_i \in T$}
   \STATE candidates = $T$
   \FOR{$d_j \in t_i$}
@@ -1005,9 +1013,125 @@ tracklets or tracks may, depending on the data and configuration of
 the software, grow to be quite large, and is not trivially
 predictable.  For software which uses tracklets or tracks as its input
 data and operates on them in bulk (including {\tt collapseTracklets},
-{\tt removeSubsets}, and {\tt linkTracklets}), this may be problematic;
-see section \ref{parallelization} for more information on this
-problem.
+{\tt removeSubsets}, and {\tt linkTracklets}), this may be problematic.
+
+
+
+\subsubsection{Parallelization}
+\label{parallelization}
+
+We have parallelized the various linking stages of DayMOPS using
+multithreading, implemented using OpenMP.  This allows multiple CPU
+cores to work simultaneously on the data set, but does not address the
+problem of splitting up the data sets.  This means that multithreading
+can be effective in large-memory environments, but does not attempt to
+solve the problem of larger-than-memory data sets.  
+
+The issue of larger-than-memory data sets could be addressed in
+several ways: distributed shared memory, algorithmic changes, or
+simply requiring larger machines.  We have had good luck using
+kernel-level distributed shared memory provided by the VSMP software
+on the Gordon cluster at San Diego Supercomputing Center.  This
+software runs inside the OS kernels of various machines connected via
+network, and provides the appearance that all CPUs and RAM on the
+various machines are shared on a single motherboard.  A similar effect
+could be achieved through explicit use of a user-level distributed
+shared memory library (such as memcached), but would require
+additional coding.
+
+\subsubsubsection{Parallel FindTracklets} In our current version, we
+parallelize the work being done per-detection.  This is achieved with
+a simple \textbf{parallel for} loop replacing the \textbf{for} loop at
+line 12 of \ref{findTrackletsAlgorithm}.  Because the amount of work
+done will vary per-detection, depending on how many possible second
+endpoints are found, we use dynamic thread scheduling as opposed to
+static scheduling.  The only critical section used is the writing of
+results, otherwise there is no need for inter-processor
+synchronization or communication.
+
+The tracklets reported by parallel findTracklets should be identical
+to those reported by serial findTracklets, though the order in which
+they are reported may differ.
+
+
+\subsubsubsection{Parallel CollapseTracklets} We parallelize the word
+done per-tracklet.  Again, this is achieved with a simple
+\textbf{parallel for} loop replacing the \textbf{for} loop at line 8
+of \ref{collapseTrackletsAlgorithm}.  The writing of output is inside
+a critical section, as in parallel findTracklets.  
+
+Unlike findTracklets, the work done in the parallel region of
+collapseTracklets is not entirely independent; different threads may
+read and write the ``already merged'' flags on tracklets.  This leads
+to a potential consistency problem, with several possible solutions.
+The first approach would be to enforce strict locking on every
+read/write to the ``already merged'' flags.  This has the disadvantage
+of potentially scaling very badly, since the reads/writes are
+extremely frequent.  It is also problematic in that it creates
+potential for deadlocks if not implemented very carefully.  A second
+approach would be to disregard the flags entirely, which would be
+quite simple to implement. However, in cases where objects may
+generate many tracklets (e.g. deep stacks, which can see $n^2$
+tracklets given $n$ observations) this would result in a significant
+amount of redundant work being performed.  We took a third approach,
+which attempts to compromise these two: we do not enforce strict
+locking on the ``already merged'' flags, and simply allow that there
+may be stale reads occasionally.  These stale reads may lead to
+redundant work, but because we expect that they will be uncommon, and
+hopefully should not have a big impact on performance.  The redundant
+work will lead to redundant tracklets in output, but we expect them to
+be removed by the removeSubsets stage.
+
+It is also important to note that because of the ``already merged''
+flags, results from collapseTracklets are nondeterministic in a
+multi-threaded environment.  Consider the unusual case in which
+tracklets $t_a$ and $t_b$ are sufficiently close in the tree, and
+$t_b$ and $t_c$ are sufficiently close in the tree, but $t_a$ and
+$t_c$ are not sufficiently close in the tree, and querying for one
+will not return the other.  Depending on which tracklet is first
+visited and queried for similar tracklets, tracklet $t_b$ may be
+merged with either $t_a$ or $t_c$, at which point it will be flagged
+and never considered again.  As a result, output from parallel
+collapseTracklets runs is expected to vary, and not just with regard
+to ordering, albeit quite slightly.
+
+
+\subsubsubsection{Parallel LinkTracklets} 
+
+
+\subsubsubsection{Parallel Subset Removal} Subset track(let) removal
+provides a fairly obvious axis of parallelism: for each track, we
+perform a series of lookups and a set intersection calculation.  This
+could be parallelized with a simple parallel for loop.  However, the
+lookups are preformed on a potentially-large reverse-map.  With a
+large set of tracks, this map may become larger than memory.  Accesses
+to the reverse-map are fairly unpredictable.  To deal with this
+problem, we have made use of kernel-level distributed shared memory,
+as in the parallel linkTracklets.  We found that subset track removal
+could be performed quite efficiently using this approach.  However, we
+do not currently know of an explicitly distributed equivalent.
+
+
+\subsubsubsection{Distributed LinkTracklets} In case the implicit
+memory sharing is not sufficient (say, because distributed shared
+memory systems do not provide adequate performance), it may be
+necessary to write an explicitly distributed linkTracklets.  This was
+attempted by a CS Master's student, Matt Cleveland, working with
+Prof. Dave Lowenthal.  The design was well-thought out but complex,
+leading to slow implementation.  The distributed version was forked
+off before a variety of changes to the serial version were made, and
+never merged with those changes.
+
+The distributed linkTracklets, the master node held only the tracklets
+of the endpoint trees, and the higher levels of the endpoint and
+support trees.  The master node would attempt the linking algorithm on
+the higher levels of the tree until it reached a terminal point; it
+would then attempt to predict the amount of work needed to complete
+the linking and save the state of the searching and estimated cost to
+a buffer.  Periodically, the work items in the buffer are distributed
+to worker nodes, with attention given to load distribution as well as
+cache issues, attempting to minimize the amount of data which must be
+transferred to worker nodes.
 
 
 
@@ -1015,3 +1139,9 @@ problem.
 
 
 
+
+\subsubsubsection{Orbit Determination} Orbit Determination is
+performed per-track; we expect that it will be slow only because the
+number of tracks will be very large.  Thus, we expect that Orbit
+Determination should be trivially parallel; simply divide the tracks
+between various machines or CPU cores. 

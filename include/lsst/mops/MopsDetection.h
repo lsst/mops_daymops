@@ -32,28 +32,32 @@ public:
     MopsDetection();
 
     //create a "lightweight" detection.
-    MopsDetection(long int ID, double epochMJD, double RA, double Dec, double RaErr=0, double DecErr=0, int ssmId=-1);
+    MopsDetection(long int ID, double epochMJD, double RA, double Dec, double RaErr=0, double DecErr=0, int ssmId=-1, long int obsHistId=-1, double snr=-1, double mag=-1);
     
-    // the MITI format holds lots more data than ID, MJD, Ra, and Dec.  
-    // We don't store those items, though!
-    void fromMITIString(std::string);
+    void fromString(std::string);
 
     //getters...  note that if you don't set values, you'll get bogus
     // placeholder values from the "getters" - they used to send exceptions in
     // this case, but to save the extra byte, I dropped the "initialized" flag.
     long int getID() const ;
+    long int getImageID() const;
     double getEpochMJD() const ;
     double getRA() const ;
     double getDec() const ;
+    double getMag() const ; 
+    double getSNR() const ; 
     int getSsmId() const;
     double getRaErr() const ;
     double getDecErr() const ;
     double getRaTopoCorr() const ;
 
     void setID(long int newId);
+    void setImageID(long int);
     void setEpochMJD(double newMjd);
     void setRA(double newRa);
     void setDec(double newDec);
+    void setMag(double) ; 
+    void setSNR(double) ; 
     void setSsmId(int newSsmId);
     void setRaErr(double RaErr);
     void setDecErr(double DecErr);
@@ -74,6 +78,9 @@ private:
     double DecErr;
     double RaTopoCorr;
     int ssmId;
+    long int imageID;
+    double mag;
+    double snr;
 };
 
 }} // close namespace lsst::mops

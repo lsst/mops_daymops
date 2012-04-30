@@ -29,7 +29,8 @@ MopsDetection::MopsDetection()
 }
 
 
- MopsDetection::MopsDetection(long int ID, double epochMJD, double RA, double Dec, double RaErr, double DecErr, int ssmId) 
+
+MopsDetection::MopsDetection(long int ID, double epochMJD, double RA, double Dec, double RaErr, double DecErr, int ssmId, long int obsHistId, double snr, double mag) 
 {
     this->ID = ID;
     MJD = epochMJD;
@@ -38,6 +39,9 @@ MopsDetection::MopsDetection()
     this->RaErr = RaErr;
     this->DecErr = DecErr;
     this->ssmId = ssmId;
+    this->imageID = obsHistId;
+    this->snr = snr;
+    this->mag = mag;
 }
 
 
@@ -45,6 +49,21 @@ MopsDetection::MopsDetection()
 void MopsDetection::setID(long int newId)
 {
     ID = newId;
+}
+
+void MopsDetection::setImageID(long int newiid) 
+{
+    imageID = newiid;
+}
+
+void MopsDetection::setMag(double newMag) 
+{
+    mag = newMag;
+}
+
+void MopsDetection::setSNR(double newSnr) 
+{
+    snr=newSnr;
 }
 
 void MopsDetection::setSsmId(int newSsmId)
@@ -91,6 +110,21 @@ long int MopsDetection::getID() const
 
 }
 
+long int MopsDetection::getImageID() const
+{
+    return imageID;
+}
+
+double MopsDetection::getMag() const
+{
+    return mag;
+}
+
+double MopsDetection::getSNR() const
+{
+    return snr;
+}
+
 int MopsDetection::getSsmId() const 
 {
     return ssmId;
@@ -132,40 +166,27 @@ double MopsDetection::getRaTopoCorr()  const
 
 
 
-void MopsDetection::fromMITIString(std::string mitiString) {
-    /*     --------- PANSTARRS Input File Format (from Larry Denneau's Spec):
-           ID EPOCH_MJD RA_DEG DEC_DEG MAG OBSCODE OBJECT_NAME LENGTH ANGLE [ETIME]*/
-    // read these parameters to local vars; we don't save them.
-    double mag;
-    std::string obscode;
-    double length;
-    double angle;
-    double etime;
-    bool hasETime;
-    std::istringstream ss(mitiString);
+void MopsDetection::fromString(std::string diaStr) {
+    // fullerDiaSource format:
+
+    //  diaId obsHistId/imageId ssmId RA Dec MJD mag SNR
+
+    std::istringstream ss(diaStr);
     /* make SS raise an exception if reading doesn't happen correctly */
     ss.exceptions(std::ifstream::failbit | std::ifstream::badbit);    
     try {
         ss >> ID;
-        ss >> MJD;
+        ss >> imageID;
+        ss >> ssmId;
         ss >> RA;
         ss >> dec;
+        ss >> MJD;
         ss >> mag;
-        ss >> obscode;
-        ss >> ssmId;
-        ss >> length;
-        ss >> angle;
+        ss >> snr;
     }
     catch (...) {
         throw LSST_EXCEPT(BadParameterException, 
-                          "Badly-formatted MITI string\n");
-    }
-    try {
-        ss >> etime;
-        hasETime = true;
-    }
-    catch (...) {
-        hasETime = false;
+                          "Badly-formatted DiaSource string. Note that MITI is no longer supported\n");
     }
 }
 

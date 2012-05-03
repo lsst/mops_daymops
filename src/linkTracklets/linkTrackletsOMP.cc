@@ -930,10 +930,7 @@ void buildTracksAddToResults(
                         std::cout << "track passed rms" << std::endl;
 #endif
 
-#pragma omp critical(writeResults)
-                        {
                         results.insert(newTrack);
-                        }
 
                     } else {
 #ifdef DEBUG
@@ -1673,6 +1670,7 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
                         uint nSupport = 0;
                         std::map<ImageTime, TrackletTree >::const_iterator 
                             supportPointIter;
+                        // look for support; break if we find any at all.
                         for (supportPointIter = afterFirstIter;
                              supportPointIter != secondEndpointIter;
                              supportPointIter++) {
@@ -1695,11 +1693,114 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
                         }
                 
                         if (nSupport > 0) {
-                            // create a work item here and pass it off.
-                            WorkItem newWork;
-                            newWork.firstEndpoint = firstEndpointIter;
-                            newWork.secondEndpoint = secondEndpointIter;
-                            allWork.push_back(newWork); 
+                            // check to see if the top-level tree
+                            // nodes are really compatible.  we can
+                            // probably cut out a lot of overhead if
+                            // we only allocate hard work, and no
+                            // trivial work.
+
+                            imagePairs++;
+                            TreeNodeAndTime firstEndpoint(firstEndpointIter->second.getRootNode(), 
+                                                          firstEndpointIter->first);
+                            TreeNodeAndTime secondEndpoint(secondEndpointIter->second.getRootNode(),
+                                                           secondEndpointIter->first);
+                            double accMaxRa = searchConfig.maxRAAccel;
+                            double accMinRa = accMaxRa * -1;
+                            double accMaxDec = searchConfig.maxDecAccel;
+                            double accMinDec = accMaxDec * -1;
+                            bool isValid = updateAccBoundsReturnValidity(firstEndpoint, 
+                                                                         secondEndpoint,
+                                                                         accMinRa, 
+                                                                         accMaxRa, 
+                                                                         accMinDec, 
+                                                                         accMaxDec); 
+
+                            if (isValid)
+                                {
+                                    // create a work item here and
+                                    // pass it off.
+                                    WorkItem newWork;
+                                    newWork.firstEndpoint = firstEndpointIter;
+                                    newWork.secondEndpoint = secondEndpointIter;
+                                    allWork.push_back(newWork); 
+                                }
+                            else {
+                                TrackSet tmpRes;
+                                // we should get NO results. if we do then panic.
+        std::vector<TreeNodeAndTime > supportPoints;
+        std::map<ImageTime, TrackletTree >::const_iterator 
+            supportPointIter;
+        std::map<ImageTime, TrackletTree>::const_iterator afterFirstIter;
+        afterFirstIter = firstEndpointIter;
+        afterFirstIter++;
+        for (supportPointIter = afterFirstIter;
+             supportPointIter != secondEndpointIter;
+             supportPointIter++) {
+            
+            /* don't pass along second tracklets which
+               are 'too close' to the endpoints; see
+               linkTracklets.h for more comments */
+            double firstToSup = supportPointIter->first.getMJD() 
+                - firstEndpointIter->first.getMJD(); 
+            double supToSecond =  secondEndpointIter->first.getMJD() 
+                - supportPointIter->first.getMJD();
+            if ((firstToSup > 
+                 searchConfig.minSupportToEndpointTimeSeparation) 
+                && 
+                (supToSecond > 
+                 searchConfig.minSupportToEndpointTimeSeparation)) 
+            {
+                
+                TreeNodeAndTime tmpTAT(supportPointIter->second.getRootNode(),
+                                       supportPointIter->first);
+                supportPoints.push_back(tmpTAT);
+            }
+        }
+        // use tid to choose an output vector for just this thread to use.
+        int tid;
+        tid = omp_get_thread_num();
+
+        doLinkingRecurse(allDetections,
+                         allTracklets, 
+                         searchConfig,
+                         firstEndpoint, 
+                         secondEndpoint,
+                         supportPoints,  
+                         searchConfig.maxRAAccel*-1.,
+                         searchConfig.maxRAAccel,
+                         searchConfig.maxDecAccel*-1.,
+                         searchConfig.maxDecAccel,
+                         tmpRes, 
+                         ITERATIONS_PER_SPLIT);
+        
+        if (tmpRes.size() != 0) {
+            std::cout << "WTF?! endpoints are not compatible but found " << tmpRes.size() << " tracks?!" << std::endl;
+
+            accMaxRa = searchConfig.maxRAAccel;
+            accMinRa = accMaxRa * -1;
+            accMaxDec = searchConfig.maxDecAccel;
+            accMinDec = accMaxDec * -1;
+
+            bool isValid = updateAccBoundsReturnValidity(firstEndpoint, 
+                                                         secondEndpoint,
+                                                         accMinRa, accMaxRa, 
+                                                         accMinDec, accMaxDec); 
+            // call it again so the debugger can watch.
+            doLinkingRecurse(allDetections,
+                             allTracklets, 
+                             searchConfig,
+                             firstEndpoint, 
+                             secondEndpoint,
+                             supportPoints,  
+                             searchConfig.maxRAAccel*-1.,
+                             searchConfig.maxRAAccel,
+                             searchConfig.maxDecAccel*-1.,
+                             searchConfig.maxDecAccel,
+                             tmpRes, 
+                             ITERATIONS_PER_SPLIT);
+        
+        }
+                            }
                         }
                     }
                 }
@@ -1707,21 +1808,33 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
         }
     }
 
-    int nthreads, tid;
+    std::vector<TrackSet*> localResults;
     
-#pragma omp parallel private(nthreads, tid)
+#pragma omp parallel shared(localResults)
     {
-      nthreads = omp_get_num_threads();
-      tid = omp_get_thread_num();
-      if(tid == 0) {
-	std::cout << "Number of threads " << nthreads << std::endl;
-	std::cout << "Number of endpoint pairs: " << allWork.size() << std::endl;
-      }
+        int nthreads, tid;
+        nthreads = omp_get_num_threads();
+        tid = omp_get_thread_num();
+
+        if(tid == 0) {
+
+            std::cout << "Number of threads " << nthreads << std::endl;
+            std::cout << "Number of endpoint pairs: " << imagePairs << std::endl;
+            std::cout << "Number of post-filtered work items: " << allWork.size() << std::endl;
+
+            // main thread sets up localResults vector for other threads to use
+            for (int i = 0; i < nthreads; i++) {
+                // configure each local result set to hold tracks in
+                // memory (forever, not a temporary cache) and we will
+                // explicitly flush to disk at the end.
+                TrackSet *tmpTS = new TrackSet(searchConfig.outputFile, false, 0);
+                localResults.push_back(tmpTS);
+            }
+        }
     }
 
-#pragma omp parallel for schedule(dynamic, 1)
+#pragma omp parallel for schedule(dynamic, 128)
     for (uint i = 0; i < allWork.size(); i++) {
-
         std::map<ImageTime, TrackletTree>::const_iterator 
             firstEndpointIter, secondEndpointIter;
         firstEndpointIter = allWork[i].firstEndpoint;
@@ -1761,6 +1874,10 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
                 supportPoints.push_back(tmpTAT);
             }
         }
+        // use tid to choose an output vector for just this thread to use.
+        int tid;
+        tid = omp_get_thread_num();
+
         doLinkingRecurse(allDetections,
                          allTracklets, 
                          searchConfig,
@@ -1771,9 +1888,26 @@ void doLinking(const std::vector<MopsDetection> &allDetections,
                          searchConfig.maxRAAccel,
                          searchConfig.maxDecAccel*-1.,
                          searchConfig.maxDecAccel,
-                         results, 
+                         *(localResults[tid]), 
                          ITERATIONS_PER_SPLIT);
         
+    }
+
+#pragma omp parallel shared(localResults)
+    {
+        int tid;
+        tid = omp_get_thread_num();
+
+        if(tid == 0) {
+            
+            std::cout << "Master thread: collecting results " << std::endl;
+
+            // main thread sets up localResults vector for other threads to use
+            for (int i = 0; i < localResults.size(); i++) {
+                // the destructor will purge to file and clear the memory.
+                delete localResults[i];
+            }
+        }
     }
     
 }

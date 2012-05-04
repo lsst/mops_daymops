@@ -101,22 +101,17 @@ template argument so the constant is ``baked in'' at compile time and
 would not need to be stored.  
 
 \paragraph{Removing Critical Sections in Parallel Implementations}
-In all the multithreaded software, we maintain a single output vector
-(or set) to which all threads write.  To prevent conflicts, these
-writes must be wrapped in critical sections.  Critical sections impose
-synchronization costs, which may become significant when threads
-execute on separate boards and must communicate over the network (as
-in vSMP or other OS-level distributed shared memory systems).
+In all the multithreaded software (except linkTracklets), we maintain
+a single output vector (or set) to which all threads write.  To
+prevent conflicts, these writes must be wrapped in critical sections.
+Critical sections impose synchronization costs, which may become
+significant when threads execute on separate boards and must
+communicate over the network (as in vSMP or other OS-level distributed
+shared memory systems).
 
 To reduce overhead, each thread should really maintain its own output
 vector, which could be used without any critical section and merged
-later, after all worker threads have completed.  This can be
-accomplished in the master thread before the parallel section, by by
-using \texttt{omp\_get\_num\_threads} to determine the number of
-threads, and then allocating one result vector per thread.  Then, the
-individual worker threads should write to their allocated results
-vector and these can be accumulated later.  For reasons of time, this
-has not yet been implemented, but could be done quickly.
+later, after all worker threads have completed, as is done in linkTracklets.
 
 \subsubsection{Significant Changes in CollapseTracklets}
 \paragraph{Motion Vectors} 
@@ -142,14 +137,14 @@ fairly effective close to the ecliptic, but near the poles it will be
 problematic.  Fixing this should be relatively trivial, but it has not
 yet been done.
 
-\paragraph{Exploring Parallelism and Cacheing of Flags}
+\paragraph{Exploring Parallelism and Caching of Flags}
 As mentioned in \ref{parallelization}, there are several possible
 methods for dealing with the per-tracklet ``already merged'' flags.
 Currently, the implementation does not explicitly address the issue,
 and no attempt has been made to compare various approaches and their
 performance.
 
-Currently, there is no explicit cacheing of the ``already merged''
+Currently, there is no explicit caching of the ``already merged''
 flags, and all threads modify them without regard for locking.  On a
 true large-memory, single-board system, this should be fine:
 integer-sized reads should be atomic, meaning no partially-written

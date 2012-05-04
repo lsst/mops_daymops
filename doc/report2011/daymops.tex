@@ -1145,9 +1145,11 @@ axis of paralellism.  The psuedocode for the parallel linkTracklets is presented
 \label{parallelLinkTracklets}
 \end{figure}
 
-The work done inside the parallel sections is naturally independent,
-and so the only critical section is the writing of output.  The
-parallel linkTracklets should return the same tracks discovered by the
+Unlike the other parallel programs, which write their output inside of
+a critical section, parallel linkTracklets maintains separate output
+sets for each thread, so it has no critical sections at all.  This
+allows for slightly better scaling of performance.  The parallel
+linkTracklets should return the same tracks discovered by the
 sequential version, though the order of their discovery may differ.
 
 

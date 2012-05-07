@@ -38,16 +38,37 @@ bool trackContains(unsigned int ind, const Tracklet &t)
 }
 
 
+// return common elements in sorted vectors A and B.  A
+// AND B MUST BE SORTED.
+std::vector<unsigned int> intersect(const std::vector<unsigned int> &A, 
+                                    const std::vector<unsigned int> &B) 
+{
+    std::vector<unsigned int> res;
+    int n1 = A.size();
+    int n2 = B.size();
+    int i = 0, j = 0;
+    while (i < n1 && j < n2) {
+        if (A[i] > B[j]) {
+            j++;
+        } else if (B[j] > A[i]) {
+            i++;
+        } else {
+            res.push_back(A[i]);
+            i++;
+            j++;
+        }
+    }
+    return res;
+}
+
 
 
 void getSupersetOrIdenticalTracks(const Tracklet* curTrack, 
-                                  std::map<unsigned int, std::set<unsigned int> > & reverseMap,
+                                  std::map<unsigned int, std::vector<unsigned int> > & reverseMap,
                                   bool shortCircuit,
                                   bool sortBeforeIntersect,
-                                  std::set<unsigned int> & results)
+                                  std::vector<unsigned int> & results)
 {
-
-        
     std::set<unsigned int>::const_iterator indexIter;
     bool quitNow = false;
     if (!sortBeforeIntersect) 
@@ -60,11 +81,9 @@ void getSupersetOrIdenticalTracks(const Tracklet* curTrack,
         for (indexIter = (curTrack->indices.begin())++; 
              indexIter != curTrack->indices.end() && (quitNow == false);
              indexIter++) {
-            std::set<unsigned int> tmpResults;
-            const std::set<unsigned int> * detIDSet = &(reverseMap[*indexIter]);
-            std::set_intersection(results.begin(), results.end(),
-                                  detIDSet->begin(), detIDSet->end(), 
-                                  std::insert_iterator<std::set <unsigned int> >(tmpResults, tmpResults.begin()));
+            std::vector<unsigned int> tmpResults;
+            const std::vector<unsigned int> * detIDSet = &(reverseMap[*indexIter]);
+            tmpResults = intersect(*detIDSet, results);
             results = tmpResults;
             
             if (shortCircuit && (results.size() == 1)) {
@@ -82,31 +101,30 @@ void getSupersetOrIdenticalTracks(const Tracklet* curTrack,
          * doing intersection; so first we need to read all the
          * elements from the reverse map, sort them by size and THEN
          * do the intersection */
-        std::multimap<unsigned int, const std::set<unsigned int>* > reverseMapEntries;
+        std::multimap<unsigned int, const std::vector<unsigned int>* > reverseMapEntries;
         for (indexIter = (curTrack->indices.begin()); 
              indexIter != curTrack->indices.end();
              indexIter++) {
-            const std::set<unsigned int>* detIDSet = &(reverseMap[*indexIter]);
-            std::pair<unsigned int, const std::set<unsigned int> * > toInsert(detIDSet->size(), detIDSet);
+            const std::vector<unsigned int>* detIDSet = &(reverseMap[*indexIter]);
+            std::pair<unsigned int, const std::vector<unsigned int> * > toInsert(detIDSet->size(), detIDSet);
             reverseMapEntries.insert(toInsert);
         }
 
         /* std::multimap sorts automatically so we'll be using smallest
            element first */
-        std::multimap<unsigned int, const std::set<unsigned int>* >::const_iterator entryIter;
+        std::multimap<unsigned int, const std::vector<unsigned int>* >::const_iterator entryIter;
         // initialize results set
         results = *(reverseMapEntries.begin()->second);
 
         for (entryIter = reverseMapEntries.begin()++; 
              entryIter != reverseMapEntries.end() && (quitNow == false);
              entryIter++) {
-
-            std::set<unsigned int> tmpResults;
-            std::set_intersection(results.begin(), results.end(),
-                                  entryIter->second->begin(), entryIter->second->end(), 
-                                  std::insert_iterator<std::set <unsigned int> >(tmpResults, tmpResults.begin()));
-            results = tmpResults;
             
+            std::vector<unsigned int> tmpResults;
+            const std::vector<unsigned int> * detIDSet = &(reverseMap[*indexIter]);
+            tmpResults = intersect(*detIDSet, results);
+            results = tmpResults;
+
             if (shortCircuit && (results.size() == 1)) {
                 // we are not a subset track(let); end this for loop
                 quitNow = true;
@@ -131,7 +149,7 @@ void SubsetRemover::removeSubsetsPopulateOutputVector(const std::vector<Tracklet
                                                       bool sortBeforeIntersect) {
     /* build a map which maps each detection to each tracklet which uses it. */
     
-    std::map<unsigned int, std::set<unsigned int> > reverseMap;
+    std::map<unsigned int, std::vector<unsigned int> > reverseMap;
     std::set<unsigned int>::iterator indicesIter;
     
     std::cout << "Building detection-to-track map, starting at " << curTime() << std::endl;
@@ -143,8 +161,14 @@ void SubsetRemover::removeSubsetsPopulateOutputVector(const std::vector<Tracklet
              indicesIter != curTrack->indices.end();
              indicesIter++) {
             /* indicesIter now points to an index into the detections file (i.e. detection ID) */
-            reverseMap[*indicesIter].insert(curTrackIndex);
+            reverseMap[*indicesIter].push_back(curTrackIndex);
         }
+    }
+    // now sort the entries in the reverse map.
+    std::map<unsigned int, std::vector<unsigned int> >::iterator rMapIter;
+    for (rMapIter = reverseMap.begin(); rMapIter != reverseMap.end(); rMapIter++) {
+        unsigned int cur=rMapIter->first;
+        sort(reverseMap[cur].begin(), reverseMap[cur].end());
     }
         
     std::cout << "Finished detection-to-track map, filtering tracks starting at " << curTime() << std::endl;
@@ -171,7 +195,7 @@ void SubsetRemover::removeSubsetsPopulateOutputVector(const std::vector<Tracklet
          *it is safe to assume that all tracklets have at least 1
          * detection, of course */
 
-        std::set<unsigned int> indicesIntersect;  
+        std::vector<unsigned int> indicesIntersect;  
         getSupersetOrIdenticalTracks(curTrack, 
                                      reverseMap,
                                      shortCircuit,
@@ -192,7 +216,7 @@ void SubsetRemover::removeSubsetsPopulateOutputVector(const std::vector<Tracklet
             /* we got other tracklet(s) which may be supersets or identical.  Check for supersets.*/
             bool writeThisTracklet = true;
             unsigned int mySize = curTrack->indices.size();
-            std::set<unsigned int>::iterator otherTrackletIter;
+            std::vector<unsigned int>::iterator otherTrackletIter;
 
             for (otherTrackletIter = indicesIntersect.begin(); 
                  otherTrackletIter != indicesIntersect.end();

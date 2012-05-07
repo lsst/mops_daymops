@@ -37,222 +37,15 @@ bool Eq(double a, double b)
 
 
 
-///////////////////////////////////////////////////////////////////////
-//    DETECTION TESTS
-///////////////////////////////////////////////////////////////////////
 
 
 
-BOOST_AUTO_TEST_CASE( MopsDetection_blackbox_1 )
+// helper function for creating sets of detections
+void addDetectionAt(double MJD, double RA, double dec,  std::vector<MopsDetection> &detVec)
 {
-    MopsDetection myDet;
-    long int ID = 10001;
-    double MJD = 1234.5678;
-    double RA = 2.02;
-    double dec = 3.03;
-    double obscode = 1337;
-    std::string objName = "TestingObject1";
-    double mag = 4.04;
-    double len = 5.05;
-    double angle = -6.06;
-    std::stringstream ss("");
-    ss << ID << " " << std::setprecision(12) << MJD << " " << RA << " " << dec << " " <<  mag << " "<< obscode
-       << " " << objName << " " << len << " " << angle;
-
-    std::string MITIString(ss.str());
-    myDet.fromMITIString(MITIString);
-
-    BOOST_CHECK (ID == myDet.getID() );    
-
-    BOOST_CHECK (Eq(MJD, myDet.getEpochMJD())) ;
-    BOOST_CHECK (Eq(RA,myDet.getRA()));
-    BOOST_CHECK (Eq(dec,myDet.getDec())) ; 
+    MopsDetection tmpDet(detVec.size(), MJD, RA, dec);
+    detVec.push_back(tmpDet);
 }
-
-
-BOOST_AUTO_TEST_CASE( MopsDetection_blackbox_2 )
-{
-    //same as above, but with trailing whitespace
-    MopsDetection myDet;
-    long int ID = 10001;
-    double MJD = 1234.5678;
-    double RA = 2.02;
-    double dec = 3.03;
-    double obscode = 1337;
-    std::string objName = "TestingObject1";
-    double mag = 4.04;
-    double len = 5.05;
-    double angle = -6.06;
-    std::stringstream ss("");
-    ss << ID << " "  << std::setprecision(12) << MJD << " " << RA << " " << dec << " " <<  mag << " "<< obscode
-       << " " << objName << " " << len << " " << angle << "  ";
-
-    std::string MITIString(ss.str());
-    myDet.fromMITIString(MITIString);
-    
-
-    BOOST_CHECK (ID == myDet.getID() );
-    BOOST_CHECK (Eq(MJD, myDet.getEpochMJD())) ;
-    BOOST_CHECK (Eq(RA,myDet.getRA()));
-    BOOST_CHECK (Eq(dec,myDet.getDec())) ; 
-}
-
-
-BOOST_AUTO_TEST_CASE( MopsDetection_blackbox_3 )
-{
-    //same as 1, with whitespace in front
-    MopsDetection myDet;
-    long int ID = 10001;
-    double MJD = 1234.5678;
-    double RA = 2.02;
-    double dec = 3.03;
-    double obscode = 1337;
-    std::string objName = "TestingObject1";
-    double mag = 4.04;
-    double len = 5.05;
-    double angle = -6.06;
-    std::stringstream ss("");
-    ss << " " << ID << " " << std::setprecision(12) << MJD << " " << RA << " " << dec << " " <<  mag << " "<< obscode
-       << " " << objName << " " << len << " " << angle;
-
-    std::string MITIString(ss.str());
-    
-    myDet.fromMITIString(MITIString);
-    
-
-    BOOST_CHECK (ID == myDet.getID() );
-    BOOST_CHECK (Eq(MJD, myDet.getEpochMJD())) ;
-    BOOST_CHECK (Eq(RA,myDet.getRA()));
-    BOOST_CHECK (Eq(dec,myDet.getDec())) ; 
-}
-
-BOOST_AUTO_TEST_CASE( MopsDetection_blackbox_4 )
-{
-    //same as 1, with tabs in the whitespace
-    MopsDetection myDet;
-    long int ID = 10001;
-    double MJD = 1234.5678;
-    double RA = 2.02;
-    double dec = 3.03;
-    double obscode = 1337;
-    std::string objName = "TestingObject1";
-    double mag = 4.04;
-    double len = 5.05;
-    double angle = -6.06;
-    std::stringstream ss("");
-    ss << ID << "\t" << std::setprecision(12) << MJD << "\t" << RA << "\t" << dec << "\t" <<  mag << "\t"<< obscode
-       << "\t" << objName << "\t" << len << "\t" << angle;
-    std::string MITIString(ss.str());
-
-    
-    myDet.fromMITIString(MITIString);
-    
-
-    BOOST_CHECK (ID == myDet.getID() );
-    BOOST_CHECK (Eq(MJD, myDet.getEpochMJD())) ;
-    BOOST_CHECK (Eq(RA,myDet.getRA()));
-    BOOST_CHECK (Eq(dec,myDet.getDec())) ; 
-}
-
-
-
-
-BOOST_AUTO_TEST_CASE( MopsDetection_blackbox_5 )
-{
-    //same as above, but with trailing newline
-    MopsDetection myDet;
-    long int ID = 10001;
-    double MJD = 1234.5678;
-    double RA = 2.02;
-    double dec = 3.03;
-    double obscode = 1337;
-    std::string objName = "TestingObject1";
-    double mag = 4.04;
-    double len = 5.05;
-    double angle = -6.06;
-    std::stringstream ss("");
-    ss << ID << " " << std::setprecision(12) << MJD << " " << RA << " " << dec << " " <<  mag << " "<< obscode
-       << " " << objName << " " << len << " " << angle << "\n";
-
-    std::string MITIString(ss.str());
-
-    
-    myDet.fromMITIString(MITIString);
-    
-
-    BOOST_CHECK (ID == myDet.getID() );
-
-    BOOST_CHECK (Eq(MJD, myDet.getEpochMJD())) ;
-    BOOST_CHECK (Eq(RA,myDet.getRA()));
-    BOOST_CHECK (Eq(dec,myDet.getDec())) ; 
-}
-
-
-
-
-
-BOOST_AUTO_TEST_CASE( MopsDetection_blackbox_6 )
-{
-    //straightforward, but with an etime parameter.
-    MopsDetection myDet;
-    long int ID = 10001;
-    double MJD = 1234.5678;
-    double RA = 2.02;
-    double dec = 3.03;
-    double obscode = 1337;
-    std::string objName = "TestingObject1";
-    double mag = 4.04;
-    double len = 5.05;
-    double angle = -6.06;
-    double eTime = 7.07;
-    std::stringstream ss("");
-    ss << ID << " " << std::setprecision(12) << MJD << " " << RA << " " << dec << " " <<  mag << " "<< obscode
-       << " " << objName << " " << len << " " << angle << " " << eTime;
-
-    std::string MITIString(ss.str());
-
-    
-    myDet.fromMITIString(MITIString);
-    
-
-    BOOST_CHECK (ID == myDet.getID() );
-
-    BOOST_CHECK (Eq(MJD, myDet.getEpochMJD())) ;
-    BOOST_CHECK (Eq(RA,myDet.getRA()));
-    BOOST_CHECK (Eq(dec,myDet.getDec())) ; 
-}
-
-
-
-
-/* 
-   MopsDetection whitebox tests: Actually, aside from error cases, we have 100%
-   coverage through blackbox tests.
-
-   TBD: possibly find a good way to test that we handle bad input sanely?
-   for now, I use exit() instead of exceptions, so this isn't really possible.
-
- */
-
-
-
-
-
-
-
-
-
-
-
-///////////////////////////////////////////////////////////////////////
-//    TRACKLET  TESTS
-///////////////////////////////////////////////////////////////////////
-
-
-// Um, we don't really need any...
-
-
-
 
 
 
@@ -264,7 +57,7 @@ BOOST_AUTO_TEST_CASE( MopsDetection_blackbox_6 )
 
 
 
-BOOST_AUTO_TEST_CASE( PAV_blackbox_1 )
+BOOST_AUTO_TEST_CASE( PAV_1 )
 {
     std::vector<double> myPoint;
     myPoint.push_back(1.01);
@@ -286,9 +79,6 @@ BOOST_AUTO_TEST_CASE( PAV_blackbox_1 )
 }
 
 
-/* 
-   No whitebox tests needed - we have 100% coverage from one silly test...
- */
 
 
 
@@ -331,18 +121,8 @@ BOOST_AUTO_TEST_CASE( Common_fastMedian_blackbox_3 )
 }
 
 
-//fastmedian already has 100% coverage, no need for added whitebox tests
-
 // not testing printDoubleVec - it's only there for debugging and should probably be removed.
 
-
-BOOST_AUTO_TEST_CASE( Common_areEqual_blackbox_1 )
-{
-    BOOST_CHECK(areEqual(1.000000000001, 1.0) == true);
-    BOOST_CHECK(areEqual(1.000000001, 1.0) == false);
-}
-
-// areEqual has 100% coverage from blackbox
 
 BOOST_AUTO_TEST_CASE( Common_euclideanDistance_blackbox_1 )
 {
@@ -1267,14 +1047,10 @@ BOOST_AUTO_TEST_CASE( rmsForTracklet_blackbox_1 )
     std::vector<MopsDetection> dets;
 
     MopsDetection tmpDet;
-    tmpDet.fromMITIString("0 5330.0 10.0 10.0 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.1 11.0 11.0 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.2 12.0 12.0 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.3 13.0 13.0 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
+    addDetectionAt(5330.0, 10.0, 10.0, dets);
+    addDetectionAt(5330.1, 11.0, 11.0, dets);
+    addDetectionAt(5330.2, 12.0, 12.0, dets);
+    addDetectionAt(5330.3, 13.0, 13.0, dets);
 
     Tracklet t;
     t.indices.insert(0);
@@ -1296,14 +1072,10 @@ BOOST_AUTO_TEST_CASE( rmsForTracklet_blackbox_2 )
     std::vector<MopsDetection> dets;
 
     MopsDetection tmpDet;
-    tmpDet.fromMITIString("0 5330.0 10.0 9.9 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.1 11.0 11.1 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.2 12.0 11.9 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.3 13.0 13.1 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
+    addDetectionAt(5330.0, 10.0, 9.9, dets);
+    addDetectionAt(5330.1, 11.0, 11.1, dets);
+    addDetectionAt(5330.2, 12.0, 11.9, dets);
+    addDetectionAt(5330.3, 13.0, 13.1, dets);
 
     Tracklet t;
     t.indices.insert(0);
@@ -1314,17 +1086,6 @@ BOOST_AUTO_TEST_CASE( rmsForTracklet_blackbox_2 )
     double mSqDev = rmsForTracklet(t, &dets);
     // each one deviates by .1, so local dist sq is .1*.1.  4 total observations.
     double expected = sqrt((.1*.1)*4) / 4;
-
-    // std::vector<double> RASlopeAndOffset, DecSlopeAndOffset;
-    // collapseTracklets::leastSquaresSolveForRADecLinear(&dets, RASlopeAndOffset, 
-    //                                                    DecSlopeAndOffset, 5330);
-
-    // std::cout << "RA  Slope, offset: " << RASlopeAndOffset[0] << " , " << RASlopeAndOffset[1] << std::endl;
-    // std::cout << "Dec Slope, offset: " << DecSlopeAndOffset[0] << " , " << DecSlopeAndOffset[1] << std::endl;
-    // std::cout <<" mSqDev = " << mSqDev << ", expected = "<< expected << std::endl;
-
-    // this is really pretty miserably inaccurate, but that's due to
-    // visionWorkbench, it appears.  I'm using an even fuzzier definition of == here...
     
     BOOST_CHECK(fabs(mSqDev - expected) < .01);
 }
@@ -1339,14 +1100,10 @@ BOOST_AUTO_TEST_CASE( rmsForTracklet_blackbox_3 )
     std::vector<MopsDetection> dets;
 
     MopsDetection tmpDet;
-    tmpDet.fromMITIString("0 5330.0 358.0 358.0 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.1 359.0 359.0 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.2 0.0 0.0 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.3 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
+    addDetectionAt(5330.0, 358.0, 358.0, dets);
+    addDetectionAt(5330.1, 359.0, 359.0, dets);
+    addDetectionAt(5330.2, 0.0, 0.0, dets);
+    addDetectionAt(5330.3, 1.0, 1.0, dets);
 
     Tracklet t;
     t.indices.insert(0);
@@ -1367,14 +1124,10 @@ BOOST_AUTO_TEST_CASE( rmsForTracklet_blackbox_4 )
     std::vector<MopsDetection> dets;
 
     MopsDetection tmpDet;
-    tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.1 0.0 0.0 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.2 359. 359. 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.3 358. 358. 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
+    addDetectionAt(5330.0, 1.0, 1.0, dets);
+    addDetectionAt(5330.1, 0.0, 0.0, dets);
+    addDetectionAt(5330.2, 359., 359., dets);
+    addDetectionAt(5330.3, 358., 358., dets);
 
     Tracklet t;
     t.indices.insert(0);
@@ -1391,330 +1144,10 @@ BOOST_AUTO_TEST_CASE( rmsForTracklet_blackbox_4 )
 
 
 
-// TBD: uncomment this and use real exceptions. (It's commented out because it causes an exit()
-// BOOST_AUTO_TEST_CASE( getAverageMagnitude_blackbox_3 )
-// {
-//     //try to cause trouble with empty tracklet
-
-//     std::vector<MopsDetection> dets;
-
-//     MopsDetection tmpDet;
-//     tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
-//     dets.push_back(tmpDet);
-//     tmpDet.fromMITIString("0 5330.1 0.0 0.0 20.0 1337 dummy 0.0 0.0"); 
-//     dets.push_back(tmpDet);
-//     tmpDet.fromMITIString("0 5330.2 359. 359. 20.0 1337 dummy 0.0 0.0"); 
-//     dets.push_back(tmpDet);
-//     tmpDet.fromMITIString("0 5330.3 358. 358. 20.0 1337 dummy 0.0 0.0"); 
-//     dets.push_back(tmpDet);
-
-//     Tracklet t;
-    
-//     BOOST_CHECK(Eq(getAverageMagnitude(t, &dets), 20.0));
-// }
 
 
 
 
-BOOST_AUTO_TEST_CASE( filterByLineFitAddToOutputVector_blackbox_1 )
-{
-
-    std::vector<MopsDetection> dets;
-
-    MopsDetection tmpDet;
-    // 4 matching detections
-    tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.1 0.0 0.0 22.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.2 359. 359. 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.3 358. 358. 22.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-
-    // 4 unrelated detections
-    tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.1 10.0 0.0 22.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.2 359. 349. 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.3 18. 358. 22.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-
-    std::vector<Tracklet> allTracklets;
-    Tracklet t1, t2;
-    t1.indices.insert(0);
-    t1.indices.insert(1);
-    t1.indices.insert(2);
-    t1.indices.insert(3);
-
-    t2.indices.insert(4);
-    t2.indices.insert(5);
-    t2.indices.insert(6);
-    t2.indices.insert(7);
-
-    allTracklets.push_back(t1);
-    allTracklets.push_back(t2);
-    
-    std::vector<Tracklet> results;
-
-    filterByLineFitAddToOutputVector(&allTracklets, &dets, .1, results);
-    
-    BOOST_REQUIRE(results.size() == 1);
-    
-    BOOST_CHECK(results[0].indices == t1.indices);
-}
-
-
-
-
-BOOST_AUTO_TEST_CASE( filterByLineFitAddToOutputVector_blackbox_2 )
-{
-    //try to cause an error by sending in no tracklets
-
-    std::vector<MopsDetection> dets;
-
-    MopsDetection tmpDet;
-    // 4 matching detections
-    tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.1 0.0 0.0 22.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.2 359. 359. 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.3 358. 358. 22.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-
-    // 4 unrelated detections
-    tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.1 10.0 0.0 22.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.2 359. 349. 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.3 18. 358. 22.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-
-    Tracklet t1, t2;
-    
-    std::vector<Tracklet> results;
-    std::vector<Tracklet> allTracklets;
-
-    filterByLineFitAddToOutputVector(&allTracklets, &dets, .1, results);
-    
-    BOOST_REQUIRE(results.size() == 0);
-    
-}
-
-
-// TBD: need to uncomment this after all Exceptions are in place.
-// BOOST_AUTO_TEST_CASE( filterByLineFitAddToOutputVector_blackbox_3 )
-// {
-//     //try to cause an error by sending in *empty* tracklets...
-
-//     std::vector<MopsDetection> dets;
-
-//     MopsDetection tmpDet;
-//     // 4 matching detections
-//     tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
-//     dets.push_back(tmpDet);
-//     tmpDet.fromMITIString("0 5330.1 0.0 0.0 22.0 1337 dummy 0.0 0.0"); 
-//     dets.push_back(tmpDet);
-//     tmpDet.fromMITIString("0 5330.2 359. 359. 20.0 1337 dummy 0.0 0.0"); 
-//     dets.push_back(tmpDet);
-//     tmpDet.fromMITIString("0 5330.3 358. 358. 22.0 1337 dummy 0.0 0.0"); 
-//     dets.push_back(tmpDet);
-
-//     // 4 unrelated detections
-//     tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
-//     dets.push_back(tmpDet);
-//     tmpDet.fromMITIString("0 5330.1 10.0 0.0 22.0 1337 dummy 0.0 0.0"); 
-//     dets.push_back(tmpDet);
-//     tmpDet.fromMITIString("0 5330.2 359. 349. 20.0 1337 dummy 0.0 0.0"); 
-//     dets.push_back(tmpDet);
-//     tmpDet.fromMITIString("0 5330.3 18. 358. 22.0 1337 dummy 0.0 0.0"); 
-//     dets.push_back(tmpDet);
-
-//     Tracklet t1, t2;
-    
-//     std::vector<Tracklet> results;
-//     std::vector<Tracklet> allTracklets;
-//     allTracklets.push_back(t1);
-//     allTracklets.push_back(t2);
-
-//     filterByLineFitAddToOutputVector(&allTracklets, &dets, 0., .1, results);
-    
-//     // not even sure what expected behavior is here... BOOST_REQUIRE(results.size() == 2);
-    
-// }
-
-
-
-BOOST_AUTO_TEST_CASE( filterByLineFitAddToOutputVector_blackbox_4 )
-{
-    // test with one 'perfect' tracklet, one with a way-off detection.
-    std::vector<MopsDetection> dets;
-
-    MopsDetection tmpDet;
-    // 4 matching detections
-    tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.1 0.0 0.0 22.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.2 359. 359. 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.3 358. 358. 22.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-
-    // 4 unrelated detections
-    tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy2 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.1 0.0 0.0 22.0 1337 dummy2 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    // this one is way out there
-    tmpDet.fromMITIString("0 5330.2 359. 349. 20.0 1337 dummy2 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.3 358. 358. 22.0 1337 dummy2 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    
-
-    std::vector<Tracklet> allTracklets;
-    Tracklet t1, t2;
-    t1.indices.insert(0);
-    t1.indices.insert(1);
-    t1.indices.insert(2);
-    t1.indices.insert(3);
-
-    t2.indices.insert(4);
-    t2.indices.insert(5);
-    t2.indices.insert(6);
-    t2.indices.insert(7);
-
-    allTracklets.push_back(t1);
-    allTracklets.push_back(t2);
-
-    std::vector<Tracklet> resultTracklets;
-    filterByLineFitAddToOutputVector(&allTracklets, &dets, .1, resultTracklets);
-    
-    BOOST_REQUIRE(resultTracklets.size() == 1);
-    BOOST_CHECK(resultTracklets[0].indices == t1.indices);
-}
-
-
-
-BOOST_AUTO_TEST_CASE( filterByLineFitAddToOutputVector_blackbox_5 )
-{
-    // test with one 'perfect' tracklet, one with all detections all a little off.
-    std::vector<MopsDetection> dets;
-
-    MopsDetection tmpDet;
-    // 4 matching detections
-    tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.1 0.0 0.0 22.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.2 359. 359. 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.3 358. 358. 22.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-
-    // 4 unrelated detections
-    tmpDet.fromMITIString("0 5330.0 1.0 .8 20.0 1337 dummy2 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.1 0.0 .2 22.0 1337 dummy2 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.2 359. 358.8 20.0 1337 dummy2 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.3 358. 358.2 22.0 1337 dummy2 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    
-
-    std::vector<Tracklet> allTracklets;
-    Tracklet t1, t2;
-    t1.indices.insert(0);
-    t1.indices.insert(1);
-    t1.indices.insert(2);
-    t1.indices.insert(3);
-
-    t2.indices.insert(4);
-    t2.indices.insert(5);
-    t2.indices.insert(6);
-    t2.indices.insert(7);
-
-    allTracklets.push_back(t1);
-    allTracklets.push_back(t2);
-
-    std::vector<Tracklet> resultTracklets;
-    filterByLineFitAddToOutputVector(&allTracklets, &dets, .05, resultTracklets);
-    
-    BOOST_REQUIRE(resultTracklets.size() == 1);
-    BOOST_CHECK(resultTracklets[0].indices == t1.indices);
-}
-
-
-
-
-
-BOOST_AUTO_TEST_CASE( purifyTracklet_blackbox_1 )
-{
-    // test with one 'perfect' tracklet, one with a barely-off detection.
-    std::vector<MopsDetection> dets;
-
-    MopsDetection tmpDet;
-    // 4 matching detections
-    tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.1 0.0 0.0 22.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.2 359. 359. 20.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.3 358. 358. 22.0 1337 dummy 0.0 0.0"); 
-    dets.push_back(tmpDet);
-
-    // 4 unrelated detections
-    tmpDet.fromMITIString("0 5330.0 1.0 1.0 20.0 1337 dummy2 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.1 0.0 0.0 22.0 1337 dummy2 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    // this one is a little off
-    tmpDet.fromMITIString("0 5330.2 359. 359.2 20.0 1337 dummy2 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    tmpDet.fromMITIString("0 5330.3 358. 358. 22.0 1337 dummy2 0.0 0.0"); 
-    dets.push_back(tmpDet);
-    
-
-    std::vector<Tracklet> allTracklets;
-    Tracklet t1, t2, t1Pure, t2Pure;
-    
-    t1.indices.insert(0);
-    t1.indices.insert(1);
-    t1.indices.insert(2);
-    t1.indices.insert(3);
-
-    t2.indices.insert(4);
-    t2.indices.insert(5);
-    t2.indices.insert(6);
-    t2.indices.insert(7);
-
-    allTracklets.push_back(t1);
-    allTracklets.push_back(t2);
-
-    std::vector<Tracklet> resultTracklets;
-    TrackletPurifier myPure;
-    t1Pure = myPure.purifyTracklet(&t1, &dets, .1);
-    t2Pure = myPure.purifyTracklet(&t2, &dets, .1);
-    
-    BOOST_CHECK(t1Pure.indices == t1.indices);
-    std::set<unsigned int> t2Expected;
-
-    t2Expected.insert(4);
-    t2Expected.insert(5);
-    t2Expected.insert(7);
-    
-    BOOST_CHECK(t2Pure.indices == t2Expected);
-
-}
 
 
 

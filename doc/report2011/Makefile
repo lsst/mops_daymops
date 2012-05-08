@@ -1,4 +1,4 @@
-ILLUSTRATIONS=illustrations/mopsDiagram.png illustrations/mopsWithinLsst.png
+ILLUSTRATIONS=illustrations/mopsDiagram.png illustrations/mopsWithinLsst.png newIllustrations/*.png
 
 %.png: %.txt
 	ditaa $< $@

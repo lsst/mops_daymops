@@ -44,16 +44,17 @@ by DayMOPS is considered to be \textbf{found} by the DayMOPS pipeline.
 
 Despite the best efforts of the telescope's cadence, not all objects
 are observed in a manner such that they can generate an OD-worthy
-track.  We refer to an object which is observed with a cadence
-sufficient for an OD-worthy track as a \textbf{findable} object.  When
-running simulations, determining whether or not a given object is
-findable is fairly straightforward: by using \textit{a priori}
-knowledge of when its simulated detections occurred, we can simply
-measure the time intervals between these detections and determine
-whether the time interval were sufficient for tracklet generation and
-track generation.  Note that the sky-plane velocities/accelerations of
-the objects are \textit{not} used in deciding whether an object is
-considered findable.
+track.  We refer to an object which \textit{should} generate a track
+as a \textbf{findable} object.  We know an object should generate a
+track if: it is observed with the correct cadence, and it has apparent
+velocity and acceleration below the chosen thresholds.  When running
+simulations, determining whether or not a given object is findable is
+fairly straightforward: by using \textit{a priori} knowledge of when
+its simulated detections occurred, we can simply measure the time
+intervals between these detections, and the sky-plane locations of the
+detections, and determine whether the time intervals and apparent
+velocities and acceleration were sufficient for tracklet generation
+and track generation.  
 
 
 To understand net cost and success of our linking, the number of
@@ -108,10 +109,7 @@ astrometric error were added to the detection locations.
 \end{figure}
 
 A plot of some of the detections used in the simulation is presented
-in figure \ref{diasPlot}.  As is visible in the plot, four of the
-twenty-two fields had missing data due to a software error.  We expect
-that the presence of this flaw in the data should not significantly
-affect the conclusions reached from our experiments.
+in figure \ref{diasPlot}.  
 
 
 
@@ -296,11 +294,11 @@ test scaling of track generation.  For reasons of time, we only
 attempted to search for tracks starting on the first night of
 observation.  Results are presented in
 Figure~\ref{noiseScaling_tracks} and Figure~\ref{noiseScaling_found}.
-The track generation scaled well on the additional tracklets (which
-were primarily due to mislinkage).  We saw only modest increases in
-the number of output tracks and runtime for linkTracklets.  Also note
-that the number of objects found remained nearly constant across the
-various runs.  
+The CPU time cost for track generation scaled worse-than-linearly on
+the number of tracklets.  However, we saw only modest increases in the
+number of output tracks and runtime for linkTracklets.  Also note that
+the number of objects found remained nearly constant across the
+various runs.
 
 
 
@@ -363,7 +361,7 @@ Per-Image Noise Density & Total number of detections & \% noise detections &  \\
   ``noise'' sources, and corresponding compute costs.  Detections
   catalogs with increasing numbers of noise detections
   (Figure~\ref{noiseScaling_detections}) and tracklets generated from
-  these catalogs (~\ref{noiseScaling_tracklets}) were used to generate
+  these catalogs (Figure~\ref{noiseScaling_tracklets}) were used to generate
   linkTracklets input. For reasons of time, each linkTracklets run
   attempted to find only tracks which started on the first night of
   data and ended anywhere within the first 15 days.}
@@ -393,12 +391,54 @@ Noise Density & Number of Tracklets & Found Objects \\
 
 
 
-\subsubsection{LinkTracklets Scaling on Number of Threads}
+\subsection{Conclusions}
 
-\begin{figure}[ht!]
-\centering
-\includegraphics[width=16cm]{newIllustrations/linkTracklets_scaling.png}
-\caption{LinkTracklets runtimes with varying numbers of threads.}
-\label{threadScaling}
-\end{figure}
+For LSST images, we expect that 50-80\% of the DiaSources in our
+catalogs will be attributable to non-asteroid sources.  This
+corresponds to roughly 1250 or 5000 ``noise'' points per image, as we
+simulated.
 
+To meet requirements, we must be capable of running one night's-worth
+of tracklet generation, track generation, and per-track IOD within 24
+hours.  For the 50\% noise case, we saw a maximum tracklet generation
+time of 10 minutes (using 16 CPUs) and for the 80\% noise case we saw
+a maximum tracklet generation time of 21 minutes (again using 16
+CPUs).  In our testing of track generation, we saw 306,866 tracks and
+461,902 tracks generated in the 50\%-noise and 80\%-noise cases
+respectively.  Expecting a trivially parallel IOD and an IOD cost of
+roughly .001 seconds/track, we anticipate that IOD should not be
+problematic: given a few hundred CPUs, we should be able to complete
+the nightly IOD processing in a few wall-clock hours.
+
+The cost of running linkTracklets, however, could be problematic given
+the 24-hour limit.  As seen in Figure~\ref{noiseScaling_tracks},
+linkTracklets can be quite slow, and runtimes can increase
+worse-than-linearly on the number of input tracks, with non-linear
+factors becoming significant somewhere between the 50\%-noise and
+80\%-noise cases.  In the 50\%-noise experiment, runtime for a single
+night was only 1.4 hours, but for the 80\%-noise experiment, runtime
+was 32.5 hours!  Again, both experiments used 16 CPUs.  
+
+In our one-month run of linkTracklets without noise, we found the
+per-night cost of tracklet generation could vary by a factor of two or
+more.  Applying this to the runs performed with noise, this gives us
+an estimated maximum nightly runtime of between 2.8 and 65
+hours (assuming 16 CPUs).
+
+In order to reach the goal of running tracklet generation, track
+generation, and IOD on the tracks, we should aim to reduce the maximum
+runtime of linkTracklets to below 20 hours in the worst case.  This
+requires a speedup of roughly 3-4 over the current performance.  Such
+a speedup may be possible simply by waiting on Moore's law, but to be
+safe it would be preferable to begin aggressively experimenting with
+larger numbers of threads and possible sequential optimizations as
+soon as possible.  
+
+Preliminary scaling experiments showed little additional speedup when
+using more than 16 CPUs, and a possible slowdown as the number of CPUs
+exceeded 20.  However, these tests were conducted using a smallish
+data set, and should be repeated with a larger one.  Initial tests
+were also conducted on Gordon vSMP nodes, which hold only 16 CPUs per
+motherboard; this is another possible cause of the poor scaling beyond
+16 CPUs, and should be compared with scaling tests on conventional
+single-board, large-memory UMA machines.

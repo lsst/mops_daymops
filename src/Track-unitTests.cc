@@ -75,6 +75,13 @@ void debugPrintTrackSet(const TrackSet &tracks, const std::vector<MopsDetection>
 
 }
 
+// helper function for creating sets of detections
+void addDetectionAt(double MJD, double RA, double dec,  std::vector<MopsDetection> &detVec)
+{
+    MopsDetection tmpDet(detVec.size(), MJD, RA, dec);
+    detVec.push_back(tmpDet);
+}
+
 
 
 BOOST_AUTO_TEST_CASE( track_1) {
@@ -82,12 +89,9 @@ BOOST_AUTO_TEST_CASE( track_1) {
     Track t2;
     std::vector<MopsDetection> allDetections;
     MopsDetection tmp;
-    tmp.fromMITIString("130073 49543.427348 350.757850 4.674333 21.576199 566 6206408 0. 0.");
-    allDetections.push_back(tmp);
-    tmp.fromMITIString("130074 49543.440873 350.755445 4.679549 20.568481 566 2079498 0. 0.");
-    allDetections.push_back(tmp);
-    tmp.fromMITIString("130075 49543.440873 350.755445 4.679549 20.568481 566 2079498 0. 0.");
-    allDetections.push_back(tmp);
+    addDetectionAt(5000.01, 350.75, 4.67, allDetections);
+    addDetectionAt(5000.02, 350.8, 4.68, allDetections);
+    addDetectionAt(5000.03, 350.85, 4.69, allDetections);
     t1.addDetection(1, allDetections);
     t2.addDetection(1, allDetections);
     t1.addDetection(2, allDetections);
@@ -103,14 +107,10 @@ BOOST_AUTO_TEST_CASE( track_2) {
     Track t2;
     std::vector<MopsDetection> allDetections;
     MopsDetection tmp;
-    tmp.fromMITIString("130073 49543.427348 350.757850 4.674333 21.576199 566 6206408 0. 0.");
-    allDetections.push_back(tmp);
-    tmp.fromMITIString("130074 49543.440873 350.755445 4.679549 20.568481 566 2079498 0. 0.");
-    allDetections.push_back(tmp);
-    tmp.fromMITIString("130075 49543.450873 350.855445 4.679549 20.568481 566 2079498 0. 0.");
-    allDetections.push_back(tmp);
-    tmp.fromMITIString("130076 49543.450873 350.855445 4.679549 20.568481 566 2079498 0. 0.");
-    allDetections.push_back(tmp);
+    addDetectionAt(5000.01, 350.75, 4.67, allDetections);
+    addDetectionAt(5000.02, 350.8, 4.68, allDetections);
+    addDetectionAt(5000.03, 350.85, 4.69, allDetections);
+    addDetectionAt(5000.04, 350.90, 4.70, allDetections);
 
     t1.addDetection(1, allDetections);
     t2.addDetection(1, allDetections);
@@ -128,12 +128,9 @@ BOOST_AUTO_TEST_CASE( trackSet_1) {
     Track t2;
     std::vector<MopsDetection> allDetections;
     MopsDetection tmp;
-    tmp.fromMITIString("130073 49543.427348 350.757850 4.674333 21.576199 566 6206408 0. 0.");
-    allDetections.push_back(tmp);
-    tmp.fromMITIString("130074 49543.440873 350.755445 4.679549 20.568481 566 2079498 0. 0.");
-    allDetections.push_back(tmp);
-    tmp.fromMITIString("130076 49543.450873 350.855445 4.679549 20.568481 566 2079498 0. 0.");
-    allDetections.push_back(tmp);
+    addDetectionAt(5000.01, 350.75, 4.67, allDetections);
+    addDetectionAt(5000.02, 350.8, 4.68, allDetections);
+    addDetectionAt(5000.03, 350.85, 4.69, allDetections);
     t1.addDetection(1, allDetections);
     t2.addDetection(1, allDetections);
     t1.addDetection(2, allDetections);
@@ -158,14 +155,10 @@ BOOST_AUTO_TEST_CASE( trackSet_2) {
     Track t2;
     std::vector<MopsDetection> allDetections;
     MopsDetection tmp;
-    tmp.fromMITIString("130073 49543.427348 350.757850 4.674333 21.576199 566 6206408 0. 0.");
-    allDetections.push_back(tmp);
-    tmp.fromMITIString("130074 49543.440873 350.755445 4.679549 20.568481 566 2079498 0. 0.");
-    allDetections.push_back(tmp);
-    tmp.fromMITIString("130075 49543.450873 350.855445 4.679549 20.568481 566 2079498 0. 0.");
-    allDetections.push_back(tmp);
-    tmp.fromMITIString("130076 49543.450873 350.855445 4.679549 20.568481 566 2079498 0. 0.");
-    allDetections.push_back(tmp);
+    addDetectionAt(5000.01, 350.75, 4.67, allDetections);
+    addDetectionAt(5000.02, 350.8, 4.68, allDetections);
+    addDetectionAt(5000.03, 350.85, 4.69, allDetections);
+    addDetectionAt(5000.04, 350.90, 4.70, allDetections);
 
     t1.addDetection(1, allDetections);
     t2.addDetection(1, allDetections);
@@ -196,30 +189,20 @@ BOOST_AUTO_TEST_CASE (trackSet_3) {
 
     MopsDetection tmp;
     std::vector<MopsDetection> allDetections;
-    tmp.fromMITIString("130073 49543.427348 350.757850 4.674333 21.576199 566 6206408 0. 0.");
-    allDetections.push_back(tmp);
-    tmp.fromMITIString("130074 49543.440873 350.755445 4.679549 20.568481 566 2079498 0. 0.");
-    allDetections.push_back(tmp);
-    tmp.fromMITIString("130075 49543.450873 350.855445 4.679549 20.568481 566 2079498 0. 0.");
-    allDetections.push_back(tmp);
-    tmp.fromMITIString("130076 49544.440873 351.855445 2.679549 20.568481 566 2079498 0. 0.");
-    allDetections.push_back(tmp);
-    tmp.fromMITIString("130077 49543.427348 350.757850 4.674333 21.576199 566 6206408 0. 0.");
-    allDetections.push_back(tmp);
-    tmp.fromMITIString("130078 49543.440873 350.755445 4.679549 20.568481 566 2079498 0. 0.");
-    allDetections.push_back(tmp);
-    tmp.fromMITIString("130079 49543.450873 350.855445 4.679549 20.568481 566 2079498 0. 0.");
-    allDetections.push_back(tmp);
-    tmp.fromMITIString("130080 49544.440873 351.855445 2.679549 20.568481 566 2079498 0. 0.");
-    allDetections.push_back(tmp);
-    tmp.fromMITIString("130081 49543.450873 350.855445 4.679549 20.568481 566 2079498 0. 0.");
-    allDetections.push_back(tmp);
-    tmp.fromMITIString("130082 49544.440873 351.855445 2.679549 20.568481 566 2079498 0. 0.");
-    allDetections.push_back(tmp);
-    tmp.fromMITIString("130083 49544.440873 351.855445 2.679549 20.568481 566 2079498 0. 0.");
-    allDetections.push_back(tmp);
-    tmp.fromMITIString("130084 49544.440873 351.855445 2.679549 20.568481 566 2079498 0. 0.");
-    allDetections.push_back(tmp);
+    addDetectionAt(5000.01, 350.75, 4.67, allDetections);
+    addDetectionAt(5000.02, 350.8, 4.68, allDetections);
+    addDetectionAt(5000.03, 350.85, 4.69, allDetections);
+    addDetectionAt(5000.04, 350.90, 4.70, allDetections);
+
+    addDetectionAt(5001.01, 350.75, 4.67, allDetections);
+    addDetectionAt(5001.02, 350.8, 4.68, allDetections);
+    addDetectionAt(5001.03, 350.85, 4.69, allDetections);
+    addDetectionAt(5001.04, 350.90, 4.70, allDetections);
+
+    addDetectionAt(5002.01, 350.75, 4.67, allDetections);
+    addDetectionAt(5002.02, 350.8, 4.68, allDetections);
+    addDetectionAt(5002.03, 350.85, 4.69, allDetections);
+    addDetectionAt(5002.04, 350.90, 4.70, allDetections);
 
     t1.addDetection(1, allDetections);
     t1.addDetection(2, allDetections);
@@ -271,13 +254,6 @@ BOOST_AUTO_TEST_CASE (trackSet_3) {
 }
 
 
-
-// helper function for creating sets of detections
-void addDetectionAt(double MJD, double RA, double dec,  std::vector<MopsDetection> &detVec)
-{
-    MopsDetection tmpDet(detVec.size(), MJD, RA, dec);
-    detVec.push_back(tmpDet);
-}
 
 
 

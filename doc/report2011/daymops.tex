@@ -1,3 +1,14 @@
+%% nabbed from http://tex.stackexchange.com/questions/19982/how-do-i-add-parfor-in-algorithmic-environment
+% declaration of the new block
+\algblock{ParFor}{EndParFor}
+% customising the new block
+\algnewcommand\algorithmicparfor{\textbf{parfor}}
+\algnewcommand\algorithmicpardo{\textbf{do}}
+\algnewcommand\algorithmicendparfor{\textbf{end\ parfor}}
+\algrenewtext{ParFor}[1]{\algorithmicparfor\ #1\ \algorithmicpardo}
+\algrenewtext{EndParFor}{\algorithmicendparfor}
+
+
 \section{DayMOPS}
 \label{linking}
 
@@ -35,14 +46,15 @@ which do not follow conventional heliocentric orbits, such as
 loosely-coupled binaries or planetary satellites.
 
 
-\textbf{TBD: Illustration of a Kepler orbit - Wikipedia has a good one.}
+%\textbf{TBD: Illustration of a Kepler orbit - Wikipedia has a good one.}
 
 
 \subsection{Orbit Determination and The Linking Problem}
 Orbit determination refers to the problem of identifying an object's
 orbit given a well-spaced set of detections of that object.  The
-problem of orbit determination has been studied extensively \textbf{
-  CITATIONS HERE }, and several software tools exist which can, given
+problem of orbit determination has been studied extensively 
+%\textbf{CITATIONS HERE }
+, and several software tools exist which can, given
 a set of detections, identify an orbit which could have generated them
 or identify that no such orbit could exist.We entrust that a suitable
 outside tool will be chosen to handle this problem.
@@ -126,7 +138,7 @@ motion, to more quickly reject the (often numerous) mislinked tracks.
 
 \begin{figure}[ht]
   \centering
-    \includegraphics[width=10cm]{illustrations/oneObjectMops.png}
+    \includegraphics[width=16cm]{illustrations/oneObjectMops.png}
     \caption{ An illustration of how DayMOPS linkage might be applied
       to a single object.  In $i$, the object is observed on three
       nights; on the first and last night, it gets two detections per
@@ -240,33 +252,33 @@ quickly find nearby detections in those later images and use them for
 the creation of tracklets.
 
 \begin{figure}[ht]
-\begin{algorithmic}
-\REQUIRE $I$ is a set of images, each of which has an associated exposure time and contains a set of detections
-\STATE \COMMENT{Create a 2D KD-Tree for each image, holding detections from that image.}
-\STATE $T \gets \emptyset$
-\FOR {$i \in I$}
-  \STATE $t \gets$ Make2DTree$(i.detections)$
-  \STATE $t.time \gets i.time$
-  \STATE $T \gets T \cup \{t\}$
-\ENDFOR
-\STATE \COMMENT{Use these trees to discover the actual tracklets.}
-\STATE $tracklets \gets \emptyset$
-\FOR {$t_1 \in T$}
-  \STATE $later \gets \{t_i \in T : 0 < t_i.time - t_1.time < maxDt\}$
-  \FOR{$d \in t_1.detections$}
-     \FOR{$t_q \in later$}
+\begin{algorithmic}[5]
+\Require $I$ is a set of images, each of which has an associated exposure time and contains a set of detections
+\State \Comment{Create a 2D KD-Tree for each image, holding detections from that image.}
+\State $T \gets \emptyset$
+\For {$i \in I$}
+  \State $t \gets$ Make2DTree$(i.detections)$
+  \State $t.time \gets i.time$
+  \State $T \gets T \cup \{t\}$
+\EndFor
+\State \Comment{Use these trees to discover the actual tracklets.}
+\State $tracklets \gets \emptyset$
+\For {$t_1 \in T$}
+  \State $later \gets \{t_i \in T : 0 < t_i.time - t_1.time < maxDt\}$
+  \For{$d \in t_1.detections$}
+     \For{$t_q \in later$}
  
-       \STATE \COMMENT{Use time between images and max velocity to
+       \State \Comment{Use time between images and max velocity to
          calculate the max travel distance}
 
-        \STATE $dt \gets t_q.time - t_1.time$
-        \STATE $dd \gets dt * maxV$
-        \STATE \COMMENT{Use KD-Tree range search to find detections within max travel distance}
-        \STATE $tracklets \gets tracklets \cup t_q.$rangeSearch($d.ra, d.dec, dd$)
-     \ENDFOR
-   \ENDFOR
-\ENDFOR
-\RETURN{$tracklets$}
+        \State $dt \gets t_q.time - t_1.time$
+        \State $dd \gets dt * maxV$
+        \State \Comment{Use KD-Tree range search to find detections within max travel distance}
+        \State $tracklets \gets tracklets \cup t_q.$rangeSearch($d.ra, d.dec, dd$)
+     \EndFor
+   \EndFor
+\EndFor
+\Return{$tracklets$}
 \end{algorithmic}
 
 \caption{Pseudo-code for the findTracklets algorithm.  2D (RA, Dec)
@@ -348,20 +360,28 @@ series of range searches, which of course can be implemented with 4-D
 presented in Figure \ref{collapseTrackletsAlgorithm}.
 
 \begin{figure}[ht]
-\begin{algorithmic}
-  \REQUIRE $T$ is a set of intra-nightly tracklets, $D$ is the set of nightly detections from which $T$ was created, $range$ is a 4-tuple of tolerances for RA, Dec, angle and velocity.
-  \STATE $t_c \gets midpoint(\{ d_{time} : d \in D \})$
-  \FOR {$t \in T$}
-    \STATE Calculate $t$'s predicted location at time $t_c$, its motion angle and velocity
-  \ENDFOR
-  \STATE \COMMENT{Create a 4D KD-Tree of the tracklets on their projected RA, Dec position and motion angle/velocity.}
-  \STATE $tree \gets$ Make4DTree$(T)$
-  \STATE $outTracklets = \emptyset$
-  \FOR {$t \in T,\ t$ has not already merged with another tracklet}
-    \STATE \COMMENT{Find tracklets with projected location, motion similar to that of $t$}
-     \STATE $outTracklets = outTracklets \cup tree.$rangeSearch$(t_{projected\ position}, t_{angle}, t_{velocity}, range)$
-  \ENDFOR
-  \RETURN{$outTracklets$}
+\begin{algorithmic}[5]
+  \Require $T$ is a set of intra-nightly tracklets, $D$ is the set of nightly detections from which $T$ was created, $range$ is a 4-tuple of tolerances for RA, Dec, angle and velocity.
+  \State $t_c \gets midpoint(\{ d_{time} : d \in D \})$
+  \For {$t \in T$}
+    \State Calculate $t$'s predicted location at time $t_c$, its motion angle and velocity
+  \EndFor
+  \State \Comment{Create a 4D KD-Tree of the tracklets on their projected RA, Dec position and motion angle/velocity.}
+  \State $tree \gets$ Make4DTree$(T)$
+  \State $outTracklets = \emptyset$
+  \For {$t \in T,\ t$ has not already merged with another tracklet}
+    \State \Comment{Find tracklets with projected location, motion similar to that of $t$}
+    \State $candidates \gets tree.$rangeSearch$(t_{projected\ position}, t_{angle}, t_{velocity}, range)$
+    \For {$c \in candidates$} 
+      \If{$c$ and $t$ do not contain different detections from the same image}
+        \State $t.detections \gets t.detections \cup c.detections$
+        \State mark $c$ as already merged
+      \EndIf
+    \EndFor
+    \State mark $t$ as already merged
+    \State $outTracklets \gets outTracklets \cup t$
+  \EndFor
+  \Return{$outTracklets$}
 \end{algorithmic}
 
 \caption{Pseudo-code for the collapseTracklets algorithm. A 4-D KD-Tree over RA, Dec, angle, velocity is constructed using the projected locations and motion of the tracklets.  Tracklets which are similar in this 4-D space are roughly colinear, so they are merged and written to output}
@@ -411,19 +431,19 @@ find and remove them from the active set of tracklets.
 
 
 \begin{figure}[ht!]
-\begin{algorithmic}
-  \REQUIRE $T$ is a set of tracklets, $rmsMax$ is a maximum root-mean
+\begin{algorithmic}[5]
+  \Require $T$ is a set of tracklets, $rmsMax$ is a maximum root-mean
   squared residual on the tracklet's best-fit function to its
   detections
 
-  \FOR {$t \in T$}
-    \STATE $rms = RMS(t)$
-    \WHILE {$rms > maxRms, |t| > 2$} 
-      \STATE remove the worst-fitting detection from $t$
-      \STATE $rms = RMS(t)$
-    \ENDWHILE
-  \ENDFOR
-  \RETURN{$outTracklets$}
+  \For {$t \in T$}
+    \State $rms = RMS(t)$
+    \While {$rms > maxRms, |t| > 2$} 
+      \State remove the worst-fitting detection from $t$
+      \State $rms = RMS(t)$
+    \EndWhile
+  \EndFor
+  \Return{$outTracklets$}
 \end{algorithmic}
 
 \caption{In purifyTracklets, poorly-fitted detections are ``pruned''
@@ -556,33 +576,36 @@ two-tracklet-linking, ``endpoint-only'' version of the algorithm which
 finds pairs of compatible tracklets on different nights.
 
 \begin{figure}[ht!]
-\begin{algorithmic}
-  \REQUIRE{$nodeA$ and $nodeB$ are KD-Tree nodes which hold tracklets
+\begin{algorithmic}[5]
+  \Require{$nodeA$ and $nodeB$ are KD-Tree nodes which hold tracklets
     from two different images on different nights, $minAcc$ and $maxAcc$
     specify the limits of accelerations which the user finds
     interesting.}
   
-  \STATE $accRange = $ min/max acceleration to move from $nodeA$ to $nodeB$
-  \IF{$accRange$ does not overlap $(minAcc, maxAcc)$}
-  \RETURN $\emptyset$
-  \ELSE
-  \IF{$nodeA$ and $nodeB$ are leaf nodes}
+  \State $accRange = $ min/max acceleration to move from $nodeA$ to $nodeB$
+  \If{$accRange$ does not overlap $(minAcc, maxAcc)$}
+  \Return $\emptyset$
+  \Else
+  \If{$nodeA$ and $nodeB$ are leaf nodes}
   
-  \STATE \COMMENT{When we hit a pair of terminal nodes, and their
+  \State \Comment{When we hit a pair of terminal nodes, and their
     acceleration bounds are interesting, then we have found a set
       of tracklets which may be sufficient to create a track.}
     
-    \RETURN $\{$tryToBuildATrack($nodeA$.tracklet, $nodeB$.tracklet)$\}$
-    \ELSE
+    \Return $\{$tryToBuildATrack($nodeA$.tracklet, $nodeB$.tracklet)$\}$
+    \Else
     
-    \STATE \COMMENT{In order to ensure that this function sees
+    \State \Comment{In order to ensure that this function sees
       nodes which are roughly the same size, we choose the larger
       node and ``split'' that one, recursing on its children.}
-    
-    \STATE $largerNode, smallerNode \gets $orderBySize$(nodeA, nodeB)$
-    \RETURN $recurse(largerNode.\text{leftChild}, smallerNode) \cup recurse(largerNode.\text{rightChild}, smallerNode)$
-    \ENDIF
-    \ENDIF
+
+
+    \State $largerNode, smallerNode \gets orderBySize(nodeA, nodeB)$
+    \State $leftRes \gets recurse(largerNode.\text{leftChild}, smallerNode, S)$
+    \State $rightRes \gets recurse(largerNode.\text{rightChild}, smallerNode, S)$
+    \Return $ leftRes \cup rightRes $
+    \EndIf
+    \EndIf
     
   \end{algorithmic}
   \caption{An endpoint-matching, two-tracklet version of the
@@ -631,44 +654,46 @@ implemented by the function {\tt doLinkingRecurse} from {\tt linkTracklets.cc}
 
 
 \begin{figure}[ht!]
-\begin{algorithmic}
+\begin{algorithmic}[5]
 
-\REQUIRE{$nodeA$ and $nodeB$ are KD-Tree nodes which hold tracklets
+\Require{$nodeA$ and $nodeB$ are KD-Tree nodes which hold tracklets
   from two different images on different nights, $S$ holds a series of
   nodes from images take on nights in between $nodeA.time$ and
   $nodeB.time$, $minAcc$ and $maxAcc$ specify the limits of
   accelerations which the user finds interesting.}
 
-\STATE $accRange = $ min/max acceleration to move from $nodeA$ to $nodeB$
-\IF{$accRange$ does not overlap $(minAcc, maxAcc)$}
-    \RETURN $\emptyset$
-  \ELSE
+\State $accRange = $ min/max acceleration to move from $nodeA$ to $nodeB$
+\If{$accRange$ does not overlap $(minAcc, maxAcc)$}
+    \Return $\emptyset$
+  \Else
   
-  \FOR{$supportNode \in S$}
-  \IF{$supportNode$ represents an awkwardly large portion of tracklet-space relative to $nodeA$ and $nodeB$}
-    \STATE replace $supportNode$ with $supportNode.rightChild$ and $supportNode.leftChild$, coming back to them later
-    \ELSE
-    \IF{no track with acceleration within $accRange$ could pass from $nodeA$ through $supportNode$ and into $nodeB$}
-      \STATE remove $supportNode$ from $S$
-    \ENDIF
-  \ENDIF
+  \For{$supportNode \in S$}
+  \If{$supportNode$ represents an awkwardly large portion of tracklet-space relative to $nodeA$ and $nodeB$}
+    \State replace $supportNode$ with $supportNode.rightChild$ and $supportNode.leftChild$, coming back to them later
+    \Else
+    \If{no track with acceleration within $accRange$ could pass from $nodeA$ through $supportNode$ and into $nodeB$}
+      \State remove $supportNode$ from $S$
+    \EndIf
+  \EndIf
 
-  \IF{$S$ is empty}
-    \RETURN $\emptyset$ \COMMENT{There is no way to build a three-tracklet track using the contents of these nodes, so abandon searching.}
-  \ENDIF
+  \If{$S$ is empty}
+    \Return $\emptyset$ \Comment{There is no way to build a three-tracklet track using the contents of these nodes, so abandon searching.}
+  \EndIf
 
-  \ENDFOR
-    \IF{$nodeA$ and $nodeB$ are leaf nodes}
+  \EndFor
+    \If{$nodeA$ and $nodeB$ are leaf nodes}
 
-    \STATE \COMMENT{Again, try to build a track, this time using $S$ for intermediate tracklets}
+    \State \Comment{Again, try to build a track, this time using $S$ for intermediate tracklets}
 
-       \RETURN $\{$tryToBuildATrack($nodeA$.tracklet, $nodeB$.tracklet, $S$)$\}$
-    \ELSE
+       \Return $\{$tryToBuildATrack($nodeA$.tracklet, $nodeB$.tracklet, $S$)$\}$
+    \Else
 
-       \STATE $largerNode, smallerNode \gets $orderBySize$(nodeA, nodeB)$
-       \RETURN $recurse(largerNode.\text{leftChild}, smallerNode, S) \cup recurse(largerNode.\text{rightChild}, smallerNode, S)$
-  \ENDIF
-\ENDIF
+       \State $largerNode, smallerNode \gets orderBySize(nodeA, nodeB)$
+       \State $leftRes \gets recurse(largerNode.\text{leftChild}, smallerNode, S)$
+       \State $rightRes \gets recurse(largerNode.\text{rightChild}, smallerNode, S)$
+       \Return $ leftRes \cup rightRes $
+  \EndIf
+\EndIf
 
 \end{algorithmic}
 \caption{The full vtrees algorithm, the actual algorithm implemented
@@ -917,13 +942,13 @@ efficient algorithm uses a detection-to-track ``reverse-map'' $R$,
 which maps from each detection to the set of tracks holding that
 detection.  This is easy to construct for a set of tracks $T$:
 
-\begin{algorithmic}
-  \FOR{$t_i \in T$}
-  \STATE $R[d_j] = \{\}$
-  \ENDFOR
-  \FOR{$d_j \in t_i$}
-  \STATE $R[d_j] = R[d_j] \cup t_i$
-  \ENDFOR
+\begin{algorithmic}[5]
+  \For{$t_i \in T$}
+  \State $R[d_j] = \{\}$
+  \EndFor
+  \For{$d_j \in t_i$}
+  \State $R[d_j] = R[d_j] \cup t_i$
+  \EndFor
 \end{algorithmic}
 
 We may then use the algorithm from
@@ -934,18 +959,18 @@ track containing all these detections must be equal to or a superset
 of $t_i$.
 
 \begin{figure}[h!]
-\begin{algorithmic}
-\FOR{$t_i \in T$}
-  \STATE candidates = $T$
-  \FOR{$d_j \in t_i$}
-    \STATE candidates = candidates $\cap$ $R[d_j]$
-  \ENDFOR
-  \IF{$|$candidates$| >$ 1}
-    \STATE $t_i$ is a subset of some other $t_j \in T$; discard it
-  \ELSE 
-    \STATE keep $t_i$
-  \ENDIF
-\ENDFOR
+\begin{algorithmic}[5]
+\For{$t_i \in T$}
+  \State candidates = $T$
+  \For{$d_j \in t_i$}
+    \State candidates = candidates $\cap$ $R[d_j]$
+  \EndFor
+  \If{$|$candidates$| >$ 1}
+    \State $t_i$ is a subset of some other $t_j \in T$; discard it
+  \Else 
+    \State keep $t_i$
+  \EndIf
+\EndFor
 \end{algorithmic}
 \caption{Psuedocode for the subset removal algorithm}
 
@@ -1005,13 +1030,153 @@ tracklets or tracks may, depending on the data and configuration of
 the software, grow to be quite large, and is not trivially
 predictable.  For software which uses tracklets or tracks as its input
 data and operates on them in bulk (including {\tt collapseTracklets},
-{\tt removeSubsets}, and {\tt linkTracklets}), this may be problematic;
-see section \ref{parallelization} for more information on this
-problem.
+{\tt removeSubsets}, and {\tt linkTracklets}), this may be problematic.
+
+
+
+\subsubsection{Parallelization}
+\label{parallelization}
+
+We have parallelized the various linking stages of DayMOPS using
+multithreading, implemented using OpenMP.  This allows multiple CPU
+cores to work simultaneously on the data set, but does not address the
+problem of partitioning the data sets between machines.  This means
+that multithreading can be effective in large-memory environments, but
+does not attempt to solve the problem of larger-than-memory data sets.
+
+The issue of larger-than-memory data sets could be addressed in
+several ways: through (OS-level or implementation-level) distributed
+shared memory, algorithmic changes, or simply requiring large-memory
+machines.  We have had good luck using kernel-level distributed shared
+memory provided by the vSMP software on the Gordon cluster at San
+Diego Supercomputing Center.  This software runs inside the OS kernels
+of various machines connected via network, and provides the appearance
+that all CPUs and RAM on the various machines are shared on a single
+motherboard.  A similar effect could be achieved through explicit use
+of a user-level distributed shared memory library (such as memcached),
+but would require additional coding.
+
+\subsubsubsection{Parallel FindTracklets} In our current version, we
+parallelize the work being done per-detection.  This is achieved with
+a simple \textbf{parallel for} loop replacing the \textbf{for} loop at
+line 12 in the pseudocode at Figure~\ref{findTrackletsAlgorithm}.  Because the amount of work
+done will vary per-detection, depending on how many possible second
+endpoints are found, we use dynamic thread scheduling as opposed to
+static scheduling.  The only critical section used is the writing of
+results, otherwise there is no need for inter-processor
+synchronization or communication.
+
+The tracklets reported by parallel findTracklets should be identical
+to those reported by serial findTracklets, though the order in which
+they are reported may differ.
+
+
+\subsubsubsection{Parallel CollapseTracklets} The work done is
+parallelized on a per-tracklet basis.  Again, this is achieved with a
+simple \textbf{parallel for} loop replacing the \textbf{for} loop at
+line 8 of Figure~\ref{collapseTrackletsAlgorithm}.  The writing of output is
+inside a critical section, as in parallel findTracklets.
+
+Unlike findTracklets, the work done in the parallel region of
+collapseTracklets is not entirely independent; different threads may
+read and write the ``already merged'' flags on tracklets.  This leads
+to a potential consistency problem, with several possible solutions.
+One approach would be to enforce strict locking on every read/write to
+the ``already merged'' flags.  This has the disadvantage of
+potentially scaling very badly, since the reads/writes are extremely
+frequent and synchronization costs could be quite high.  It is also
+problematic in that it creates potential for deadlocks if not
+implemented very carefully.  A second approach would be to disregard
+the flags entirely, which would be quite simple to implement. However,
+in cases where objects may generate many tracklets (e.g. deep stacks,
+which can see $n^2$ tracklets given $n$ observations) this would
+result in a significant amount of redundant work being performed.  We
+took a third approach, which attempts to compromise these two: we do
+not enforce strict locking on the ``already merged'' flags, and simply
+allow that there may be stale reads occasionally.  These stale reads
+may lead to redundant work, but because we expect that they will be
+uncommon, and hopefully should not have a big impact on performance.
+The redundant work will lead to redundant tracklets in output, but we
+expect them to be removed by the removeSubsets stage.
+
+It is also important to note that because of the ``already merged''
+flags, results from collapseTracklets are nondeterministic in a
+multi-threaded environment.  Consider the unusual case in which
+tracklets $t_a$ and $t_b$ are sufficiently close in the tree, and
+$t_b$ and $t_c$ are sufficiently close in the tree, but $t_a$ and
+$t_c$ are not sufficiently close in the tree, and querying for one
+will not return the other.  Depending on which tracklet is first
+visited and queried for similar tracklets, tracklet $t_b$ may be
+merged with either $t_a$ or $t_c$, at which point it will be flagged
+and never considered again.  As a result, output from parallel
+collapseTracklets runs is expected to vary, and not just with regard
+to ordering, albeit quite slightly.
+
+
+\subsubsubsection{Parallel LinkTracklets} 
+
+LinkTracklets looks for tracks which could start in a given image and
+end in another given image.  Usually, the number of possible
+start/endpoint image pairs is fairly large, so this provides a natural
+axis of paralellism.  The psuedocode for the parallel linkTracklets is presented in Fig. \ref{parallelLinkTracklets}.
+
+
+\begin{figure}[h!]
+
+\begin{algorithmic}[5]
+
+\Require{$T$ is a set of per-image tracklet trees}
+\State $work \gets \emptyset$
+\For{$t_i \in T$}
+  \For{$t_j \in T$ and $t_j$ happens $\ge 2$ nights later than $t_i$}
+    \If{there are sufficient support trees between $t_i$ and $t_j$}
+    \State add $t_i, t_j$ to work
+    \EndIf
+  \EndFor
+\EndFor
+
+\ParFor{$w \in$ work}
+  \State $t_i, t_j \gets w$
+  \State $sup \gets $ trees from images between $t_i$ and $t_j$
+  \State use vtrees algorithm (Fig. \ref{linkTrackletsAlgorithm}) to find tracks starting in $t_i$, ending in $t_j$ and passing through $sup$ 
+\EndParFor
+
+\end{algorithmic}
+\caption{Psuedocode for parallel linkTracklets.  First, usable pairs of images are identified in a single thread, then the searching between these pairs of images is performed in parallel by multiple threads.}
+\label{parallelLinkTracklets}
+\end{figure}
+
+Unlike the other parallel programs, which write their output inside of
+a critical section, parallel linkTracklets maintains separate output
+sets for each thread, so it has no critical sections at all.  This
+allows for slightly better scaling of performance.  The parallel
+linkTracklets should return the same tracks discovered by the
+sequential version, though the order of their discovery may differ.
+
+
+\subsubsubsection{Parallel Subset Removal} 
+
+Again, the subset removal algorithm contains an outer \textbf{for}
+loop which provides an obvious axis of parallelism.  The \textbf{for}
+loop at line 8 of Figure~\ref{subsetRemovalAlgorithm} is simply
+changed to a parallel \textbf{for} loop to achieve multi-threading
+parallelism.  
+
+The work done in the parallel section is natrually independent, so the
+only critical section is the writing of output.  The results of
+parallel subset removal should be identical to that of the sequential
+version, except for the ordering.
 
 
 
 
 
+\subsubsubsection{Orbit Determination} 
 
-
+Orbit Determination is performed per-track; we expect that it will be
+slow only because the number of tracks will be very large.  Thus, we
+expect that Orbit Determination should be trivially parallel; simply
+divide the tracks between various machines or CPU cores.  Note that
+unlike the linking algorithms, which often involve large data
+structures, the orbit determination phase requires little memory
+overhead and thus should be trivial to distribute.

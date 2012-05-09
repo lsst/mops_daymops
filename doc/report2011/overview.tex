@@ -39,11 +39,98 @@ figure \ref{mopsWithinLsst}.
 % sky-plane vs. orbit-space illustration
 
 The DayMOPS is responsible for discovering moving objects in source
-catalogs.  The task of discovering and tracking asteroids has been
-performed by humans since hundreds of years ago, but automated systems
-for asteroid discovery and tracking remain relatively uncommon.  Other
-surveys have often mixed human and computerized approaches -
-\textbf{can we get some more history here?}.
+catalogs.  The task of discovering unknown asteroids has a very
+lengthy history, involving human, electronic, and computerized actors.
+
+From the beginning the primary detectable feature of an asteroid is
+it's motion across the sky as time progresses -- which makes the
+underlying orbital parameters of critical relevance to the continued
+tracking of the object.  The first asteroid, Ceres, was visually
+detected by Piazzi \citep{1802QB378} through its motions
+against the background star as he attempted to verify the position of
+a star in a published catalog.  Without knowing how orbits were
+goverened, Piazzi's initial tracking effort involved constant repeated
+night-to-night observations which he was only able to maintain for a
+limited time due to his health and the motion of the asteroid into the
+daytime sky.  It fell to Carl Friedrich Gauss to develop his method of
+orbit determination before Ceres could be recovered again thus firmly
+establishing the mathematics of orbits as a required prerequisite.
+
+Optical observations had their limitations, however, and the archival
+record created by the application of photography to observations was
+of critical importance to scientific demands of repeatability.  The
+first photographic discovery of an asteroid, (323) Brucia, was by Max
+Wolf in 1891 \citep{1892AN} as he recognized the
+non-sidereal rate trails on his photographs for the asteroids they
+were.  Wolf became a prolific discoverer of asteroids (almost 250
+total) through photography and as such developed the standard
+detection technique used for the next century.
+
+Photographic sensitivity is determined to a large part through
+exposure time and asteroid motion to first order is a function of its
+distance so two main types of photographic survey methodology were
+used.  Surveys looking for closeby and fast near-Earth asteroids (like
+those of \cite{1988NASTM4041...52S}) used non-sidereal trailed motions
+and generally shorter exposure times.  A discovered trail of any
+length in the and image developed in an observatory darkroom would
+lead to additional exposures of the asteroid being quickly acquired
+and the data required to secure the orbit.  The second technique,
+useful for very slow moving asteroids that did not appear as a trailed
+images was to take several exposures and then manually alternate
+between them rapidly, thus depending on the well-developed human
+motion sense to discover the moving asteroids.  Machines were built
+for this purpose, such as the blink comparator.  Besides its use for
+stellar proper motions, this technique's most well known success was
+in the discovery of Pluto by Tombaugh \citep{1960S&T....19..264T}.
+The blink comparator was useful for scientific studies of asteroids in
+the main asteroid belt such as the seminal Palomar-Leiden survey
+\citep{1970A&AS....2..339V}.  Keeping the exposure times short was
+important to keep the asteroid images starlike so their isophotal
+diameter could be used inaccurate brightness calibration.  This
+allowed for the rapid discovery of asteroids for the time: 2400
+discoveries in 11 nights of observation.
+
+The advent of the CCD was applied to asteroids early, with the long
+readout times (and consequential 50\% duty cycle) minimized through
+the process of drift scannings.  Gehrels and the Spacewatch Project
+\citep{1990ASPC....8...51G} pioneered the use of CCD's in the
+detection of asteroids, making the first CCD detection of the
+near-Earth asteroid 1989 UP and the first discovery as well (1990 SS).
+Spacewatch went on to built an advanced real time asteroid motion
+detection program, MODP \citep{1991AJ....101.1518R}.  Drift scanning
+was made unnecessary by the advent of large format cameras used in a
+step-and-stare mode such as that of the NEAT project
+\citep{1999AJ....117.1616P}.  With the introduction of custom
+frame-transfer CCD's and high-capacity computer processing, the LINEAR
+project \citep{2000Icar..148...21S} and the Catalina Sky Survey
+\citep{2007IAUS..236..323L} were able to progress handily towards the
+Spaceguard goal.
+
+As with photography, there are multiple techniques which can be
+applied to CCD images to discover their asteroids.  Most asteroid
+detection software uses a "moving target indicator" approach in that
+CCD images are searched automatically for their objects who are then
+compiled as a detection list.  By filtering out objects which did not
+move and searching for asteroid-like motions in the unmatched lists,
+motion candidates are created.  However, a more exotic approach called
+Matched Filter Processing \citep{2005AJ....130.1951G} can be applied
+that has several advantages.  Images are coadded rapidly along
+hypothesized motion vectors.  If the flux of an object appears to grow
+after coaddition, it becomes a candidate moving object with the motion
+vector already determined.  This approach becomes computationally
+expensive with a large number of possible motion vectors but has the
+advantage of being able to detect fainter objects in the same set of
+images compared to the moving target indicator approach.  It has been
+used successfully in searches for distant objects such as those in the
+Kuiper Belt \citep{BG, MB} and has been used to do NEA searches over
+large portions of the sky where the asteroid is uncertain but has a
+relatively small range of possible velocities
+\citep{2005AJ....130.1951G}.
+
+The advent of large-format all sky surveys have radically changed the
+detection requirements both in terms of techniques for imagery and
+software...  heheheh, all yours Jon.  I could only make mistakes in
+this part of the discussion.
 
 
 The design of the LSST DayMOPS is based on the PanSTARRS Moving Object

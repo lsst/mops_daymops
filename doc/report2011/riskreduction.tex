@@ -55,91 +55,142 @@ asteroid trails and send them to image processing; further refinement
 of image processing algorithms may be neccesary.
 
 
+\subsubsubsection{Distributed LinkTracklets} 
 
-\subsubsection{Distribution/Parallelization of Software}
-\label{parallelization}
+In case the implicit memory sharing is not sufficient (say, because
+distributed shared memory systems do not provide adequate
+performance), it may be necessary to write an explicitly distributed
+linkTracklets.  This was attempted by a CS Master's student, Matt
+Cleveland, working with Prof. Dave Lowenthal.  The design was
+well-thought out but complex, leading to slow implementation.  The
+distributed version was forked off before a variety of changes to the
+serial version were made, and never merged with those changes.
 
-To meet the needs of full operations, DayMOPS will almost certainly
-need to utilize some form of parallelism in order to reduce runtime.
-For some components, such as orbit determination, this should be
-easily achieved; others will require closer attention to detail.  We
-have planned parallel or distributed versions for most components,
-which are described below.  In some cases we have also experimented
-with various initial implementations, which are noted.
-
-%% do we need this?
-%% \subsubsubsection{Tools And Methods}
-%% \paragraph{Multithreading and OpenMP}
-%% \paragraph{Distributed Shared Memory}
-%% \paragraph{Full Distribution and MPI}
-
-
-\subsubsubsection{Orbit Determination} Orbit Determination is
-performed per-track; we expect that it will be slow only because the
-number of tracks will be very large.  Thus, we expect that Orbit
-Determination should be trivially parallel; simply divide the tracks
-between various machines or CPU cores. 
-
-\subsubsubsection{Parallel FindTracklets} The findTracklets section of
-our pipeline tends to run very quickly.  For this reason, we do not
-anticipate that parallelizing findTracklets will be necessary at all.
-However, if we choose to parallelize it, then it should be trivial to
-distribute the workload; one query is performed per input detection,
-and each query is naturally independent, so it should be trivial to
-parallelize the work at this level.  This could be accomplished by
-changing the outer ``for'' loop to a ``parallel for'' loop, e.g. using
-OpenMP.  We anticipate that the detections as well as the trees over
-detections should fit in memory, making explicit distribution
-unnecessary.
-
-\subsubsubsection{Parallel CollapseTracklets} It has been our
-experience that the collapseTracklets phase is generally quite fast,
-and will likely not need parallelization.  One tree query will be
-performed per tracklet, which provides a natural axis of parallelism.
-However, there is potential for some contention between CPUs as we
-normally check whether an input tracklet has been collapsed already by
-a prior query, and if so, do not attempt to work with it.  Dealing
-with this conditional will require synchronization between CPUs, which
-could hamper performance.  It might also be ignored, perhaps allowing
-the redundant work to happen in order to avoid the synchronization
-costs.
-
-\subsubsubsection{Parallel LinkTracklets} We have experimented with a
-parallel, shared-memory linkTracklets implementation based on OpenMP.
-The linkTracklets phase creates a tree of tracklets at each image
-which generated tracklets, and attempts searching using each
-temporally well-separated pair of trees as endpoint trees, with
-intermediate-time trees as sources of possible support.  Each of these
-searches is independent, so this provides a fairly natural axis of
-parallelism.  However, this does not address the potential case where
-the trees become larger than memory, which we have determined to be a
-plausible problem.  To deal with this, we have used the kernel-level
-distributed shared-memory provided by vSMP on the Dash and Gordon
-clusters.  This way, a series of distributed machines provide the
-appearance of a shared-memory system for OpenMP.  It may also be
-possible to accomplish a similar effect by explicitly rewriting
-linkTracklets to use a user-level distributed shared memory library
-and MPI.  
-
-\subsubsubsection{Distributed LinkTracklets} In case the implicit
-memory sharing is not sufficient, it may be necessary to write an
-explicitly distributed linkTracklets.  This was attempted by a CS
-Master's student, Matt Cleveland, working with Prof. Dave Lowenthal.
-The design was well-thought out but complex, leading to slow
-implementation.  The distributed version was forked off before a
-variety of changes to the serial version were made, and never merged
-back.
-
-The distributed linkTracklets held only the higher levels of trees and
-the tracklets of the endpoint trees on the master node.  The master
-node would attempt the linking algorithm on the higher levels of the
-tree until it reached a terminal point; it would then attempt to
-predict the amount of work needed to complete the linking and save the
-state of the searching and estimated cost to a buffer.  Periodically,
-the work items in the buffer are distributed to worker nodes, with
-attention given to load distribution as well as cache issues,
-attempting to minimize the amount of data which must be transferred to
-worker nodes.
+The distributed linkTracklets, the master node held only the tracklets
+of the endpoint trees, and the higher levels of the endpoint and
+support trees.  The master node would attempt the linking algorithm on
+the higher levels of the tree until it reached a terminal point; it
+would then attempt to predict the amount of work needed to complete
+the linking and save the state of the searching and estimated cost to
+a buffer.  Periodically, the work items in the buffer are distributed
+to worker nodes, with attention given to load distribution as well as
+cache issues, attempting to minimize the amount of data which must be
+transferred to worker nodes.
 
 
-\subsubsubsection{Parallel Subset Removal}
+\subsubsection{Trivial Code Changes}
+\paragraph{Reducing Memory Bloat in KD-Tree Libraries}
+
+Because of the size of the data sets in MOPS, memory consumption is a
+frequent problem.  Though this cannot necessarily be addressed
+exclusively through improvements in software implementation alone, the
+overhead could be reduced significantly.
+
+Lack of attention to the memory size in the initial implementation of
+the KD-Tree library have resulted in needless memory bloat of the
+trees.  Each node uses a series of \texttt{std::vector}s which could
+be easily replaced with pointers or C-style arrays.  On a 64-bit
+architecture, \texttt{std::vector} has an overhead of at least 24
+bytes, where pointers and fixed-size arrays have an overhead of just 8
+bytes.  Currently, KD-Trees use four vectors, meaning an overhead of
+96 bytes per node.
+
+Further modification could further reduce the size of KD-Tree nodes;
+for instance, rather than storing $k$ in an integer, it could made a
+template argument so the constant is ``baked in'' at compile time and
+would not need to be stored.  
+
+\paragraph{Removing Critical Sections in Parallel Implementations}
+In all the multithreaded software (except linkTracklets), we maintain
+a single output vector (or set) to which all threads write.  To
+prevent conflicts, these writes must be wrapped in critical sections.
+Critical sections impose synchronization costs, which may become
+significant when threads execute on separate boards and must
+communicate over the network (as in vSMP or other OS-level distributed
+shared memory systems).
+
+To reduce overhead, each thread should really maintain its own output
+vector, which could be used without any critical section and merged
+later, after all worker threads have completed, as is done in linkTracklets.
+
+\subsubsection{Significant Changes in CollapseTracklets}
+\paragraph{Motion Vectors} 
+Currently, collapseTracklets parameterizes motion using location,
+angle, and velocity.  However, for low-speed objects which have
+significant observational error, the angle can be affected by
+significant error.  This means that setting a threshold for angle
+tolerance can be difficult; if set too low, then tracklets from
+slow-moving objects may not be merged, and if set too high, then
+tracklets from fast-moving objects may be mislinked.
+
+This problem would likely be less severe if motion angle and velocity
+were replaced by per-axis velocity in RA and declination.  However,
+after making this change, it will be necessary to develop
+experimentally determine some effective thresholds, which can be a
+time-consuming process.
+
+\paragraph{Polar Distortion}
+When projecting the locations and motion vectors of objects to a
+common time, the current collapseTracklets implementation currently
+treats celestial coordinates as though they were planar.  This is
+fairly effective close to the ecliptic, but near the poles it will be
+problematic.  Fixing this should be relatively trivial, but it has not
+yet been done.
+
+\paragraph{Exploring Parallelism and Caching of Flags}
+As mentioned in \ref{parallelization}, there are several possible
+methods for dealing with the per-tracklet ``already merged'' flags.
+Currently, the implementation does not explicitly address the issue,
+and no attempt has been made to compare various approaches and their
+performance.
+
+Currently, there is no explicit caching of the ``already merged''
+flags, and all threads modify them without regard for locking.  On a
+true large-memory, single-board system, this should be fine:
+integer-sized reads should be atomic, meaning no partially-written
+results could be read, and only in very unusual cases could a stale
+value be read. However, in systems with CC-NUMA systems, likely
+including vSMP systems such as SDSC's Gordon cluster, it is possible
+that stale reads could occur when threads from the same process
+execute on multiple boards.
+
+
+\subsubsection{Dealing with Near-Pole Distortion in LinkTracklets}
+
+The math used in linkTracklets to determine acceleration is almost
+certain to break down on near-pole cases.  Further, the chi-squared
+probability fitting and filtering has not yet been tested heavily off
+the ecliptic, much less in cases of near-pole objects, and will likely
+reject true tracks at an increasing rate as it sees objects further
+from ecliptic.
+
+To deal with the acceleration pruning near poles, it may be wise to
+modify the core piece of code to rotate pairs of nodes to near the
+origin at each pruning check; however, this may be too computationally
+costly to insert into the ``hot spot'' of the program.  Another
+solution would be to abandon celestial coordinates and instead use
+full (x,y,z) Cartesian coordinates on a unit sphere.  This will
+require new math be used for calculating acceleration and pruning, as
+well as for tree construction.  It is unclear how performance will be
+affected by the change.
+
+Additional evaluation will be needed before it becomes clear whether
+the higher-order fitting code and chi squared probability filter will
+be needed whether changes are necessary. 
+
+
+
+\subsubsection{Dense and Clustered Noise}
+
+The rate of false tracklet generation increases worse-than-linearly on
+the density of detections. Issues with image processing can lead to
+dense clusters of false detections packed in a small area.  This could
+lead to spectacularly painful growth in false tracklets.
+
+Additional experimentation will be needed to determine how sever this
+problem could be.  If it becomes an issue, it may be necessary to
+identify regions with unusually high rates of false detections and
+simply remove all detections from this region before the data is fed
+to MOPS.
+
+

@@ -172,7 +172,7 @@ namespace lsst {
 
 
 
-    void TrackletCollapser::collapse(Tracklet &t1, Tracklet& t2) {
+    void collapse(Tracklet &t1, Tracklet& t2) {
         t1.isCollapsed = true;
         t2.isCollapsed = true;
         std::set<unsigned int> uniqueIndices; 
@@ -204,7 +204,7 @@ namespace lsst {
      * element of "pairs" describes a tracklet, a collection of detections)
      * put the resulting tracklets into collapsedPairs.
      */
-    void TrackletCollapser::doCollapsingPopulateOutputVector(
+    void doCollapsingPopulateOutputVector(
         const std::vector<MopsDetection> * detections, 
         std::vector<Tracklet> &pairs,
         std::vector<double> tolerances, 
@@ -458,9 +458,9 @@ namespace lsst {
    * 
    * ASSUME that physicalParams was allocated with 4 slots.
    */
-    void TrackletCollapser::setPhysicalParamsVector(const std::vector<MopsDetection> *trackletDets,
-                                                    std::vector<double> &physicalParams,
-                                                    double normalTime) {
+    void parameterize(const std::vector<MopsDetection> *trackletDets,
+                      std::vector<double> &motionVector,
+                      double normalTime) {
         std::vector<double> RASlopeAndOffset;
         std::vector<double> DecSlopeAndOffset;
         
@@ -468,20 +468,20 @@ namespace lsst {
         // physical params 0, 1 are initial RA, initial Dec at normalTime.
         leastSquaresSolveForRADecLinear(trackletDets, RASlopeAndOffset, DecSlopeAndOffset,
                                                     normalTime);
-        physicalParams[0] = convertToStandardDegrees(RASlopeAndOffset[1]);
-        physicalParams[1] = convertToStandardDegrees(DecSlopeAndOffset[1]);
+        motionVector[0] = convertToStandardDegrees(RASlopeAndOffset[1]);
+        motionVector[1] = convertToStandardDegrees(DecSlopeAndOffset[1]);
         double RAv = RASlopeAndOffset[0];
         double Decv = DecSlopeAndOffset[0];
         double velocity = sqrt(pow(RAv, 2) + pow(Decv, 2));
         if (velocity != 0) {
-            physicalParams[3] = velocity;
+            motionVector[3] = velocity;
             double sineOfTheta = Decv/velocity;
             double theta = asin(sineOfTheta) * (360./(2*M_PI));
-            physicalParams[2] = convertToStandardDegrees(theta);
+            motionVector[2] = convertToStandardDegrees(theta);
         }
         else {
-            physicalParams[3] = 0;
-            physicalParams[2] = 0;
+            motionVector[3] = 0;
+            motionVector[2] = 0;
         }
     }
 
@@ -511,7 +511,7 @@ namespace lsst {
 
 
 
-    void TrackletCollapser::populateTrackletsForTreeVector(const std::vector<MopsDetection> *detections,
+    void populateTrackletsForTreeVector(const std::vector<MopsDetection> *detections,
                                                            const std::vector<Tracklet> * tracklets,
                                                            std::vector<PointAndValue <unsigned int> >
                                                            &trackletsForTree) {
@@ -523,7 +523,7 @@ namespace lsst {
         unsigned int i = 0;
         for (trackletIter = (*tracklets).begin(); trackletIter != (*tracklets).end(); trackletIter++) {
             PointAndValue <unsigned int> curTracklet;
-            std::vector<double> physicalParams(4); /* will hold RA0, Dec0, angle, velocity */
+            std::vector<double> motionVector(4); /* will hold RA0, Dec0, angle, velocity */
             std::vector<MopsDetection> trackletDets;
 
             for (indicesIter = trackletIter->indices.begin(); 
@@ -532,11 +532,11 @@ namespace lsst {
                 trackletDets.push_back((*detections)[*indicesIter]);
             }
 
-            setPhysicalParamsVector(&trackletDets, physicalParams, midPointTime);
-            /* for the KDTree, use physical params as the spatial
-               'point' and make sure we get a reference to the current
-               index into pairs as the associated value */
-            curTracklet.setPoint(physicalParams);
+            parameterize(&trackletDets, motionVector, midPointTime);
+            /* for the KDTree, use parameterized representation as the
+               spatial 'point' and make sure we get a reference to the
+               current index into pairs as the associated value */
+            curTracklet.setPoint(motionVector);
             /*each PointAndValue for the tree has Value which is index into
              * tracklets vector of corresponding tracklet*/
             curTracklet.setValue(i);

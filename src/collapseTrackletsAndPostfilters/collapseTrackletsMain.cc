@@ -218,7 +218,6 @@ Only used if useRMSfilt == true.  Describes the function for RMS filtering.  Tra
         /* read data from files, do collapsing if data supports it, write
          * output */
 
-        TrackletCollapser myTC;
         populateDetVectorFromFile(detsFile, detections);
         populatePairsVectorFromFile(pairsFile, pairs);
         
@@ -238,8 +237,9 @@ Only used if useRMSfilt == true.  Describes the function for RMS filtering.  Tra
 
         if ((detectionsHaveGT2UniqueTimes(&detections)) && (pairs.size() > 1)) {
             std::cout << "Doing the collapsing..." << std::endl;
-            myTC.doCollapsingPopulateOutputVector(&detections, pairs, tolerances, collapsedPairs, 
-                                                  useMinimumRMS, useBestFit, useRMSFilt, maxRMS, beVerbose);
+            doCollapsingPopulateOutputVector(&detections, pairs, tolerances, collapsedPairs, 
+                                             useMinimumRMS, useBestFit, useRMSFilt, maxRMS, 
+                                             beVerbose);
             std::cout << std::endl << "Done!" << std::endl;
 
         }

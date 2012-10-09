@@ -3,10 +3,10 @@
 \usepackage{natbib}
 \usepackage{graphicx}
 \usepackage{subfig}
-%\usepackage{algorithmic}
 \usepackage{appendix}
 \usepackage{gensymb}
 \usepackage{amsmath}
+%\usepackage{algorithmic}
 \usepackage{algpseudocode}
 
 %\usepackage{fixltx2e}
@@ -51,16 +51,19 @@ detections of known Solar System objects.
 \end{abstract}
 
 \tableofcontents
-
+\listoffigures
 
 \include{overview}
 
-\include {daymops}
+\include{daymops_linking}
+\include{metrics_linking}
 
-\include{metrics}
+\include{daymops_orbits}
+\include{precovery_attribution}
 
 
-\include{riskreduction}
+
+\include{furtherdev}
 
 \include{appendices}
 
@@ -68,11 +71,9 @@ detections of known Solar System objects.
 % so jeff larsen gave me a list of references as \bibitems.  our other
 % references are bibtex format.  So we now have two bibliographies!
 % ugly! hopefully no one will particularly care.
-\include{larsenbib}
 \bibliographystyle{apj}
 \bibliography{baseline}
 
-
-
+\include{larsenbib}
 
 \end{document}

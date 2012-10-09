@@ -1,0 +1,40 @@
+\section{Precovery and Attribution}
+\label{precoveryattribution}
+
+This section is intended to provide a brief overview of the requirements for precovery and attribution, along with some speculation on how these tasks may be implemented. 
+
+\subsection{Attribution}
+
+Attribution is the process of adding new observations to an existing movingObject, thus increasing its observed orbital arc. This decreases the errors in the orbital parameters, generally making the object more useful for dynamical modeling or studying orbital distributions of populations and making future ephemeris predictions for the object more accurate. These additional observations are particularly useful when the orbital arc is short. 
+
+Attribution could take place by adding single detections within a night, if the ephemeris prediction is suitably low in error and a comparison image or template shows that no other star, galaxy or transient object is present at the predicted location. This process should be considered if the LSST cadence results in many single visits per night, or perhaps as an additional goal to fill in as many observations as possible. However, in general, it will be more reliable to extend the arc by looking for multiple observations of the same moving object within a night, so as to use not only the position but also the velocity as match criteria. This allows larger ephemeris errors to still result in a reliable identification and means that tracklets should be the basis for attribution. 
+
+The process of attribution would then go as follows: 
+\begin{itemize}
+\item{After the night's worth of observations, dayMOPS findTracklets phase produces tracklets.}
+\item{Ephemerides for all the currently known movingObjects are produced, at some intervals over the time span of observing.}
+\item{These ephemerides (presumably placed into some form of KD-Tree holding position and velocity information) are compared to the night's tracklets (also placed in a similar KD-Tree), and the intersecting matches are inspected further.}
+\item{For each movingObject and tracklet match, take all the detections which make up the movingObject and the tracklet and use these to attempt to fit an updated orbit; if the residuals are appropriate, then the match is considered correct.}
+\item{For correct matches, the movingObject orbit is updated, the detections are flagged as belonging to this movingObject, and the detections (and any tracklets involving those detections) are removed from the set of tracklets.}
+\item{The remaining set of tracklets are then sent onwards to linkTracklets.}
+\end{itemize}
+
+The details of matching the ephemerides and the tracklets have not been worked out. The LSST case is demanding because we expect about 800 observations per night and (towards the end of the survey) 11M known movingObjects; this means it will likely be impractical to brute force things by just predicting the positions of all known movingObjects at all observational times. However, work done in nightMOPS is applicable here as well if the velocities are ignored in the first stages, and only considered when examining potential matches; if the requirement is that potential matches are close to the predicted positions in more than one visit, this essentially includes the velocity condition implicitly. 
+
+\subsection{Precovery}
+
+Precovery is the process of adding old observations (that could not be identified at the time) to an existing movingObject, again increasing its observed orbital arc, although here it is `backward' in time. An additional advantage of precovery is that it reduces the uncertainty in ephemeris predictions without waiting for additional observations, thus presumably making further attribution less time consuming as the ephemeris errors become smaller. Again, the most useful method of precovery will include multiple observations within a night.  
+
+There are many possible approaches to precovery. While attribution should be attempted for all known movingObjects as soon as tracklets are formed, precovery should only be done if a movingObject's orbit is significantly changed by adding new observations (`significantly' meaning that the ephemeris predictions move beyond the region which would have been included in any previous attempts at precovery). Precovery efforts should also be limited to a timespan where the uncertainty in ephemeris predictions permit reliable matches. These two factors suggest that precovery may be best handled on an object-by-object basis, perhaps as follows: 
+\begin{itemize}
+\item{Using the orbit of the movingObject, generate coarse ephemerides backward in time to the point that the uncertainty in the ephemeride predictions reaches a predetermined threshhold.}
+\item{Compare these coarse ephemerides (including the predicted magnitudes) to the location of LSST pointings (and their measured $5\sigma$ limiting magnitudes) to determine visits where the movingObject may be visible.}
+\item{For the visits where the movingObject may be visible, retrieve diaSources which do not match other known movingObjects or Objects.}
+\item{Compare the diaSources to the ephemeris predictions for each time, looking for multiple potential matches within a night.}
+\item{Combine the potential matches and the detections which make up the movingObject, and use these to attempt to fit an updated orbit; if the residuals are appropriate the match is considered correct.}
+\item{Update the diaSource table to reflect the new movingObject associations, and update the movingObject orbit with the new parameters.}
+\end{itemize}
+
+This is likely to become an iterative process; precovery is performed, additional observations are identified and orbit is updated, making further precovery possible. 
+
+A complication with both precovery and attribution is that with the additional observations, it may become clear that diaSources which were previously associated with the movingObject no longer belong ({\it i.e.} the residuals between the orbit predictions and the location of these diaSources becomes larger than the overall RMS). This will mean that further changes in the association of diaSources will occur, and further evaluation of the orbit may be necessary (which observations should be kept, which should be discarded?).  

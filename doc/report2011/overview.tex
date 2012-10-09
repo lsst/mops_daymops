@@ -1,193 +1,231 @@
-\section{System Design and Responsibilities}
+\section{Overview}
 
 The Moving Object Pipeline System has two main responsibilities: the
-generation and maintenance of the Moving Object database, and the
-prediction of known object locations which are sent to the Association
-Pipeline to prevent unneccessary alerts.  The MOPS has been broken
-into two components, colloquially known as ``DayMOPS'' and ``NightMOPS.''
- 
+generation and maintenance of the Moving Object database ({\it i.e..}
+the discovery and linking of all observations of each moving object),
+and the prediction of known object locations which are sent to the
+Alert Pipeline to prevent unneccessary alerts.  To serve these
+two functions, MOPS operates in two components, known as ``DayMOPS''
+and ``NightMOPS.''
+
+``NightMOPS'' (operating throughout each night) is responsible for
+predicting the locations of known Moving Objects in upcoming
+images. This is intended solely to help flag known moving objects in
+the LSST alert stream.  ``DayMOPS'' (operating after each night's data
+is complete, typically in the day) is responsible for discovering new
+Moving Objects in newly-acquired data, searching old data for
+detections of new objects (`precovery), identifying known moving
+objects in newly-acquired data (`attribution') and updating the Moving
+Objects database. Note that `attribution' is distinct from
+NightMOPS, as attribution can take advantage of additional information
+coming from observations throughout the entire night, allowing matches
+between new detections and moving objects under larger positional
+uncertainties, and also folds this information back into the Moving
+Object database. DayMOPS is also responsible for periodically refining
+the contents of the Moving Objects database based on the orbits of the
+known objects.
+
+The relationship between NightMOPS, DayMOPS, and the neighboring
+components of the LSST Data Management system is illustrated in
+figure \ref{mopsWithinLsst}.
 
 \begin{figure}[!ht]
 \centering
-  \includegraphics[width=13cm]{illustrations/mopsWithinLsst.png}
-\caption{ Data flow from the camera through DayMOPS to the Science
-  Users and Alert Generation.  DayMOPS will build and maintain the
+  \includegraphics[width=12cm]{illustrations/MOPSinLSST.png}
+\caption[Data flow between MOPS and LSST.]{Data flow within LSST, from image acquisition to the Moving
+  Object database and Alert generation.  DayMOPS will build and maintain the
   Moving Objects table, NightMOPS will use the Moving Objects table to
+  predict positions of known moving objects and
   communicate with the Assocation Pipeline.  }
 \label{mopsWithinLsst}
 \end{figure}
 
+\subsection{NightMOPS: Serving the Alert stream}
 
-``DayMOPS,'' so called because it processes data acquired from the
-previous night in a large batch operation, is responsible for
-discovering new Moving Objects in newly-acquired data, searching old
-data for detections of new objects, and updating the Moving Objects
-table to reflect newly-acquired data. It is also responsible for
-periodically cleaning and refining the contents of the Moving Objects
-table.  ``NightMOPS'' is responsible for projecting the locations of known
-Moving Objects in upcoming images as they are announced during
-night-time operations.  
+\subsubsection{Overview}
 
-The relationship between DayMOPS, NightMOPS and the neighboring
-components of the LSST Data Management system is illustrated in
-figure \ref{mopsWithinLsst}.
+NightMOPS is a much simpler system than DayMOPS, so will be described
+briefly and then not discussed further in this document. The goal of
+NightMOPS is simply to hand the alert pipeline the information needed
+to flag diaSource detections (detections from each individual image,
+differenced against a template image) with their probability of
+corresponding to a known moving object. The relevant pieces of
+information are the names (or ID numbers) of each of the known objects
+in the field, their locations and expected magnitudes along with the
+uncertainties in these parameters, and potentially velocity vectors if
+visible trailing could be expected over a 30~s exposure.  Joining
+these pieces of information to the diaSources reported in each visit
+is the job of the alert pipeline, and in particular, the association
+pipeline. 
+
+As the alert pipeline must issue alerts within 60~s of the shutter
+closing on each image, speed in generating the ephemerides of the
+objects visible in each field as it is observed is
+paramount. Later during the LSST survey, we expect to have on the
+order of 11 million known moving objects, mostly Main Belt
+asteroids. The orbits of these known objects can potentially 
+change during the day if DayMOPS discovers new objects or links more
+detections into previously known orbits. 
+
+The general idea here is to propagate all of the known orbits to the
+start (or middle) of the night and generate `coarse ephemerides' on a
+time grid that covers most of the night at fairly large intervals,
+before the night's observing begins. As
+individual visits are acquired during the night, these coarse
+ephemerides are used to generate a list of moving objects which could
+potentially be visible in the visit. A `precise' ephemeris (the
+location, magnitude, velocity vector and uncertainties) is then
+generated for the exact time of the visit, for each of the moving objects
+which could be visible. The subject of ephemeris generation is
+discussed in Chapter~\ref{orbits}, in connection with orbit
+determination software.
+
+\subsubsection{Status Summary}
+
+There is currently an implementation of NightMOPS in the LSST
+codebase which was exercised in DC2, but we expect this code to be overhauled and updated before
+first light, for several reasons: 
+\begin{itemize}
+{\item the current version of NightMOPS was written before significant
+upgrades to the python interface to OpenOrb (the software used to
+generate ephemerides),}
+{\item there has been ongoing work at UW on methods to generate
+  ephemerides for our catalog simulations, some of which might be
+  taken advantage of to speed up this ephemeride generation,
+  (particularly relating to translating from coarse ephemerides to the
+  precise ephemerides), }
+{\item it seems entirely likely that our ephemeris generation software
+  will change before first light, given that OpenOrb is a Fortran
+  program,}
+{\item changes in the LSST middleware will require updates to the
+  current implementation of NightMOPS, which was developed under an
+  older API.}
+\end{itemize}
+
 
 \subsection{DayMOPS: Discovering and Managing Moving Objects}
 
-% Illustration of DayMOPS
+\subsubsection{Overview} 
+\label{daymopsOverview}
 
-% sky-plane vs. orbit-space illustration
+DayMOPS makes up the bulk of the moving object software. It is
+responsible for discovering new moving objects in our data, extending
+the orbital arc of our known and newly discovered moving objects both
+backward and forward in time (`precovery' and `attribution'), and
+updating the Moving Object Database with this information. 
 
-The DayMOPS is responsible for discovering moving objects in source
-catalogs.  The task of discovering unknown asteroids has a very
-lengthy history, involving human, electronic, and computerized actors.
-
-From the beginning the primary detectable feature of an asteroid is
-it's motion across the sky as time progresses -- which makes the
-underlying orbital parameters of critical relevance to the continued
-tracking of the object.  The first asteroid, Ceres, was visually
-detected by Piazzi \citep{1802QB378} through its motions
-against the background star as he attempted to verify the position of
-a star in a published catalog.  Without knowing how orbits were
-goverened, Piazzi's initial tracking effort involved constant repeated
-night-to-night observations which he was only able to maintain for a
-limited time due to his health and the motion of the asteroid into the
-daytime sky.  It fell to Carl Friedrich Gauss to develop his method of
-orbit determination before Ceres could be recovered again thus firmly
-establishing the mathematics of orbits as a required prerequisite.
-
-Optical observations had their limitations, however, and the archival
-record created by the application of photography to observations was
-of critical importance to scientific demands of repeatability.  The
-first photographic discovery of an asteroid, (323) Brucia, was by Max
-Wolf in 1891 \citep{1892AN} as he recognized the
-non-sidereal rate trails on his photographs for the asteroids they
-were.  Wolf became a prolific discoverer of asteroids (almost 250
-total) through photography and as such developed the standard
-detection technique used for the next century.
-
-Photographic sensitivity is determined to a large part through
-exposure time and asteroid motion to first order is a function of its
-distance so two main types of photographic survey methodology were
-used.  Surveys looking for closeby and fast near-Earth asteroids (like
-those of \cite{1988NASTM4041...52S}) used non-sidereal trailed motions
-and generally shorter exposure times.  A discovered trail of any
-length in the and image developed in an observatory darkroom would
-lead to additional exposures of the asteroid being quickly acquired
-and the data required to secure the orbit.  The second technique,
-useful for very slow moving asteroids that did not appear as a trailed
-images was to take several exposures and then manually alternate
-between them rapidly, thus depending on the well-developed human
-motion sense to discover the moving asteroids.  Machines were built
-for this purpose, such as the blink comparator.  Besides its use for
-stellar proper motions, this technique's most well known success was
-in the discovery of Pluto by Tombaugh \citep{1960S&T....19..264T}.
-The blink comparator was useful for scientific studies of asteroids in
-the main asteroid belt such as the seminal Palomar-Leiden survey
-\citep{1970A&AS....2..339V}.  Keeping the exposure times short was
-important to keep the asteroid images starlike so their isophotal
-diameter could be used inaccurate brightness calibration.  This
-allowed for the rapid discovery of asteroids for the time: 2400
-discoveries in 11 nights of observation.
-
-The advent of the CCD was applied to asteroids early, with the long
-readout times (and consequential 50\% duty cycle) minimized through
-the process of drift scannings.  Gehrels and the Spacewatch Project
-\citep{1990ASPC....8...51G} pioneered the use of CCD's in the
-detection of asteroids, making the first CCD detection of the
-near-Earth asteroid 1989 UP and the first discovery as well (1990 SS).
-Spacewatch went on to built an advanced real time asteroid motion
-detection program, MODP \citep{1991AJ....101.1518R}.  Drift scanning
-was made unnecessary by the advent of large format cameras used in a
-step-and-stare mode such as that of the NEAT project
-\citep{1999AJ....117.1616P}.  With the introduction of custom
-frame-transfer CCD's and high-capacity computer processing, the LINEAR
-project \citep{2000Icar..148...21S} and the Catalina Sky Survey
-\citep{2007IAUS..236..323L} were able to progress handily towards the
-Spaceguard goal.
-
-As with photography, there are multiple techniques which can be
-applied to CCD images to discover their asteroids.  Most asteroid
-detection software uses a "moving target indicator" approach in that
-CCD images are searched automatically for their objects who are then
-compiled as a detection list.  By filtering out objects which did not
-move and searching for asteroid-like motions in the unmatched lists,
-motion candidates are created.  However, a more exotic approach called
-Matched Filter Processing \citep{2005AJ....130.1951G} can be applied
-that has several advantages.  Images are coadded rapidly along
-hypothesized motion vectors.  If the flux of an object appears to grow
-after coaddition, it becomes a candidate moving object with the motion
-vector already determined.  This approach becomes computationally
-expensive with a large number of possible motion vectors but has the
-advantage of being able to detect fainter objects in the same set of
-images compared to the moving target indicator approach.  It has been
-used successfully in searches for distant objects such as those in the
-Kuiper Belt \citep{BG, MB} and has been used to do NEA searches over
-large portions of the sky where the asteroid is uncertain but has a
-relatively small range of possible velocities
-\citep{2005AJ....130.1951G}.
-
-The advent of large-format all sky surveys have radically changed the
-detection requirements both in terms of techniques for imagery and
-software...  heheheh, all yours Jon.  I could only make mistakes in
-this part of the discussion.
-
-
-The design of the LSST DayMOPS is based on the PanSTARRS Moving Object
+The design of LSST DayMOPS is based on (although only roughly similar
+to the current implementation of) the PanSTARRS Moving Object
 Pipeline System \citep{psMOPSDesign}.  The approach used here is to
-first find sets of detections with sky-plane paths consistent with
-asteroid behaviour; these sets of detections and their fitted paths
-are called \textbf{tracks}.  A set of algorithms for the discovery of
+link detections (RA/Dec measurements of non-stationary objects - in
+LSST these are called `diaSources') with sky-plane paths generally consistent with
+asteroid behaviour. After linkage, orbit determination is used to
+separate true moving objects from random, roughly-but-not-quite-correct alignments. 
+
+The linking methods used are based on a tiered approach. First, two or
+more detections from a single night are linked into
+\textbf{tracklets}, under the assumption that within a short time
+period (we use 90 minutes as an upper limit based primarily
+on computational resources) all solar system objects'
+motions will appear linear. Thus tracklets have position and velocity,
+but no acceleration. Once tracklets are generated for a series of
+nights, they are then linked in a second stage into
+\textbf{tracks}. Tracks consist of detections from multiple nights,
+which to first order display quadratic motion across the sky, thus tracks have a position,
+velocity, and acceleration. The approximation that moving objects
+follow quadratic motion starts to break down over longer time periods,
+thus we limit our tracks to a time span of between 15--30 days.  A set
+of algorithms to implement this tiered approach for the discovery of
 sky-plane tracks in dense data are presented in
 \citet{Kubica:2005:MTA:1081870.1081889}; these algorithms are the
 basis of the linking methods for the current LSST DayMOPS.
 
-
-%% TBD: it would be really nice to have some illustrations here
-%% showing detections of an object, and possibly tracklets and tracks
-%% as well
-
-The tracking methods used are based on a tiered approach; first two or
-more detections from a single night are linked into
-\textbf{tracklets}, which represent a hypothetical object and a linear
-approximation of its sky-plane motion.  These tracklets are later
-joined into larger tracks. Because of the increasing complexity of
-sky-plane motion over time, we are generally interested in tracks
-which span no more than 15-30 days of observation time.
-
-The PanSTARRS MOPS uses a fairly loose and generous approximation of
-asteroid motion.  This allows for many mislinkages or \textbf{false
-  tracks}, combining detections which are not attributable to the same
-source, but virtually all objects for which a true (correctly-linked)
-track could be generated will get some correct track.  With LSST's
-expected density of detections, we found that this glut of false
-tracks was generally too painful.  As a result, our methods diverge
-from those of PanSTARRS as we introduce some more strict filters on
-tracks, reducing the number of mislinkages at the expense of
+This quadratic motion assumption is used in PanSTARRS MOPS, and is a
+good first approximation, as virtually all objects for which a true
+(correctly-linked) track could be generated will actually generate a
+track. However, we have found that at the deeper magnitude limits of
+LSST, the density of moving objects is high enough that this
+assumption permits too many mislinkages or `false tracks' where
+detections from one moving object are joined with detections from a
+different moving object (or other random diaSource), driving the
+compute costs too high. As a result, our methods diverge from those of
+PanSTARRS as we introduce some more strict filters (based on the
+chi-squared probability) and a higher-order
+fit on tracks, reducing the number of mislinkages at the expense of
 potentially missing some true tracks.  The algorithms, their
 implementations, the additional filters, and their behaviors are
 presented thoroughly in Chapter \ref{linking}.
 
-Once tracks are discovered, they are sent to the Orbit Determination
-phase. The Orbit Determination phase takes these sets of sky-plane
-detections and attempts to find a Keplerian orbit which could generate
-the detections.  This orbit is further refined, and error bounds are
-established, using differential correction.  Orbit Determination will
-reject many tracks as false, but should successfully find precise
-orbits for virtually all correctly linked tracks.  Several methods for
-performing this task are known, and several have open-source implementations
-available to LSST \citep{Milani04orbitdetermination},
-\citep{Milani2006}, \citep{OpenOrb2009}, \citep{granvik_thesis}.  The
-orbits discovered by Orbit Determination, and the detections present
-in the track associated with each orbit, are used to generate new
-Moving Objects.
+Once tracks are discovered, the orbit determination phase is used to
+separate true linkages from mislinkages of moving objects and/or
+noise. The orbit determination phase takes tracks (which are just sets
+of diaSources which follow a roughly appropriate sky-plane path) and
+attempts to find a Keplerian orbit which could generate the
+detections. In general terms, six detections spread over three nights
+are sufficient to determine a preliminary (and, depending on the type
+of object, perhaps having rather large uncertainties) orbit -- at
+least two detections on each night are preferred to unmistakably
+identify a moving object, and three night's worth of detections are
+needed to determine the six parameters which make up an orbit. 
+
+Initial orbit determination is the first step in orbital determination, and is
+where the mislinkages will fail. During differential correction, the
+initial orbit is further refined and error bounds are established. The
+process of orbit determination will reject many tracks as false, but
+should successfully find precise orbits for virtually all correctly
+linked tracks.  Several methods for performing this task are known,
+and several have open-source implementations available to LSST
+\citep{Milani04orbitdetermination}, \citep{Milani2006},
+\citep{OpenOrb2009}, \citep{granvik_thesis}.  The orbits discovered by
+orbit determination and the diaSources present in the track
+associated with each orbit are used to generate new Moving
+Objects. More information on orbit fitting is presented in Chapter~\ref{orbits}.
+
+It is worth noting that we have chosen to follow PanSTARRS and store
+moving object orbital elements in cometary format; that is, perihelion
+distance ($q$), eccentricity ($e$), inclination ($i$), longitude of
+ascending node (node or $\Omega$), argument of perihelion ($\omega$)
+and time of perihelion ($T_{peri}$). For bound orbits these can be
+easily transformed from $q$ and $e$ to semi-major axis ($a$) while 
+$T_{peri}$ can be translated to mean anomaly (M), but this
+representation also allows expression of orbital elements for objects
+which appear on hyperbolic orbits such as comets. 
+
+After an orbit has been established for an object ({\it i.e.} a new
+Moving Object has been created), the observational arc of the orbit
+should be extended by adding earlier observations (if the object was
+observed earlier, but not frequently enough to generate an orbit, for
+example) and adding later observations as they are acquired. For MOPS,
+these extensions are best handled by searching for potential matching
+tracklets (tracklets providing a stronger constraint than single
+images, thus enabling cleaner matches where positional uncertainties
+are high or SNR may be low). The process of searching through old data
+is called `Precovery'; checking incoming new data is `Attribution'. In
+both cases, the new diaSources must be combined with the previously
+linked diaSources and a new orbit produced. Residuals in the orbit can
+be used to reject outliers and refine the orbit. 
+
+If there are no recoveries of a particular moving object for a period
+of time, ephemeris uncertainties may grow large enough to prevent
+further attribution. At this point, the same moving object could
+actually be rediscovered if it is observed with the right cadence,
+resulting in new moving object that would be similar (but likely
+not quite the same due to orbital uncertainties) to the first moving
+object. To account for this, DayMOPS will also periodically have to
+update all orbits, attempting to fit joined orbits to similar moving
+objects and merging these objects where the residuals in these joined
+fits are appropriate. 
+
+The complete set of DayMOPS tasks and their data
+flows are illustrated in figure \ref{mopsDiagram}.
+
 
 \begin{figure}[h]
 \begin{center}
-  \includegraphics[width=11cm]{illustrations/mopsDiagram.png}
+  \includegraphics[width=11cm]{illustrations/MOPSDiagram.png}
 \end{center}
-\caption{ Data flows into the DayMOPS pipeline and results in
-  modifications of the Moving Objects table in a variety of ways,
+\caption[Data flow within MOPS.]{Data flows into the DayMOPS pipeline and results in
+  modifications of the Moving Objects database in a variety of ways,
   including attribution to known objects, a multi-stage pipeline for
   the discovery of new objects, and periodic refinements of the Moving
   Object table, such as possible merges of redundant objects or
@@ -196,17 +234,82 @@ Moving Objects.
 \end{figure}
 
 
+\subsubsection{Status Summary}
 
-The DayMOPS is expected to perform several additional tasks to manage
-and improve the Moving Objects table over time.  Attribution is the
-process of identifying known objects in incoming data and adding those
-detections to the correct Moving Object, in a process called
-Attribution. Similarly, Precovery is the recovery of known,
-unattributed detections associated with a newly-discovered Moving
-Object.  Another refinement is the merging of potentially redundant
-Moving Objects.  The complete set of DayMOPS tasks and their data
-flows are illustrated in figure \ref{mopsDiagram}.
+Most of the work on dayMOPS so far has focused on the linking phases,
+as these are essentially the base of the computational
+pyramid. Chapter~\ref{linking} provides a summary of the current
+software status. Chapter~\ref{scalingLinking} describes tests which have been done
+with this software, including computing resource requirement
+estimates. Both of these chapters include small descriptions of some
+issues (marked with a comment as `Issue'), but most of the software
+development tasks still to be done are described in more depth in
+Chapter~\ref{furtherDev}. Many of the current outstanding issues
+have to do with potential geometry problems in
+collapseTracklets and linkTracklets, and the differences between the
+software implementation of RA/Dec movement compared to great-circle
+movements on the sky. In general, these issues need further evaluation
+to determine their impact, and then potentially some changes to the
+code. The primary impact here is likely to be to the linkTracklets
+code, potentially in requiring a different implementation of the
+KD-Tree and potentially in requiring some reworking of the equations
+determining compatibility. Neither of these should be hugely significant issues
+in themselves, especially as the KD-Tree implementation should be
+updated to address memory bloat and to fold in improvements in memory
+footprint and speed of use that may
+be available from tree algorithms in other LSST code such as
+astrometry.net and the association pipeline. The major
+outstanding software issue is that linkTracklets is currently too slow to
+run in the daytime window available to it; improvements will be needed
+before LSST's first light. Some experiments with parallel versions of
+this software are presented in Chapter~\ref{scalingLinking}, showing what may
+be possible with large-shared-memory parallel machines, but even on
+this hardware linkTracklets is currently too slow to run on a typical
+LSST cadence with large false-positive diaSource detection rates
+within 24 hours. It seems likely that upgrading the underlying KD-Tree
+algorithms will address much of the speed requirements.  The major
+outstanding science issues are that due to resource
+limitations we are not searching for very fast-moving NEOs (using a
+limit of 0.5 deg/day in velocity) and that we are not discovering
+about 25\% of the moving objects we are capable of.  Increasing our
+search velocity and acceleration limits seems likely to happen
+hand-in-hand with improving the speed of linkTracklets overall, but
+discovering the reasons for not detecting all of the moving objects we
+should be finding will require more in-depth evaluation of the linking
+stages performance. 
 
+A summary of LSST's current status with regards to orbit fitting and
+ephemeris generation software is given in Chapter~\ref{orbits}. The
+take-away here is that we have two open-source software solutions
+available, but neither is ideal for LSST's use in production. LSST
+should consider partnering with an organization to develop orbital
+software that will be appropriate for our future use, or may end up
+having to develop software in-house (prefer to avoid this). 
 
+The emphasis on linking and the lack of orbit fitting software means
+that very little to no software development has been done for
+LSST in the areas relating to precovery and attribution or towards
+software for maintaining the movingObject database.  These pieces of
+software have been developed for PanSTARRS, and we should build on the
+available code as possible for LSST. We should also consult with the
+Minor Planet Center and other knowledgable members of the community
+for recommendations on orbit updates (when to update an orbit, when to
+consider new observations as belonging to the same movingObject). Work
+on precovery and attribution will need integration with
+the database teams, as precovery and attribution are heavy
+catalog/database use cases. It is worth noting that precovery and
+attribution need to be added to the LSST compute model, as does
+maintaining some form of the Tracklets database over some limited
+timeframe around the current observing date. More information on the
+precovery and attribution stages is presented in
+Chapter~\ref{precoveryattribution}. 
 
-
+The needs of the solar system science collaboration for
+access to an up-to-date orbit database, vs the Data Release database,
+and how to reconcile these two versions of the database after data
+release are also topics to be considered.  Refinement of the
+movingObject orbital database (to account for later rediscoveries of
+the same underlying object) has not been addressed for LSST, although
+basic algorithms were created for PanSTARRS.  Additional complications
+due to binary objects or planetary satellites have also not been
+addressed, but are generally expected to be secondary level problems. 

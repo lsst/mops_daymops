@@ -1,8 +1,8 @@
-\section{Risk Reduction}
+\section{Further Development Tasks}
+\label{furtherDev}
 
 Though the core algorithms of MOPS have been implemented in
 LSST-appropriate style, further research and development are needed.
-
 
 
 \subsection{Long Duration Survey Performance}
@@ -20,18 +20,13 @@ quantified.
 Attribution, precovery and Moving Object management and refinement of the
 Moving Object table are not yet implemented in LSST-compliant software.
 Developing this software should be a significant development task.
-However, we hope that by using the algorithms from the PanSTARRS MOPS
-we can avoid any significant research tasks.
 
 To test this software, we will need to generate simulated input
-catalogs which span longer time periods.  Accomplishing this will
-require either significant compute-resources or improved tools for
-generating input catalogs.
+catalogs which span longer time periods.  Improvements in the catalog
+generation software at UW (which took place after most of the
+simulations presented in this document) should make this possible. 
 
-
-\subsection{Future Software Development Tasks}
-
-\subsubsection{Filtering on Trailing for Near-Earth-Object Searching}
+\subsection{Including Trailing for Near-Earth-Object Searching}
 
 \label{neosTrailing}
 
@@ -55,7 +50,7 @@ asteroid trails and send them to image processing; further refinement
 of image processing algorithms may be neccesary.
 
 
-\subsubsubsection{Distributed LinkTracklets} 
+\subsection{Distributed LinkTracklets} 
 
 In case the implicit memory sharing is not sufficient (say, because
 distributed shared memory systems do not provide adequate
@@ -78,7 +73,7 @@ cache issues, attempting to minimize the amount of data which must be
 transferred to worker nodes.
 
 
-\subsubsection{Trivial Code Changes}
+\subsection{Trivial Code Changes}
 \paragraph{Reducing Memory Bloat in KD-Tree Libraries}
 
 Because of the size of the data sets in MOPS, memory consumption is a
@@ -87,9 +82,9 @@ exclusively through improvements in software implementation alone, the
 overhead could be reduced significantly.
 
 Lack of attention to the memory size in the initial implementation of
-the KD-Tree library have resulted in needless memory bloat of the
+the KD-Tree library has resulted in needless memory bloat of the
 trees.  Each node uses a series of \texttt{std::vector}s which could
-be easily replaced with pointers or C-style arrays.  On a 64-bit
+be replaced with pointers or C-style arrays.  On a 64-bit
 architecture, \texttt{std::vector} has an overhead of at least 24
 bytes, where pointers and fixed-size arrays have an overhead of just 8
 bytes.  Currently, KD-Trees use four vectors, meaning an overhead of
@@ -113,7 +108,8 @@ To reduce overhead, each thread should really maintain its own output
 vector, which could be used without any critical section and merged
 later, after all worker threads have completed, as is done in linkTracklets.
 
-\subsubsection{Significant Changes in CollapseTracklets}
+\subsection{Significant Changes in CollapseTracklets}
+
 \paragraph{Motion Vectors} 
 Currently, collapseTracklets parameterizes motion using location,
 angle, and velocity.  However, for low-speed objects which have
@@ -133,14 +129,14 @@ time-consuming process.
 When projecting the locations and motion vectors of objects to a
 common time, the current collapseTracklets implementation currently
 treats celestial coordinates as though they were planar.  This is
-fairly effective close to the ecliptic, but near the poles it will be
+fairly effective close to the ecliptic, but near the poles it could be
 problematic.  Fixing this should be relatively trivial, but it has not
 yet been done.
 
 \paragraph{Exploring Parallelism and Caching of Flags}
 As mentioned in \ref{parallelization}, there are several possible
 methods for dealing with the per-tracklet ``already merged'' flags.
-Currently, the implementation does not explicitly address the issue,
+The current implementation does not explicitly address the issue,
 and no attempt has been made to compare various approaches and their
 performance.
 
@@ -155,12 +151,12 @@ that stale reads could occur when threads from the same process
 execute on multiple boards.
 
 
-\subsubsection{Dealing with Near-Pole Distortion in LinkTracklets}
+\subsection{Dealing with Near-Pole Distortion in LinkTracklets}
 
 The math used in linkTracklets to determine acceleration is almost
 certain to break down on near-pole cases.  Further, the chi-squared
 probability fitting and filtering has not yet been tested heavily off
-the ecliptic, much less in cases of near-pole objects, and will likely
+the ecliptic, much less in cases of near-pole objects, and could
 reject true tracks at an increasing rate as it sees objects further
 from ecliptic.
 
@@ -174,23 +170,21 @@ require new math be used for calculating acceleration and pruning, as
 well as for tree construction.  It is unclear how performance will be
 affected by the change.
 
-Additional evaluation will be needed before it becomes clear whether
+Additional evaluation is needed before it becomes clear whether changes to
 the higher-order fitting code and chi squared probability filter will
-be needed whether changes are necessary. 
+be needed due to these geometry distrotions.
 
 
+\subsection{Dense and Clustered Noise}
 
-\subsubsection{Dense and Clustered Noise}
-
-The rate of false tracklet generation increases worse-than-linearly on
+The rate of false tracklet generation increases worse-than-linearly with
 the density of detections. Issues with image processing can lead to
-dense clusters of false detections packed in a small area.  This could
-lead to spectacularly painful growth in false tracklets.
+dense clusters of false detections packed in a small area, which can
+in turn lead to very large growth in the number of false tracklets. 
 
-Additional experimentation will be needed to determine how sever this
+Additional experimentation will be needed to determine how severe this
 problem could be.  If it becomes an issue, it may be necessary to
-identify regions with unusually high rates of false detections and
+identify regions with unusually high rates of (potentially) false detections and
 simply remove all detections from this region before the data is fed
-to MOPS.
-
-
+to MOPS. It's worth noting that PanSTARRS is implementing a technique
+similar to this to deal with high densities of detections. 

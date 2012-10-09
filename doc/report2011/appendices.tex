@@ -1,4 +1,105 @@
 \appendix
+\section{A Little History of Discovering Moving Objects}
+\label{history}
+
+{\it Contributed by Jeff Larsen}
+
+To provide a bit of background, the task of discovering unknown asteroids has a very
+lengthy history, involving human, electronic, and computerized actors.
+
+From the beginning the primary detectable feature of an asteroid is
+it's motion across the sky as time progresses -- which makes the
+underlying orbital parameters of critical relevance to the continued
+tracking of the object.  The first asteroid, Ceres, was visually
+detected by Piazzi \citep{1802QB378} through its motions
+against the background star as he attempted to verify the position of
+a star in a published catalog.  Without knowing how orbits were
+goverened, Piazzi's initial tracking effort involved constant repeated
+night-to-night observations which he was only able to maintain for a
+limited time due to his health and the motion of the asteroid into the
+daytime sky.  It fell to Carl Friedrich Gauss to develop his method of
+orbit determination before Ceres could be recovered again thus firmly
+establishing the mathematics of orbits as a required prerequisite.
+
+Optical observations had their limitations, however, and the archival
+record created by the application of photography to observations was
+of critical importance to scientific demands of repeatability.  The
+first photographic discovery of an asteroid, (323) Brucia, was by Max
+Wolf in 1891 \citep{1892AN} as he recognized the
+non-sidereal rate trails on his photographs for the asteroids they
+were.  Wolf became a prolific discoverer of asteroids (almost 250
+total) through photography and as such developed the standard
+detection technique used for the next century.
+
+Photographic sensitivity is determined to a large part through
+exposure time and asteroid motion to first order is a function of its
+distance so two main types of photographic survey methodology were
+used.  Surveys looking for closeby and fast near-Earth asteroids (like
+those of \cite{1988NASTM4041...52S}) used non-sidereal trailed motions
+and generally shorter exposure times.  A discovered trail of any
+length in the and image developed in an observatory darkroom would
+lead to additional exposures of the asteroid being quickly acquired
+and the data required to secure the orbit.  The second technique,
+useful for very slow moving asteroids that did not appear as a trailed
+images was to take several exposures and then manually alternate
+between them rapidly, thus depending on the well-developed human
+motion sense to discover the moving asteroids.  Machines were built
+for this purpose, such as the blink comparator.  Besides its use for
+stellar proper motions, this technique's most well known success was
+in the discovery of Pluto by Tombaugh \citep{1960S&T....19..264T}.
+The blink comparator was useful for scientific studies of asteroids in
+the main asteroid belt such as the seminal Palomar-Leiden survey
+\citep{1970A&AS....2..339V}.  Keeping the exposure times short was
+important to keep the asteroid images starlike so their isophotal
+diameter could be used inaccurate brightness calibration.  This
+allowed for the rapid discovery of asteroids for the time: 2400
+discoveries in 11 nights of observation.
+
+The advent of the CCD was applied to asteroids early, with the long
+readout times (and consequential 50\% duty cycle) minimized through
+the process of drift scannings.  Gehrels and the Spacewatch Project
+\citep{1990ASPC....8...51G} pioneered the use of CCD's in the
+detection of asteroids, making the first CCD detection of the
+near-Earth asteroid 1989 UP and the first discovery as well (1990 SS).
+Spacewatch went on to built an advanced real time asteroid motion
+detection program, MODP \citep{1991AJ....101.1518R}.  Drift scanning
+was made unnecessary by the advent of large format cameras used in a
+step-and-stare mode such as that of the NEAT project
+\citep{1999AJ....117.1616P}.  With the introduction of custom
+frame-transfer CCD's and high-capacity computer processing, the LINEAR
+project \citep{2000Icar..148...21S} and the Catalina Sky Survey
+\citep{2007IAUS..236..323L} were able to progress handily towards the
+Spaceguard goal.
+
+As with photography, there are multiple techniques which can be
+applied to CCD images to discover their asteroids.  Most asteroid
+detection software uses a "moving target indicator" approach in that
+CCD images are searched automatically for their objects who are then
+compiled as a detection list.  By filtering out objects which did not
+move and searching for asteroid-like motions in the unmatched lists,
+motion candidates are created.  However, a more exotic approach called
+Matched Filter Processing \citep{2005AJ....130.1951G} can be applied
+that has several advantages.  Images are coadded rapidly along
+hypothesized motion vectors.  If the flux of an object appears to grow
+after coaddition, it becomes a candidate moving object with the motion
+vector already determined.  Any technique to search for moving objects
+below the single-image limiting magnitude becomes computationally
+expensive with a large number of possible motion vectors, but has the
+advantage of being able to detect fainter objects in the same set of
+images compared to the moving target indicator approach.  Variants on
+these techniques have been
+used successfully in searches for distant objects such as those in the
+Kuiper Belt \citep{BG, MB} and has been used to do NEA searches over
+large portions of the sky where the asteroid is uncertain but has a
+relatively small range of possible velocities
+\citep{2005AJ....130.1951G}.
+
+The advent of large-format all sky surveys have radically changed the
+detection requirements both in terms of techniques for imagery and
+software, eventually leading to the PS and LSST MOPS software. 
+
+
+
 \section{About the KD-Tree Library}
 \label{kdTreeLib}
 
@@ -9,10 +110,10 @@ collapseTracklets needs an (RA, Dec, velocity, angle) tree of
 tracklets, and linkTracklets needs a specialized (RA, Dec, RA vel,
 Dec vel) tree of tracklets.  Other ``helper'' tools not described in
 this document have been constructed using trees over various types of
-data (such as collections of Kepler orbits).
+data (such as collections of orbits).
 
 To suit the needs of our various algorithms, and to prepare for the
-possibility of new algorithms, we chose to create our own KD-Tree
+possibility of new algorithms, we have created our own KD-Tree
 library.  The design is intended to fulfill the following needs:
 
 \begin{itemize}
@@ -54,7 +155,7 @@ arbitrary type) and a location of that data object.
 {\tt KDTree} instances are constructed from a {\tt std::vector} of
 {\tt PointAndValue} instances.  The $k$ value (the dimensionality of
 the tree) must be specified at construction-time.  Each ``point''
-vector used to build the tree must, of course, have at least $k$
+vector used to build the tree must have at least $k$
 elements, though the software will allow ``points'' with $>k$
 elements, in which case only the first $k$ are used.  
 
@@ -73,10 +174,10 @@ type of searching is provided by the library, but is not used within
 DayMOPS.
 
 In order to deal with data points which may not be in a Euclidean
-space, the library provides rectangular (or hyper-rectangular)
-searches are supported for searching on mixtures of Euclidean and/or
+space, the library supports rectangular (or hyper-rectangular)
+searches on mixtures of Euclidean and/or
 circular axes.  A query point is provided in each axis, and a query
-range around that point, and any point which is within the query range
+range around that point; any point which is within the query range
 of the query point in each axis is returned.  This is suitable when
 searching, for example, for motion vectors, which have a velocity and
 angle of motion; specify a range of velocities, and a range of angles,
@@ -111,7 +212,7 @@ this has not yet been done.
 
 The linkTracklets algorithm uses KD-Trees in an unusual fashion, and
 is highly sensitive to their construction.  It also requires the
-spatial regions held by each tree node be extended to account for
+spatial regions held by each tree node to be extended to account for
 error bars on the tracklets.  For these reasons, linkTracklets does
 not use the normal {\tt KDTree} class used by other algorithms, but a
 sibling class called {\tt TrackletTree}.  These classes share the
@@ -129,7 +230,7 @@ memory management, as an outside tool cannot hold a reference to a
 dynamically-allocated child.  However, in linkTracklets these children
 must be visible to linkTracklets, as it explicitly traverses the tree.  
 
-{\tt TrackletTreeNode} also has a few methods for studying performance:
+{\tt TrackletTreeNode} also has a few methods for studying performance: \\
 {\tt TrackletTreeNode::addVisit} and {\tt TrackletTreeNode::getNumVisits} can
 be used to count the number of times a node is examined by
 linkTracklets.  Eventually, it may be wise to remove these in order to

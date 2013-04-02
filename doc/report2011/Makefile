@@ -1,9 +1,7 @@
-ILLUSTRATIONS=illustrations/mopsDiagram.png illustrations/mopsWithinLsst.png newIllustrations/*.png
-
 %.png: %.txt
 	ditaa $< $@
 
-baseline.pdf: baseline.tex baseline.bib overview.tex daymops.tex metrics.tex riskreduction.tex appendices.tex $(ILLUSTRATIONS)
+baseline.pdf: baseline.tex baseline.bib overview.tex daymops_linking.tex metrics_linking.tex precovery_attribution.tex furtherdev.tex appendices.tex larsenbib.tex
 	latexmk -f -pdf baseline
 
 clean: 

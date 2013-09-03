@@ -253,22 +253,22 @@ to determine their impact, and then potentially some changes to the
 code. The primary impact here is likely to be to the linkTracklets
 code, potentially in requiring a different implementation of the
 KD-Tree and potentially in requiring some reworking of the equations
-determining compatibility. Neither of these should be hugely significant issues
+determining compatibility to allow for a higher fidelity approximation of true orbits. 
+Neither of these should be hugely significant issues
 in themselves, especially as the KD-Tree implementation should be
-updated to address memory bloat and to fold in improvements in memory
+reviewed to address memory bloat and to fold in improvements in memory
 footprint and speed of use that may
 be available from tree algorithms in other LSST code such as
 astrometry.net and the association pipeline. The major
 outstanding software issue is that linkTracklets is currently too slow to
-run in the daytime window available to it; improvements will be needed
+run in the daytime window available to it if significant noise is present; improvements will be needed
 before LSST's first light. Some experiments with parallel versions of
 this software are presented in Chapter~\ref{scalingLinking}, showing what may
 be possible with large-shared-memory parallel machines, but even on
 this hardware linkTracklets is currently too slow to run on a typical
 LSST cadence with large false-positive diaSource detection rates
-within 24 hours. It seems likely that upgrading the underlying KD-Tree
-algorithms will address much of the speed requirements.  The major
-outstanding science issues are that due to resource
+within 24 hours. 
+The major outstanding science issues are that due to resource
 limitations we are not searching for very fast-moving NEOs (using a
 limit of 0.5 deg/day in velocity) and that we are not discovering
 about 25\% of the moving objects we are capable of.  Increasing our
@@ -283,13 +283,13 @@ ephemeris generation software is given in Chapter~\ref{orbits}. The
 take-away here is that we have two open-source software solutions
 available, but neither is ideal for LSST's use in production. LSST
 should consider partnering with an organization to develop orbital
-software that will be appropriate for our future use, or may end up
-having to develop software in-house (prefer to avoid this). 
+software that will be appropriate for our future use, or develop a plan to 
+produce this software in-house.
 
 The emphasis on linking and the lack of orbit fitting software means
 that very little to no software development has been done for
 LSST in the areas relating to precovery and attribution or towards
-software for maintaining the movingObject database.  These pieces of
+software for maintaining the movingObject database. Prototypes are available, as these pieces of
 software have been developed for PanSTARRS, and we should build on the
 available code as possible for LSST. We should also consult with the
 Minor Planet Center and other knowledgable members of the community
@@ -297,11 +297,9 @@ for recommendations on orbit updates (when to update an orbit, when to
 consider new observations as belonging to the same movingObject). Work
 on precovery and attribution will need integration with
 the database teams, as precovery and attribution are heavy
-catalog/database use cases. It is worth noting that precovery and
-attribution need to be added to the LSST compute model, as does
-maintaining some form of the Tracklets database over some limited
-timeframe around the current observing date. More information on the
-precovery and attribution stages is presented in
+catalog/database use cases. Developing these pieces of software is more about
+implementing it well and in a scientifically desireable way, rather than developing new algorithms. 
+More information on the precovery and attribution stages is presented in
 Chapter~\ref{precoveryattribution}. 
 
 The needs of the solar system science collaboration for

@@ -133,10 +133,10 @@ here.
 \label{velAccLimits}
 \begin{figure}[ht!]
   \centering
-  \includegraphics[width=13cm]{illustrations/mopsplots/aug2011/n_velocity.png}
+  \includegraphics[width=13cm]{illustrations/n_velocity60.png}
   \caption[Velocity distribution of solar system objects.]{A cumulative histogram of solar solar system object
     sky-plane velocities, organized by classification.  These
-    velocities include objects at all solar elongations. Classes of
+    velocities include objects at solar elongations greater than 60 degrees. Classes of
     objects closer to the Sun and to the Earth (NEOs) move faster than
     objects further away (TNOs). }
   \label{velSurvey}
@@ -182,17 +182,18 @@ the highest accelerations, while outer solar system objects (SDOs,
 TNOs) move much more slowly.  In order to detect 99\% of all MBAs,
 velocity limits of 0.5 deg/day and an acceleration limit of 
 .02 deg/day$^2$ are sufficient. It's worth noting that this is too
-slow to detect more than about 60\% of the NEOs, but this is a
+slow to detect more than about 80\% of the NEOs, but this is a
 simplifying choice made to make find and linkTracklets more manageable
 at this stage of development. 
 
-By examining the detections on an object-per-object basis, we
-calculated that among the 186,344 objects seen with proper cadence,
-186,209 of these (more than 99.9\%) should generate useful tracks
-given these velocity and acceleration limits. This is a reflection of
-the fact that the overwhelming majority (about 9M of the total 11M)
-objects in the SSM are MBAs, while NEOs make up only a small fraction
-of solar system objects.
+%By examining the detections on an object-per-object basis, we
+%calculated that among the 186,344 objects seen with proper cadence,
+%186,209 of these (more than 99.9\%) should generate useful tracks
+%given these velocity and acceleration limits. This is a reflection of
+%the fact that the overwhelming majority (about 9M of the total 11M)
+%objects in the SSM are MBAs, while NEOs make up only a small fraction
+%of solar system objects.
+% ... these #'s don't make sense - we had over a million findable objects in the full sky/1month sim.
 
 %% see mops64: /mnt/raid/jmyers/variousDensities/fullDensity/maxV.5_15days/trueTracks/*.log
 
@@ -239,7 +240,7 @@ Found / findable: & 75.7\% \\
 Figure~\ref{oneMonth} shows in-depth stats for a `perfect' survey,
 where SSM detections above $5\sigma$ SNR in each image are reported
 without additional `noise' from artifacts in difference imaging,
-background transient or variable objects, or cosmic rays. 
+background transients, or fluctuations in sky background.
 As in all our runs, track generation is far more expensive than
 tracklet generation in terms of CPU usage, but both require
 substantial amounts of memory.  Also note that nearly one fourth of
@@ -295,7 +296,7 @@ variations over the month of this simulation.
 \subsubsection{Scaling on Non-Asteroid Sources}
 
 Actual images will contain diaSources from non-asteroid sources:
-variable stars, supernova, and image processing artifacts (e.g. from
+sky fluctuations, transient objects, and image processing artifacts (e.g. from
 bright stars) will also be present.  Because the quality of image
 processing is not known, we added non-asteroid ``noise'' detections to
 images at varying rates.  At each rate, a fixed $n$ noise detections

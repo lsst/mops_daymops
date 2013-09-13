@@ -81,20 +81,17 @@ residuals to allow for tighter filtering of the potential tracks. The
 first step is to attempt to add a topocentric correction to the
 detections; during the night, as the Earth rotates, objects which are
 close to Earth will have some additional `wiggle' in their motion due
-to the change in observer's location.  The topocentric correction fits
-the range (1/distance) of the object from the tracklet, and applies a
-correction to the RA locations of the tracklets that alter the
-observed (topocentric) values to equivalent geocentric values. The Dec
-values are left unchanged, as this primarily effects the RA. The
-second step is to attempt to fit a higher-order polynomial to the
-resulting RA and Dec values. If a higher-order than quadratic
-polynomial can be supported for the track, ({\it i.e.} if
-the fit residuals are lower than all of the errors between the
+to the change in observer's location.  A topocentric correction factor is
+determined for each tracklet before building the kd-trees; when the potential
+tracks are evaluated, we now fit for a topocentric correction to the observed 
+positions -- the topocentric correction is the range (1/distance) times this topocentric 
+correction factor. This additional parameter is fit using only the RA values,
+as the effect in Declination is small. We also permit the use of a higher 
+order polynomial to fit the detections, if it is supported by the track;
+{\it i.e.} if the fit residuals are lower than all of the errors between the
 predicted positions and the measured positions, the order
-of the fit is too high), then this higher
-order fit is done. After the fit for the track is
-created (either quadratic or higher order, potentially with a
-topocentric correction, but always separately fit in RA/Dec), then a
+of the fit is too high. After the fit for the track is
+created (always separately fit in RA/Dec), then a
 chi-squared probability is computed for the track. We reject tracks
 with chi-squared values larger than a predetermined cutoff; this
 cutoff is determined experimentally to optimize the true / false track
@@ -419,9 +416,7 @@ making use of this quadratic approximation of motion, valid for
 approximately one month, we can move a sliding window of up to 30 days
 over the data, looking for tracklets which could be linked by some
 quadratic acceleration factor.  As we find these linkages, depending
-on the detections themselves (the number and timespan of detections, the best-fit
-distance to each object (based on the tracklet velocity), their
-astrometric errors) we will also apply a topocentric correction to the
+on the individual detections themselves, we will also calculate a topocentric correction to the
 detections and a higher-order fit in order to apply a stronger
 requirement on the residuals to the fit when outputting tracks. 
 
@@ -703,9 +698,8 @@ of the observations are fit to either a quadratic or higher order
 fit compared to the differences between predicted and actual positions to
 control the order of the fit. Then the RA values of the observations
 are fit, with the added complication of including a topocentric
-correction if one could be determined from the tracklet and is
-appropriate for the fitting function. The order of the function in Dec
-and RA do not have to be the same.  
+correction (essentially fitting for the range of the object). 
+The order of the function in Dec and RA do not have to be the same.  
 
 In the event there are multiple possible support detections at one of
 these image times, the best-fitting detection is chosen. 
@@ -721,20 +715,22 @@ validated, then it is passed to the set of output tracks.
 \label{someLinkingIssues}
 
 \paragraph{Topocentric Correction}
-We can generate more precise fits and do more aggressive filtering if we first apply a
-topocentric correction to the detections, converting from topocentric
-coordinates to geocentric coordinates based on an assumed topocentric
-distance.  For this reason, before the positions/velocities of the
+We can generate more precise fits and do more aggressive filtering if we fit for a
+topocentric correction to the detections, basically converting from topocentric
+coordinates to geocentric coordinates. For this reason, before the positions/velocities of the
 tracklets are calculated, the trees are built or the linking algorithm
-is run, topocentric correction factor is calculated for each
-tracklet. This factor is then applied to the RA value of each detection in the
-tracklet when the track is being evaluated for residuals between the
-best-fit path across the sky (in RA/Dec) vs the locations of the
-actual detections.  The correction is only applied in RA rather than
-Declination; the effect is small in declination. 
+is run, a topocentric correction factor is calculated for each
+tracklet - this is the topocentric correction for an object at 1 AU observed at the times 
+of the detections in the tracklet. When the RA values of the potential track are fit, the appropriate 
+topocentric correction (which is the topocentric correction factor multiplied by the range, or 1/distance)
+is fit for at the same time as a higher order polynomial. The order of this polynomial is variable,
+depending on what the track will support, in terms of predicted positions vs. observed measurements and their 
+expected astrometric error. 
 
-Issue: I would like to see this verified across the entire sky, as it
-was developed near the equator/ecliptic. 
+Issue: This topocentric correction fit should be verified over the entire sky, as it was developed for
+use near the equator/ecliptic. 
+
+Note: if it holds up, this could be a useful tool for orbit fitting as well. 
 
 
 \paragraph{Spherical Geometry Issues}

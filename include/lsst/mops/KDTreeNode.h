@@ -30,6 +30,8 @@
  * 
  */
 
+static unsigned int lastId2_NULL = 0;
+
 namespace lsst {
 namespace mops {
 
@@ -50,7 +52,7 @@ namespace mops {
                    unsigned int myAxisToSplit, 
                    const std::vector<double> &Ubounds,
                    const std::vector<double> &LBounds, 
-                   unsigned int &lastId=0) 
+                   unsigned int &lastId=lastId2_NULL) 
             
             : BaseKDTreeNode<T, KDTreeNode<T> >(pointsAndValues, 
                                                 k, maxLeafSize, 

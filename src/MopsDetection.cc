@@ -5,7 +5,9 @@
 #include "lsst/mops/MopsDetection.h"
 #include "lsst/mops/Exceptions.h"
 
+extern "C" {
 #include "slalib.h"
+}
 #include "slamac.h"
 
 #undef DEBUG

@@ -23,6 +23,8 @@
  * 
  */
 
+static unsigned int lastId_NULL = 0;
+
 namespace lsst {
 namespace mops {
 
@@ -42,7 +44,7 @@ namespace mops {
             unsigned int myAxisToSplit, 
             const std::vector<double> &Ubounds,
             const std::vector<double> &LBounds, 
-            unsigned int &lastId=0);
+            unsigned int &lastId=lastId_NULL);
 
 
         /*

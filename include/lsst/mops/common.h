@@ -39,7 +39,7 @@ namespace mops {
     };
 
     /* return time since priorEvent (in seconds). */
-    double timeElapsed(clock_t priorEvent);
+    double timeElapsed(time_t priorEvent);
 
     /* O(n)-time implementation returns median value of fv */
     double fastMedian(std::vector<double> fv);

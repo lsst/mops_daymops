@@ -28,7 +28,9 @@ BASEINC=-I ../include/
 MOPSINC=../include/lsst/mops/
 MOPSHEADERS= ${MOPSINC}*.h ${MOPSINC}daymops/findTracklets/*.h ${MOPSINC}daymops/collapseTrackletsAndPostfilters/*.h 
 
-all:	../bin/findTracklets ../bin/collapseTracklets ../bin/purifyTracklets ../bin/removeSubsets ../bin/linkTracklets  ../bin/findTrackletsOMP   ../bin/collapseTrackletsOMP  ../bin/purifyTrackletsOMP   ../bin/removeSubsetsOMP   ../bin/linkTrackletsOMP 
+all:	../bin/findTracklets ../bin/collapseTracklets ../bin/purifyTracklets ../bin/removeSubsets ../bin/linkTracklets 
+
+# ../bin/findTrackletsOMP   ../bin/collapseTrackletsOMP  ../bin/purifyTrackletsOMP   ../bin/removeSubsetsOMP   ../bin/linkTrackletsOMP 
 
 clean: 
 	rm -f *.o */*.o ../bin/findTracklets ../bin/collapseTracklets ../bin/purifyTracklets ../bin/removeSubsets ../bin/findTrackletsOMP ../bin/linkTracklets   ../bin/collapseTrackletsOMP  ../bin/purifyTrackletsOMP   ../bin/removeSubsetsOMP   ../bin/linkTrackletsOMP 

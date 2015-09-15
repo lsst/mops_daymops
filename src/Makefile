@@ -9,7 +9,7 @@
 GCC = c++
 
 # if you compiled slalib as a shared library, use this OPT line
-OPT=-O3 -DNOPEX -fPIC -shared
+#OPT=-O3 -DNOPEX -fPIC -shared
 # if you compiled slalib as a static library, use this OPT line
 OPT=-O3 -DNOPEX 
 #if not using EUPS, then you'll probably uncomment these (otherwise just use eups to set them up first)
@@ -17,7 +17,7 @@ OPT=-O3 -DNOPEX
 #EIGEN_DIR=${THIRD}eigen/
 #BOOST_DIR=${THIRD}boost/
 #GSL_DIR=/opt/gsl/gnu/
-SLALIB_DIR = /local/tmp/ljones/slalib_C
+SLALIB_DIR = ../../slalib_C
 
 EXTINCLUDES=-I ${EIGEN_DIR}/include/ -I ${BOOST_DIR}/include/ -I ${SLALIB_DIR}/include/ -I ${GSL_DIR}/include
 EXTLIBDIRS=-L ${BOOST_DIR}/lib -L ${SLALIB_DIR}/lib -L ${GSL_DIR}/lib

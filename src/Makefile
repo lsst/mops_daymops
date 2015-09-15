@@ -6,7 +6,7 @@
 # any LSST packages at all!
 
 # choose your appropriate gcc compiler
-GCC = g++
+GCC = c++
 
 # if you compiled slalib as a shared library, use this OPT line
 OPT=-O3 -DNOPEX -fPIC -shared

@@ -223,7 +223,7 @@ KDTree<T>::KDTree(std::vector<PointAndValue <T> > pointsAndValues,
                        unsigned int k, unsigned int maxLeafSize) 
 {
     this->setUpEmptyTree();
-    buildFromData(pointsAndValues, k, maxLeafSize);
+    this->buildFromData(pointsAndValues, k, maxLeafSize);
 }
 
 

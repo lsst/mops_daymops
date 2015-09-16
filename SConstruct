@@ -16,7 +16,7 @@ env = scons.makeEnv("mops_daymops",
                     ["boost", "boost/test/included/unit_test.hpp"],
                     ["pex_exceptions", "lsst/pex/exceptions/Exception.h lsst/pex/exceptions/Runtime.h", "pex_exceptions:C++"],
                     ["gsl", "gsl/gsl_fit.h", "gslcblas gsl:C++"],
-                    ["slalib", "slalib.h slamac.h", "libsla:C++"],
+                    ["pal", "pal.h palmac.h", "libpal:C++"],
                     ["eigen", "Eigen/Core.h"],
                     #["utils", "lsst/tr1/unordered_map.h", "utils:C++"],
                     #["daf_base", "lsst/daf/base/Citizen.h lsst/daf/base/Persistable.h", "daf_base:C++"],
@@ -25,7 +25,7 @@ env = scons.makeEnv("mops_daymops",
                     ["python", "Python.h"]
                     ])
 
-env.libs["mops_daymops"] += env.getlibs("boost pex_exceptions gsl python slalib")
+env.libs["mops_daymops"] += env.getlibs("boost pex_exceptions gsl python pal")
 
 env['IgnoreFiles'] = r"(~$|\.pyc$|^\.svn$|\.o$)"
 

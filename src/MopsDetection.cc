@@ -6,9 +6,9 @@
 #include "lsst/mops/Exceptions.h"
 
 extern "C" {
-#include "slalib.h"
+#include "pal.h"
 }
-#include "slamac.h"
+#include "palmac.h"
 
 #undef DEBUG
 
@@ -200,17 +200,17 @@ void MopsDetection::calculateTopoCorr() {
     obsLatRad = obsLat*DD2R;
     obsLongRad = obsLong*DD2R;
     
-    double localAppSidTime = slaGmst(MJD - slaDt(slaEpj(MJD))/86400.0) + obsLongRad;
+    double localAppSidTime = palGmst(MJD - slaDt(palEpj(MJD))/86400.0) + obsLongRad;
 
     double geoPosVel[6]; // observing position (and velocity) in AU, AU/sec
-    slaPvobs(obsLatRad, 0, localAppSidTime, geoPosVel);
+    palPvobs(obsLatRad, 0, localAppSidTime, geoPosVel);
     
     double raRad, decRad;
     raRad = RA*DD2R;
     decRad = dec*DD2R;
     
     float rho[3];   // geocentric unit 3-vector to object
-    slaCs2c(raRad, decRad, rho);
+    palCs2c(raRad, decRad, rho);
 
     // add geoPos to rho (multiplied by 1 AU) to get the topocentric vector to the object
     float rhoTopo[3];
@@ -221,7 +221,7 @@ void MopsDetection::calculateTopoCorr() {
     // calculate the topocentric ra, dec
 
     float raTopo, decTopo;
-    slaCc2s(rhoTopo, &raTopo, &decTopo);
+    palCc2s(rhoTopo, &raTopo, &decTopo);
 
     double deltaRa = raTopo - raRad;
 

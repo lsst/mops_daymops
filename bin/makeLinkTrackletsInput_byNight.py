@@ -76,10 +76,15 @@ def writeDetsAndIds(detsFile, idsFile, compatibleNights):
     print "done with ", compatibleNights
     print ""
 
-
 if __name__=="__main__":
 
     WINDOW_SIZE=int(sys.argv[1])
+
+    if len(sys.argv) > 2:
+        INPUT_DETS_DIR=sys.argv[2]
+        INPUT_TRACKLETS_DIR=sys.argv[3]
+        OUTPUT_DIR=sys.argv[4]
+
     print "Reading MITI files from %s" %(INPUT_DETS_DIR)
     print "Reading tracklet files from %s" %(INPUT_TRACKLETS_DIR)
     print "Will write %d day window *.dets and *.ids files to %s" %(WINDOW_SIZE, OUTPUT_DIR)

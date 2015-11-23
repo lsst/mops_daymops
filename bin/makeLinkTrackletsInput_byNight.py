@@ -68,7 +68,7 @@ def writeDetsAndIds(detsFile, idsFile, compatibleNights):
             indexes = map(lambda x: idToIndexTable[x], detIds)
             indexesStr = " ".join(map(str, indexes))
             #print "writing output ", indexesStr
-            outIds.write(indexesStr + "\n")
+            outIds.write(indexesStr + " \n")
             pair = compatibleIds.readline()
 
     outDets.close()

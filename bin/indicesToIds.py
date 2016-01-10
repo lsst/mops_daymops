@@ -79,7 +79,7 @@ if __name__ == "__main__":
             trackDiaIds.append(diaIds[lineNum])
             
         for dia in sorted(trackDiaIds):
-            outFile.write(" %d " % dia)
+            outFile.write("%d " % dia)
         outFile.write("\n")
 
         trackLine = trackFile.readline()

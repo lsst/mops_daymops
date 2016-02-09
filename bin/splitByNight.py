@@ -1,71 +1,85 @@
-#!/usr/bin/env python
-
 """
+Splits 'fullerDiaSource' format DiaSources by night and put them into separate files.
+This is the first step in preparation for use by findTracklets on a per-night basis.
 
-jmyers may 11 2010
-
-march 29 2012: Get rid of MITI format and write things in fullerDiaSource format.
-
-Split up the "fullerDiaSource"-format DIAsources by night and put them in separate
-files.  
-
-apr. 3 2012: Also, write out a per-obsHist file which holds all dias from a given image.
-
+Also writes out a per-obsHist file which holds all dias from a given image (?)
 """
-
-# note that midnight at LSST is MJD+0.125 (or 0.166) days
-#  (MJD = integer at midnight UTC, Chile/LSST local time is 
-#    UTC -4 hours in standard,-3 hours daylight savings. 
-#    which translates to midnight @ LSST = MJD + 0.125/0.166)
-# which means ~NOON to NOON observations cover 
-#   ~'night'-0.35 to ~'night' + 0.65   (where 'night' = int(MJD) at midnight)
-#    a gap would be okay because we're don't observe that close to noon
-
-night_start = -0.35
-night_end = 0.65
-
-OBSCODE='807'
 
 import sys
-import os.path
+import os
+import argparse
 
-def getNightNum(mjd):
+def getNightNum(mjd, midnight):
     """Determine night number for any MJD."""
-    night = night = int(mjd+0.5-0.12)    
+    night = int(mjd + 0.5 - midnight)
     return night
-    
+
 
 if __name__=="__main__":
 
+    parser = argparse.ArgumentParser(description="Split DiaSources in one input file into separate nights.")
+    parser.add_argument("inputFile", type=str, help="Input file containing the diaSources.")
+    nightly = "nightly"
+    parser.add_argument("-n", "--nightlyDir", type=str, default=nightly,
+                        help="Output directory containing diaSources split per night. Default is %s"\
+                        % nightly)
+    parser.add_argument("-o", "--obshistDir", type=str, default=None,
+                        help="Output directory containing diaSources split per observation."\
+                        " If not specified, diaSources split per observation are not created.")
+    lsst_midnight = 0.166
+    parser.add_argument("--midnight", type=float, default=lsst_midnight,
+                        help="The average MJD value of midnight at the location of the observatory."\
+                        " Default value (%.3f) is appropriate for LSST site." % lsst_midnight)
+    args = parser.parse_args()
 
-    if len(sys.argv)<2:
-        print "Usage: splitByNight.py filename nightlyOutputDir byObsHistOutputDir"
-        print "  where filename = the input diasource file "
-        print "  dia sources broken up by night will go in nightlyOutputDir"
-        print "  dia sources broken up by image will go in byObsHistOutputDir"
-        sys.exit(1)
+    # Create the output directories if they do not exist.
+    if not os.path.isdir(args.nightlyDir):
+        os.makedirs(args.nightlyDir)
+    if args.obshistDir is not None:
+        if not os.path.isdir(args.obshistDir):
+            os.makedirs(args.obshistDir)
 
-    infile = open(sys.argv[1], 'r')
-    outDir1 = sys.argv[2]
-    outDir2 = sys.argv[3]
-
+    # Read and write the input data.
     prev_night = None
+    counter = 0
+    with open(args.inputFile, 'r') as inFile:
+        # Read diasources from input file.
+        for line in inFile:
+            values = line.split()
+            diaId = values[0]
+            # Skip a comment line
+            try:
+                diaId = int(diaId)
+            except ValueError:
+                # This was probably a comment, which would not translate to int.
+                continue
+            counter += 1
 
-    # Read diasources from input file.
-    for line in infile:
-        diaId, obshistId, ssmId, ra, decl, MJD, mag, snr = line.split()
-        diaId, obshistId, ssmId = map(int, [diaId, obshistId, ssmId])
-        ra, decl, MJD, mag = map(float, [ra, decl, MJD, mag])
+            # Determine the night number of this particular diasource and write to that file.
+            mjd = float(values[5])
+            nightNum = getNightNum(mjd, args.midnight)
+            print mjd, nightNum
 
-        # Determine the night number of this particular diasource and write to that file.
-        nightNum = getNightNum(MJD)
-        # Open new output file if needed.
-        if nightNum != prev_night:
-            outfile = open(os.path.join(outDir1, str(nightNum) + ".dias"), "aw")
-            prev_night = nightNum
-        # Write output line.
-        print>>outfile, line.rstrip()
+            # Open new output file if needed.
+            if nightNum != prev_night:
+                try:
+                    outfile.close()
+                except NameError:
+                    # this was just the first night, so outfile doesn't exist yet.
+                    pass
+                outfile = open(os.path.join(args.nightlyDir, str(nightNum) + ".dias"), "aw")
+                prev_night = nightNum
+            # Write output line.
+            # Since we're writing the whole thing back to disk, we do not need to convert other #'s.
+            print>>outfile, line.rstrip()
 
-        # now write to a by-obshist dir
-        outfile2 = open(os.path.join(outDir2, str(obshistId) + ".dias"), "aw")
-        print>>outfile2, line.rstrip()
+            # Write to per-obsHist file if desired.
+            if args.obshistDir is not None:
+                outfile2 = open(os.path.join(args.obshistDir, str(obshistId) + ".dias"), "aw")
+                print>>outfile2, line.rstrip()
+                outfile2.close()
+
+    print "Read %d lines from input file %s. Wrote to perNight files in %s." \
+      % (counter, args.inputFile, args.nightlyDir)
+    if args.obshistDir is not None:
+        print "Also wrote perObsHist files in %s" % args.obshistDir

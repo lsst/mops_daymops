@@ -2,7 +2,7 @@
 Splits 'fullerDiaSource' format DiaSources by night and put them into separate files.
 This is the first step in preparation for use by findTracklets on a per-night basis.
 
-Also writes out a per-obsHist file which holds all dias from a given image (?)
+Also (optionally) writes out a per-obsHist file which holds all dias from a given image.
 """
 
 import sys

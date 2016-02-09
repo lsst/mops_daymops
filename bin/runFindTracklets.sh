@@ -4,7 +4,7 @@
 FINDTRACKLETS=$MOPS_DAYMOPS_DIR/bin/findTracklets
 
 echo "Working directory: $PWD"
-NIGHTLY_DIASOURCES=$PWD/../*.dias
+NIGHTLY_DIASOURCES=`ls $PWD | grep .dias`
 echo "Got diaSource detections: $NIGHTLY_DIASOURCES"
 OUTPUT_DIR=$PWD/
 
@@ -12,7 +12,7 @@ MAXV=$1
 
 if [ "$MAXV" == "" ]
 then
-    print "USAGE: runFindTracklets.sh (max velocity)" 
+    echo "USAGE: runFindTracklets.sh (max velocity)" 
     exit 1
 fi
 

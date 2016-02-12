@@ -69,56 +69,56 @@ TrackSet.o: TrackSet.cc ${MOPSHEADERS}
 	${GCC} ${OPT} -c TrackSet.cc ${EXTINCLUDES} ${BASEINC}
 
 ../bin/findTracklets: findTracklets/findTracklets.cc findTracklets/findTrackletsMain.cc MopsDetection.o PointAndValue.o common.o Tracklet.o Track.o TrackletVector.o fileUtils.o ${MOPSHEADERS}
-	${GCC} ${OPT} ${BASEINC} ${EXTINCLUDES} ${EXTLIBDIRS} ${EXTLIBS} \
+	${GCC} ${OPT} ${BASEINC} ${EXTINCLUDES} ${EXTLIBDIRS} \
 MopsDetection.o PointAndValue.o common.o Tracklet.o Track.o TrackletVector.o fileUtils.o \
-findTracklets/findTracklets.cc findTracklets/findTrackletsMain.cc -o ../bin/findTracklets
+findTracklets/findTracklets.cc findTracklets/findTrackletsMain.cc ${EXTLIBS} -o ../bin/findTracklets
 
 ../bin/findTrackletsOMP: findTracklets/findTrackletsOMP.cc findTracklets/findTrackletsMain.cc MopsDetection.o PointAndValue.o common.o Tracklet.o Track.o TrackletVector.o fileUtils.o ${MOPSHEADERS}
-	${GCC} ${OPT} ${BASEINC} ${EXTINCLUDES} ${EXTLIBDIRS} ${EXTLIBS} \
+	${GCC} ${OPT} ${BASEINC} ${EXTINCLUDES} ${EXTLIBDIRS} \
 MopsDetection.o PointAndValue.o common.o Tracklet.o Track.o TrackletVector.o fileUtils.o \
 -lgomp -fopenmp \
-findTracklets/findTrackletsOMP.cc findTracklets/findTrackletsMain.cc -o ../bin/findTrackletsOMP
+findTracklets/findTrackletsOMP.cc findTracklets/findTrackletsMain.cc ${EXTLIBS} -o ../bin/findTrackletsOMP
 
 ../bin/collapseTracklets: collapseTrackletsAndPostfilters/collapseTracklets.cc collapseTrackletsAndPostfilters/collapseTrackletsMain.cc MopsDetection.o PointAndValue.o common.o Tracklet.o Track.o TrackletVector.o fileUtils.o rmsLineFit.o ${MOPSHEADERS}
-	${GCC} ${OPT} ${BASEINC} ${EXTINCLUDES} ${EXTLIBDIRS} ${EXTLIBS} \
+	${GCC} ${OPT} ${BASEINC} ${EXTINCLUDES} ${EXTLIBDIRS} \
 MopsDetection.o PointAndValue.o common.o Tracklet.o Track.o TrackletVector.o fileUtils.o rmsLineFit.o \
-collapseTrackletsAndPostfilters/collapseTracklets.cc collapseTrackletsAndPostfilters/collapseTrackletsMain.cc -o ../bin/collapseTracklets
+collapseTrackletsAndPostfilters/collapseTracklets.cc collapseTrackletsAndPostfilters/collapseTrackletsMain.cc ${EXTLIBS} -o ../bin/collapseTracklets
 
 ../bin/collapseTrackletsOMP: collapseTrackletsAndPostfilters/collapseTrackletsOMP.cc collapseTrackletsAndPostfilters/collapseTrackletsMain.cc MopsDetection.o PointAndValue.o common.o Tracklet.o Track.o TrackletVector.o fileUtils.o rmsLineFit.o ${MOPSHEADERS}
-	${GCC} ${OPT} ${BASEINC} ${EXTINCLUDES} ${EXTLIBDIRS} ${EXTLIBS} \
+	${GCC} ${OPT} ${BASEINC} ${EXTINCLUDES} ${EXTLIBDIRS} \
 MopsDetection.o PointAndValue.o common.o Tracklet.o Track.o TrackletVector.o fileUtils.o rmsLineFit.o \
 -fopenmp -lgomp \
-collapseTrackletsAndPostfilters/collapseTrackletsOMP.cc collapseTrackletsAndPostfilters/collapseTrackletsMain.cc -o ../bin/collapseTrackletsOMP
+collapseTrackletsAndPostfilters/collapseTrackletsOMP.cc collapseTrackletsAndPostfilters/collapseTrackletsMain.cc ${EXTLIBS} -o ../bin/collapseTrackletsOMP
 
 ../bin/purifyTracklets: collapseTrackletsAndPostfilters/purifyTracklets.cc  MopsDetection.o common.o Tracklet.o TrackletVector.o fileUtils.o rmsLineFit.o ${MOPSHEADERS}
-	${GCC} ${OPT} ${BASEINC} ${EXTINCLUDES} ${EXTLIBDIRS} ${EXTLIBS} \
+	${GCC} ${OPT} ${BASEINC} ${EXTINCLUDES} ${EXTLIBDIRS} \
 MopsDetection.o PointAndValue.o common.o Tracklet.o Track.o TrackletVector.o fileUtils.o rmsLineFit.o \
-collapseTrackletsAndPostfilters/purifyTracklets.cc -o ../bin/purifyTracklets
+collapseTrackletsAndPostfilters/purifyTracklets.cc ${EXTLIBS} -o ../bin/purifyTracklets
 
 ../bin/purifyTrackletsOMP: collapseTrackletsAndPostfilters/purifyTrackletsOMP.cc  MopsDetection.o common.o Tracklet.o TrackletVector.o fileUtils.o rmsLineFit.o ${MOPSHEADERS}
-	${GCC} ${OPT} ${BASEINC} ${EXTINCLUDES} ${EXTLIBDIRS} ${EXTLIBS} \
+	${GCC} ${OPT} ${BASEINC} ${EXTINCLUDES} ${EXTLIBDIRS} \
 MopsDetection.o PointAndValue.o common.o Tracklet.o Track.o TrackletVector.o fileUtils.o rmsLineFit.o \
 -fopenmp -lgomp \
-collapseTrackletsAndPostfilters/purifyTrackletsOMP.cc -o ../bin/purifyTrackletsOMP
+collapseTrackletsAndPostfilters/purifyTrackletsOMP.cc ${EXTLIBS} -o ../bin/purifyTrackletsOMP
 
 ../bin/removeSubsets: removeSubsets.cc removeSubsetsMain.cc MopsDetection.o common.o Tracklet.o fileUtils.o ${MOPSHEADERS}
-	${GCC} ${OPT} ${BASEINC} ${EXTINCLUDES} ${EXTLIBDIRS} ${EXTLIBS} \
+	${GCC} ${OPT} ${BASEINC} ${EXTINCLUDES} ${EXTLIBDIRS} \
 MopsDetection.o common.o Tracklet.o fileUtils.o \
-removeSubsets.cc removeSubsetsMain.cc -o ../bin/removeSubsets
+removeSubsets.cc removeSubsetsMain.cc ${EXTLIBS} -o ../bin/removeSubsets
 
 ../bin/removeSubsetsOMP: removeSubsetsOMP.cc removeSubsetsMainOMP.cc MopsDetection.o common.o Tracklet.o fileUtils.o ${MOPSHEADERS}
-	${GCC} ${OPT} ${BASEINC} ${EXTINCLUDES} ${EXTLIBDIRS} ${EXTLIBS} \
+	${GCC} ${OPT} ${BASEINC} ${EXTINCLUDES} ${EXTLIBDIRS} \
 MopsDetection.o common.o Tracklet.o fileUtils.o \
 -fopenmp -lgomp \
-removeSubsetsOMP.cc removeSubsetsMainOMP.cc -o ../bin/removeSubsetsOMP
+removeSubsetsOMP.cc removeSubsetsMainOMP.cc ${EXTLIBS} -o ../bin/removeSubsetsOMP
 
 ../bin/linkTracklets: linkTracklets/linkTracklets.cc linkTracklets/linkTrackletsMain.cc TrackletTree.o TrackletTreeNode.o TrackSet.o Tracklet.o Track.o MopsDetection.o common.o fileUtils.o rmsLineFit.o ${MOPSHEADERS}
-	${GCC} ${OPT} ${BASEINC} ${EXTINCLUDES} ${EXTLIBDIRS} ${EXTLIBS} \
+	${GCC} ${OPT} ${BASEINC} ${EXTINCLUDES} ${EXTLIBDIRS} \
 TrackletTree.o TrackletTreeNode.o TrackSet.o Tracklet.o Track.o MopsDetection.o common.o fileUtils.o rmsLineFit.o \
-linkTracklets/linkTracklets.cc linkTracklets/linkTrackletsMain.cc -o ../bin/linkTracklets
+linkTracklets/linkTracklets.cc linkTracklets/linkTrackletsMain.cc ${EXTLIBS} -o ../bin/linkTracklets
 
 ../bin/linkTrackletsOMP: linkTracklets/linkTrackletsOMP.cc linkTracklets/linkTrackletsMain.cc TrackletTree.o TrackletTreeNode.o TrackSet.o Tracklet.o Track.o MopsDetection.o common.o fileUtils.o rmsLineFit.o ${MOPSHEADERS}
-	${GCC} ${OPT} ${BASEINC} ${EXTINCLUDES} ${EXTLIBDIRS} ${EXTLIBS} \
+	${GCC} ${OPT} ${BASEINC} ${EXTINCLUDES} ${EXTLIBDIRS} \
 TrackletTree.o TrackletTreeNode.o TrackSet.o Tracklet.o Track.o MopsDetection.o common.o fileUtils.o rmsLineFit.o \
 -fopenmp -lgomp \
-linkTracklets/linkTrackletsOMP.cc linkTracklets/linkTrackletsMain.cc -o ../bin/linkTracklets
+linkTracklets/linkTrackletsOMP.cc linkTracklets/linkTrackletsMain.cc ${EXTLIBS} -o ../bin/linkTracklets

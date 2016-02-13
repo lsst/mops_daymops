@@ -110,8 +110,7 @@ if __name__=="__main__":
     for night in nights:
         # Don't create redundant work by creating identical sets, and don't create output if
         # linkTracklets won't run (linkTracklets requires 3 nights of tracklets).
-        compatibleNights = sorted(filter(lambda x: x >= night
-                                             and x <= (night + args.windowSize), nights))
+        compatibleNights = sorted(x for x in nights if x >= night and x <= (night + args.windowSize))
 
         if not ((compatibleNights != previousNights) & (len(compatibleNights)>=3)) :
             print "No track could start on night ", night

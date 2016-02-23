@@ -5,20 +5,31 @@ import pandas as pd
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(description="Swap ssmId's that are strings into integers.")
+    parser = argparse.ArgumentParser(description="Swap ssmId's that are strings into integers.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("inputFile", type=str, help="Input file containing the DiaSources.")
     parser.add_argument("-t", "--trackId", type=str, default='ssmId_to_int.dat',
                         help="File tracking the map from the ssmId strings to integers.")
     parser.add_argument("-o", "--outFile", type=str, default=None,
                         help="Output file name for diasources with integer ssmIds. "\
                         "Default value is the input file, with addition of '_newId'.")
+    parser.add_argument("-k", "--ssmidKey", type=str, default=None,
+                        help="Name of the input file column containing SSMIDs."\
+                        "If not specified, will use a list of default key names and look"\
+                        "for the correct key.")
     args = parser.parse_args()
 
     diasources = pd.read_table(args.inputFile, delim_whitespace=True)
-    ssmKeys = ['objId', 'ssmId', 'ObjID', 'objID', 'ssmID']
-    for k in ssmKeys:
-        if k in diasources:
-            ssmKey = k
+
+    # If ssmidKey is given on command-line then use that.
+    # If it's not given, use list of defaults and find key.
+    if args.ssmidKey is not None:
+        ssmKey = args.ssmidKey
+    else:
+        ssmKeys = ['objId', 'ssmId', 'ObjID', 'objID', 'ssmID']
+        for k in args.ssmidKeys:
+            if k in diasources:
+                ssmKey = k
     newIds = np.zeros(len(diasources), int)
 
     if args.outFile is None:

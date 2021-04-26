@@ -10,8 +10,8 @@ setupRequired("numpy")
 
 envPrepend(LD_LIBRARY_PATH, ${PRODUCT_DIR}/lib)
 envPrepend(DYLD_LIBRARY_PATH, ${PRODUCT_DIR}/lib)
-envAppend(PYTHONPATH, ${PRODUCT_DIR}/python)
-envAppend(PATH, ${PRODUCT_DIR}/bin)
+envPrepend(PYTHONPATH, ${PRODUCT_DIR}/python)
+envPrepend(PATH, ${PRODUCT_DIR}/bin)
 
 envSet(MOPS_HACKS, ${PRODUCT_DIR}/tests/experimentScripts)
 setupOptional(doxygen >= 1.7.5.1)
